@@ -1,0 +1,20 @@
+{
+  "login": {
+    "title": "Anmelden",
+    "email": "Email",
+    "password": "Passwort",
+    "loginButton": "Anmelden",
+    "signupText": "Haben Sie noch kein Konto?",
+    "signupButton": "Als Manager registrieren",
+    "biometricButton": "Mit Biometrie anmelden"
+  },
+  "signup": {
+    "title": "Manager-Konto erstellen",
+    "email": "Email",
+    "password": "Passwort",
+    "confirmPassword": "Passwort bestätigen",
+    "signupButton": "Registrieren",
+    "loginText": "Haben Sie bereits ein Konto?",
+    "loginButton": "Anmelden"
+  }
+}

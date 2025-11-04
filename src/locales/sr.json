@@ -1,0 +1,20 @@
+{
+  "login": {
+    "title": "Prijava",
+    "email": "Email",
+    "password": "Lozinka",
+    "loginButton": "Prijavi se",
+    "signupText": "Nemate nalog?",
+    "signupButton": "Registrujte se kao menadžer",
+    "biometricButton": "Prijavite se pomoću biometrije"
+  },
+  "signup": {
+    "title": "Kreirajte menadžerski nalog",
+    "email": "Email",
+    "password": "Lozinka",
+    "confirmPassword": "Potvrdite lozinku",
+    "signupButton": "Registrujte se",
+    "loginText": "Već imate nalog?",
+    "loginButton": "Prijavi se"
+  }
+}

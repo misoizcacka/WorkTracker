@@ -2,6 +2,7 @@
   "expo": {
     "name": "workhourstracker",
     "slug": "workhourstracker",
+    "scheme": "workhourstracker",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -24,7 +25,13 @@
       "predictiveBackGestureEnabled": false
     },
     "web": {
-      "favicon": "./assets/favicon.png"
-    }
+      "favicon": "./assets/favicon.png",
+      "bundler": "metro"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-audio",
+      "expo-font"
+    ]
   }
 }

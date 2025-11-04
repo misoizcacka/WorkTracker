@@ -1,0 +1,20 @@
+{
+  "login": {
+    "title": "Logga in",
+    "email": "E-post",
+    "password": "Lösenord",
+    "loginButton": "Logga in",
+    "signupText": "Har du inget konto?",
+    "signupButton": "Registrera dig som chef",
+    "biometricButton": "Logga in med biometri"
+  },
+  "signup": {
+    "title": "Skapa chefskonto",
+    "email": "E-post",
+    "password": "Lösenord",
+    "confirmPassword": "Bekräfta lösenord",
+    "signupButton": "Registrera dig",
+    "loginText": "Har du redan ett konto?",
+    "loginButton": "Logga in"
+  }
+}
