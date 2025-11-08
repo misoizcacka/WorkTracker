@@ -1,10 +1,11 @@
 import { Slot } from "expo-router";
-import { I18nProvider } from "../../I18nContext";
+import { I18nextProvider } from "react-i18next";
+import i18n from "../../i18n";
 
 export default function RootLayout() {
   return (
-    <I18nProvider>
+    <I18nextProvider i18n={i18n}>
       <Slot />
-    </I18nProvider>
+    </I18nextProvider>
   );
 }

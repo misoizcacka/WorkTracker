@@ -15,6 +15,7 @@ export const CircularTimer: React.FC<CircularTimerProps> = ({ elapsedTime, size,
   const circumference = radius * 2 * Math.PI;
   const spinValue = useRef(new Animated.Value(0)).current;
   const progressValue = useRef(new Animated.Value(0)).current;
+  const circleRef = useRef<any>(null);
 
   const formatTime = (seconds: number): string => {
     const h = Math.floor(seconds / 3600).toString().padStart(2, "0");
@@ -34,28 +35,30 @@ export const CircularTimer: React.FC<CircularTimerProps> = ({ elapsedTime, size,
     );
     spinAnimation.start();
 
+    progressValue.addListener((progress) => {
+      if (circleRef.current) {
+        const strokeDashoffset = circumference - (circumference * progress.value * 0.25);
+        circleRef.current.setNativeProps({ strokeDashoffset: strokeDashoffset.toString() });
+      }
+    });
+
     const progressAnimation = Animated.timing(progressValue, {
       toValue: 1,
       duration: 1000, // Adjust duration for desired speed of progress effect
       easing: Easing.linear,
-      useNativeDriver: true,
+      useNativeDriver: false, // setNativeProps requires this to be false
     });
     progressAnimation.start();
 
     return () => {
       spinAnimation.stop();
-      progressAnimation.stop();
+      progressValue.removeAllListeners();
     };
   }, []);
 
   const rotate = spinValue.interpolate({
     inputRange: [0, 1],
     outputRange: ['0deg', '360deg'],
-  });
-
-  const strokeDashoffset = progressValue.interpolate({
-    inputRange: [0, 1],
-    outputRange: [circumference, circumference * 0.75], // Animate from full circle to 75% visible
   });
 
   return (
@@ -71,13 +74,13 @@ export const CircularTimer: React.FC<CircularTimerProps> = ({ elapsedTime, size,
             strokeWidth={strokeWidth}
           />
           <AnimatedCircle
+            ref={circleRef}
             stroke={theme.colors.primary}
             fill="none"
             cx={size / 2}
             cy={size / 2}
             r={radius}
             strokeDasharray={`${circumference} ${circumference}`}
-            strokeDashoffset={strokeDashoffset}
             strokeWidth={strokeWidth}
             strokeLinecap="round"
           />

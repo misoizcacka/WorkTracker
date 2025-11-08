@@ -1,20 +1,26 @@
 {
   "login": {
-    "title": "Anmelden",
-    "email": "Email",
+    "appName": "WorkTracker",
+    "loginHeading": "Anmelden",
+    "loginDescription": "Geben Sie Ihre Anmeldedaten ein, um die App zu nutzen",
+    "email": "E-Mail",
     "password": "Passwort",
-    "loginButton": "Anmelden",
-    "signupText": "Haben Sie noch kein Konto?",
-    "signupButton": "Als Manager registrieren",
-    "biometricButton": "Mit Biometrie anmelden"
+    "continueButton": "Weiter",
+    "termsText": "Durch Klicken auf Weiter stimmen Sie unseren",
+    "termsLink": "Nutzungsbedingungen",
+    "and": "und",
+    "privacyLink": "Datenschutzbestimmungen",
+    "or": "oder",
+    "registerManagerButton": "Als Manager registrieren"
   },
   "signup": {
-    "title": "Manager-Konto erstellen",
-    "email": "Email",
+    "title": "Registrieren",
+    "description": "Erstellen Sie ein Konto, um Ihre Mitarbeiter zu verwalten",
+    "companyName": "Firmenname",
+    "email": "E-Mail",
     "password": "Passwort",
     "confirmPassword": "Passwort bestätigen",
     "signupButton": "Registrieren",
-    "loginText": "Haben Sie bereits ein Konto?",
     "loginButton": "Anmelden"
   }
 }

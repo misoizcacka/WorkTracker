@@ -1,4 +1,5 @@
-import { I18n } from 'i18n-js';
+import i18n from 'i18next';
+import { initReactI18next } from 'react-i18next';
 import * as Localization from 'expo-localization';
 
 import en from './locales/en.json';
@@ -6,15 +7,18 @@ import sv from './locales/sv.json';
 import sr from './locales/sr.json';
 import de from './locales/de.json';
 
-const i18n = new I18n({
-  en,
-  sv,
-  sr,
-  de,
+i18n.use(initReactI18next).init({
+  resources: {
+    en: { translation: en },
+    sv: { translation: sv },
+    sr: { translation: sr },
+    de: { translation: de },
+  },
+  lng: Localization.locale,
+  fallbackLng: 'en',
+  interpolation: {
+    escapeValue: false,
+  },
 });
-
-i18n.defaultLocale = 'en';
-i18n.locale = Localization.locale || 'en';
-i18n.enableFallback = true;
 
 export default i18n;

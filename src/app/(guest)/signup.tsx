@@ -1,13 +1,14 @@
-import React, { useState, useContext } from "react";
+import React, { useState } from "react";
 import { View, Text, TextInput, StyleSheet, Alert, SafeAreaView } from "react-native";
 import { useRouter } from "expo-router";
+import { useTranslation } from "react-i18next";
 import { Button } from "../../components/Button";
 import { LanguageSelector } from "../../components/LanguageSelector";
 import { theme } from "../../theme";
-import { I18nContext } from "../../I18nContext";
+import { PixelatedBackground } from '../../components/PixelatedBackground';
 
 export default function SignUp() {
-  const i18n = useContext(I18nContext);
+  const { t } = useTranslation();
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -27,57 +28,60 @@ export default function SignUp() {
 
   return (
     <SafeAreaView style={styles.container}>
+      <PixelatedBackground />
       <LanguageSelector />
-      <Text style={styles.appName}>⏰ {i18n.t('login.appName')}</Text>
-      <View style={styles.content}>
-        <Text style={styles.loginHeading}>{i18n.t('signup.title')}</Text>
-        <Text style={styles.loginDescription}>{i18n.t('signup.description')}</Text>
-        <TextInput
-          style={styles.input}
-          placeholder={i18n.t('signup.companyName')}
-          value={companyName}
-          onChangeText={setCompanyName}
-          autoCapitalize="none"
-        />
-        <TextInput
-          style={styles.input}
-          placeholder={i18n.t('signup.email')}
-          value={email}
-          onChangeText={setEmail}
-          keyboardType="email-address"
-          autoCapitalize="none"
-        />
-        <TextInput
-          style={styles.input}
-          placeholder={i18n.t('signup.password')}
-          value={password}
-          onChangeText={setPassword}
-          secureTextEntry
-        />
-        <TextInput
-          style={styles.input}
-          placeholder={i18n.t('signup.confirmPassword')}
-          value={confirmPassword}
-          onChangeText={setConfirmPassword}
-          secureTextEntry
-        />
-        <Button
-          title={i18n.t('signup.signupButton')}
-          onPress={handleSignUp}
-          style={styles.loginButton}
-          textStyle={styles.loginButtonText}
-        />
-        <View style={styles.separatorContainer}>
-          <View style={styles.separatorLine} />
-          <Text style={styles.separatorText}>{i18n.t('login.or')}</Text>
-          <View style={styles.separatorLine} />
+      <Text style={styles.appName}>{t('login.appName')}</Text>
+      <View style={styles.centeredContentWrapper}>
+        <View style={styles.content}>
+          <Text style={styles.loginHeading}>{t('signup.title')}</Text>
+          <Text style={styles.loginDescription}>{t('signup.description')}</Text>
+          <TextInput
+            style={styles.input}
+            placeholder={t('signup.companyName')}
+            value={companyName}
+            onChangeText={setCompanyName}
+            autoCapitalize="none"
+          />
+          <TextInput
+            style={styles.input}
+            placeholder={t('signup.email')}
+            value={email}
+            onChangeText={setEmail}
+            keyboardType="email-address"
+            autoCapitalize="none"
+          />
+          <TextInput
+            style={styles.input}
+            placeholder={t('signup.password')}
+            value={password}
+            onChangeText={setPassword}
+            secureTextEntry
+          />
+          <TextInput
+            style={styles.input}
+            placeholder={t('signup.confirmPassword')}
+            value={confirmPassword}
+            onChangeText={setConfirmPassword}
+            secureTextEntry
+          />
+          <Button
+            title={t('signup.signupButton')}
+            onPress={handleSignUp}
+            style={styles.primaryButton}
+            textStyle={styles.primaryButtonText}
+          />
+          <View style={styles.separatorContainer}>
+            <View style={styles.separatorLine} />
+            <Text style={styles.separatorText}>{t('login.or')}</Text>
+            <View style={styles.separatorLine} />
+          </View>
+          <Button
+            title={t('signup.loginButton')}
+            onPress={() => router.push("/(guest)/login")}
+            type="secondary"
+            textStyle={styles.managerButtonText}
+          />
         </View>
-        <Button
-          title={i18n.t('signup.loginButton')}
-          onPress={() => router.push("/(guest)/login")}
-          type="secondary"
-          textStyle={styles.managerButtonText}
-        />
       </View>
     </SafeAreaView>
   );
@@ -86,17 +90,19 @@ export default function SignUp() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: theme.colors.background,
+  },
+  centeredContentWrapper: {
+    flex: 1,
+    justifyContent: 'center',
   },
   content: {
-    flex: 1,
     justifyContent: "center",
     padding: theme.spacing(4),
+    backgroundColor: 'white',
   },
   appName: {
     fontSize: 32,
-    fontWeight: "bold",
-    color: theme.colors.text,
+    color: "white",
     textAlign: "center",
     marginBottom: theme.spacing(1),
     paddingTop: theme.spacing(2),
@@ -124,12 +130,12 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: theme.colors.text,
   },
-  loginButton: {
-    backgroundColor: "black",
+  primaryButton: {
+    backgroundColor: theme.colors.primary,
     borderRadius: theme.radius.md,
     marginBottom: theme.spacing(2),
   },
-  loginButtonText: {
+  primaryButtonText: {
     color: "white",
     fontSize: 14,
     fontWeight: "normal",

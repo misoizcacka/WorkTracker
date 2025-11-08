@@ -1,9 +1,8 @@
 import React, { useState, useRef } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Animated, TouchableWithoutFeedback } from 'react-native';
-import i18n from '../i18n';
-import { languageStore } from '../languageStore';
+import { View, Text, TouchableOpacity, StyleSheet, Animated } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import CountryFlag from "react-native-country-flag";
+import { useTranslation } from 'react-i18next';
 
 const LANGUAGES = [
   { code: 'en', label: 'English', countryCode: 'GB' },
@@ -14,8 +13,9 @@ const LANGUAGES = [
 
 export function LanguageSelector() {
   const { top } = useSafeAreaInsets();
+  const { i18n } = useTranslation();
   const [popoverVisible, setPopoverVisible] = useState(false);
-  const [currentLanguage, setCurrentLanguage] = useState(i18n.locale.split('-')[0]);
+  const [currentLanguage, setCurrentLanguage] = useState(i18n.language.split('-')[0]);
   const fadeAnim = useRef(new Animated.Value(0)).current; // Initial value for opacity: 0
   const scaleAnim = useRef(new Animated.Value(0.9)).current; // Initial value for scale: 0.9
 
@@ -51,10 +51,9 @@ export function LanguageSelector() {
   };
 
   const handleLanguageChange = (langCode: string) => {
-    i18n.locale = langCode;
+    i18n.changeLanguage(langCode);
     setCurrentLanguage(langCode);
     togglePopover(); // Close popover after selection
-    languageStore.notify();
   };
 
   const currentLang = LANGUAGES.find(lang => lang.code === currentLanguage) || LANGUAGES[0];
@@ -89,9 +88,11 @@ const styles = StyleSheet.create({
     zIndex: 1000, // Ensure it's above other content
   },
   button: {
-    padding: 8,
+    padding: 2, // Reduced padding for a thinner border appearance
     borderRadius: 50,
-    backgroundColor: 'rgba(255, 255, 255, 0.8)',
+    backgroundColor: 'transparent', // Make background transparent to show only the border
+    borderWidth: 1,
+    borderColor: 'white',
   },
   flag: {
     width: 24,

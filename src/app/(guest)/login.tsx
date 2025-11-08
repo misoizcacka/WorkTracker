@@ -1,21 +1,23 @@
-import React, { useState, useEffect, useReducer, useContext } from "react";
-import { View, Text, TextInput, StyleSheet, Alert, SafeAreaView } from "react-native";
+import * as React from "react";
+import { useState, useEffect, useReducer, useContext } from "react";
+import { View, Text, TextInput, StyleSheet, Alert, SafeAreaView, Dimensions } from "react-native";
 import { useRouter } from "expo-router";
 import { Button } from "../../components/Button";
 import { LanguageSelector } from "../../components/LanguageSelector";
 import { theme } from "../../theme";
 import { languageStore } from "../../languageStore";
 import { useSession } from "../AuthContext";
-import { I18nContext } from "../../I18nContext";
+import { useTranslation } from 'react-i18next';
+
+import { LinearGradient } from 'expo-linear-gradient';
+import { PixelatedBackground } from '../../components/PixelatedBackground';
 
 export default function Login() {
   const { signIn } = useSession()!;
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const i18n = useContext(I18nContext);
-
-
+  const { t } = useTranslation();
 
   const handleLogin = () => {
     // TODO: Implement actual login logic
@@ -30,48 +32,51 @@ export default function Login() {
 
   return (
     <SafeAreaView style={styles.container}>
+      <PixelatedBackground />
       <LanguageSelector />
-      <Text style={styles.appName}>⏰ {i18n.t('login.appName')}</Text>
-      <View style={styles.content}>
-        <Text style={styles.loginHeading}>{i18n.t('login.loginHeading')}</Text>
-        <Text style={styles.loginDescription}>{i18n.t('login.loginDescription')}</Text>
-        <TextInput
-          style={styles.input}
-          placeholder={i18n.t('login.email')}
-          value={email}
-          onChangeText={setEmail}
-          keyboardType="email-address"
-          autoCapitalize="none"
-        />
-        <TextInput
-          style={styles.input}
-          placeholder={i18n.t('login.password')}
-          value={password}
-          onChangeText={setPassword}
-          secureTextEntry
-        />
-        <Button
-          title={i18n.t('login.continueButton')}
-          onPress={handleLogin}
-          style={styles.loginButton}
-          textStyle={styles.loginButtonText}
-        />
-        <View style={styles.termsContainer}>
-          <Text style={styles.termsText}>
-            {i18n.t('login.termsText')} <Text style={styles.termsLink}>{i18n.t('login.termsLink')}</Text> {i18n.t('login.and')} <Text style={styles.termsLink}>{i18n.t('login.privacyLink')}</Text>
-          </Text>
+      <Text style={styles.appName}>{t('login.appName')}</Text>
+      <View style={styles.centeredContentWrapper}>
+        <View style={styles.content}>
+          <Text style={styles.loginHeading}>{t('login.loginHeading')}</Text>
+          <Text style={styles.loginDescription}>{t('login.loginDescription')}</Text>
+          <TextInput
+            style={styles.input}
+            placeholder={t('login.email')}
+            value={email}
+            onChangeText={setEmail}
+            keyboardType="email-address"
+            autoCapitalize="none"
+          />
+          <TextInput
+            style={styles.input}
+            placeholder={t('login.password')}
+            value={password}
+            onChangeText={setPassword}
+            secureTextEntry
+          />
+          <Button
+            title={t('login.continueButton')}
+            onPress={handleLogin}
+            style={styles.primaryButton}
+            textStyle={styles.primaryButtonText}
+          />
+          <View style={styles.termsContainer}>
+            <Text style={styles.termsText}>
+              {t('login.termsText')} <Text style={styles.termsLink}>{t('login.termsLink')}</Text> {t('login.and')} <Text style={styles.termsLink}>{t('login.privacyLink')}</Text>
+            </Text>
+          </View>
+          <View style={styles.separatorContainer}>
+            <View style={styles.separatorLine} />
+            <Text style={styles.separatorText}>{t('login.or')}</Text>
+            <View style={styles.separatorLine} />
+          </View>
+          <Button
+            title={t('login.registerManagerButton')}
+            onPress={() => router.push("/(guest)/signup")}
+            type="secondary"
+            textStyle={styles.managerButtonText}
+          />
         </View>
-        <View style={styles.separatorContainer}>
-          <View style={styles.separatorLine} />
-          <Text style={styles.separatorText}>{i18n.t('login.or')}</Text>
-          <View style={styles.separatorLine} />
-        </View>
-        <Button
-          title={i18n.t('login.registerManagerButton')}
-          onPress={() => router.push("/(guest)/signup")}
-          type="secondary"
-          textStyle={styles.managerButtonText}
-        />
       </View>
     </SafeAreaView>
   );
@@ -80,17 +85,19 @@ export default function Login() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: theme.colors.background,
+  },
+  centeredContentWrapper: {
+    flex: 1,
+    justifyContent: 'center',
   },
   content: {
-    flex: 1,
     justifyContent: "center",
     padding: theme.spacing(4),
+    backgroundColor: 'white',
   },
   appName: {
     fontSize: 32,
-    fontWeight: "bold",
-    color: theme.colors.text,
+    color: "white",
     textAlign: "center",
     marginBottom: theme.spacing(1),
     paddingTop: theme.spacing(2),
@@ -118,12 +125,12 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: theme.colors.text,
   },
-  loginButton: {
-    backgroundColor: "black",
+  primaryButton: {
+    backgroundColor: theme.colors.primary,
     borderRadius: theme.radius.md,
     marginBottom: theme.spacing(2),
   },
-  loginButtonText: {
+  primaryButtonText: {
     color: "white",
     fontSize: 14,
     fontWeight: "normal",
@@ -159,5 +166,12 @@ const styles = StyleSheet.create({
   separatorText: {
     marginHorizontal: theme.spacing(2),
     color: theme.colors.textLight,
+  },
+  gradientContainer: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    top: 0,
+    height: "100%",
   },
 });

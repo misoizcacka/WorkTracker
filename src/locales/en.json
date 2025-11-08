@@ -1,15 +1,10 @@
 {
   "login": {
-    "title": "Login",
-    "email": "Email",
-    "password": "Password",
-    "loginButton": "Login",
-    "signupText": "Don't have an account?",
-    "signupButton": "Sign Up as Manager",
-    "biometricButton": "Login with Biometrics",
     "appName": "WorkTracker",
     "loginHeading": "Log in",
     "loginDescription": "Enter your login details to use the app",
+    "email": "Email",
+    "password": "Password",
     "continueButton": "Continue",
     "termsText": "By clicking continue you agree to our",
     "termsLink": "Terms of service",
@@ -26,7 +21,6 @@
     "password": "Password",
     "confirmPassword": "Confirm Password",
     "signupButton": "Sign Up",
-    "loginText": "Already have an account?",
     "loginButton": "Login"
   }
 }

@@ -3,6 +3,7 @@ import { useWindowDimensions } from "react-native";
 import { Tabs } from "expo-router";
 import { Drawer } from "expo-router/drawer";
 import { Ionicons } from "@expo/vector-icons";
+import { theme } from "../../theme";
 
 export default function WorkerTabsLayout() {
   const { width } = useWindowDimensions();
@@ -15,7 +16,7 @@ export default function WorkerTabsLayout() {
         screenOptions={{
           headerShown: true,
           drawerStyle: { backgroundColor: "#f7f7f7", width: 260 },
-          drawerActiveTintColor: "#2563EB",
+          drawerActiveTintColor: theme.colors.primary,
           drawerLabelStyle: { fontSize: 16, fontWeight: "500" },
         }}
       >
@@ -55,7 +56,7 @@ export default function WorkerTabsLayout() {
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: "#2563EB",
+        tabBarActiveTintColor: theme.colors.primary,
         tabBarStyle: {
           backgroundColor: "#fff",
           borderTopColor: "#ddd",

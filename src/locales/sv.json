@@ -1,20 +1,26 @@
 {
   "login": {
-    "title": "Logga in",
+    "appName": "WorkTracker",
+    "loginHeading": "Logga in",
+    "loginDescription": "Ange dina inloggningsuppgifter för att använda appen",
     "email": "E-post",
     "password": "Lösenord",
-    "loginButton": "Logga in",
-    "signupText": "Har du inget konto?",
-    "signupButton": "Registrera dig som chef",
-    "biometricButton": "Logga in med biometri"
+    "continueButton": "Fortsätt",
+    "termsText": "Genom att klicka på fortsätt godkänner du våra",
+    "termsLink": "Användarvillkor",
+    "and": "och",
+    "privacyLink": "Integritetspolicy",
+    "or": "eller",
+    "registerManagerButton": "Registrera dig som chef"
   },
   "signup": {
-    "title": "Skapa chefskonto",
+    "title": "Registrera dig",
+    "description": "Skapa ett konto för att hantera dina arbetare",
+    "companyName": "Företagsnamn",
     "email": "E-post",
     "password": "Lösenord",
     "confirmPassword": "Bekräfta lösenord",
     "signupButton": "Registrera dig",
-    "loginText": "Har du redan ett konto?",
     "loginButton": "Logga in"
   }
 }

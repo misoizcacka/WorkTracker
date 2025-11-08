@@ -1,20 +1,26 @@
 {
   "login": {
-    "title": "Prijava",
+    "appName": "WorkTracker",
+    "loginHeading": "Prijava",
+    "loginDescription": "Unesite svoje podatke za prijavu da biste koristili aplikaciju",
     "email": "Email",
     "password": "Lozinka",
-    "loginButton": "Prijavi se",
-    "signupText": "Nemate nalog?",
-    "signupButton": "Registrujte se kao menadžer",
-    "biometricButton": "Prijavite se pomoću biometrije"
+    "continueButton": "Nastavi",
+    "termsText": "Klikom na nastavi slažete se sa našim",
+    "termsLink": "Uslovima korišćenja",
+    "and": "i",
+    "privacyLink": "Politikom privatnosti",
+    "or": "ili",
+    "registerManagerButton": "Registrujte se kao menadžer"
   },
   "signup": {
-    "title": "Kreirajte menadžerski nalog",
+    "title": "Registracija",
+    "description": "Kreirajte nalog za upravljanje svojim radnicima",
+    "companyName": "Naziv kompanije",
     "email": "Email",
     "password": "Lozinka",
     "confirmPassword": "Potvrdite lozinku",
     "signupButton": "Registrujte se",
-    "loginText": "Već imate nalog?",
-    "loginButton": "Prijavi se"
+    "loginButton": "Prijava"
   }
 }

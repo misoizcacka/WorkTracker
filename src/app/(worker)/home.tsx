@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { View, Text, StyleSheet, Alert, ScrollView, SafeAreaView } from "react-native";
+import { View, Text, StyleSheet, Alert, ScrollView } from "react-native";
 import * as Location from "expo-location";
 import * as Notifications from "expo-notifications";
 import { getDistance } from "geolib";
@@ -135,6 +135,13 @@ export default function WorkerHomeScreen() {
   };
 
 
+  const formatTime = (seconds: number): string => {
+    const h = Math.floor(seconds / 3600).toString().padStart(2, "0");
+    const m = Math.floor((seconds % 3600) / 60).toString().padStart(2, "0");
+    const s = Math.floor(seconds % 60).toString().padStart(2, "0");
+    return `${h}:${m}:${s}`;
+  };
+
   // 🧭 Distance text logic
   const distanceText =
     distance == null
@@ -146,7 +153,7 @@ export default function WorkerHomeScreen() {
   const isNearby = distance !== null && distance < ACCEPTABLE_DISTANCE;
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <View style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.title}>Work Session</Text>
       </View>
@@ -154,53 +161,66 @@ export default function WorkerHomeScreen() {
         <Text style={styles.reminderText}>Make sure you check in before you start working.</Text>
 
         <Card style={{ width: "100%", marginBottom: theme.spacing(2) }}>
+          <Text style={styles.cardTitle}>Current Project</Text>
           <Text style={styles.projectName}>{project.name}</Text>
           <Text style={styles.projectAddress}>{project.address}</Text>
         </Card>
 
-        <Card style={{ alignItems: "center", marginBottom: theme.spacing(2) }}>
-          {checkedIn ? (
-            <>
-              <Text style={styles.timerLabel}>Time on site</Text>
-              <CircularTimer elapsedTime={elapsedTime} size={200} strokeWidth={5} />
-            </>
-          ) : (
+        {checkedIn && startTime && (
+          <Card style={{ width: "100%", marginBottom: theme.spacing(2) }}>
+            <Text style={styles.checkInTimeText}>
+              Checked in at: {new Date(startTime).toLocaleTimeString()}
+            </Text>
+          </Card>
+        )}
+
+        {checkedIn ? (
+          <View style={{ alignItems: "center", marginBottom: theme.spacing(2) }}>
+            <CircularTimer elapsedTime={elapsedTime} size={200} strokeWidth={5} />
+          </View>
+        ) : (
+          <Card style={{ alignItems: "center", marginBottom: theme.spacing(2) }}>
             <Text style={styles.timerLabel}>Not checked in</Text>
-          )}
-        </Card>
+          </Card>
+        )}
 
-        <Card style={{ alignItems: "center", marginBottom: theme.spacing(2) }}>
-          <Text
-            style={[
-              styles.distanceText,
-              {
-                color:
-                  !locationReady
-                    ? theme.colors.textLight
-                    : isNearby
-                    ? theme.colors.success
-                    : theme.colors.danger,
-              },
-            ]}
-          >
-            {distanceText}
-          </Text>
-        </Card>
-
+        {checkedIn && (
+          <Card style={{ width: "100%", marginBottom: theme.spacing(2) }}>
+            <Text style={styles.cardTitle}>Today's Summary</Text>
+            <Text style={styles.summaryText}>{formatTime(elapsedTime)}</Text>
+          </Card>
+        )}
+      </ScrollView>
+      <View style={styles.footer}>
+        <Text
+          style={[
+            styles.distanceText,
+            {
+              color:
+                !locationReady
+                  ? theme.colors.textLight
+                  : isNearby
+                  ? theme.colors.success
+                  : theme.colors.danger,
+            },
+          ]}
+        >
+          {distanceText}
+        </Text>
         <Button
           title={checkedIn ? "Check Out" : "Check In"}
           onPress={checkedIn ? handleCheckOut : handleCheckIn}
-          style={checkedIn ? styles.dangerButton : styles.blackButton}
-          textStyle={styles.blackButtonText}
+          style={checkedIn ? styles.dangerButton : styles.primaryButton}
+          textStyle={styles.primaryButtonText}
           disabled={!isNearby && !checkedIn}
         />
-      </ScrollView>
-    </SafeAreaView>
+      </View>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
+  container: {
     flex: 1,
     backgroundColor: theme.colors.background,
   },
@@ -211,6 +231,7 @@ const styles = StyleSheet.create({
     borderBottomColor: theme.colors.lightBorder,
   },
   scrollViewContent: {
+    flexGrow: 1,
     padding: theme.spacing(3),
     alignItems: "center",
   },
@@ -238,13 +259,31 @@ const styles = StyleSheet.create({
     color: theme.colors.textLight,
     marginTop: 4,
   },
+  checkInTimeText: {
+    fontSize: 16,
+    color: theme.colors.text,
+    textAlign: 'center',
+  },
+  cardTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: theme.colors.text,
+    marginBottom: theme.spacing(1),
+  },
+  summaryText: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: theme.colors.primary,
+    textAlign: 'center',
+  },
   timerLabel: {
     fontSize: 18,
     color: theme.colors.textLight,
   },
   distanceText: {
     fontSize: 16,
-    fontWeight: "600",
+    textAlign: "center",
+    marginBottom: theme.spacing(2),
   },
   link: {
     color: theme.colors.primary,
@@ -252,12 +291,17 @@ const styles = StyleSheet.create({
     fontSize: 16,
     textDecorationLine: "underline",
   },
-  blackButton: {
-    backgroundColor: "black",
-    borderRadius: theme.radius.md,
-    marginBottom: theme.spacing(2),
+  footer: {
+    padding: theme.spacing(3),
+    backgroundColor: theme.colors.background,
+    borderTopWidth: 1,
+    borderTopColor: theme.colors.lightBorder,
   },
-  blackButtonText: {
+  primaryButton: {
+    backgroundColor: theme.colors.primary,
+    borderRadius: theme.radius.md,
+  },
+  primaryButtonText: {
     color: "white",
     fontSize: 14,
     fontWeight: "normal",
@@ -265,6 +309,5 @@ const styles = StyleSheet.create({
   dangerButton: {
     backgroundColor: theme.colors.danger,
     borderRadius: theme.radius.md,
-    marginBottom: theme.spacing(2),
   },
 });

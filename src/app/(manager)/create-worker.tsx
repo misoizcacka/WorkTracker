@@ -42,7 +42,7 @@ export default function CreateWorker() {
         onChangeText={setPassword}
         secureTextEntry
       />
-      <Button title="Create Worker" onPress={handleCreateWorker} style={styles.loginButton} textStyle={styles.loginButtonText} />
+      <Button title="Create Worker" onPress={handleCreateWorker} style={styles.primaryButton} textStyle={styles.primaryButtonText} />
     </View>
   );
 }
@@ -72,12 +72,12 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: theme.colors.text,
   },
-  loginButton: {
-    backgroundColor: "black",
+  primaryButton: {
+    backgroundColor: theme.colors.primary,
     borderRadius: theme.radius.md,
     marginBottom: theme.spacing(2),
   },
-  loginButtonText: {
+  primaryButtonText: {
     color: "white",
     fontSize: 14,
     fontWeight: "normal",

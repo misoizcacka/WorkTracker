@@ -5,8 +5,8 @@ export const theme = {
     surface: "#F8FAFC", // slightly lighter surface for cards or modals
 
     // Brand colors
-    primary: "#000000", // black
-    primaryDark: "#000000", // black
+    primary: "#000080", // navy
+    primaryDark: "#000080", // navy
     accent: "#E0E0E0", // light gray accent for highlights
 
     // Status / system colors
