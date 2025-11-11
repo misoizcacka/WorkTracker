@@ -1,7 +1,8 @@
 import React from "react";
 import { View, Text, StyleSheet, FlatList, ScrollView } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { Card } from "../../components/Card";
+import AnimatedScreen from "../../components/AnimatedScreen";
 import { theme } from "../../theme";
 
 import { Button } from "../../components/Button";
@@ -11,6 +12,7 @@ import { useRouter } from "expo-router";
 import { WorkersContext } from "./WorkersContext";
 
 export default function ManagerWorkers() {
+  const tabBarHeight = useBottomTabBarHeight();
   const router = useRouter();
   const { workers } = React.useContext(WorkersContext)!;
 
@@ -41,37 +43,42 @@ export default function ManagerWorkers() {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Workers Overview</Text>
-        <Button title="Create Worker" onPress={handleCreateWorker} style={styles.loginButton} textStyle={styles.loginButtonText} />
+    <AnimatedScreen>
+      <View style={styles.container}>
+        <View style={{ flex: 1, backgroundColor: 'white', borderTopLeftRadius: 20, borderTopRightRadius: 20, paddingHorizontal: theme.spacing(3), paddingTop: theme.spacing(3), paddingBottom: tabBarHeight }}>
+          <View style={styles.createWorkerContainer}>
+            <Button title="Create Worker" onPress={handleCreateWorker} style={styles.loginButton} textStyle={styles.loginButtonText} />
+          </View>
+          <ScrollView contentContainerStyle={styles.scrollViewContent}>
+            <FlatList
+              data={workers}
+              keyExtractor={(item) => item.id}
+              renderItem={({ item }) => (
+                <Card style={styles.workerCard}>
+                  <Text style={styles.workerName}>{item.name}</Text>
+                  <Text style={styles.workerProject}>{item.project}</Text>
+                  <Text style={[styles.workerStatus, { color: getStatusColor(item.status) }]}>
+                    {getStatusText(item.status)}
+                  </Text>
+                  <Text style={styles.workerHours}>{item.hours} hrs today}</Text>
+                </Card>
+              )}
+            />
+          </ScrollView>
+        </View>
       </View>
-      <ScrollView contentContainerStyle={styles.scrollViewContent}>
-        <FlatList
-          data={workers}
-          keyExtractor={(item) => item.id}
-          renderItem={({ item }) => (
-            <Card style={styles.workerCard}>
-              <Text style={styles.workerName}>{item.name}</Text>
-              <Text style={styles.workerProject}>{item.project}</Text>
-              <Text style={[styles.workerStatus, { color: getStatusColor(item.status) }]}>
-                {getStatusText(item.status)}
-              </Text>
-              <Text style={styles.workerHours}>{item.hours} hrs today</Text>
-            </Card>
-          )}
-        />
-      </ScrollView>
-    </SafeAreaView>
+    </AnimatedScreen>
   );
 }
 
 const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: theme.colors.background },
-  header: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: theme.spacing(3), paddingTop: theme.spacing(2), paddingHorizontal: theme.spacing(3), borderBottomWidth: 1, borderBottomColor: theme.colors.lightBorder },
-  title: { fontSize: 24, fontWeight: "bold", color: theme.colors.text },
+  container: { flex: 1, backgroundColor: theme.colors.primary },
+  createWorkerContainer: {
+    paddingHorizontal: theme.spacing(3),
+    paddingTop: theme.spacing(2),
+  },
   scrollViewContent: {
-    padding: theme.spacing(3),
+    // No padding here
   },
   workerCard: { marginBottom: theme.spacing(2) },
   loginButton: {

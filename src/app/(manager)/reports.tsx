@@ -1,10 +1,12 @@
 import React, { useState } from "react";
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, ScrollView } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { Card } from "../../components/Card";
+import AnimatedScreen from "../../components/AnimatedScreen";
 import { theme } from "../../theme";
 
 export default function ManagerReports() {
+  const tabBarHeight = useBottomTabBarHeight();
   const [selectedMonth, setSelectedMonth] = useState("October 2025");
 
   const reports = [
@@ -14,58 +16,52 @@ export default function ManagerReports() {
   ];
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Monthly Summary</Text>
-      </View>
-      <ScrollView contentContainerStyle={styles.scrollViewContent}>
-        {/* Month selector */}
-        <View style={styles.monthSelector}>
-          {["October 2025", "September 2025", "August 2025"].map((month) => (
-            <TouchableOpacity key={month} onPress={() => setSelectedMonth(month)}>
-              <Text
-                style={[
-                  styles.monthButton,
-                  month === selectedMonth && styles.monthButtonActive,
-                ]}
-              >
-                {month}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
+    <AnimatedScreen>
+      <View style={styles.container}>
+        <View style={{ flex: 1, backgroundColor: 'white', borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: theme.spacing(3), paddingBottom: tabBarHeight }}>
+          <ScrollView contentContainerStyle={styles.scrollViewContent}>
+            {/* Month selector */}
+            <View style={styles.monthSelector}>
+              {["October 2025", "September 2025", "August 2025"].map((month) => (
+                <TouchableOpacity key={month} onPress={() => setSelectedMonth(month)}>
+                  <Text
+                    style={[
+                      styles.monthButton,
+                      month === selectedMonth && styles.monthButtonActive,
+                    ]}
+                  >
+                    {month}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
 
-        <Text style={styles.sectionTitle}>Hours Worked ({selectedMonth})</Text>
-        <FlatList
-          data={reports}
-          keyExtractor={(item) => item.id}
-          renderItem={({ item }) => (
-            <Card style={styles.reportCard}>
-              <Text style={styles.workerName}>{item.name}</Text>
-              <Text style={styles.workerHours}>{item.totalHours} hrs</Text>
-              <Text style={styles.workerPay}>
-                €{(item.totalHours * 20).toFixed(2)} (at €20/hr)
-              </Text>
-            </Card>
-          )}
-        />
-      </ScrollView>
-    </SafeAreaView>
+            <Text style={styles.sectionTitle}>Hours Worked ({selectedMonth})</Text>
+            <FlatList
+              data={reports}
+              keyExtractor={(item) => item.id}
+              renderItem={({ item }) => (
+                <Card style={styles.reportCard}>
+                  <Text style={styles.workerName}>{item.name}</Text>
+                  <Text style={styles.workerHours}>{item.totalHours} hrs</Text>
+                  <Text style={styles.workerPay}>
+                    €{(item.totalHours * 20).toFixed(2)} (at €20/hr)
+                  </Text>
+                </Card>
+              )}
+            />
+          </ScrollView>
+        </View>
+      </View>
+    </AnimatedScreen>
   );
 }
 
 const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: theme.colors.background },
-  header: {
-    padding: theme.spacing(3),
-    backgroundColor: theme.colors.background,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.lightBorder,
-  },
+  container: { flex: 1, backgroundColor: theme.colors.primary },
   scrollViewContent: {
-    padding: theme.spacing(3),
+    // No padding here
   },
-  title: { fontSize: 24, fontWeight: "bold", color: theme.colors.text, marginBottom: theme.spacing(3), textAlign: "center", paddingTop: theme.spacing(2) },
   monthSelector: { flexDirection: "row", justifyContent: "space-around", marginBottom: theme.spacing(3) },
   monthButton: { fontSize: 14, color: theme.colors.textLight },
   monthButtonActive: { color: theme.colors.primary, fontWeight: "700" },

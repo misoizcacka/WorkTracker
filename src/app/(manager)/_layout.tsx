@@ -1,10 +1,15 @@
 import React from "react";
-import { useWindowDimensions } from "react-native";
-import { Tabs } from "expo-router";
+import { useWindowDimensions, Image } from "react-native";
 import { Drawer } from "expo-router/drawer";
 import { Ionicons } from "@expo/vector-icons";
+import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { withLayoutContext } from 'expo-router';
 
 import { WorkersProvider } from "./WorkersContext";
+
+const { Navigator } = createBottomTabNavigator();
+
+export const BottomTabs = withLayoutContext(Navigator);
 
 export default function ManagerLayout() {
   const { width } = useWindowDimensions();
@@ -17,6 +22,17 @@ export default function ManagerLayout() {
         <Drawer
           screenOptions={{
             headerShown: true,
+            headerStyle: {
+              backgroundColor: '#f7f7f7',
+              elevation: 0, // Remove shadow on Android
+              shadowOpacity: 0, // Remove shadow on iOS
+            },
+            headerTitle: () => (
+              <Image
+                source={require('../../../assets/logowhitenavy.png')}
+                style={{ width: 150, height: 40, resizeMode: 'contain' }}
+              />
+            ),
             drawerStyle: { backgroundColor: "#f7f7f7", width: 260 },
             drawerActiveTintColor: "#2563EB",
             drawerLabelStyle: { fontSize: 16, fontWeight: "500" },
@@ -66,24 +82,36 @@ export default function ManagerLayout() {
   // 📱 Mobile → Tabs
   return (
     <WorkersProvider>
-      <Tabs
+      <BottomTabs
         screenOptions={{
-          headerShown: false,
-          tabBarActiveTintColor: "#fff",
-          tabBarStyle: {
-            backgroundColor: "rgba(0,0,0,0.25)",
-            borderTopWidth: 0,
-            elevation: 0,
-            position: "absolute",
-            height: 60,
+          headerShown: true,
+          headerStyle: {
+            backgroundColor: theme.colors.primary, // Use navy from theme
+            elevation: 0, // Remove shadow on Android
+            shadowOpacity: 0, // Remove shadow on iOS
           },
-          tabBarLabelStyle: {
+          headerTitle: () => (
+            <Image
+              source={require('../../../assets/logowhitenavy.png')}
+              style={{ width: 150, height: 40, resizeMode: 'contain' }}
+            />
+          ),
+          tabBarActiveTintColor: "#fff",
+                  tabBarStyle: {
+                    backgroundColor: "rgba(0,0,0,0.25)",
+                    borderTopWidth: 0,
+                    elevation: 0,
+                    position: "absolute",
+                    bottom: 0,
+                    left: 0,
+                    right: 0,
+                  },          tabBarLabelStyle: {
             fontSize: 12,
             fontWeight: "600",
           },
         }}
       >
-        <Tabs.Screen
+        <BottomTabs.Screen
           name="dashboard"
           options={{
             title: "Dashboard",
@@ -92,7 +120,7 @@ export default function ManagerLayout() {
             ),
           }}
         />
-        <Tabs.Screen
+        <BottomTabs.Screen
           name="workers"
           options={{
             title: "Workers",
@@ -101,7 +129,7 @@ export default function ManagerLayout() {
             ),
           }}
         />
-        <Tabs.Screen
+        <BottomTabs.Screen
           name="reports"
           options={{
             title: "Reports",
@@ -110,7 +138,7 @@ export default function ManagerLayout() {
             ),
           }}
         />
-        <Tabs.Screen
+        <BottomTabs.Screen
           name="account"
           options={{
             title: "Account",
@@ -119,7 +147,7 @@ export default function ManagerLayout() {
             ),
           }}
         />
-      </Tabs>
+      </BottomTabs>
     </WorkersProvider>
   );
 }

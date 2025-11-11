@@ -1,12 +1,15 @@
 import React, { useState } from "react";
 import { View, Text, TextInput, StyleSheet, Alert } from "react-native";
+import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { useRouter } from "expo-router";
 import { Button } from "../../components/Button";
+import AnimatedScreen from "../../components/AnimatedScreen";
 import { theme } from "../../theme";
 
 import { WorkersContext } from "./WorkersContext";
 
 export default function CreateWorker() {
+  const tabBarHeight = useBottomTabBarHeight();
   const router = useRouter();
   const { addWorker } = React.useContext(WorkersContext)!;
   const [name, setName] = useState("");
@@ -19,48 +22,41 @@ export default function CreateWorker() {
   };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Create New Worker</Text>
-      <TextInput
-        style={styles.input}
-        placeholder="Name"
-        value={name}
-        onChangeText={setName}
-      />
-      <TextInput
-        style={styles.input}
-        placeholder="Email"
-        value={email}
-        onChangeText={setEmail}
-        keyboardType="email-address"
-        autoCapitalize="none"
-      />
-      <TextInput
-        style={styles.input}
-        placeholder="Password"
-        value={password}
-        onChangeText={setPassword}
-        secureTextEntry
-      />
-      <Button title="Create Worker" onPress={handleCreateWorker} style={styles.primaryButton} textStyle={styles.primaryButtonText} />
-    </View>
+    <AnimatedScreen>
+      <View style={styles.container}>
+        <View style={{ flex: 1, backgroundColor: 'white', borderTopLeftRadius: 20, borderTopRightRadius: 20, justifyContent: "center", padding: theme.spacing(4), paddingBottom: tabBarHeight }}>
+          <TextInput
+            style={styles.input}
+            placeholder="Name"
+            value={name}
+            onChangeText={setName}
+          />
+          <TextInput
+            style={styles.input}
+            placeholder="Email"
+            value={email}
+            onChangeText={setEmail}
+            keyboardType="email-address"
+            autoCapitalize="none"
+          />
+          <TextInput
+            style={styles.input}
+            placeholder="Password"
+            value={password}
+            onChangeText={setPassword}
+            secureTextEntry
+          />
+          <Button title="Create Worker" onPress={handleCreateWorker} style={styles.primaryButton} textStyle={styles.primaryButtonText} />
+        </View>
+      </View>
+    </AnimatedScreen>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: "center",
-    padding: theme.spacing(4),
-    backgroundColor: theme.colors.background,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: "bold",
-    color: theme.colors.text,
-    textAlign: "center",
-    marginBottom: theme.spacing(2),
-    paddingTop: theme.spacing(2),
+    backgroundColor: theme.colors.primary,
   },
   input: {
     height: 50,

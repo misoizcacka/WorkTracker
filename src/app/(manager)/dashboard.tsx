@@ -1,10 +1,12 @@
 import React from "react";
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, ScrollView } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { Card } from "../../components/Card";
+import AnimatedScreen from "../../components/AnimatedScreen";
 import { theme } from "../../theme";
 
 export default function ManagerDashboard() {
+  const tabBarHeight = useBottomTabBarHeight();
   const stats = {
     activeWorkers: 12,
     totalWorkers: 18,
@@ -18,59 +20,52 @@ export default function ManagerDashboard() {
     { id: "3", name: "Retail Construction", workers: 3, hours: 15.5 },
   ];
 
-  return (
-    <SafeAreaView style={styles.safeArea}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Team Dashboard</Text>
-      </View>
-      <ScrollView contentContainerStyle={styles.scrollViewContent}>
-        <View style={styles.statsRow}>
-          <Card style={styles.statCard}>
-            <Text style={styles.statValue}>
-              {stats.activeWorkers}/{stats.totalWorkers}
-            </Text>
-            <Text style={styles.statLabel}>Workers Active</Text>
-          </Card>
-          <Card style={styles.statCard}>
-            <Text style={styles.statValue}>{stats.activeProjects}</Text>
-            <Text style={styles.statLabel}>Projects</Text>
-          </Card>
-          <Card style={styles.statCard}>
-            <Text style={styles.statValue}>{stats.totalHoursToday}</Text>
-            <Text style={styles.statLabel}>Hours Today</Text>
-          </Card>
+    return (
+      <AnimatedScreen>
+        <View style={styles.container}>
+          <View style={{ flex: 1, backgroundColor: 'white', borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: theme.spacing(3), paddingBottom: tabBarHeight }}>
+            <ScrollView contentContainerStyle={styles.scrollViewContent}>
+              <View style={styles.statsRow}>
+                <Card style={styles.statCard}>
+                  <Text style={styles.statValue}>
+                    {stats.activeWorkers}/{stats.totalWorkers}
+                  </Text>
+                  <Text style={styles.statLabel}>Workers Active</Text>
+                </Card>
+                <Card style={styles.statCard}>
+                  <Text style={styles.statValue}>{stats.activeProjects}</Text>
+                  <Text style={styles.statLabel}>Projects</Text>
+                </Card>
+                <Card style={styles.statCard}>
+                  <Text style={styles.statValue}>{stats.totalHoursToday}</Text>
+                  <Text style={styles.statLabel}>Hours Today</Text>
+                </Card>
+              </View>
+  
+              <Text style={styles.sectionTitle}>Projects Overview</Text>
+              <FlatList
+                data={projects}
+                keyExtractor={(item) => item.id}
+                renderItem={({ item }) => (
+                  <Card style={{ marginBottom: theme.spacing(2) }}>
+                    <Text style={styles.projectName}>{item.name}</Text>
+                    <Text style={styles.projectDetail}>
+                      Workers: {item.workers} | Hours: {item.hours}
+                    </Text>
+                  </Card>
+                )}
+              />
+            </ScrollView>
+          </View>
         </View>
-
-        <Text style={styles.sectionTitle}>Projects Overview</Text>
-        <FlatList
-          data={projects}
-          keyExtractor={(item) => item.id}
-          renderItem={({ item }) => (
-            <Card style={{ marginBottom: theme.spacing(2) }}>
-              <Text style={styles.projectName}>{item.name}</Text>
-              <Text style={styles.projectDetail}>
-                Workers: {item.workers} | Hours: {item.hours}
-              </Text>
-            </Card>
-          )}
-        />
-      </ScrollView>
-    </SafeAreaView>
-  );
-}
+      </AnimatedScreen>
+    );}
 
 const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: theme.colors.background },
-  header: {
-    padding: theme.spacing(3),
-    backgroundColor: theme.colors.background,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.lightBorder,
-  },
+  container: { flex: 1, backgroundColor: theme.colors.primary },
   scrollViewContent: {
-    padding: theme.spacing(3),
+    // No padding here
   },
-  title: { fontSize: 24, fontWeight: "bold", color: theme.colors.text, marginBottom: theme.spacing(3), textAlign: "center", paddingTop: theme.spacing(2) },
   statsRow: { flexDirection: "row", justifyContent: "space-between", marginBottom: theme.spacing(3) },
   statCard: { flex: 1, marginHorizontal: 4, alignItems: "center", paddingVertical: theme.spacing(2) },
   statValue: { fontSize: 20, fontWeight: "700", color: theme.colors.primary },

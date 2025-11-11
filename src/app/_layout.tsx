@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { Slot, useRouter, useSegments } from 'expo-router';
-import { SessionProvider, useSession } from './AuthContext';
+import { SessionProvider, useSession } from '../context/AuthContext';
 
 import { I18nextProvider } from 'react-i18next';
 import i18n from '../i18n';

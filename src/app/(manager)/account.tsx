@@ -1,14 +1,16 @@
 import React, { useState, useEffect } from "react";
-import { SafeAreaView } from "react-native-safe-area-context";
 import { View, Text, StyleSheet, Switch } from "react-native";
+import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import * as LocalAuthentication from "expo-local-authentication";
 import { Card } from "../../components/Card";
 import { Button } from "../../components/Button";
 import { theme } from "../../theme";
-import { useSession } from "../AuthContext";
+import AnimatedScreen from "../../components/AnimatedScreen";
+import { useSession } from "../../context/AuthContext";
 import { setStorageItemAsync, useStorageState } from "../../hooks/useStorageState";
 
 export default function ManagerAccount() {
+  const tabBarHeight = useBottomTabBarHeight();
   const { signOut, user } = useSession()!;
   const [isBiometricSupported, setIsBiometricSupported] = useState(false);
   const [[isLoading, isBiometricEnabled], setIsBiometricEnabled] = useStorageState('biometricEnabled');
@@ -39,42 +41,43 @@ export default function ManagerAccount() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <Text style={styles.title}>My Account</Text>
+    <AnimatedScreen>
+      <View style={styles.container}>
+        <View style={{ flex: 1, backgroundColor: 'white', borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: theme.spacing(3), paddingBottom: tabBarHeight }}>
+          <Card style={styles.card}>
+            <Text style={styles.label}>Name:</Text>
+            <Text style={styles.value}>Anna Manager</Text>
 
-      <Card style={styles.card}>
-        <Text style={styles.label}>Name:</Text>
-        <Text style={styles.value}>Anna Manager</Text>
+            <Text style={styles.label}>Role:</Text>
+            <Text style={styles.value}>Project Manager</Text>
 
-        <Text style={styles.label}>Role:</Text>
-        <Text style={styles.value}>Project Manager</Text>
+            <Text style={styles.label}>Email:</Text>
+            <Text style={styles.value}>{user?.email}</Text>
+          </Card>
 
-        <Text style={styles.label}>Email:</Text>
-        <Text style={styles.value}>{user?.email}</Text>
-      </Card>
+          {isBiometricSupported && (
+            <Card style={styles.card}>
+              <View style={styles.biometricRow}>
+                <Text style={styles.biometricText}>Enable Biometric Login</Text>
+                <Switch value={isBiometricEnabled === 'true'} onValueChange={handleBiometricSwitch} />
+              </View>
+            </Card>
+          )}
 
-      {isBiometricSupported && (
-        <Card style={styles.card}>
-          <View style={styles.biometricRow}>
-            <Text style={styles.biometricText}>Enable Biometric Login</Text>
-            <Switch value={isBiometricEnabled === 'true'} onValueChange={handleBiometricSwitch} />
-          </View>
-        </Card>
-      )}
-
-      <Button
-        title="Log Out"
-        onPress={() => signOut()}
-        type="danger"
-        style={{ marginTop: theme.spacing(3), width: "100%" }}
-      />
-    </SafeAreaView>
+          <Button
+            title="Log Out"
+            onPress={() => signOut()}
+            type="danger"
+            style={{ marginTop: theme.spacing(3), width: "100%" }}
+          />
+        </View>
+      </View>
+    </AnimatedScreen>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: theme.colors.background, padding: theme.spacing(3) },
-  title: { fontSize: 24, fontWeight: "bold", color: theme.colors.text, marginBottom: theme.spacing(3), textAlign: "center", paddingTop: theme.spacing(2) },
+  container: { flex: 1, backgroundColor: theme.colors.primary },
   card: { width: "100%", marginBottom: theme.spacing(3) },
   label: { fontSize: 16, color: theme.colors.textLight, marginTop: theme.spacing(1) },
   value: { fontSize: 18, fontWeight: "600", color: theme.colors.text },

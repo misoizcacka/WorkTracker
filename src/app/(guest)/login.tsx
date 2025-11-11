@@ -1,15 +1,12 @@
 import * as React from "react";
 import { useState, useEffect, useReducer, useContext } from "react";
-import { View, Text, TextInput, StyleSheet, Alert, SafeAreaView, Dimensions } from "react-native";
+import { View, Text, TextInput, StyleSheet, Alert, SafeAreaView, Dimensions, Image } from "react-native";
 import { useRouter } from "expo-router";
 import { Button } from "../../components/Button";
 import { LanguageSelector } from "../../components/LanguageSelector";
 import { theme } from "../../theme";
-import { languageStore } from "../../languageStore";
-import { useSession } from "../AuthContext";
+import { useSession } from "../../context/AuthContext";
 import { useTranslation } from 'react-i18next';
-
-import { LinearGradient } from 'expo-linear-gradient';
 import { PixelatedBackground } from '../../components/PixelatedBackground';
 
 export default function Login() {
@@ -34,7 +31,10 @@ export default function Login() {
     <SafeAreaView style={styles.container}>
       <PixelatedBackground />
       <LanguageSelector />
-      <Text style={styles.appName}>{t('login.appName')}</Text>
+      <Image
+        source={require('../../../assets/logowhitetransparent.png')}
+        style={styles.logo}
+      />
       <View style={styles.centeredContentWrapper}>
         <View style={styles.content}>
           <Text style={styles.loginHeading}>{t('login.loginHeading')}</Text>
@@ -95,10 +95,11 @@ const styles = StyleSheet.create({
     padding: theme.spacing(4),
     backgroundColor: 'white',
   },
-  appName: {
-    fontSize: 32,
-    color: "white",
-    textAlign: "center",
+  logo: {
+    width: 200, // Adjust as needed
+    height: 60, // Adjust as needed
+    resizeMode: 'contain',
+    alignSelf: 'center',
     marginBottom: theme.spacing(1),
     paddingTop: theme.spacing(2),
   },
