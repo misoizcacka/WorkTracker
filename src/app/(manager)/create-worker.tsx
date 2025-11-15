@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { View, Text, TextInput, StyleSheet, Alert } from "react-native";
+import { View, Text, TextInput, StyleSheet, Alert, useWindowDimensions } from "react-native";
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { useRouter } from "expo-router";
 import { Button } from "../../components/Button";
@@ -9,7 +9,9 @@ import { theme } from "../../theme";
 import { WorkersContext } from "./WorkersContext";
 
 export default function CreateWorker() {
-  const tabBarHeight = useBottomTabBarHeight();
+  const { width } = useWindowDimensions();
+  const isLargeScreen = width >= 900;
+  const tabBarHeight = isLargeScreen ? 0 : useBottomTabBarHeight();
   const router = useRouter();
   const { addWorker } = React.useContext(WorkersContext)!;
   const [name, setName] = useState("");
@@ -17,7 +19,8 @@ export default function CreateWorker() {
   const [password, setPassword] = useState("");
 
   const handleCreateWorker = () => {
-    addWorker({ name, email, password, status: "notCheckedIn", hours: 0, project: "" });
+    const newId = Math.random().toString(36).substring(2, 15); // Generate a simple unique ID
+    addWorker({ id: newId, name, email, password, status: "notCheckedIn", hours: 0, project: "" });
     router.back();
   };
 

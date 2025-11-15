@@ -81,7 +81,7 @@ export default function WorkerAccountScreen() {
                 <Switch
                   value={isBiometricEnabled === 'true'}
                   onValueChange={handleBiometricSwitch}
-                  trackColor={{ false: theme.colors.lightGray, true: theme.colors.primary }}
+                  trackColor={{ false: theme.colors.accent, true: theme.colors.primary }}
                   thumbColor={'#fff'}
                 />
               </View>
@@ -127,7 +127,7 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: theme.colors.lightGray,
+    backgroundColor: theme.colors.accent,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: theme.spacing(2),

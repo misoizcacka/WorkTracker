@@ -222,7 +222,7 @@ const styles = StyleSheet.create({
     width: 220,
     height: 220,
     borderRadius: 110,
-    backgroundColor: theme.colors.lightGray,
+    backgroundColor: theme.colors.accent,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 15,

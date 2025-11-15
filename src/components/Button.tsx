@@ -31,7 +31,7 @@ export const Button: React.FC<ButtonProps> = ({
       ? theme.colors.primary
       : type === "danger"
       ? theme.colors.danger
-      : theme.colors.secondary;
+      : theme.colors.accent;
 
   const buttonStyle = [
     styles.button,
@@ -42,8 +42,8 @@ export const Button: React.FC<ButtonProps> = ({
 
   const textColor =
     type === "secondary"
-      ? theme.colors.white
-      : theme.colors.white;
+      ? theme.colors.background
+      : theme.colors.background;
 
   return (
     <TouchableOpacity
@@ -66,7 +66,7 @@ export const Button: React.FC<ButtonProps> = ({
 
 const styles = StyleSheet.create({
   button: {
-    borderRadius: theme.radius.xl,
+    borderRadius: theme.radius.lg,
     paddingVertical: theme.spacing(2),
     paddingHorizontal: theme.spacing(4),
     alignItems: "center",

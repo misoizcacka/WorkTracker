@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useContext } from 'react';
 import {
   StyleSheet,
   View,
@@ -14,13 +14,14 @@ import {
   Linking,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { Card } from '../../components/Card';
-import { theme } from '../../theme';
-import AnimatedScreen from '../../components/AnimatedScreen';
+import { Card } from '../../../components/Card';
+import { theme } from '../../../theme';
+import AnimatedScreen from '../../../components/AnimatedScreen';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
-import { MapView, Marker } from '../../components/MapView';
-import ImageCarouselModal from '../../components/ImageCarouselModal';
+import { MapView, Marker } from '../../../components/MapView';
+import ImageCarouselModal from '../../../components/ImageCarouselModal';
+import { ProjectsContext } from '../ProjectsContext';
 
 const { width } = Dimensions.get('window');
 
@@ -33,70 +34,6 @@ interface Message {
   timestamp: string;
 }
 
-// Mock data - in a real app, this would come from an API
-const mockProjects = [
-  {
-    id: '1',
-    name: 'Modern Villa Construction',
-    address: '123 Luxury Lane, Berlin',
-    explanation:
-      'This project involves the construction of a high-end modern villa. Key tasks include laying the foundation, erecting the steel frame, and installing glass curtain walls. Attention to detail is paramount.',
-    pictures: [
-      'https://loremflickr.com/640/480/villa,construction/all',
-      'https://loremflickr.com/640/480/villa,building/all',
-      'https://loremflickr.com/640/480/villa,architecture/all',
-    ],
-    location: {
-      latitude: 52.52,
-      longitude: 13.405,
-    },
-  },
-  {
-    id: '2',
-    name: 'Downtown Office Renovation',
-    address: '456 Business Blvd, Berlin',
-    explanation:
-      'Renovation of a 10-story office building. The focus is on modernizing the interior, upgrading the HVAC system, and improving energy efficiency. Work needs to be completed floor by floor.',
-    pictures: [
-      'https://loremflickr.com/640/480/office,renovation/all',
-      'https://loremflickr.com/640/480/office,interior/all',
-    ],
-    location: {
-      latitude: 52.516,
-      longitude: 13.3777,
-    },
-  },
-  {
-    id: '3',
-    name: 'Suburban Home Scaffolding',
-    address: '789 Family Rd, Potsdam',
-    explanation:
-      'Erect scaffolding around a two-story suburban home for roof and facade repairs. Safety protocols must be strictly followed. The project is expected to take one week.',
-    pictures: [
-      'https://loremflickr.com/640/480/house,scaffolding/all',
-    ],
-    location: {
-      latitude: 52.4,
-      longitude: 13.06,
-    },
-  },
-  {
-    id: '4',
-    name: 'Historic Building Restoration',
-    address: '101 History Alley, Berlin',
-    explanation:
-      "Restoration of a 19th-century building. This requires careful handling of original materials and adherence to historical preservation guidelines. The sandstone facade needs special attention.",
-    pictures: [
-      'https://loremflickr.com/640/480/historic,building/all',
-      'https://loremflickr.com/640/480/building,restoration/all',
-    ],
-    location: {
-      latitude: 52.524,
-      longitude: 13.41,
-    },
-  },
-];
-
 const mockMessages: Message[] = [
   { id: '1', text: 'Scaffolding is complete on the north side.', type: 'text', sender: 'John Doe', timestamp: '10:30 AM' },
   { id: '2', image: 'https://loremflickr.com/640/480/house', type: 'image', sender: 'John Doe', timestamp: '10:32 AM' },
@@ -107,7 +44,8 @@ const mockMessages: Message[] = [
 export default function ProjectDetailsScreen() {
   const { id } = useLocalSearchParams();
   const router = useRouter();
-  const project = mockProjects.find((p) => p.id === id);
+  const { projects } = useContext(ProjectsContext)!;
+  const project = projects.find((p) => p.id === id);
 
   const [messages, setMessages] = useState<Message[]>(mockMessages);
   const [newMessage, setNewMessage] = useState('');
@@ -128,24 +66,22 @@ export default function ProjectDetailsScreen() {
 
     let newMessages: Message[] = [];
 
-    // Create messages for images
     if (selectedImages.length > 0) {
       newMessages = selectedImages.map((uri, index) => ({
         id: (messages.length + index + 1).toString(),
         type: 'image',
         image: uri,
-        sender: 'You',
+        sender: 'You (Manager)',
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       }));
     }
 
-    // Create message for text
     if (trimmedMessage !== '') {
       const textMessage: Message = {
         id: (messages.length + newMessages.length + 1).toString(),
         text: trimmedMessage,
         type: 'text',
-        sender: 'You',
+        sender: 'You (Manager)',
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       };
       newMessages.push(textMessage);
@@ -206,12 +142,6 @@ export default function ProjectDetailsScreen() {
     </Card>
   );
 
-  const renderProjectImage = ({ item, index }: { item: string, index: number }) => (
-    <TouchableOpacity onPress={() => openImageModal(project.pictures, index)}>
-      <Image source={{ uri: item }} style={styles.projectImage} />
-    </TouchableOpacity>
-  );
-
   const renderSelectedImagePreview = ({ item }: { item: string }) => (
     <View style={styles.previewImageContainer}>
       <Image source={{ uri: item }} style={styles.previewImage} />
@@ -232,23 +162,6 @@ export default function ProjectDetailsScreen() {
           <View style={styles.headerCard}>
             <Text style={styles.title}>{project.name}</Text>
             <Text style={styles.addressText}>{project.address}</Text>
-          </View>
-
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Project Overview</Text>
-            <Text style={styles.explanationText}>{project.explanation}</Text>
-          </View>
-
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Project Images</Text>
-            <FlatList
-              data={project.pictures}
-              renderItem={renderProjectImage}
-              keyExtractor={(item, index) => index.toString()}
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.projectImageList}
-            />
           </View>
 
           <View style={styles.section}>
@@ -281,8 +194,8 @@ export default function ProjectDetailsScreen() {
               renderItem={renderMessage}
               keyExtractor={(item) => item.id}
               contentContainerStyle={styles.listContainer}
-              scrollEnabled={false} // Disable scroll for this list
-              inverted={false} // No longer inverted as the main scrollview handles it
+              scrollEnabled={false}
+              inverted={false}
             />
           </View>
         </ScrollView>
@@ -333,7 +246,7 @@ const styles = StyleSheet.create({
   headerCard: {
     padding: theme.spacing(2),
     borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
+    borderBottomColor: theme.colors.lightBorder,
     backgroundColor: 'white',
   },
   title: {
@@ -355,20 +268,6 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: theme.colors.text,
     marginBottom: theme.spacing(1),
-  },
-  explanationText: {
-    fontSize: 16,
-    color: theme.colors.text,
-    lineHeight: 24,
-  },
-  projectImageList: {
-    paddingVertical: theme.spacing(1),
-  },
-  projectImage: {
-    width: width * 0.7,
-    height: width * 0.5,
-    borderRadius: theme.radius.md,
-    marginRight: theme.spacing(2),
   },
   map: {
     height: 200,
@@ -404,7 +303,7 @@ const styles = StyleSheet.create({
   inputContainer: {
     padding: theme.spacing(2),
     borderTopWidth: 1,
-    borderTopColor: theme.colors.border,
+    borderTopColor: theme.colors.lightBorder,
     backgroundColor: 'white',
   },
   textInputRow: {

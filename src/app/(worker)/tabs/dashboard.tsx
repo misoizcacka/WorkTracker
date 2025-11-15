@@ -8,7 +8,25 @@ import { Ionicons } from "@expo/vector-icons";
 
 const FILTERS = ["Yesterday", "This Week", "Last Week", "This Month", "Custom"];
 
-const mockData = {
+interface Session {
+  id: string;
+  date: string;
+  project: string;
+  address: string;
+  hours: number;
+}
+
+interface MockDataEntry {
+  sessions: Session[];
+  total: number;
+  avg: number;
+}
+
+interface MockData {
+  [key: string]: MockDataEntry;
+}
+
+const mockData: MockData = {
   "Yesterday": {
     sessions: [
       { id: "4", date: "2025-11-10", project: "Facade Inspection", address: "Berlin", hours: 8.0 },
@@ -57,11 +75,11 @@ const mockData = {
 
 export default function WorkerDashboardScreen() {
   const tabBarHeight = useBottomTabBarHeight();
-  const [selectedFilter, setSelectedFilter] = useState("This Week");
+  const [selectedFilter, setSelectedFilter] = useState<keyof MockData>("This Week");
 
   const data = mockData[selectedFilter];
 
-  const renderSession = ({ item }) => (
+  const renderSession = ({ item }: { item: Session }) => (
     <Card style={styles.sessionCard}>
       <View style={styles.sessionHeader}>
         <Text style={styles.sessionDate}>{item.date}</Text>
@@ -196,7 +214,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     paddingHorizontal: 16,
     borderRadius: 20,
-    backgroundColor: theme.colors.lightGray,
+    backgroundColor: theme.colors.accent,
     marginHorizontal: 5,
   },
   filterSelected: {
@@ -223,7 +241,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   dateInput: {
-    backgroundColor: theme.colors.lightGray,
+    backgroundColor: theme.colors.accent,
     borderRadius: theme.radius.md,
     padding: theme.spacing(1.5),
     fontSize: 16,

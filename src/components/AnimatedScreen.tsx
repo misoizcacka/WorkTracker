@@ -1,8 +1,9 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, ReactNode } from 'react';
 import { View } from 'react-native';
 import Animated, { useSharedValue, useAnimatedStyle, withTiming } from 'react-native-reanimated';
+import { theme } from '../theme';
 
-const AnimatedScreen = ({ children }) => {
+const AnimatedScreen = ({ children, backgroundColor }: { children: ReactNode, backgroundColor?: string }) => {
   const opacity = useSharedValue(0);
 
   const animatedStyle = useAnimatedStyle(() => {
@@ -16,10 +17,11 @@ const AnimatedScreen = ({ children }) => {
   }, []);
 
   return (
-    <Animated.View style={[{ flex: 1 }, animatedStyle]}>
+    <Animated.View style={[{ flex: 1, backgroundColor: backgroundColor || theme.colors.background }, animatedStyle]}>
       {children}
     </Animated.View>
   );
 };
 
 export default AnimatedScreen;
+

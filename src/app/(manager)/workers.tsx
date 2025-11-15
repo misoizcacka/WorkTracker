@@ -1,20 +1,18 @@
-import React from "react";
-import { View, Text, StyleSheet, FlatList, ScrollView } from "react-native";
-import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
+import React, { useState } from "react";
+import { View, Text, StyleSheet, FlatList, useWindowDimensions, TextInput, Image } from "react-native";
 import { Card } from "../../components/Card";
 import AnimatedScreen from "../../components/AnimatedScreen";
 import { theme } from "../../theme";
-
 import { Button } from "../../components/Button";
-
 import { useRouter } from "expo-router";
-
 import { WorkersContext } from "./WorkersContext";
 
 export default function ManagerWorkers() {
-  const tabBarHeight = useBottomTabBarHeight();
+  const { width } = useWindowDimensions();
+  const isLargeScreen = width >= 900;
   const router = useRouter();
   const { workers } = React.useContext(WorkersContext)!;
+  const [searchTerm, setSearchTerm] = useState('');
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -27,71 +25,142 @@ export default function ManagerWorkers() {
     }
   };
 
-  const getStatusText = (status: string) => {
-    switch (status) {
-      case "onSite":
-        return "🟢 On Site";
-      case "offSite":
-        return "🟠 Away from Site";
-      default:
-        return "🔴 Not Checked In";
-    }
-  };
-
   const handleCreateWorker = () => {
     router.push("/(manager)/create-worker");
   };
 
+  const filteredWorkers = workers.filter(worker =>
+    worker.name.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const renderWorkerCard = ({ item }: { item: any }) => (
+    <Card style={styles.workerCard}>
+      <View style={styles.cardHeader}>
+        <Image source={{ uri: item.avatar }} style={styles.avatar} />
+        <View style={styles.headerText}>
+          <Text style={styles.workerName}>{item.name}</Text>
+          <Text style={styles.workerProject}>{item.project}</Text>
+        </View>
+      </View>
+      <View style={styles.cardBody}>
+        <View style={styles.statusContainer}>
+          <View style={[styles.statusDot, { backgroundColor: getStatusColor(item.status) }]} />
+          <Text style={styles.workerStatus}>{item.status.replace(/([A-Z])/g, ' $1')}</Text>
+        </View>
+        <Text style={styles.workerHours}>{item.hours} hrs today</Text>
+      </View>
+    </Card>
+  );
+
   return (
     <AnimatedScreen>
       <View style={styles.container}>
-        <View style={{ flex: 1, backgroundColor: 'white', borderTopLeftRadius: 20, borderTopRightRadius: 20, paddingHorizontal: theme.spacing(3), paddingTop: theme.spacing(3), paddingBottom: tabBarHeight }}>
-          <View style={styles.createWorkerContainer}>
-            <Button title="Create Worker" onPress={handleCreateWorker} style={styles.loginButton} textStyle={styles.loginButtonText} />
-          </View>
-          <ScrollView contentContainerStyle={styles.scrollViewContent}>
-            <FlatList
-              data={workers}
-              keyExtractor={(item) => item.id}
-              renderItem={({ item }) => (
-                <Card style={styles.workerCard}>
-                  <Text style={styles.workerName}>{item.name}</Text>
-                  <Text style={styles.workerProject}>{item.project}</Text>
-                  <Text style={[styles.workerStatus, { color: getStatusColor(item.status) }]}>
-                    {getStatusText(item.status)}
-                  </Text>
-                  <Text style={styles.workerHours}>{item.hours} hrs today}</Text>
-                </Card>
-              )}
-            />
-          </ScrollView>
+        <View style={styles.header}>
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search workers..."
+            value={searchTerm}
+            onChangeText={setSearchTerm}
+          />
+          <Button title="Create Worker" onPress={handleCreateWorker} style={styles.createButton} textStyle={styles.createButtonText} />
         </View>
+        <FlatList
+          data={filteredWorkers}
+          keyExtractor={(item) => item.id as string}
+          renderItem={renderWorkerCard}
+          numColumns={isLargeScreen ? 2 : 1}
+          key={isLargeScreen ? 'two-columns' : 'one-column'}
+          contentContainerStyle={styles.listContent}
+        />
       </View>
     </AnimatedScreen>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: theme.colors.primary },
-  createWorkerContainer: {
-    paddingHorizontal: theme.spacing(3),
-    paddingTop: theme.spacing(2),
+  container: {
+    flex: 1,
+    backgroundColor: 'white',
+    padding: theme.spacing(2),
   },
-  scrollViewContent: {
-    // No padding here
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: theme.spacing(2),
   },
-  workerCard: { marginBottom: theme.spacing(2) },
-  loginButton: {
-    backgroundColor: "black",
+  searchInput: {
+    flex: 1,
+    height: 40,
+    borderColor: theme.colors.lightBorder,
+    borderWidth: 1,
+    borderRadius: theme.radius.md,
+    paddingHorizontal: theme.spacing(2),
+    marginRight: theme.spacing(2),
+  },
+  createButton: {
+    backgroundColor: theme.colors.primary,
     borderRadius: theme.radius.md,
   },
-  loginButtonText: {
+  createButtonText: {
     color: "white",
     fontSize: 14,
     fontWeight: "normal",
   },
-  workerName: { fontSize: 16, fontWeight: "600", color: theme.colors.text },
-  workerProject: { fontSize: 14, color: theme.colors.textLight, marginTop: 2 },
-  workerStatus: { fontSize: 14, marginTop: 2 },
-  workerHours: { fontSize: 16, color: theme.colors.primary, marginTop: 4 },
+  listContent: {
+    paddingBottom: theme.spacing(10),
+  },
+  workerCard: {
+    flex: 1,
+    margin: theme.spacing(1),
+    padding: theme.spacing(2),
+  },
+  cardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: theme.spacing(2),
+  },
+  avatar: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    marginRight: theme.spacing(2),
+  },
+  headerText: {
+    flex: 1,
+  },
+  workerName: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: theme.colors.text,
+  },
+  workerProject: {
+    fontSize: 14,
+    color: theme.colors.textLight,
+  },
+  cardBody: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: theme.spacing(1),
+  },
+  statusContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  statusDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginRight: theme.spacing(1),
+  },
+  workerStatus: {
+    fontSize: 14,
+    textTransform: 'capitalize',
+  },
+  workerHours: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: theme.colors.primary,
+  },
 });

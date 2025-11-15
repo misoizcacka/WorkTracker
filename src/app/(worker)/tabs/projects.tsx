@@ -5,7 +5,14 @@ import { Card } from '../../../components/Card';
 import { theme } from '../../../theme';
 import AnimatedScreen from '../../../components/AnimatedScreen';
 
-const mockProjects = [
+interface Project {
+  id: string;
+  name: string;
+  address: string;
+  status: string;
+}
+
+const mockProjects: Project[] = [
   {
     id: '1',
     name: 'Modern Villa Construction',
@@ -39,7 +46,7 @@ export default function ProjectsScreen() {
     router.push(`/(worker)/${projectId}`);
   };
 
-  const renderProject = ({ item }) => (
+  const renderProject = ({ item }: { item: Project }) => (
     <TouchableOpacity onPress={() => handleProjectPress(item.id)}>
       <Card style={styles.projectCard}>
         <Text style={styles.subtitle}>{item.name}</Text>

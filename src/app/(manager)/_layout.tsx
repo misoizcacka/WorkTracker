@@ -5,11 +5,22 @@ import { Ionicons } from "@expo/vector-icons";
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { withLayoutContext } from 'expo-router';
 
+import { theme } from "../../theme";
 import { WorkersProvider } from "./WorkersContext";
+
+import { ProjectsProvider } from "./ProjectsContext";
 
 const { Navigator } = createBottomTabNavigator();
 
 export const BottomTabs = withLayoutContext(Navigator);
+
+function ManagerProviders({ children }: { children: React.ReactNode }) {
+  return (
+    <WorkersProvider>
+      <ProjectsProvider>{children}</ProjectsProvider>
+    </WorkersProvider>
+  );
+}
 
 export default function ManagerLayout() {
   const { width } = useWindowDimensions();
@@ -18,15 +29,16 @@ export default function ManagerLayout() {
   if (isLargeScreen) {
     // 🖥️ Web/Desktop → Sidebar Drawer
     return (
-      <WorkersProvider>
+      <ManagerProviders>
         <Drawer
           screenOptions={{
             headerShown: true,
             headerStyle: {
-              backgroundColor: '#f7f7f7',
+              backgroundColor: theme.colors.primary,
               elevation: 0, // Remove shadow on Android
               shadowOpacity: 0, // Remove shadow on iOS
             },
+            headerTintColor: theme.colors.background,
             headerTitle: () => (
               <Image
                 source={require('../../../assets/logowhitenavy.png')}
@@ -57,6 +69,15 @@ export default function ManagerLayout() {
             }}
           />
           <Drawer.Screen
+            name="projects"
+            options={{
+              title: "Projects",
+              drawerIcon: ({ color, size }: { color: string; size: number }) => (
+                <Ionicons name="briefcase-outline" color={color} size={size} />
+              ),
+            }}
+          />
+          <Drawer.Screen
             name="reports"
             options={{
               title: "Reports",
@@ -75,13 +96,13 @@ export default function ManagerLayout() {
             }}
           />
         </Drawer>
-      </WorkersProvider>
+      </ManagerProviders>
     );
   }
 
   // 📱 Mobile → Tabs
   return (
-    <WorkersProvider>
+    <ManagerProviders>
       <BottomTabs
         screenOptions={{
           headerShown: true,
@@ -130,6 +151,15 @@ export default function ManagerLayout() {
           }}
         />
         <BottomTabs.Screen
+          name="projects"
+          options={{
+            title: "Projects",
+            tabBarIcon: ({ color, size }: { color: string; size: number }) => (
+              <Ionicons name="briefcase-outline" color={color} size={size} />
+            ),
+          }}
+        />
+        <BottomTabs.Screen
           name="reports"
           options={{
             title: "Reports",
@@ -148,6 +178,6 @@ export default function ManagerLayout() {
           }}
         />
       </BottomTabs>
-    </WorkersProvider>
+    </ManagerProviders>
   );
 }

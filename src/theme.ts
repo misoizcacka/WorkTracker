@@ -7,6 +7,8 @@ export const theme = {
     // Brand colors
     primary: "#000080", // navy
     primaryDark: "#000080", // navy
+    primaryMuted: "#E6E6FA", // light blue for muted primary
+    secondary: "#FFA500", // orange
     accent: "#E0E0E0", // light gray accent for highlights
 
     // Status / system colors

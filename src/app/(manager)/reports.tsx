@@ -1,12 +1,14 @@
 import React, { useState } from "react";
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, ScrollView } from "react-native";
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, ScrollView, useWindowDimensions } from "react-native";
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { Card } from "../../components/Card";
 import AnimatedScreen from "../../components/AnimatedScreen";
 import { theme } from "../../theme";
 
 export default function ManagerReports() {
-  const tabBarHeight = useBottomTabBarHeight();
+  const { width } = useWindowDimensions();
+  const isLargeScreen = width >= 900;
+  const tabBarHeight = isLargeScreen ? 0 : useBottomTabBarHeight();
   const [selectedMonth, setSelectedMonth] = useState("October 2025");
 
   const reports = [

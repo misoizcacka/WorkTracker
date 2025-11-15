@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { View, Text, StyleSheet, Switch } from "react-native";
+import { View, Text, StyleSheet, Switch, useWindowDimensions } from "react-native";
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import * as LocalAuthentication from "expo-local-authentication";
 import { Card } from "../../components/Card";
@@ -10,7 +10,9 @@ import { useSession } from "../../context/AuthContext";
 import { setStorageItemAsync, useStorageState } from "../../hooks/useStorageState";
 
 export default function ManagerAccount() {
-  const tabBarHeight = useBottomTabBarHeight();
+  const { width } = useWindowDimensions();
+  const isLargeScreen = width >= 900;
+  const tabBarHeight = isLargeScreen ? 0 : useBottomTabBarHeight();
   const { signOut, user } = useSession()!;
   const [isBiometricSupported, setIsBiometricSupported] = useState(false);
   const [[isLoading, isBiometricEnabled], setIsBiometricEnabled] = useStorageState('biometricEnabled');
