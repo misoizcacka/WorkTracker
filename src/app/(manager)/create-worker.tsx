@@ -63,13 +63,13 @@ const styles = StyleSheet.create({
   },
   input: {
     height: 50,
-    borderColor: theme.colors.lightBorder,
+    borderColor: theme.colors.borderColor,
     borderWidth: 1,
     borderRadius: theme.radius.md,
     paddingHorizontal: theme.spacing(2),
     marginBottom: theme.spacing(2),
     fontSize: 16,
-    color: theme.colors.text,
+    color: theme.colors.headingText,
   },
   primaryButton: {
     backgroundColor: theme.colors.primary,

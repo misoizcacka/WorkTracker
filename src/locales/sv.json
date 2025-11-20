@@ -11,7 +11,8 @@
     "and": "och",
     "privacyLink": "Integritetspolicy",
     "or": "eller",
-    "registerManagerButton": "Registrera dig som chef"
+    "registerManagerButton": "Registrera dig som chef",
+    "getStartedButton": "Kom igång med ditt företag"
   },
   "signup": {
     "title": "Registrera dig",
@@ -21,6 +22,28 @@
     "password": "Lösenord",
     "confirmPassword": "Bekräfta lösenord",
     "signupButton": "Registrera dig",
-    "loginButton": "Logga in"
+    "loginButton": "Logga in",
+    "error": "Fel",
+    "allFieldsRequired": "Alla fält är obligatoriska.",
+    "passwordsMismatch": "Lösenorden matchar inte.",
+    "invalidEmail": "Vänligen ange en giltig e-postadress.",
+    "passwordTooShort": "Lösenordet måste vara minst 6 tecken långt.",
+    "continueButton": "Fortsätt"
+  },
+  "pricing": {
+    "title": "Välj din plan",
+    "description": "Välj antal anställda för att beräkna din månatliga prenumeration.",
+    "baseFee": "Grundavgift per månad: {fee} EUR",
+    "perWorkerFee": "Pris per anställd: {price} EUR",
+    "numberOfWorkers": "Antal anställda",
+    "totalMonthlyCost": "Total månadskostnad",
+    "confirmButton": "Bekräfta plan",
+    "error": "Fel",
+    "invalidWorkerCount": "Vänligen ange ett giltigt antal anställda (minst 1)."
+  },
+  "payment": {
+    "title": "Betalning lyckades!",
+    "description": "Ditt abonnemang har framgångsrikt ställts in. Du kan nu logga in i appen med ditt nya chefskonto.",
+    "goToLoginButton": "Gå till inloggning"
   }
 }

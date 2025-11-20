@@ -10,7 +10,7 @@ export default function WorkerLayout() {
         headerStyle: {
           backgroundColor: theme.colors.primary,
         },
-        headerTintColor: '#fff',
+        headerTintColor: theme.colors.cardBackground,
         headerTitle: () => (
           <Image
             source={require('../../../assets/logowhitenavy.png')}

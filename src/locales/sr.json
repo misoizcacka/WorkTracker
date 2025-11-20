@@ -11,7 +11,8 @@
     "and": "i",
     "privacyLink": "Politikom privatnosti",
     "or": "ili",
-    "registerManagerButton": "Registrujte se kao menadžer"
+    "registerManagerButton": "Registrujte se kao menadžer",
+    "getStartedButton": "Započnite sa vašom kompanijom"
   },
   "signup": {
     "title": "Registracija",
@@ -21,6 +22,28 @@
     "password": "Lozinka",
     "confirmPassword": "Potvrdite lozinku",
     "signupButton": "Registrujte se",
-    "loginButton": "Prijava"
+    "loginButton": "Prijava",
+    "error": "Greška",
+    "allFieldsRequired": "Sva polja su obavezna.",
+    "passwordsMismatch": "Lozinke se ne podudaraju.",
+    "invalidEmail": "Molimo unesite ispravnu email adresu.",
+    "passwordTooShort": "Lozinka mora imati najmanje 6 karaktera.",
+    "continueButton": "Nastavi"
+  },
+  "pricing": {
+    "title": "Odaberite svoj plan",
+    "description": "Odaberite broj radnika da biste izračunali svoju mesečnu pretplatu.",
+    "baseFee": "Osnovna mesečna naknada: {fee} EUR",
+    "perWorkerFee": "Cena po radniku: {price} EUR",
+    "numberOfWorkers": "Broj radnika",
+    "totalMonthlyCost": "Ukupni mesečni trošak",
+    "confirmButton": "Potvrdi plan",
+    "error": "Greška",
+    "invalidWorkerCount": "Molimo unesite validan broj radnika (najmanje 1)."
+  },
+  "payment": {
+    "title": "Plaćanje uspešno!",
+    "description": "Vaša pretplata je uspešno podešena. Sada se možete prijaviti u aplikaciju sa svojim novim menadžerskim nalogom.",
+    "goToLoginButton": "Idi na prijavu"
   }
 }

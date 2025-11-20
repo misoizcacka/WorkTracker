@@ -40,13 +40,17 @@ export default function ManagerProjects() {
   const renderProjectCard = ({ item }: { item: any }) => (
     <TouchableOpacity onPress={() => handleProjectPress(item.id)} style={{ width: `${100 / numColumns}%` }}>
       <Card style={styles.projectCard}>
-        <Image source={{ uri: item.pictures[0] }} style={styles.projectImage} />
+        {item.photos && item.photos.length > 0 ? (
+          <Image source={{ uri: item.photos[0] }} style={styles.projectImage} />
+        ) : (
+          <View style={[styles.projectImage, { backgroundColor: theme.colors.cardBackground }]} /> // Placeholder
+        )}
         <View style={styles.cardContent}>
           <Text style={styles.projectName}>{item.name}</Text>
           <Text style={styles.projectAddress}>{item.address}</Text>
           <View style={styles.cardFooter}>
             <View style={styles.footerStat}>
-              <Ionicons name="people" size={16} color={theme.colors.textLight} />
+              <Ionicons name="people" size={16} color={theme.colors.bodyText} />
               <Text style={styles.footerStatText}>{getWorkerCountForProject(item.name)}</Text>
             </View>
             <Text style={styles.lastModified}>Last updated: {new Date(item.lastModified).toLocaleDateString()}</Text>
@@ -91,7 +95,7 @@ const styles = StyleSheet.create({
   },
   searchInput: {
     height: 40,
-    borderColor: theme.colors.lightBorder,
+    borderColor: theme.colors.borderColor,
     borderWidth: 1,
     borderRadius: theme.radius.md,
     paddingHorizontal: theme.spacing(2),
@@ -114,11 +118,11 @@ const styles = StyleSheet.create({
   projectName: {
     fontSize: 16,
     fontWeight: "600",
-    color: theme.colors.text,
+    color: theme.colors.headingText,
   },
   projectAddress: {
     fontSize: 14,
-    color: theme.colors.textLight,
+    color: theme.colors.bodyText,
     marginTop: 2,
   },
   cardFooter: {
@@ -133,10 +137,10 @@ const styles = StyleSheet.create({
   },
   footerStatText: {
     marginLeft: theme.spacing(1),
-    color: theme.colors.textLight,
+    color: theme.colors.bodyText,
   },
   lastModified: {
     fontSize: 12,
-    color: theme.colors.textLight,
+    color: theme.colors.bodyText,
   },
 });

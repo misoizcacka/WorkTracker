@@ -1,3 +1,4 @@
+import { Linking } from "react-native";
 import * as React from "react";
 import { useState, useEffect, useReducer, useContext } from "react";
 import { View, Text, TextInput, StyleSheet, Alert, SafeAreaView, Dimensions, Image } from "react-native";
@@ -71,8 +72,8 @@ export default function Login() {
             <View style={styles.separatorLine} />
           </View>
           <Button
-            title={t('login.registerManagerButton')}
-            onPress={() => router.push("/(guest)/signup")}
+            title={t('login.getStartedButton')}
+            onPress={() => Linking.openURL("http://192.168.188.52:8081/signup")} // Expo-provided URL
             type="secondary"
             textStyle={styles.managerButtonText}
           />
@@ -106,25 +107,25 @@ const styles = StyleSheet.create({
   loginHeading: {
     fontSize: 24,
     fontWeight: "bold",
-    color: theme.colors.text,
+    color: theme.colors.headingText,
     textAlign: "center",
     marginBottom: theme.spacing(2),
   },
   loginDescription: {
     fontSize: 14,
-    color: theme.colors.text,
+    color: theme.colors.headingText,
     textAlign: "center",
     marginBottom: theme.spacing(4),
   },
   input: {
     height: 50,
-    borderColor: theme.colors.lightBorder,
+    borderColor: theme.colors.borderColor,
     borderWidth: 1,
     borderRadius: theme.radius.md,
     paddingHorizontal: theme.spacing(2),
     marginBottom: theme.spacing(2),
     fontSize: 16,
-    color: theme.colors.text,
+    color: theme.colors.headingText,
   },
   primaryButton: {
     backgroundColor: theme.colors.primary,
@@ -137,7 +138,7 @@ const styles = StyleSheet.create({
     fontWeight: "normal",
   },
   managerButtonText: {
-    color: theme.colors.text,
+    color: theme.colors.headingText,
     fontSize: 14,
     fontWeight: "normal",
   },
@@ -146,12 +147,12 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   termsText: {
-    color: "#828282",
+    color: theme.colors.bodyText,
     fontSize: 12,
     textAlign: "center",
   },
   termsLink: {
-    color: theme.colors.text,
+    color: theme.colors.headingText,
     fontWeight: "bold",
   },
   separatorContainer: {
@@ -162,11 +163,11 @@ const styles = StyleSheet.create({
   separatorLine: {
     flex: 1,
     height: 1,
-    backgroundColor: theme.colors.lightBorder,
+    backgroundColor: theme.colors.borderColor,
   },
   separatorText: {
     marginHorizontal: theme.spacing(2),
-    color: theme.colors.textLight,
+    color: theme.colors.bodyText,
   },
   gradientContainer: {
     position: "absolute",

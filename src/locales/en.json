@@ -11,7 +11,8 @@
     "and": "and",
     "privacyLink": "Privacy policy",
     "or": "or",
-    "registerManagerButton": "Register as Manager"
+    "registerManagerButton": "Register as Manager",
+    "getStartedButton": "Get started with your company"
   },
   "signup": {
     "title": "Sign Up",
@@ -21,6 +22,28 @@
     "password": "Password",
     "confirmPassword": "Confirm Password",
     "signupButton": "Sign Up",
-    "loginButton": "Login"
+    "loginButton": "Login",
+    "error": "Error",
+    "allFieldsRequired": "All fields are required.",
+    "passwordsMismatch": "Passwords do not match.",
+    "invalidEmail": "Please enter a valid email address.",
+    "passwordTooShort": "Password must be at least 6 characters long.",
+    "continueButton": "Continue"
+  },
+  "pricing": {
+    "title": "Choose Your Plan",
+    "description": "Select the number of workers to calculate your monthly subscription.",
+    "baseFee": "Base monthly fee: {fee} EUR",
+    "perWorkerFee": "Price per worker: {price} EUR",
+    "numberOfWorkers": "Number of Workers",
+    "totalMonthlyCost": "Total Monthly Cost",
+    "confirmButton": "Confirm Plan",
+    "error": "Error",
+    "invalidWorkerCount": "Please enter a valid number of workers (at least 1)."
+  },
+  "payment": {
+    "title": "Payment Successful!",
+    "description": "Your subscription has been successfully set up. You can now log in to the app with your new manager account.",
+    "goToLoginButton": "Go to Login"
   }
 }

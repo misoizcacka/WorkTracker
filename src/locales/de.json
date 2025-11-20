@@ -11,7 +11,8 @@
     "and": "und",
     "privacyLink": "Datenschutzbestimmungen",
     "or": "oder",
-    "registerManagerButton": "Als Manager registrieren"
+    "registerManagerButton": "Als Manager registrieren",
+    "getStartedButton": "Mit Ihrem Unternehmen starten"
   },
   "signup": {
     "title": "Registrieren",
@@ -21,6 +22,28 @@
     "password": "Passwort",
     "confirmPassword": "Passwort bestätigen",
     "signupButton": "Registrieren",
-    "loginButton": "Anmelden"
+    "loginButton": "Anmelden",
+    "error": "Fehler",
+    "allFieldsRequired": "Alle Felder sind erforderlich.",
+    "passwordsMismatch": "Passwörter stimmen nicht überein.",
+    "invalidEmail": "Bitte geben Sie eine gültige E-Mail-Adresse ein.",
+    "passwordTooShort": "Das Passwort muss mindestens 6 Zeichen lang sein.",
+    "continueButton": "Weiter"
+  },
+  "pricing": {
+    "title": "Wählen Sie Ihren Plan",
+    "description": "Wählen Sie die Anzahl der Mitarbeiter, um Ihr monatliches Abonnement zu berechnen.",
+    "baseFee": "Grundgebühr pro Monat: {fee} EUR",
+    "perWorkerFee": "Preis pro Mitarbeiter: {price} EUR",
+    "numberOfWorkers": "Anzahl der Mitarbeiter",
+    "totalMonthlyCost": "Gesamtkosten pro Monat",
+    "confirmButton": "Plan bestätigen",
+    "error": "Fehler",
+    "invalidWorkerCount": "Bitte geben Sie eine gültige Anzahl von Mitarbeitern ein (mindestens 1)."
+  },
+  "payment": {
+    "title": "Zahlung erfolgreich!",
+    "description": "Ihr Abonnement wurde erfolgreich eingerichtet. Sie können sich jetzt mit Ihrem neuen Manager-Konto in der App anmelden.",
+    "goToLoginButton": "Zum Login"
   }
 }

@@ -167,7 +167,7 @@ export default function WorkerDashboardScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: theme.colors.background,
+    backgroundColor: theme.colors.pageBackground,
   },
   header: {
     paddingHorizontal: theme.spacing(2),
@@ -177,7 +177,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 28,
     fontWeight: 'bold',
-    color: theme.colors.text,
+    color: theme.colors.headingText,
   },
   summaryCard: {
     marginHorizontal: theme.spacing(2),
@@ -200,11 +200,11 @@ const styles = StyleSheet.create({
   metricValue: {
     fontSize: 26,
     fontWeight: 'bold',
-    color: theme.colors.text,
+    color: theme.colors.headingText,
   },
   metricLabel: {
     fontSize: 14,
-    color: theme.colors.textLight,
+    color: theme.colors.bodyText,
     marginTop: 4,
   },
   filterContainer: {
@@ -223,10 +223,10 @@ const styles = StyleSheet.create({
   filterText: {
     fontSize: 14,
     fontWeight: '500',
-    color: theme.colors.text,
+    color: theme.colors.headingText,
   },
   filterSelectedText: {
-    color: '#fff',
+    color: theme.colors.cardBackground,
   },
   datePickerContainer: {
     marginHorizontal: theme.spacing(2),
@@ -237,7 +237,7 @@ const styles = StyleSheet.create({
   },
   datePickerLabel: {
     fontSize: 14,
-    color: theme.colors.textLight,
+    color: theme.colors.bodyText,
     marginBottom: 4,
   },
   dateInput: {
@@ -253,14 +253,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   datePickerButtonText: {
-    color: '#fff',
+    color: theme.colors.cardBackground,
     fontWeight: 'bold',
     fontSize: 16,
   },
   sessionsTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: theme.colors.text,
+    color: theme.colors.headingText,
     marginHorizontal: theme.spacing(2),
     marginBottom: theme.spacing(1),
   },
@@ -280,7 +280,7 @@ const styles = StyleSheet.create({
   sessionDate: {
     fontSize: 16,
     fontWeight: '600',
-    color: theme.colors.text,
+    color: theme.colors.headingText,
   },
   sessionHours: {
     fontSize: 16,
@@ -289,11 +289,11 @@ const styles = StyleSheet.create({
   },
   sessionProject: {
     fontSize: 15,
-    color: theme.colors.text,
+    color: theme.colors.headingText,
     marginVertical: 4,
   },
   sessionAddress: {
     fontSize: 13,
-    color: theme.colors.textLight,
+    color: theme.colors.bodyText,
   },
 });

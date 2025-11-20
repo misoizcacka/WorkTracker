@@ -157,7 +157,7 @@ export default function WorkerHomeScreen() {
                 {
                   color:
                     !locationReady
-                      ? theme.colors.textLight
+                      ? theme.colors.bodyText
                       : isNearby
                       ? theme.colors.success
                       : theme.colors.danger,
@@ -189,7 +189,7 @@ export default function WorkerHomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: theme.colors.background,
+    backgroundColor: theme.colors.pageBackground,
   },
   scrollViewContent: {
     flexGrow: 1,
@@ -205,12 +205,12 @@ const styles = StyleSheet.create({
   cardTitle: {
     fontSize: 26,
     fontWeight: "bold",
-    color: theme.colors.text,
+    color: theme.colors.headingText,
     marginBottom: theme.spacing(1),
   },
   checkInTimeText: {
     fontSize: 16,
-    color: theme.colors.textLight,
+    color: theme.colors.bodyText,
     marginBottom: theme.spacing(3),
   },
   timerContainer: {
@@ -226,12 +226,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 15,
-    borderColor: theme.colors.border,
+    borderColor: theme.colors.borderColor,
   },
   notCheckedInText: {
     fontSize: 22,
     fontWeight: "600",
-    color: theme.colors.textLight,
+    color: theme.colors.bodyText,
   },
   distanceText: {
     fontSize: 16,
@@ -242,9 +242,9 @@ const styles = StyleSheet.create({
   footer: {
     paddingHorizontal: theme.spacing(3),
     paddingVertical: theme.spacing(2),
-    backgroundColor: theme.colors.background,
+    backgroundColor: theme.colors.pageBackground,
     borderTopWidth: 1,
-    borderTopColor: theme.colors.border,
+    borderTopColor: theme.colors.borderColor,
   },
   primaryButton: {
     backgroundColor: theme.colors.primary,

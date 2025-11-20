@@ -92,7 +92,7 @@ const styles = StyleSheet.create({
   searchInput: {
     flex: 1,
     height: 40,
-    borderColor: theme.colors.lightBorder,
+    borderColor: theme.colors.borderColor,
     borderWidth: 1,
     borderRadius: theme.radius.md,
     paddingHorizontal: theme.spacing(2),
@@ -132,11 +132,11 @@ const styles = StyleSheet.create({
   workerName: {
     fontSize: 16,
     fontWeight: "600",
-    color: theme.colors.text,
+    color: theme.colors.headingText,
   },
   workerProject: {
     fontSize: 14,
-    color: theme.colors.textLight,
+    color: theme.colors.bodyText,
   },
   cardBody: {
     flexDirection: 'row',

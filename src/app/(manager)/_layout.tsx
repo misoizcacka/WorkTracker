@@ -1,14 +1,16 @@
 import React from "react";
-import { useWindowDimensions, Image } from "react-native";
+import { Image } from "react-native";
 import { Drawer } from "expo-router/drawer";
 import { Ionicons } from "@expo/vector-icons";
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { withLayoutContext } from 'expo-router';
+import { useDebouncedWindowDimensions } from "../../hooks/useDebouncedWindowDimensions";
 
 import { theme } from "../../theme";
 import { WorkersProvider } from "./WorkersContext";
 
 import { ProjectsProvider } from "./ProjectsContext";
+import { AssignmentsProvider } from "./AssignmentsContext";
 
 const { Navigator } = createBottomTabNavigator();
 
@@ -17,13 +19,17 @@ export const BottomTabs = withLayoutContext(Navigator);
 function ManagerProviders({ children }: { children: React.ReactNode }) {
   return (
     <WorkersProvider>
-      <ProjectsProvider>{children}</ProjectsProvider>
+      <ProjectsProvider>
+        <AssignmentsProvider>
+          {children}
+        </AssignmentsProvider>
+      </ProjectsProvider>
     </WorkersProvider>
   );
 }
 
 export default function ManagerLayout() {
-  const { width } = useWindowDimensions();
+  const { width } = useDebouncedWindowDimensions(50);
   const isLargeScreen = width >= 900;
 
   if (isLargeScreen) {
@@ -38,14 +44,14 @@ export default function ManagerLayout() {
               elevation: 0, // Remove shadow on Android
               shadowOpacity: 0, // Remove shadow on iOS
             },
-            headerTintColor: theme.colors.background,
+            headerTintColor: theme.colors.pageBackground,
             headerTitle: () => (
               <Image
                 source={require('../../../assets/logowhitenavy.png')}
                 style={{ width: 150, height: 40, resizeMode: 'contain' }}
               />
             ),
-            drawerStyle: { backgroundColor: "#f7f7f7", width: 260 },
+            drawerStyle: { backgroundColor: theme.colors.pageBackground, width: 260 },
             drawerActiveTintColor: "#2563EB",
             drawerLabelStyle: { fontSize: 16, fontWeight: "500" },
           }}
@@ -74,6 +80,15 @@ export default function ManagerLayout() {
               title: "Projects",
               drawerIcon: ({ color, size }: { color: string; size: number }) => (
                 <Ionicons name="briefcase-outline" color={color} size={size} />
+              ),
+            }}
+          />
+          <Drawer.Screen
+            name="project-assignment"
+            options={{
+              title: "Project Assignment",
+              drawerIcon: ({ color, size }: { color: string; size: number }) => (
+                <Ionicons name="calendar-outline" color={color} size={size} />
               ),
             }}
           />
@@ -117,7 +132,7 @@ export default function ManagerLayout() {
               style={{ width: 150, height: 40, resizeMode: 'contain' }}
             />
           ),
-          tabBarActiveTintColor: "#fff",
+          tabBarActiveTintColor: theme.colors.cardBackground,
                   tabBarStyle: {
                     backgroundColor: "rgba(0,0,0,0.25)",
                     borderTopWidth: 0,
@@ -156,6 +171,15 @@ export default function ManagerLayout() {
             title: "Projects",
             tabBarIcon: ({ color, size }: { color: string; size: number }) => (
               <Ionicons name="briefcase-outline" color={color} size={size} />
+            ),
+          }}
+        />
+        <BottomTabs.Screen
+          name="project-assignment"
+          options={{
+            title: "Assignment",
+            tabBarIcon: ({ color, size }: { color: string; size: number }) => (
+              <Ionicons name="calendar-outline" color={color} size={size} />
             ),
           }}
         />

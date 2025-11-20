@@ -65,9 +65,9 @@ export default function ProjectsScreen() {
       case 'Completed':
         return theme.colors.success;
       case 'Not Started':
-        return theme.colors.textLight;
+        return theme.colors.bodyText;
       default:
-        return theme.colors.text;
+        return theme.colors.headingText;
     }
   };
 
@@ -90,12 +90,12 @@ export default function ProjectsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: theme.colors.background,
+    backgroundColor: theme.colors.pageBackground,
   },
   title: {
     fontSize: 28,
     fontWeight: 'bold',
-    color: theme.colors.text,
+    color: theme.colors.headingText,
     paddingHorizontal: theme.spacing(2),
     paddingTop: theme.spacing(2),
     paddingBottom: theme.spacing(1),
@@ -103,7 +103,7 @@ const styles = StyleSheet.create({
   subtitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: theme.colors.text,
+    color: theme.colors.headingText,
   },
   listContainer: {
     paddingHorizontal: theme.spacing(2),
@@ -114,7 +114,7 @@ const styles = StyleSheet.create({
     padding: theme.spacing(2),
   },
   addressText: {
-    color: theme.colors.textLight,
+    color: theme.colors.bodyText,
     marginTop: 4,
   },
   statusText: {

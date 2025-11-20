@@ -81,8 +81,8 @@ export default function ManagerAccount() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: theme.colors.primary },
   card: { width: "100%", marginBottom: theme.spacing(3) },
-  label: { fontSize: 16, color: theme.colors.textLight, marginTop: theme.spacing(1) },
-  value: { fontSize: 18, fontWeight: "600", color: theme.colors.text },
+  label: { fontSize: 16, color: theme.colors.bodyText, marginTop: theme.spacing(1) },
+  value: { fontSize: 18, fontWeight: "600", color: theme.colors.headingText },
   biometricRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
-  biometricText: { fontSize: 16, color: theme.colors.text },
+  biometricText: { fontSize: 16, color: theme.colors.headingText },
 });

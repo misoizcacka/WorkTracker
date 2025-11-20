@@ -66,7 +66,7 @@ export const CircularTimer: React.FC<CircularTimerProps> = ({ elapsedTime, size,
       <Animated.View style={{ transform: [{ rotate }] }}>
         <Svg width={size} height={size}>
           <Circle
-            stroke={theme.colors.lightBorder}
+            stroke={theme.colors.borderColor}
             fill="none"
             cx={size / 2}
             cy={size / 2}

@@ -13,8 +13,19 @@ interface WorkerLocation {
   address?: string;
 }
 
+interface ProjectLocation {
+  id: string;
+  name: string;
+  location: {
+    latitude: number;
+    longitude: number;
+  };
+}
+
 interface CommonMapViewProps extends RNMapViewProps {
   workers?: WorkerLocation[];
+  selectedWorkers?: WorkerLocation[];
+  selectedProjects?: ProjectLocation[];
   initialRegion?: {
     latitude: number;
     longitude: number;

@@ -17,8 +17,8 @@ const WorkerTabsLayout = () => {
         headerShown: false, // The header is shown in the parent stack navigator
         tabBarActiveTintColor: theme.colors.primary,
         tabBarStyle: {
-          backgroundColor: "#fff",
-          borderTopColor: "#ddd",
+          backgroundColor: theme.colors.cardBackground,
+          borderTopColor: theme.colors.borderColor,
           position: 'absolute',
           bottom: 0,
           left: 0,

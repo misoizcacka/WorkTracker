@@ -17,7 +17,7 @@ const AnimatedScreen = ({ children, backgroundColor }: { children: ReactNode, ba
   }, []);
 
   return (
-    <Animated.View style={[{ flex: 1, backgroundColor: backgroundColor || theme.colors.background }, animatedStyle]}>
+    <Animated.View style={[{ flex: 1, backgroundColor: backgroundColor || theme.colors.pageBackground }, animatedStyle]}>
       {children}
     </Animated.View>
   );

@@ -65,11 +65,11 @@ const styles = StyleSheet.create({
     // No padding here
   },
   monthSelector: { flexDirection: "row", justifyContent: "space-around", marginBottom: theme.spacing(3) },
-  monthButton: { fontSize: 14, color: theme.colors.textLight },
+  monthButton: { fontSize: 14, color: theme.colors.bodyText },
   monthButtonActive: { color: theme.colors.primary, fontWeight: "700" },
   sectionTitle: { fontSize: 18, fontWeight: "600", marginBottom: theme.spacing(2) },
   reportCard: { marginBottom: theme.spacing(2) },
-  workerName: { fontSize: 16, fontWeight: "600", color: theme.colors.text },
-  workerHours: { fontSize: 16, color: theme.colors.textLight },
+  workerName: { fontSize: 16, fontWeight: "600", color: theme.colors.headingText },
+  workerHours: { fontSize: 16, color: theme.colors.bodyText },
   workerPay: { fontSize: 16, color: theme.colors.primary, marginTop: 2 },
 });

@@ -1,27 +1,23 @@
 export const theme = {
   colors: {
-    // App backgrounds
-    background: "#FFFFFF", // white base
-    surface: "#F8FAFC", // slightly lighter surface for cards or modals
+    // User-defined colors
+    pageBackground: "#F2F3F5",
+    cardBackground: "#FFFFFF",
+    headingText: "#1A1A1C",
+    bodyText: "#3A3A3C",
+    iconColor: "#5A5A5C",
+    borderColor: "#E0E1E5",
 
-    // Brand colors
+    // Existing brand/status colors (keeping for now, will check usage later)
     primary: "#000080", // navy
     primaryDark: "#000080", // navy
     primaryMuted: "#E6E6FA", // light blue for muted primary
     secondary: "#FFA500", // orange
     accent: "#E0E0E0", // light gray accent for highlights
 
-    // Status / system colors
     success: "#16A34A", // balanced green
     warning: "#F59E0B", // subtle amber
     danger: "#DC2626", // standard red for errors
-
-    // Text colors
-    text: "#000000", // black text for light backgrounds
-    textLight: "#828282", // softer gray for hints/placeholders
-    gray: "#828282",
-    border: "#334155", // muted slate border lines
-    lightBorder: "#E0E0E0",
   },
 
   spacing: (n: number) => n * 8,

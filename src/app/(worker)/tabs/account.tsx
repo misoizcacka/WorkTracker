@@ -68,7 +68,7 @@ export default function WorkerAccountScreen() {
 
           <Card style={styles.detailsCard}>
             <View style={styles.detailItem}>
-              <Ionicons name="mail-outline" size={24} color={theme.colors.textLight} />
+              <Ionicons name="mail-outline" size={24} color={theme.colors.bodyText} />
               <Text style={styles.detailText}>{mockUser.email}</Text>
             </View>
           </Card>
@@ -76,13 +76,13 @@ export default function WorkerAccountScreen() {
           {isBiometricSupported && (
             <Card style={styles.settingsCard}>
               <View style={styles.settingItem}>
-                <Ionicons name="finger-print-outline" size={24} color={theme.colors.text} />
+                <Ionicons name="finger-print-outline" size={24} color={theme.colors.headingText} />
                 <Text style={styles.settingText}>Enable Biometric Login</Text>
                 <Switch
                   value={isBiometricEnabled === 'true'}
                   onValueChange={handleBiometricSwitch}
                   trackColor={{ false: theme.colors.accent, true: theme.colors.primary }}
-                  thumbColor={'#fff'}
+                  thumbColor={theme.colors.cardBackground}
                 />
               </View>
             </Card>
@@ -103,7 +103,7 @@ export default function WorkerAccountScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: theme.colors.background,
+    backgroundColor: theme.colors.pageBackground,
   },
   header: {
     paddingHorizontal: theme.spacing(2),
@@ -113,7 +113,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 28,
     fontWeight: 'bold',
-    color: theme.colors.text,
+    color: theme.colors.headingText,
   },
   content: {
     padding: theme.spacing(2),
@@ -135,11 +135,11 @@ const styles = StyleSheet.create({
   name: {
     fontSize: 22,
     fontWeight: 'bold',
-    color: theme.colors.text,
+    color: theme.colors.headingText,
   },
   role: {
     fontSize: 16,
-    color: theme.colors.textLight,
+    color: theme.colors.bodyText,
     marginTop: 4,
   },
   detailsCard: {
@@ -153,7 +153,7 @@ const styles = StyleSheet.create({
   detailText: {
     fontSize: 16,
     marginLeft: theme.spacing(2),
-    color: theme.colors.text,
+    color: theme.colors.headingText,
   },
   settingsCard: {
     padding: theme.spacing(2),
@@ -168,14 +168,14 @@ const styles = StyleSheet.create({
     fontSize: 16,
     marginLeft: theme.spacing(2),
     flex: 1,
-    color: theme.colors.text,
+    color: theme.colors.headingText,
   },
   logoutButton: {
     backgroundColor: theme.colors.danger,
     marginTop: theme.spacing(2),
   },
   logoutButtonText: {
-    color: '#fff',
+    color: theme.colors.cardBackground,
     fontWeight: 'bold',
   },
 });

@@ -155,14 +155,14 @@ const styles = StyleSheet.create({
   },
   statLabel: {
     fontSize: 14,
-    color: theme.colors.textLight,
+    color: theme.colors.bodyText,
   },
   sidebar: {
     width: 300,
-    backgroundColor: theme.colors.background,
+    backgroundColor: theme.colors.pageBackground,
     padding: theme.spacing(2),
     borderRightWidth: 1,
-    borderColor: theme.colors.lightBorder,
+    borderColor: theme.colors.borderColor,
   },
   sidebarTitle: {
     fontSize: 18,
@@ -171,7 +171,7 @@ const styles = StyleSheet.create({
   },
   searchInput: {
     height: 40,
-    borderColor: theme.colors.lightBorder,
+    borderColor: theme.colors.borderColor,
     borderWidth: 1,
     borderRadius: theme.radius.md,
     paddingHorizontal: theme.spacing(2),
@@ -182,7 +182,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: theme.spacing(2),
     borderBottomWidth: 1,
-    borderColor: theme.colors.lightBorder,
+    borderColor: theme.colors.borderColor,
   },
   selectedItem: {
     backgroundColor: theme.colors.primaryMuted,
@@ -197,7 +197,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   itemSubtitle: {
-    color: theme.colors.textSecondary,
+    color: theme.colors.bodyText,
   },
   mapContainer: {
     flex: 1,

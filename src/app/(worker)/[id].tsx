@@ -304,7 +304,7 @@ export default function ProjectDetailsScreen() {
               value={newMessage}
               onChangeText={setNewMessage}
               placeholder="Type a message or add an image..."
-              placeholderTextColor={theme.colors.textLight}
+              placeholderTextColor={theme.colors.bodyText}
             />
             <TouchableOpacity onPress={handlePickImage} style={styles.iconButton}>
               <Ionicons name="image-outline" size={24} color={theme.colors.primary} />
@@ -328,21 +328,21 @@ export default function ProjectDetailsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: theme.colors.background,
+    backgroundColor: theme.colors.pageBackground,
   },
   headerCard: {
     padding: theme.spacing(2),
     borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
+    borderBottomColor: theme.colors.borderColor,
     backgroundColor: 'white',
   },
   title: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: theme.colors.text,
+    color: theme.colors.headingText,
   },
   addressText: {
-    color: theme.colors.textLight,
+    color: theme.colors.bodyText,
     marginTop: 4,
     fontSize: 16,
   },
@@ -353,12 +353,12 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: theme.colors.text,
+    color: theme.colors.headingText,
     marginBottom: theme.spacing(1),
   },
   explanationText: {
     fontSize: 16,
-    color: theme.colors.text,
+    color: theme.colors.headingText,
     lineHeight: 24,
   },
   projectImageList: {
@@ -389,10 +389,10 @@ const styles = StyleSheet.create({
   },
   senderText: {
     fontWeight: 'bold',
-    color: theme.colors.text,
+    color: theme.colors.headingText,
   },
   timestampText: {
-    color: theme.colors.textLight,
+    color: theme.colors.bodyText,
     fontSize: 12,
   },
   messageImage: {
@@ -404,7 +404,7 @@ const styles = StyleSheet.create({
   inputContainer: {
     padding: theme.spacing(2),
     borderTopWidth: 1,
-    borderTopColor: theme.colors.border,
+    borderTopColor: theme.colors.borderColor,
     backgroundColor: 'white',
   },
   textInputRow: {
@@ -417,7 +417,7 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.accent,
     borderRadius: theme.radius.md,
     paddingHorizontal: theme.spacing(2),
-    color: theme.colors.text,
+    color: theme.colors.headingText,
   },
   iconButton: {
     padding: theme.spacing(1),

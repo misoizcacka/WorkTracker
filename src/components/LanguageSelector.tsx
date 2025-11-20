@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity, StyleSheet, Animated } from 'react-native
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import CountryFlag from "react-native-country-flag";
 import { useTranslation } from 'react-i18next';
+import { theme } from '../theme';
 
 const LANGUAGES = [
   { code: 'en', label: 'English', countryCode: 'GB' },
@@ -92,7 +93,7 @@ const styles = StyleSheet.create({
     borderRadius: 50,
     backgroundColor: 'transparent', // Make background transparent to show only the border
     borderWidth: 1,
-    borderColor: 'white',
+    borderColor: theme.colors.cardBackground,
   },
   flag: {
     width: 24,
@@ -106,7 +107,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'white',
     borderRadius: 10,
     padding: 10,
-    shadowColor: "#000",
+    shadowColor: theme.shadow.soft.shadowColor,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
     shadowRadius: 3.84,
@@ -127,7 +128,7 @@ const styles = StyleSheet.create({
   },
   langLabel: {
     fontSize: 16,
-    color: '#333',
+    color: theme.colors.bodyText,
   },
 });
 

@@ -178,7 +178,7 @@ const styles = StyleSheet.create({
     borderRadius: theme.radius.md,
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: theme.colors.lightBorder,
+    borderColor: theme.colors.borderColor,
     margin: theme.spacing(2),
   },
   markerContainer: {
@@ -195,7 +195,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 2,
-    borderColor: 'white',
+    borderColor: theme.colors.cardBackground,
     cursor: 'pointer',
   },
   avatar: {

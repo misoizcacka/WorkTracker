@@ -35,15 +35,15 @@ export const Button: React.FC<ButtonProps> = ({
 
   const buttonStyle = [
     styles.button,
-    { backgroundColor: disabled ? theme.colors.textLight : backgroundColor },
+    { backgroundColor: disabled ? theme.colors.bodyText : backgroundColor },
     type === "secondary" && styles.secondaryButton,
     style,
   ];
 
   const textColor =
     type === "secondary"
-      ? theme.colors.background
-      : theme.colors.background;
+      ? theme.colors.pageBackground
+      : theme.colors.pageBackground;
 
   return (
     <TouchableOpacity
@@ -54,7 +54,7 @@ export const Button: React.FC<ButtonProps> = ({
       <Text
         style={[
           styles.text,
-          { color: disabled ? theme.colors.textLight : textColor },
+          { color: disabled ? theme.colors.bodyText : textColor },
           textStyle,
         ]}
       >
@@ -72,7 +72,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     minHeight: 50,
-    shadowColor: "#000",
+    shadowColor: theme.shadow.soft.shadowColor,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
@@ -81,7 +81,7 @@ const styles = StyleSheet.create({
   secondaryButton: {
     backgroundColor: 'rgba(255, 255, 255, 0.15)', // Semi-transparent white background
     borderWidth: 1.5,
-    borderColor: theme.colors.lightBorder, // Light gray border
+    borderColor: theme.colors.borderColor, // Light gray border
     borderRadius: theme.radius.md,
   },
   text: {
