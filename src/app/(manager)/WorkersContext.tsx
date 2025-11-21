@@ -1,45 +1,60 @@
-import React, { useState } from 'react';
+import React, { createContext, useState, useMemo, useCallback } from 'react';
+import { Worker } from '../../types';
 
-export interface Worker {
-  id: string;
-  name: string;
-  project: string;
-  status: 'onSite' | 'offSite' | 'notCheckedIn';
-  hours: number;
-  location?: {
-    latitude: number;
-    longitude: number;
-  };
-  avatar?: string;
-  lastSeen?: string;
-  address?: string;
-  email?: string;
-  password?: string;
+type CreateWorkerData = Omit<Worker, 'id' | 'status' | 'role'>;
+
+interface WorkersContextType {
+  workers: Worker[];
+  seatLimit: number;
+  seatsUsed: number;
+  createWorker: (worker: CreateWorkerData) => Worker;
+  getWorkerByEmail: (email: string) => Worker | undefined;
 }
 
-export const WorkersContext = React.createContext<{
-  workers: Worker[];
-  addWorker: (worker: Worker) => void;
-} | null>(null);
+export const WorkersContext = createContext<WorkersContextType | null>(null);
+
+const MOCK_WORKERS: Worker[] = [
+    { id: '1', full_name: 'John Doe', email: 'john@work.com', role:'worker', status:'active', avatar: 'https://i.imgur.com/DkSvfK0.png' },
+    { id: '2', full_name: 'Sarah Lee', email: 'sarah@work.com', role:'worker', status:'active', avatar: 'https://i.imgur.com/GckJB1a.png' },
+    { id: '3', full_name: 'Tom Hanks', email: 'tom@work.com', role:'worker', status:'active', avatar: 'https://i.imgur.com/qirZ3E6.png' },
+    { id: '4', full_name: 'Julia Roberts', email: 'julia@work.com', role:'worker', status:'active', avatar: 'https://i.imgur.com/keD0fuz.png' },
+    { id: '5', full_name: 'Robert De Niro', email: 'robert@work.com', role:'worker', status:'active', avatar: 'https://i.imgur.com/ywYuPSt.png' },
+    { id: '6', full_name: 'Meryl Streep', email: 'meryl@work.com', role:'worker', status:'active', avatar: 'https://i.imgur.com/cgtGgBw.png' },
+    { id: '7', full_name: 'Morgan Freeman', email: 'morgan@work.com', role:'worker', status:'pending', avatar: 'https://i.imgur.com/hj422E8.png' },
+];
 
 export function WorkersProvider({ children }: { children: React.ReactNode }) {
-  const [workers, setWorkers] = useState<Worker[]>([
-    { id: "1", name: "Nikola Jagodina", project: "Office Renovation", status: "onSite", hours: 8.5, location: { latitude: 52.5200, longitude: 13.4050 }, avatar: 'https://i.imgur.com/DkSvfK0.png', lastSeen: '10 minutes ago', address: 'Some street 1, Berlin' },
-    { id: "2", name: "Zoki Srce", project: "Apartment Painting", status: "offSite", hours: 7.0, location: { latitude: 52.5300, longitude: 13.4150 }, avatar: 'https://i.imgur.com/GckJB1a.png', lastSeen: '2 hours ago', address: 'Another street 2, Berlin' },
-    { id: "3", name: "Tote Arapin", project: "Retail Construction", status: "notCheckedIn", hours: 6.0, location: { latitude: 52.5100, longitude: 13.3850 }, avatar: 'https://i.imgur.com/qirZ3E6.png', lastSeen: 'Yesterday', address: 'Third street 3, Berlin' },
-    { id: "4", name: "Arapin Glupi", project: "Bridge Construction", status: "onSite", hours: 9.0, location: { latitude: 52.5150, longitude: 13.4250 }, avatar: 'https://i.imgur.com/keD0fuz.png', lastSeen: '5 minutes ago', address: 'Fourth street 4, Berlin' },
-    { id: "5", name: "Boris Marama", project: "Road Paving", status: "onSite", hours: 8.0, location: { latitude: 52.5000, longitude: 13.4000 }, avatar: 'https://i.imgur.com/ywYuPSt.png', lastSeen: '30 minutes ago', address: 'Fifth street 5, Berlin' },
-    { id: "6", name: "Stefan Colovic", project: "Scaffolding Setup", status: "offSite", hours: 7.5, location: { latitude: 52.5400, longitude: 13.3950 }, avatar: 'https://i.imgur.com/cgtGgBw.png', lastSeen: '1 hour ago', address: 'Sixth street 6, Berlin' },
-    { id: "7", name: "Nikola Nikolic", project: "Demolition", status: "notCheckedIn", hours: 0, location: { latitude: 52.5250, longitude: 13.3750 }, avatar: 'https://i.imgur.com/hj422E8.png', lastSeen: 'Today', address: 'Seventh street 7, Berlin' },
-    { id: "8", name: "Marko Markovic", project: "Foundation Work", status: "onSite", hours: 8.5, location: { latitude: 52.5050, longitude: 13.4150 }, avatar: 'https://i.imgur.com/1nSAQlW.png', lastSeen: '15 minutes ago', address: 'Eighth street 8, Berlin' },
-  ]);
+  const [workers, setWorkers] = useState<Worker[]>(MOCK_WORKERS);
+  const seatLimit = 10;
 
-  const addWorker = (worker: Worker) => {
-    setWorkers(prevWorkers => [...prevWorkers, { ...worker, id: String(prevWorkers.length + 1) }]);
-  };
+  const seatsUsed = useMemo(() => workers.filter(w => w.status === 'active' || w.status === 'pending').length, [workers]);
+
+  const createWorker = useCallback((workerData: CreateWorkerData): Worker => {
+    const newWorker: Worker = {
+      ...workerData,
+      id: (workers.length + 1).toString(),
+      status: 'active',
+      role: 'worker',
+      avatar: `https://i.imgur.com/1nSAQlW.png`,
+    };
+    setWorkers(prevWorkers => [...prevWorkers, newWorker]);
+    return newWorker;
+  }, [workers.length]);
+
+  const getWorkerByEmail = useCallback((email: string) => {
+    return workers.find(worker => worker.email === email);
+  }, [workers]);
+
+  const value = useMemo(() => ({
+    workers,
+    seatLimit,
+    seatsUsed,
+    createWorker,
+    getWorkerByEmail
+  }), [workers, seatLimit, seatsUsed, createWorker, getWorkerByEmail]);
 
   return (
-    <WorkersContext.Provider value={{ workers, addWorker }}>
+    <WorkersContext.Provider value={value}>
       {children}
     </WorkersContext.Provider>
   );

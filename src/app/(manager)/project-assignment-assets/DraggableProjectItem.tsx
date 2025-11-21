@@ -41,61 +41,47 @@ const DraggableProjectItem: React.FC<DraggableProjectItemProps> = ({
   );
 
   return (
-    <Draggable draggableId={`project-${item.id}`} index={index}
-      renderClone={(provided) => {
-        return Platform.OS === 'web' ? (
-          <div
-            ref={provided.innerRef}
-            {...provided.draggableProps}
-            {...provided.dragHandleProps}
-            style={{
-              display: 'flex',
-              flexDirection: 'row',
-              alignItems: 'center',
-              padding: 12,
-              marginBottom: 4,
-              borderRadius: 6,
-              backgroundColor: isSelected ? '#d0ebff' : hexToRgba(item.color, 0.1),
-              ...provided.draggableProps.style,
-            }}
-          >
-            {itemContent}
-          </div>
-        ) : (
-          <View
-            ref={provided.innerRef}
-            {...provided.draggableProps}
-            {...provided.dragHandleProps}
-            style={[styles.container, styles.dragging, provided.draggableProps.style]}
-          >
-            {itemContent}
-          </View>
-        );
-      }}
-    >
-      {(provided) => {
-        const itemStyle = [
-          isSelected && styles.selected,
-          provided.draggableProps.style, // important for drag positioning
-        ];
-
+    <Draggable draggableId={`project-${item.id}`} index={index} {...(Draggable as any).defaultProps} renderClone={(provided: any) => {
+      // web drag clone
+      return Platform.OS === 'web' ? (
+        <div
+          ref={provided.innerRef}
+          {...provided.draggableProps}
+          {...provided.dragHandleProps}
+          style={{
+            ...provided.draggableProps.style, // keep original drag positioning
+          }}
+        >
+          {itemContent}
+        </div>
+      ) : (
+        <View
+          ref={provided.innerRef}
+          {...provided.draggableProps}
+          {...provided.dragHandleProps}
+          style={[styles.container, styles.dragging, provided.draggableProps.style]}
+        >
+          {itemContent}
+        </View>
+      );
+    }}>
+      {(provided: DraggableProvided) => {
         return Platform.OS === 'web' ? (
           <div
             ref={provided.innerRef}
             {...provided.draggableProps}
             {...provided.dragHandleProps}
             onClick={() => onPress(item)}
-            style={StyleSheet.flatten(itemStyle)} // flatten RN styles for web
+            style={StyleSheet.flatten([provided.draggableProps.style])} // preserve style, no extra background
           >
             {itemContent}
           </div>
         ) : (
           <TouchableOpacity
             ref={provided.innerRef as any}
-            {...provided.draggableProps}
-            {...provided.dragHandleProps}
             onPress={() => onPress(item)}
             style={[styles.container, isSelected && styles.selected]}
+            activeOpacity={0.7}
           >
             {itemContent}
           </TouchableOpacity>

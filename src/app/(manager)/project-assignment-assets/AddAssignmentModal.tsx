@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Modal, View, Text, TextInput, Button, StyleSheet, TouchableOpacity } from 'react-native';
 import moment from 'moment';
-import { Worker } from '../WorkersContext';
+import { Worker } from '../../../types';
 import { Project } from '../ProjectsContext';
 import { Assignment } from './types';
 import { generateId } from './utils/generateId';
@@ -99,7 +99,7 @@ const AddAssignmentModal: React.FC<AddAssignmentModalProps> = ({
             <CrossPlatformPicker
               selectedValue={selectedWorkerId}
               onValueChange={(itemValue: string | null) => setSelectedWorkerId(itemValue)}
-              options={workers.map(worker => ({ label: worker.name, value: worker.id }))}
+              options={workers.map(worker => ({ label: worker.full_name, value: worker.id }))}
               placeholder="Select Worker"
             />
           </View>

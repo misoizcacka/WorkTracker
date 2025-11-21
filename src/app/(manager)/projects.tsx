@@ -24,7 +24,7 @@ export default function ManagerProjects() {
   const numColumns = getNumColumns();
 
   const getWorkerCountForProject = (projectName: string) => {
-    return workers.filter(worker => worker.project === projectName).length;
+    return 0;
   };
 
   const sortedProjects = [...projects].sort((a, b) => new Date(b.lastModified).getTime() - new Date(a.lastModified).getTime());

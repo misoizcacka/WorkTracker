@@ -18,6 +18,7 @@ export const theme = {
     success: "#16A34A", // balanced green
     warning: "#F59E0B", // subtle amber
     danger: "#DC2626", // standard red for errors
+    background: "#F2F3F5",
   },
 
   spacing: (n: number) => n * 8,
@@ -27,6 +28,7 @@ export const theme = {
     md: 12,
     lg: 24,
     pill: 999,
+    xl: 40,
   },
 
   font: {

@@ -12,6 +12,8 @@ import { WorkersProvider } from "./WorkersContext";
 import { ProjectsProvider } from "./ProjectsContext";
 import { AssignmentsProvider } from "./AssignmentsContext";
 
+import { InvitesProvider } from "./InvitesContext";
+
 const { Navigator } = createBottomTabNavigator();
 
 export const BottomTabs = withLayoutContext(Navigator);
@@ -21,7 +23,9 @@ function ManagerProviders({ children }: { children: React.ReactNode }) {
     <WorkersProvider>
       <ProjectsProvider>
         <AssignmentsProvider>
-          {children}
+          <InvitesProvider>
+            {children}
+          </InvitesProvider>
         </AssignmentsProvider>
       </ProjectsProvider>
     </WorkersProvider>

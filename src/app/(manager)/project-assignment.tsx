@@ -5,7 +5,7 @@ import { DragDropContext, DropResult, Droppable } from '@hello-pangea/dnd';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { mockAssignments } from './project-assignment-assets/mockData';
-import { Worker } from './WorkersContext';
+import { Worker } from '../../types';
 
 import { Assignment } from './project-assignment-assets/types';
 import { generateId } from './project-assignment-assets/utils/generateId';
@@ -80,7 +80,7 @@ export default function ProjectAssignmentScreen() {
   };
 
   const filteredWorkers = workers.filter(worker =>
-    worker.name.toLowerCase().includes(searchTerm.toLowerCase())
+    worker.full_name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const filteredProjects = React.useMemo(() => 
@@ -103,8 +103,8 @@ export default function ProjectAssignmentScreen() {
         <View style={[styles.workerItemContent, isSelected && styles.selectedItem]}>
           <Image source={{ uri: item.avatar }} style={styles.avatar} />
           <View style={styles.workerInfo}>
-            <Text style={styles.itemName}>{item.name}</Text>
-            <Text style={styles.itemSubtitle}>{item.project}</Text>
+            <Text style={styles.itemName}>{item.full_name}</Text>
+            <Text style={styles.itemSubtitle}>{item.email}</Text>
           </View>
           {isSelected && <Ionicons name="checkmark-circle" size={20} color={theme.colors.primary} />}
         </View>

@@ -4,53 +4,64 @@ import { Card } from "../../components/Card";
 import AnimatedScreen from "../../components/AnimatedScreen";
 import { theme } from "../../theme";
 import { Button } from "../../components/Button";
-import { useRouter } from "expo-router";
 import { WorkersContext } from "./WorkersContext";
+import InviteWorkerModal from "../../components/InviteWorkerModal";
+import { Worker } from "../../types";
 
 export default function ManagerWorkers() {
   const { width } = useWindowDimensions();
   const isLargeScreen = width >= 900;
-  const router = useRouter();
-  const { workers } = React.useContext(WorkersContext)!;
+  const context = React.useContext(WorkersContext);
   const [searchTerm, setSearchTerm] = useState('');
+  const [modalVisible, setModalVisible] = useState(false);
 
-  const getStatusColor = (status: string) => {
+  if (!context) {
+    return <Text>Loading...</Text>;
+  }
+
+  const { workers, seatsUsed, seatLimit } = context;
+
+  const getStatusStyle = (status: Worker['status']) => {
     switch (status) {
-      case "onSite":
-        return theme.colors.success;
-      case "offSite":
-        return theme.colors.warning;
+      case "active":
+        return { color: theme.colors.success, text: "Active" };
+      case "invited":
+        return { color: theme.colors.warning, text: "Invited" };
+      case "pending":
+        return { color: theme.colors.bodyText, text: "Pending" };
       default:
-        return theme.colors.danger;
+        return { color: theme.colors.danger, text: "Unknown" };
     }
   };
 
-  const handleCreateWorker = () => {
-    router.push("/(manager)/create-worker");
+  const handleInviteWorker = () => {
+    setModalVisible(true);
   };
 
   const filteredWorkers = workers.filter(worker =>
-    worker.name.toLowerCase().includes(searchTerm.toLowerCase())
+    worker.full_name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const renderWorkerCard = ({ item }: { item: any }) => (
-    <Card style={styles.workerCard}>
-      <View style={styles.cardHeader}>
-        <Image source={{ uri: item.avatar }} style={styles.avatar} />
-        <View style={styles.headerText}>
-          <Text style={styles.workerName}>{item.name}</Text>
-          <Text style={styles.workerProject}>{item.project}</Text>
+  const renderWorkerCard = ({ item }: { item: Worker }) => {
+    const statusStyle = getStatusStyle(item.status);
+    return (
+      <Card style={styles.workerCard}>
+        <View style={styles.cardHeader}>
+          <Image source={{ uri: item.avatar }} style={styles.avatar} />
+          <View style={styles.headerText}>
+            <Text style={styles.workerName}>{item.full_name}</Text>
+            <Text style={styles.workerEmail}>{item.email}</Text>
+          </View>
         </View>
-      </View>
-      <View style={styles.cardBody}>
-        <View style={styles.statusContainer}>
-          <View style={[styles.statusDot, { backgroundColor: getStatusColor(item.status) }]} />
-          <Text style={styles.workerStatus}>{item.status.replace(/([A-Z])/g, ' $1')}</Text>
+        <View style={styles.cardBody}>
+          <View style={styles.statusContainer}>
+            <View style={[styles.statusDot, { backgroundColor: statusStyle.color }]} />
+            <Text style={[styles.workerStatus, { color: statusStyle.color }]}>{statusStyle.text}</Text>
+          </View>
         </View>
-        <Text style={styles.workerHours}>{item.hours} hrs today</Text>
-      </View>
-    </Card>
-  );
+      </Card>
+    );
+  };
 
   return (
     <AnimatedScreen>
@@ -61,18 +72,26 @@ export default function ManagerWorkers() {
             placeholder="Search workers..."
             value={searchTerm}
             onChangeText={setSearchTerm}
+            placeholderTextColor="#999"
           />
-          <Button title="Create Worker" onPress={handleCreateWorker} style={styles.createButton} textStyle={styles.createButtonText} />
+          <Button title="Invite Worker" onPress={handleInviteWorker} style={styles.createButton} textStyle={styles.createButtonText} />
+        </View>
+        <View style={styles.seatInfoContainer}>
+          <Text style={styles.seatInfoText}>Seats Used: {seatsUsed} of {seatLimit}</Text>
         </View>
         <FlatList
           data={filteredWorkers}
-          keyExtractor={(item) => item.id as string}
+          keyExtractor={(item) => item.id}
           renderItem={renderWorkerCard}
           numColumns={isLargeScreen ? 2 : 1}
           key={isLargeScreen ? 'two-columns' : 'one-column'}
           contentContainerStyle={styles.listContent}
         />
       </View>
+      <InviteWorkerModal
+        visible={modalVisible}
+        onClose={() => setModalVisible(false)}
+      />
     </AnimatedScreen>
   );
 }
@@ -80,7 +99,7 @@ export default function ManagerWorkers() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: 'white',
+    backgroundColor: theme.colors.pageBackground,
     padding: theme.spacing(2),
   },
   header: {
@@ -91,21 +110,34 @@ const styles = StyleSheet.create({
   },
   searchInput: {
     flex: 1,
-    height: 40,
+    height: 45,
+    backgroundColor: 'white',
     borderColor: theme.colors.borderColor,
     borderWidth: 1,
     borderRadius: theme.radius.md,
     paddingHorizontal: theme.spacing(2),
     marginRight: theme.spacing(2),
+    fontSize: 16,
   },
   createButton: {
     backgroundColor: theme.colors.primary,
     borderRadius: theme.radius.md,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
   },
   createButtonText: {
     color: "white",
-    fontSize: 14,
-    fontWeight: "normal",
+    fontSize: 16,
+    fontWeight: "bold",
+  },
+  seatInfoContainer: {
+    marginBottom: theme.spacing(2),
+    alignItems: 'flex-start',
+  },
+  seatInfoText: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: theme.colors.bodyText,
   },
   listContent: {
     paddingBottom: theme.spacing(10),
@@ -114,6 +146,7 @@ const styles = StyleSheet.create({
     flex: 1,
     margin: theme.spacing(1),
     padding: theme.spacing(2),
+    backgroundColor: 'white'
   },
   cardHeader: {
     flexDirection: 'row',
@@ -130,11 +163,11 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   workerName: {
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: "600",
     color: theme.colors.headingText,
   },
-  workerProject: {
+  workerEmail: {
     fontSize: 14,
     color: theme.colors.bodyText,
   },
@@ -149,18 +182,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   statusDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
+    width: 10,
+    height: 10,
+    borderRadius: 5,
     marginRight: theme.spacing(1),
   },
   workerStatus: {
     fontSize: 14,
-    textTransform: 'capitalize',
-  },
-  workerHours: {
-    fontSize: 16,
     fontWeight: '600',
-    color: theme.colors.primary,
+    textTransform: 'capitalize',
   },
 });

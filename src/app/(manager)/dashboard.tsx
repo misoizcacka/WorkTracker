@@ -1,7 +1,8 @@
-import React, { useState, useContext } from 'react';
+import React, { useState, useContext, useMemo } from 'react';
 import { View, Text, StyleSheet, Image, TextInput, FlatList, TouchableOpacity } from 'react-native';
 import { MapView } from '../../components/MapView';
-import { WorkersContext, Worker } from './WorkersContext';
+import { WorkersContext } from './WorkersContext';
+import { Worker } from '../../types';
 import { ProjectsContext, Project } from './ProjectsContext';
 import { theme } from '../../theme';
 import AnimatedScreen from '../../components/AnimatedScreen';
@@ -15,10 +16,9 @@ export default function ManagerDashboard() {
   const [selectedProjects, setSelectedProjects] = useState<Project[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
 
-  const activeWorkers = workers.filter(w => w.status === 'onSite').length;
-  const workersOffSite = workers.filter(w => w.status === 'offSite').length;
-  const totalHoursToday = workers.reduce((acc, worker) => acc + worker.hours, 0);
-  const overtimeHours = workers.reduce((acc, worker) => worker.hours > 8 ? acc + (worker.hours - 8) : acc, 0);
+  const activeWorkers = workers.filter(w => w.status === 'active').length;
+  // const totalHoursToday = workers.reduce((acc, worker) => acc + worker.hours, 0);
+  // const overtimeHours = workers.reduce((acc, worker) => worker.hours > 8 ? acc + (worker.hours - 8) : acc, 0);
 
   const handleWorkerPress = (worker: Worker) => {
     setSelectedWorkers(prev =>
@@ -37,7 +37,7 @@ export default function ManagerDashboard() {
   };
 
   const filteredWorkers = workers.filter(worker =>
-    worker.name.toLowerCase().includes(searchTerm.toLowerCase())
+    worker.full_name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const renderWorkerItem = ({ item }: { item: Worker }) => {
@@ -47,8 +47,8 @@ export default function ManagerDashboard() {
         <View style={[styles.listItem, isSelected && styles.selectedItem]}>
           <Image source={{ uri: item.avatar }} style={styles.avatar} />
           <View>
-            <Text style={styles.itemName}>{item.name}</Text>
-            <Text style={styles.itemSubtitle}>{item.project}</Text>
+            <Text style={styles.itemName}>{item.full_name}</Text>
+            <Text style={styles.itemSubtitle}>{item.email}</Text>
           </View>
         </View>
       </TouchableOpacity>
@@ -69,6 +69,14 @@ export default function ManagerDashboard() {
     );
   };
 
+  const mapViewSelectedWorkers = useMemo(() => {
+    return selectedWorkers.map(w => ({
+      id: w.id,
+      name: w.full_name,
+      avatar: w.avatar,
+    }));
+  }, [selectedWorkers]);
+
   return (
     <AnimatedScreen>
       <View style={styles.statsRow}>
@@ -76,22 +84,22 @@ export default function ManagerDashboard() {
           <Text style={styles.statValue}>{activeWorkers}/{workers.length}</Text>
           <Text style={styles.statLabel}>Workers Active</Text>
         </Card>
-        <Card style={styles.statCard}>
+        {/* <Card style={styles.statCard}>
           <Text style={styles.statValue}>{workersOffSite}</Text>
           <Text style={styles.statLabel}>Workers Off-Site</Text>
-        </Card>
+        </Card> */}
         <Card style={styles.statCard}>
           <Text style={styles.statValue}>{projects.length}</Text>
           <Text style={styles.statLabel}>Projects Today</Text>
         </Card>
-        <Card style={styles.statCard}>
+        {/* <Card style={styles.statCard}>
           <Text style={styles.statValue}>{totalHoursToday.toFixed(1)}</Text>
           <Text style={styles.statLabel}>Hours Today</Text>
         </Card>
         <Card style={styles.statCard}>
           <Text style={styles.statValue}>{overtimeHours.toFixed(1)}</Text>
           <Text style={styles.statLabel}>Overtime Hours</Text>
-        </Card>
+        </Card> */}
       </View>
       <View style={styles.container}>
         <View style={styles.sidebar}>
@@ -100,6 +108,7 @@ export default function ManagerDashboard() {
             placeholder="Search workers..."
             value={searchTerm}
             onChangeText={setSearchTerm}
+            placeholderTextColor="#999"
           />
           <FlatList
             data={filteredWorkers}
@@ -115,8 +124,8 @@ export default function ManagerDashboard() {
               latitudeDelta: 0.2,
               longitudeDelta: 0.2,
             }}
-            selectedWorkers={selectedWorkers}
-            selectedProjects={selectedProjects}
+            selectedWorkers={mapViewSelectedWorkers}
+            selectedProjects={selectedProjects.map(p => ({...p, location: p.location!}))}
           />
         </View>
         <View style={styles.sidebar}>

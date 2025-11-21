@@ -1,14 +1,14 @@
 import { Linking } from "react-native";
 import * as React from "react";
 import { useState, useEffect, useReducer, useContext } from "react";
-import { View, Text, TextInput, StyleSheet, Alert, SafeAreaView, Dimensions, Image } from "react-native";
+import { View, Text, TextInput, StyleSheet, Alert, SafeAreaView, Dimensions, Image, Platform } from "react-native";
 import { useRouter } from "expo-router";
 import { Button } from "../../components/Button";
 import { LanguageSelector } from "../../components/LanguageSelector";
 import { theme } from "../../theme";
 import { useSession } from "../../context/AuthContext";
 import { useTranslation } from 'react-i18next';
-import { PixelatedBackground } from '../../components/PixelatedBackground';
+
 
 export default function Login() {
   const { signIn } = useSession()!;
@@ -22,6 +22,10 @@ export default function Login() {
     if (email === "manager@test.com" && password === "password") {
       signIn({ role: "manager", email });
     } else if (email === "worker@test.com" && password === "password") {
+      if (Platform.OS === 'web') {
+        Alert.alert("Login Forbidden", "Workers cannot log in on the web. Please use the mobile app.");
+        return;
+      }
       signIn({ role: "worker", email });
     } else {
       Alert.alert("Login Failed", "Invalid email or password.");
@@ -30,7 +34,7 @@ export default function Login() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <PixelatedBackground />
+
       <LanguageSelector />
       <Image
         source={require('../../../assets/logowhitetransparent.png')}
@@ -73,7 +77,7 @@ export default function Login() {
           </View>
           <Button
             title={t('login.getStartedButton')}
-            onPress={() => Linking.openURL("http://192.168.188.52:8081/signup")} // Expo-provided URL
+            onPress={() => router.push('/(guest)/signup')}
             type="secondary"
             textStyle={styles.managerButtonText}
           />

@@ -10,12 +10,13 @@ import {
 import { theme } from "../theme";
 
 interface ButtonProps {
-  title: string;
-  onPress: (event: GestureResponderEvent) => void;
+  title?: string;
+  onPress?: (event: GestureResponderEvent) => void;
   type?: "primary" | "danger" | "secondary";
   disabled?: boolean;
   style?: ViewStyle | ViewStyle[];
   textStyle?: TextStyle;
+  children?: React.ReactNode;
 }
 
 export const Button: React.FC<ButtonProps> = ({
@@ -25,6 +26,7 @@ export const Button: React.FC<ButtonProps> = ({
   disabled = false,
   style,
   textStyle,
+  children,
 }) => {
   const backgroundColor =
     type === "primary"
@@ -51,15 +53,19 @@ export const Button: React.FC<ButtonProps> = ({
       style={buttonStyle}
       activeOpacity={disabled ? 1 : 0.7}
     >
-      <Text
-        style={[
-          styles.text,
-          { color: disabled ? theme.colors.bodyText : textColor },
-          textStyle,
-        ]}
-      >
-        {title}
-      </Text>
+      {children ? (
+        children
+      ) : (
+        <Text
+          style={[
+            styles.text,
+            { color: disabled ? theme.colors.bodyText : textColor },
+            textStyle,
+          ]}
+        >
+          {title}
+        </Text>
+      )}
     </TouchableOpacity>
   );
 };

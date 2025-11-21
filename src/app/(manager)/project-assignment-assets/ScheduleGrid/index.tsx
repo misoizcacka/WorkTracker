@@ -4,7 +4,7 @@ import { Droppable, Draggable } from '@hello-pangea/dnd';
 import moment from 'moment';
 import { Ionicons } from '@expo/vector-icons';
 import Animated, { Layout } from 'react-native-reanimated';
-import { Worker } from '../../WorkersContext';
+import { Worker } from '../../../../types';
 import { Project } from '../../ProjectsContext';
 import { Assignment } from '../types';
 import { isSameDay } from '../utils/time';
@@ -111,7 +111,7 @@ const WorkerColumn = React.memo(function WorkerColumn({ worker, projects, assign
   return (
     <View style={styles.workerColumn}>
       <View style={styles.workerColumnHeader}>
-        <Text style={styles.workerName}>{worker.name}</Text>
+        <Text style={styles.workerName}>{worker.full_name}</Text>
       </View>
       <Droppable droppableId={`worker-${worker.id}`} type="TASK" direction="vertical">
         {(provided, snapshot) => (
