@@ -1,0 +1,240 @@
+import React, { useState, useContext, useMemo } from 'react';
+import { View, Text, StyleSheet, Image, TextInput, FlatList, TouchableOpacity, ScrollView, Platform } from 'react-native';
+import { MapView } from '../../components/MapView';
+import { WorkersContext } from './WorkersContext';
+import { Project, ProjectsContext } from './ProjectsContext';
+import { theme } from '../../theme';
+import AnimatedScreen from '../../components/AnimatedScreen';
+import { Card } from '../../components/Card';
+import { Ionicons } from '@expo/vector-icons'; // Import Ionicons for checkmark
+
+import { Worker } from '../../types';
+
+export default function MapOverviewScreen() { // Renamed component
+  const { workers } = useContext(WorkersContext)!;
+  const { projects } = useContext(ProjectsContext)!;
+
+  const [selectedWorkers, setSelectedWorkers] = useState<Worker[]>([]);
+  const [selectedProjects, setSelectedProjects] = useState<Project[]>([]);
+  const [searchTerm, setSearchTerm] = useState('');
+
+  // No activeWorkers or other dashboard stats on this page
+
+  const handleWorkerPress = (worker: Worker) => {
+    setSelectedWorkers(prev =>
+      prev.find(w => w.id === worker.id)
+        ? prev.filter(w => w.id !== worker.id)
+        : [...prev, worker]
+    );
+  };
+
+  const handleProjectPress = (project: Project) => {
+    setSelectedProjects(prev =>
+      prev.find(p => p.id === project.id)
+        ? prev.filter(p => p.id !== project.id)
+        : [...prev, project]
+    );
+  };
+
+  const filteredWorkers = workers.filter(worker =>
+    worker.full_name.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const renderWorkerItem = ({ item }: { item: Worker }) => {
+    const isSelected = selectedWorkers.some(w => w.id === item.id); // Use some for clarity
+    return (
+      <TouchableOpacity onPress={() => handleWorkerPress(item)} style={styles.listItem}>
+        <View style={[styles.itemContent, isSelected && styles.selectedItem]}>
+          <Image source={{ uri: item.avatar }} style={styles.avatar} />
+          <View style={styles.itemInfo}>
+            <Text style={styles.itemName}>{item.full_name}</Text>
+            <Text style={styles.itemSubtitle}>{item.email}</Text>
+          </View>
+          {isSelected && <Ionicons name="checkmark-circle" size={20} color={theme.colors.primary} />}
+        </View>
+      </TouchableOpacity>
+    );
+  };
+
+  const renderProjectItem = ({ item }: { item: Project }) => {
+    const isSelected = selectedProjects.some(p => p.id === item.id); // Use some for clarity
+    return (
+      <TouchableOpacity onPress={() => handleProjectPress(item)} style={styles.listItem}>
+        <View style={[styles.itemContent, isSelected && styles.selectedItem]}>
+          <View style={[styles.projectColorIndicator, { backgroundColor: item.color || theme.colors.secondary }]} />
+          <View style={styles.itemInfo}>
+            <Text style={styles.itemName}>{item.name}</Text>
+            <Text style={styles.itemSubtitle}>{item.address}</Text>
+          </View>
+          {isSelected && <Ionicons name="checkmark-circle" size={20} color={theme.colors.primary} />}
+        </View>
+      </TouchableOpacity>
+    );
+  };
+
+  const mapViewSelectedWorkers = useMemo(() => {
+    return selectedWorkers.map(w => ({
+      id: w.id,
+      name: w.full_name,
+      avatar: w.avatar,
+      location: w.location, // Include worker's location
+    }));
+  }, [selectedWorkers]);
+
+  const mapViewSelectedProjects = useMemo(() => {
+    return selectedProjects.map(p => ({
+      id: p.id,
+      name: p.name,
+      location: p.location,
+      color: p.color,
+      lastModified: p.lastModified,
+    }));
+  }, [selectedProjects]);
+
+
+  return (
+    <AnimatedScreen>
+      <View style={styles.container}>
+        <View style={styles.mainLayout}>
+          {/* Left Panel: Worker List */}
+          <View style={styles.leftPanel}>
+            <Text style={styles.panelTitle}>Workers</Text>
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Search workers..."
+              value={searchTerm}
+              onChangeText={setSearchTerm}
+              placeholderTextColor="#999"
+            />
+            <FlatList
+              data={filteredWorkers}
+              renderItem={renderWorkerItem}
+              keyExtractor={item => item.id}
+              contentContainerStyle={styles.workerListContent}
+            />
+          </View>
+
+          {/* Center Panel: Map */}
+          <View style={styles.centerPanel}>
+            <MapView
+              initialRegion={{
+                latitude: 52.5200,
+                longitude: 13.4050,
+                latitudeDelta: 0.2,
+                longitudeDelta: 0.2,
+              }}
+              selectedWorkers={mapViewSelectedWorkers}
+              selectedProjects={mapViewSelectedProjects}
+            />
+          </View>
+
+          {/* Right Panel: Project List */}
+          <View style={styles.rightPanel}>
+            <Text style={styles.panelTitle}>Projects</Text>
+            <FlatList
+              data={projects}
+              renderItem={renderProjectItem}
+              keyExtractor={item => item.id}
+              contentContainerStyle={styles.projectListContent}
+            />
+          </View>
+        </View>
+      </View>
+    </AnimatedScreen>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    padding: theme.spacing(2), // Padding around the entire layout
+    backgroundColor: theme.colors.pageBackground,
+  },
+  mainLayout: {
+    flex: 1,
+    flexDirection: 'row',
+    borderRadius: theme.radius.lg,
+    overflow: 'hidden',
+    backgroundColor: theme.colors.cardBackground, // Background for panels
+    ...theme.shadow.soft,
+  },
+  leftPanel: {
+    width: 280,
+    backgroundColor: theme.colors.cardBackground,
+    borderRightWidth: StyleSheet.hairlineWidth,
+    borderColor: theme.colors.borderColor,
+    padding: theme.spacing(2),
+  },
+  centerPanel: {
+    flex: 1,
+    backgroundColor: theme.colors.pageBackground, // Background for map
+  },
+  rightPanel: {
+    width: 280,
+    backgroundColor: theme.colors.cardBackground,
+    borderLeftWidth: StyleSheet.hairlineWidth,
+    borderColor: theme.colors.borderColor,
+    padding: theme.spacing(2),
+  },
+  panelTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: theme.colors.headingText,
+    marginBottom: theme.spacing(2),
+  },
+  searchInput: {
+    height: theme.spacing(5),
+    borderColor: theme.colors.borderColor,
+    borderWidth: 1,
+    borderRadius: theme.radius.md,
+    paddingHorizontal: theme.spacing(2),
+    marginBottom: theme.spacing(2),
+    backgroundColor: theme.colors.pageBackground,
+    color: theme.colors.headingText,
+  },
+  workerListContent: {
+    paddingBottom: theme.spacing(2),
+  },
+  projectListContent: {
+    paddingBottom: theme.spacing(2),
+  },
+  listItem: {
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderColor: theme.colors.borderColor,
+  },
+  itemContent: { // Unified content style for worker and project items
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: theme.spacing(1.5),
+    borderRadius: theme.radius.md,
+    flex: 1, // Take full width
+  },
+  selectedItem: {
+    backgroundColor: theme.colors.primaryMuted,
+  },
+  avatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    marginRight: theme.spacing(2),
+  },
+  projectColorIndicator: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    marginRight: theme.spacing(2),
+    borderWidth: 1,
+    borderColor: theme.colors.borderColor,
+  },
+  itemInfo: { // Unified info style
+    flex: 1, // Take available space
+  },
+  itemName: {
+    fontWeight: '500',
+    color: theme.colors.headingText,
+  },
+  itemSubtitle: {
+    fontSize: 12,
+    color: theme.colors.bodyText,
+  },
+});

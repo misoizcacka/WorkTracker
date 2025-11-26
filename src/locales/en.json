@@ -42,5 +42,27 @@
     "invalidWorkerCount": "Please enter a valid number of workers (at least 1).",
     "baseFeeLabel": "Base Fee",
     "perWorkerLabel": "per worker"
+  },
+  "login": {
+    "loginHeading": "Welcome Back!",
+    "loginDescription": "Sign in to your account to continue.",
+    "emailPlaceholder": "Email Address *",
+    "passwordPlaceholder": "Password *",
+    "loginButton": "Log In",
+    "forgotPassword": "Forgot password?",
+    "or": "OR",
+    "signUpButton": "Create New Account",
+    "errors": {
+      "emailRequired": "Email is required.",
+      "passwordRequired": "Password is required.",
+      "invalidCredentials": "Invalid email or password."
+    },
+    "marketingTitle": "Track Smarter, Work Happier.",
+    "marketingDescription": "WorkHoursTracker simplifies time management for teams of all sizes. Gain clear insights into projects, optimize workforce allocation, and streamline payroll with ease.",
+    "marketingBullet1": "Effortless Time Tracking",
+    "marketingBullet2": "Seamless Project Assignments",
+    "marketingBullet3": "Accurate Payroll Preparation",
+    "marketingBullet4": "Boost Productivity & Efficiency",
+    "marketingDescription2": "Join thousands of businesses who trust WorkHoursTracker for precise time data and robust workforce analytics. Focus on what matters most, we'll handle the rest."
   }
 }

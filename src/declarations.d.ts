@@ -5,3 +5,4 @@ declare module '*.gif';
 declare module '*.bmp';
 declare module '*.svg';
 declare module '*.webp';
+declare module 'mapboxgl-spiderifier';

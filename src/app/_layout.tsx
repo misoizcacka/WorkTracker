@@ -26,24 +26,39 @@ function Main() {
   const segments = useSegments();
   const router = useRouter();
 
-  // useEffect(() => {
-  //   if (isLoading) return;
+  useEffect(() => {
+    if (isLoading) return;
 
-  //   const inAuthGroup = segments[0] === '(guest)';
+    const inAuthGroup = segments[0] === '(guest)' || segments[0] === 'auth';
 
-  //   if (
-  //     // If the user is not signed in and the initial segment is not anything in the auth group...
-  //     !user &&
-  //     !inAuthGroup
-  //   ) {
-  //     // Redirect to the login page.
-  //     router.replace('/(guest)/login');
-  //   } else if (user && inAuthGroup) {
-  //     // Redirect away from the login page.
-  //     // go to manager or worker based on role
-  //     router.replace(user.role === 'manager' ? '/(manager)/dashboard' : '/(worker)/home');
-  //   }
-  // }, [user, segments, isLoading]);
+    if (!user) {
+      // Not logged in.
+      if (!inAuthGroup) {
+        router.replace('/(guest)/login');
+      }
+      return;
+    }
+
+    // User is logged in.
+    const inApp = segments[0] === '(manager)' || segments[0] === '(worker)';
+    const subscriptionStatus = user.app_metadata?.subscription_status;
+
+    // This is the new check for the payment processing pages
+    const inPaymentFlow = segments.includes('payment');
+
+    if (subscriptionStatus !== 'active') {
+      // No active subscription.
+      if (segments[0] !== 'subscription' && segments[0] !== 'onboarding' && !inPaymentFlow) {
+        router.replace('/subscription/setup');
+      }
+    } else {
+      // Active subscription.
+      if (!inApp) {
+        const role = user.app_metadata.role || user.user_metadata.role;
+        router.replace(role === 'manager' ? '/(manager)/dashboard' : '/(worker)/home');
+      }
+    }
+  }, [user, segments, isLoading]);
 
   return (
     <Stack>
@@ -51,6 +66,7 @@ function Main() {
       <Stack.Screen name="auth" options={{ headerShown: false }} />
       <Stack.Screen name="subscription" options={{ headerShown: false }} />
       <Stack.Screen name="onboarding" options={{ headerShown: false }} />
+      <Stack.Screen name="(manager)" options={{ headerShown: false }} />
     </Stack>
   );
 }

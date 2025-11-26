@@ -7,6 +7,7 @@ export interface Worker {
   status: 'active' | 'invited' | 'pending';
   avatar?: string;
   pin?: string;
+  location?: { latitude: number; longitude: number; };
 }
 
 export interface Invite {

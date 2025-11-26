@@ -20,6 +20,7 @@ interface ProjectLocation {
     latitude: number;
     longitude: number;
   };
+  color?: string;
 }
 
 interface CommonMapViewProps extends RNMapViewProps {

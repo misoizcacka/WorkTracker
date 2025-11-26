@@ -65,7 +65,16 @@ export default function ManagerLayout() {
             options={{
               title: "Dashboard",
               drawerIcon: ({ color, size }: { color: string; size: number }) => (
-                <Ionicons name="bar-chart-outline" color={color} size={size} />
+                <Ionicons name="home-outline" color={color} size={size} />
+              ),
+            }}
+          />
+          <Drawer.Screen
+            name="map-overview"
+            options={{
+              title: "Map Overview",
+              drawerIcon: ({ color, size }: { color: string; size: number }) => (
+                <Ionicons name="map-outline" color={color} size={size} />
               ),
             }}
           />
@@ -156,7 +165,16 @@ export default function ManagerLayout() {
           options={{
             title: "Dashboard",
             tabBarIcon: ({ color, size }: { color: string; size: number }) => (
-              <Ionicons name="bar-chart-outline" color={color} size={size} />
+              <Ionicons name="home-outline" color={color} size={size} />
+            ),
+          }}
+        />
+        <BottomTabs.Screen
+          name="map-overview"
+          options={{
+            title: "Map Overview",
+            tabBarIcon: ({ color, size }: { color: string; size: number }) => (
+              <Ionicons name="map-outline" color={color} size={size} />
             ),
           }}
         />

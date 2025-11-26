@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, StyleSheet, ActivityIndicator, Alert, ScrollView, Platform, Dimensions, Image } from 'react-native';
+import { View, Text, TextInput, StyleSheet, ActivityIndicator, Alert, ScrollView, Platform, Dimensions, Image, Pressable } from 'react-native';
+import { Feather } from '@expo/vector-icons';
 import { useRouter, Link } from 'expo-router';
 import { Button } from '../../components/Button';
 import { theme } from '../../theme';
 import AnimatedScreen from '../../components/AnimatedScreen';
 import Logo from '../../../assets/logowhitenavy.png'; // Make sure this path is correct
+import { supabase } from '../../utils/supabase'; // Import Supabase client
 
 const { width } = Dimensions.get('window');
 const isLargeScreen = width > 768; // Define what constitutes a large screen
@@ -15,10 +17,12 @@ export default function Signup() {
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [passwordVisible, setPasswordVisible] = useState(false); // New state for password visibility
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [errors, setErrors] = useState<{ fullName?: string; email?: string; password?: string }>({});
+  const [errors, setErrors] = useState<{ fullName?: string; email?: string; password?: string; general?: string }>({});
 
-  const handleSignup = () => {
+  const handleSignup = async () => {
+    console.log("Analytics: Signup initiated.");
     const newErrors: { fullName?: string; email?: string; password?: string } = {};
     if (!fullName) newErrors.fullName = 'Full name is required.';
     if (!email) {
@@ -26,25 +30,54 @@ export default function Signup() {
     } else if (!/\S+@\S+\.\S+/.test(email)) {
       newErrors.email = 'Email address is invalid.';
     }
-    if (!password) newErrors.password = 'Password is required.';
-    else if (password.length < 6) newErrors.password = 'Password must be at least 6 characters long.';
+    if (!password) {
+      newErrors.password = 'Password is required.';
+    } else if (password.length < 6) {
+      newErrors.password = 'Password must be at least 6 characters long.';
+    }
 
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
+      console.log("Analytics: Signup validation failed.", newErrors);
       return;
     }
 
     setErrors({});
     setIsSubmitting(true);
-    // Simulate API call for manager registration
-    setTimeout(() => {
-      // Store user data in localStorage
-      localStorage.setItem('user', JSON.stringify({ fullName, email, password }));
+    console.log("Analytics: Attempting Supabase signup.");
 
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            full_name: fullName,
+            role: 'manager', // Set default role to manager
+          },
+        },
+      });
+
+      if (error) {
+        console.error("Analytics: Supabase signup failed.", error.message);
+        setErrors({ general: error.message });
+      } else if (data.user) {
+        console.log("Analytics: Supabase signup successful, user created/confirmation required. User ID:", data.user.id);
+        localStorage.setItem('user', JSON.stringify({ id: data.user.id, email: data.user.email, fullName })); // Store user.id and other basic info
+        router.push('/subscription/setup');
+      } else {
+        // This case might happen if email confirmation is required and no user data is returned immediately
+        console.log("Analytics: Supabase signup successful, but user object is null. Likely awaiting email confirmation.");
+        setErrors({ general: "Sign up successful! Please check your email to confirm your account." });
+        // Optionally redirect to a confirmation required page
+      }
+    } catch (error: any) {
+      console.error("Analytics: Supabase signup encountered an unexpected error.", error.message);
+      setErrors({ general: error.message });
+    } finally {
       setIsSubmitting(false);
-      // Navigate to subscription setup page
-      router.push('/subscription/setup');
-    }, 1500);
+      console.log("Analytics: Signup request finished.");
+    }
   };
 
   return (
@@ -76,6 +109,8 @@ export default function Signup() {
               Register your manager account to get started with WorkHoursTracker.
             </Text>
 
+            {errors.general && <View style={styles.errorContainer}><Text style={styles.errorText}>{errors.general}</Text></View>}
+
             <TextInput
               style={styles.input}
               placeholder="Your Full Name *"
@@ -95,14 +130,23 @@ export default function Signup() {
               placeholderTextColor="#999"
             />
             {errors.email && <View style={styles.errorContainer}><Text style={styles.errorText}>{errors.email}</Text></View>}
-            <TextInput
-              style={styles.input}
-              placeholder="Password *"
-              value={password}
-              onChangeText={setPassword}
-              secureTextEntry
-              placeholderTextColor="#999"
-            />
+            <View style={styles.passwordInputContainer}>
+              <TextInput
+                style={styles.passwordInput}
+                placeholder="Password *"
+                value={password}
+                onChangeText={setPassword}
+                secureTextEntry={!passwordVisible} // Dynamically set secureTextEntry
+                placeholderTextColor="#999"
+              />
+              <Pressable onPress={() => setPasswordVisible(!passwordVisible)} style={styles.passwordToggle}>
+                <Feather
+                  name={passwordVisible ? 'eye' : 'eye-off'} // Icon changes based on visibility
+                  size={20}
+                  color={theme.colors.iconColor}
+                />
+              </Pressable>
+            </View>
             {errors.password && <View style={styles.errorContainer}><Text style={styles.errorText}>{errors.password}</Text></View>}
             
             <Button
@@ -170,21 +214,18 @@ const styles = StyleSheet.create({
     color: 'white',
     marginBottom: theme.spacing(4),
     lineHeight: 48,
-    fontFamily: theme.font.bold,
   },
   marketingDescription: {
     fontSize: 18,
     color: 'white',
     marginBottom: theme.spacing(4),
     lineHeight: 28,
-    fontFamily: theme.font.regular,
   },
   marketingBullet: {
     fontSize: 16,
     color: 'white',
     marginBottom: theme.spacing(1),
     fontWeight: 'bold',
-    fontFamily: theme.font.medium,
   },
   scrollContent: {
     flexGrow: 1,
@@ -217,14 +258,12 @@ const styles = StyleSheet.create({
     color: theme.colors.headingText,
     textAlign: 'center',
     marginBottom: theme.spacing(1),
-    fontFamily: theme.font.bold,
   },
   description: {
     fontSize: 16,
     color: theme.colors.bodyText,
     textAlign: 'center',
     marginBottom: theme.spacing(4),
-    fontFamily: theme.font.regular,
   },
   errorContainer: {
     backgroundColor: '#FFEBEE',
@@ -236,7 +275,6 @@ const styles = StyleSheet.create({
     color: '#D32F2F',
     fontWeight: 'bold',
     textAlign: 'center',
-    fontFamily: theme.font.medium,
   },
   input: {
     height: 50,
@@ -248,7 +286,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: theme.colors.headingText,
     backgroundColor: 'white',
-    fontFamily: theme.font.regular,
   },
   primaryButton: {
     backgroundColor: theme.colors.primary,
@@ -262,7 +299,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
     textAlign: 'center',
-    fontFamily: theme.font.bold,
+
   },
   googleButton: {
     backgroundColor: '#DB4437',
@@ -276,7 +313,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
     textAlign: 'center',
-    fontFamily: theme.font.bold,
+
   },
   signInLinkContainer: {
     flexDirection: 'row',
@@ -286,12 +323,31 @@ const styles = StyleSheet.create({
   signInText: {
     fontSize: 14,
     color: theme.colors.bodyText,
-    fontFamily: theme.font.regular,
+
   },
   signInLink: {
     fontSize: 14,
     color: theme.colors.primary,
     fontWeight: 'bold',
-    fontFamily: theme.font.bold,
+
+  },
+  passwordInputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderColor: theme.colors.borderColor,
+    borderWidth: 1,
+    borderRadius: theme.radius.md,
+    marginBottom: theme.spacing(2),
+  },
+  passwordInput: {
+    flex: 1,
+    height: 50,
+    paddingHorizontal: theme.spacing(2),
+    fontSize: 16,
+    color: theme.colors.headingText,
+    backgroundColor: 'white',
+  },
+  passwordToggle: {
+    padding: theme.spacing(2),
   },
 });

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ActivityIndicator, Dimensions, Platform } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { supabase } from '../../utils/supabase';
 import { theme } from '../../theme';
 import AnimatedScreen from '../../components/AnimatedScreen';
 
@@ -9,22 +10,43 @@ const isLargeScreen = width > 768;
 
 export default function SubscriptionSuccess() {
   const router = useRouter();
+  const { session_id } = useLocalSearchParams();
   const [paymentStatus, setPaymentStatus] = useState<'success' | 'failed' | 'loading'>('loading');
 
   useEffect(() => {
-    const subscriptionActive = localStorage.getItem('subscriptionActive');
-
-    if (subscriptionActive === 'true') {
-      setPaymentStatus('success');
-      // Redirect to company details after a short delay
-      const timer = setTimeout(() => {
-        router.push('/onboarding/company-details');
-      }, 3000); // 3-second delay
-      return () => clearTimeout(timer); // Clean up the timer
-    } else {
+    if (!session_id) {
       setPaymentStatus('failed');
+      return;
     }
-  }, []);
+
+    const verifySession = async () => {
+      try {
+        const { data, error } = await supabase.functions.invoke('verify-checkout-session', {
+          body: { session_id },
+        });
+
+        if (error) {
+          throw error;
+        }
+
+        if (data.status === 'success') {
+          setPaymentStatus('success');
+          // Redirect to company details after a short delay
+          const timer = setTimeout(() => {
+            router.push('/onboarding/company-details');
+          }, 3000); // 3-second delay
+          return () => clearTimeout(timer); // Clean up the timer
+        } else {
+          setPaymentStatus('failed');
+        }
+      } catch (err) {
+        console.error("Error verifying session:", err);
+        setPaymentStatus('failed');
+      }
+    };
+
+    verifySession();
+  }, [session_id]);
 
   return (
     <AnimatedScreen>
@@ -109,7 +131,7 @@ const styles = StyleSheet.create({
   errorTitle: {
     fontSize: 28,
     fontWeight: 'bold',
-    color: theme.colors.error,
+    color: theme.colors.danger,
     textAlign: 'center',
     marginBottom: theme.spacing(1),
   },

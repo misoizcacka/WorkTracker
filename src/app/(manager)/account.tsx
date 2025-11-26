@@ -30,7 +30,7 @@ export default function ManagerAccount() {
       if (enrolled) {
         const result = await LocalAuthentication.authenticateAsync();
         if (result.success) {
-          await setStorageItemAsync('biometricUser', JSON.stringify({ email: user.email }));
+          await setStorageItemAsync('biometricUser', JSON.stringify({ email: user?.email }));
           setIsBiometricEnabled('true');
         }
       } else {
