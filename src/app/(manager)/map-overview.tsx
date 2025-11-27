@@ -10,6 +10,17 @@ import { Ionicons } from '@expo/vector-icons'; // Import Ionicons for checkmark
 
 import { Worker } from '../../types';
 
+function hexToRgba(hex: string, alpha: number) {
+  if (!/^#([A-Fa-f0-9]{3}){1,2}$/.test(hex)) return `rgba(0,0,0,${alpha})`;
+  let c = hex.substring(1).split('');
+  if (c.length === 3) c = [c[0], c[0], c[1], c[1], c[2], c[2]];
+  const num = parseInt(c.join(''), 16);
+  const r = (num >> 16) & 255;
+  const g = (num >> 8) & 255;
+  const b = num & 255;
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
 export default function MapOverviewScreen() { // Renamed component
   const { workers } = useContext(WorkersContext)!;
   const { projects } = useContext(ProjectsContext)!;
@@ -17,6 +28,7 @@ export default function MapOverviewScreen() { // Renamed component
   const [selectedWorkers, setSelectedWorkers] = useState<Worker[]>([]);
   const [selectedProjects, setSelectedProjects] = useState<Project[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
+  const [searchTermProject, setSearchTermProject] = useState(''); // New state for project search term
 
   // No activeWorkers or other dashboard stats on this page
 
@@ -40,6 +52,13 @@ export default function MapOverviewScreen() { // Renamed component
     worker.full_name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  const filteredProjects = useMemo(() =>
+    projects.filter(project =>
+      project.name.toLowerCase().includes(searchTermProject.toLowerCase())
+    ),
+    [projects, searchTermProject]
+  );
+
   const renderWorkerItem = ({ item }: { item: Worker }) => {
     const isSelected = selectedWorkers.some(w => w.id === item.id); // Use some for clarity
     return (
@@ -57,10 +76,10 @@ export default function MapOverviewScreen() { // Renamed component
   };
 
   const renderProjectItem = ({ item }: { item: Project }) => {
-    const isSelected = selectedProjects.some(p => p.id === item.id); // Use some for clarity
+    const isSelected = selectedProjects.some(p => p.id === item.id);
     return (
-      <TouchableOpacity onPress={() => handleProjectPress(item)} style={styles.listItem}>
-        <View style={[styles.itemContent, isSelected && styles.selectedItem]}>
+      <TouchableOpacity onPress={() => handleProjectPress(item)} activeOpacity={0.7}>
+        <View style={[styles.projectItemContainer, { backgroundColor: hexToRgba(item.color || theme.colors.secondary, 0.1) }, isSelected && styles.projectItemSelected]}>
           <View style={[styles.projectColorIndicator, { backgroundColor: item.color || theme.colors.secondary }]} />
           <View style={styles.itemInfo}>
             <Text style={styles.itemName}>{item.name}</Text>
@@ -131,8 +150,15 @@ export default function MapOverviewScreen() { // Renamed component
           {/* Right Panel: Project List */}
           <View style={styles.rightPanel}>
             <Text style={styles.panelTitle}>Projects</Text>
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Search projects..."
+              value={searchTermProject}
+              onChangeText={setSearchTermProject}
+              placeholderTextColor="#999"
+            />
             <FlatList
-              data={projects}
+              data={filteredProjects} // Changed from 'projects' to 'filteredProjects'
               renderItem={renderProjectItem}
               keyExtractor={item => item.id}
               contentContainerStyle={styles.projectListContent}
@@ -219,12 +245,22 @@ const styles = StyleSheet.create({
     marginRight: theme.spacing(2),
   },
   projectColorIndicator: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    marginRight: theme.spacing(2),
-    borderWidth: 1,
+    width: 30, // Changed from 20 to 30 to match DraggableProjectItem
+    height: 30, // Changed from 20 to 30 to match DraggableProjectItem
+    borderRadius: theme.radius.sm, // Changed from 10 to theme.radius.sm to match DraggableProjectItem
+    marginRight: theme.spacing(1.5), // Changed from 2 to 1.5 to match DraggableProjectItem
+    // Removed borderWidth and borderColor as DraggableProjectItem doesn't have it here
+  },
+  projectItemContainer: {
+    borderBottomWidth: StyleSheet.hairlineWidth,
     borderColor: theme.colors.borderColor,
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: theme.spacing(1.5),
+    borderRadius: theme.radius.md,
+  },
+  projectItemSelected: {
+    backgroundColor: theme.colors.primaryMuted,
   },
   itemInfo: { // Unified info style
     flex: 1, // Take available space
