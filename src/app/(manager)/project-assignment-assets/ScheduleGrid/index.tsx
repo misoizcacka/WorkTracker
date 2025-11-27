@@ -16,8 +16,10 @@ const TIME_LABEL_WIDTH = 60;
 interface AssignmentBlockProps {
   assignment: Assignment;
   project: Project | undefined;
-  selectedDate: Date;
   index: number;
+  onDeleteAssignment: (assignmentId: string) => void;
+  onEditAssignmentTime: (assignmentId: string, assignedTime: string | null) => void;
+  isPastDate: boolean;
 }
 
 const WebSafeView = React.forwardRef(({ children, style, ...rest }: any, ref) => {
@@ -51,11 +53,42 @@ function hexToRgba(hex: string, alpha: number) {
   return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 }
 
-const AssignmentBlock = React.memo(function AssignmentBlock({ assignment, project, selectedDate, index }: AssignmentBlockProps) {
+const AssignmentBlock = React.memo(function AssignmentBlock({ assignment, project, index, onDeleteAssignment, onEditAssignmentTime, isPastDate }: AssignmentBlockProps) {
   if (!project) return null;
 
+  // You can adjust these values to fine-tune the clone's position relative to the cursor
+  const DRAG_OFFSET_X = -300; // Move left by 30px
+  const DRAG_OFFSET_Y = -200; // Move up by 15px
+
+  // Helper function to apply an offset to an existing transform
+  const getOffsetTransform = (providedTransform: string | undefined, offsetX: number, offsetY: number): string => {
+    if (!providedTransform || providedTransform === 'none') {
+      return `translate(${offsetX}px, ${offsetY}px)`;
+    }
+  
+    // Attempt to parse existing translate values
+    const match = providedTransform.match(/translate\(([^,]+), ([^)]+)\)/);
+    let currentX = 0;
+    let currentY = 0;
+  
+    if (match) {
+      currentX = parseFloat(match[1]);
+      currentY = parseFloat(match[2]);
+    } else {
+      // If there's another transform, we just layer on a new translate
+      return `${providedTransform} translate(${offsetX}px, ${offsetY}px)`;
+    }
+  
+    // Combine with the new offset
+    return providedTransform.replace(
+      /translate\(([^,]+), ([^)]+)\)/,
+      `translate(${currentX + offsetX}px, ${currentY + offsetY}px)`
+    );
+  };
+
+
   return (
-    <Draggable draggableId={`assignment-${assignment.id}`} index={index}>
+    <Draggable draggableId={`assignment-${assignment.id}`} index={index} isDragDisabled={isPastDate}>
       {(provided, snapshot) => (
         <WebSafeView
           ref={(ref: any) => provided.innerRef(ref)}
@@ -64,16 +97,40 @@ const AssignmentBlock = React.memo(function AssignmentBlock({ assignment, projec
           style={[
             styles.assignmentContainer,
             snapshot.isDragging && styles.dragging,
-            provided.draggableProps.style,
+            { // Apply dnd's style, and potentially our custom offset to its transform
+              ...provided.draggableProps.style,
+              transform: snapshot.isDragging
+                ? getOffsetTransform(provided.draggableProps.style?.transform, DRAG_OFFSET_X, DRAG_OFFSET_Y)
+                : provided.draggableProps.style?.transform,
+            },
           ]}
         >
-            <View style={[styles.assignmentContent, { backgroundColor: hexToRgba(project.color, 0.08) }]}>
-                <View style={[styles.colorIndicator, { backgroundColor: project.color }]} />
-                <View style={styles.assignmentInfo}>
-                    <Text style={styles.assignmentName} numberOfLines={1}>{project?.name}</Text>
-                    <Text style={styles.assignmentAddress} numberOfLines={1}>{project?.address}</Text>
-                </View>
-            </View>        
+          <TouchableOpacity 
+            onLongPress={() => onEditAssignmentTime(assignment.id, assignment.assignedTime ?? null)}
+            disabled={isPastDate}
+            style={styles.touchableWrapper} // Add a style for the wrapper if needed
+          >
+            <View style={[snapshot.isDragging && styles.dragOffset]}>
+              <View style={[styles.assignmentContent, { backgroundColor: hexToRgba(project.color, 0.08) }]}>
+                  <View style={[styles.colorIndicator, { backgroundColor: project.color }]} />
+                  <View style={styles.assignmentInfo}>
+                      <Text style={styles.assignmentName} numberOfLines={1}>{project?.name}</Text>
+                      <Text style={styles.assignmentAddress} numberOfLines={1}>{project?.address}</Text>
+                      {assignment.assignedTime && (
+                          <View style={styles.timeInfoContainer}>
+                              <Ionicons name="time-outline" size={14} color={theme.colors.bodyText} style={styles.timeIcon} />
+                              <Text style={styles.assignmentTime}>{assignment.assignedTime}</Text>
+                          </View>
+                      )}
+                  </View>
+              </View>
+              {!isPastDate && (
+                <TouchableOpacity style={styles.deleteButton} onPress={() => onDeleteAssignment(assignment.id)}>
+                  <Ionicons name="close-circle" size={18} color={theme.colors.danger} />
+                </TouchableOpacity>
+              )}
+            </View>
+          </TouchableOpacity>
         </WebSafeView>
       )}
     </Draggable>
@@ -85,6 +142,9 @@ interface WorkerColumnProps {
   projects: Project[];
   assignments: Assignment[];
   selectedDate: Date;
+  onDeleteAssignment: (assignmentId: string) => void;
+  onEditAssignmentTime: (assignmentId: string, assignedTime: string | null) => void;
+  isPastDate: boolean;
 }
 
 const WebSafeScrollView = React.forwardRef(({ children, style, ...rest }: any, ref) => {
@@ -103,7 +163,7 @@ const WebSafeScrollView = React.forwardRef(({ children, style, ...rest }: any, r
   }
 });
 
-const WorkerColumn = React.memo(function WorkerColumn({ worker, projects, assignments, selectedDate }: WorkerColumnProps) {
+const WorkerColumn = React.memo(function WorkerColumn({ worker, projects, assignments, selectedDate, onDeleteAssignment, onEditAssignmentTime, isPastDate }: WorkerColumnProps) {
   const workerAssignments = assignments.filter(
     (a) => a.workerId === worker.id && isSameDay(a.startDate, selectedDate)
   );
@@ -113,7 +173,7 @@ const WorkerColumn = React.memo(function WorkerColumn({ worker, projects, assign
       <View style={styles.workerColumnHeader}>
         <Text style={styles.workerName}>{worker.full_name}</Text>
       </View>
-      <Droppable droppableId={`worker-${worker.id}`} type="TASK" direction="vertical">
+      <Droppable droppableId={`worker-${worker.id}`} type="TASK" direction="vertical" isDropDisabled={isPastDate}>
         {(provided, snapshot) => (
           <WebSafeScrollView
             ref={(ref: any) => provided.innerRef(ref)}
@@ -126,8 +186,10 @@ const WorkerColumn = React.memo(function WorkerColumn({ worker, projects, assign
                   key={assignment.id}
                   assignment={assignment}
                   project={projects.find((p) => p.id === assignment.projectId)}
-                  selectedDate={selectedDate}
                   index={index}
+                  onDeleteAssignment={onDeleteAssignment}
+                  onEditAssignmentTime={onEditAssignmentTime}
+                  isPastDate={isPastDate}
                 />
               ))}
               {provided.placeholder}
@@ -169,6 +231,9 @@ interface ScheduleGridProps {
   selectedDate: Date;
   selectedWorkers: Worker[];
   onCopyAssignments: (sourceWorkerId: string, targetWorkerId: string) => void;
+  onDeleteAssignment: (assignmentId: string) => void;
+  onEditAssignmentTime: (assignmentId: string, assignedTime: string | null) => void;
+  isPastDate: boolean;
 }
 
 const ScheduleGrid: React.FC<ScheduleGridProps> = ({
@@ -178,11 +243,14 @@ const ScheduleGrid: React.FC<ScheduleGridProps> = ({
   selectedDate,
   selectedWorkers,
   onCopyAssignments,
+  onDeleteAssignment,
+  onEditAssignmentTime,
+  isPastDate,
 }) => {
   const workersToDisplay = selectedWorkers.length > 0 ? workers.filter(w => selectedWorkers.some(sw => sw.id === w.id)) : workers;
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, isPastDate && styles.pastDateOverlay]}>
       <ScrollView horizontal showsHorizontalScrollIndicator={true}>
         {workersToDisplay.map((worker, index) => (
           <React.Fragment key={worker.id}>
@@ -198,6 +266,9 @@ const ScheduleGrid: React.FC<ScheduleGridProps> = ({
                 projects={projects}
                 assignments={assignments}
                 selectedDate={selectedDate}
+                onDeleteAssignment={onDeleteAssignment}
+                onEditAssignmentTime={onEditAssignmentTime}
+                isPastDate={isPastDate}
               />
             </Animated.View>
             {index < workersToDisplay.length - 1 && (
@@ -233,6 +304,10 @@ const styles = StyleSheet.create({
     borderColor: theme.colors.borderColor,
     borderRadius: theme.radius.lg,
     backgroundColor: theme.colors.cardBackground,
+  },
+  pastDateOverlay: {
+    opacity: 0.5,
+    pointerEvents: 'none', // Disable interactions
   },
   workerColumnWrapper: {},
   workerColumnSeparator: {
@@ -271,10 +346,20 @@ const styles = StyleSheet.create({
   assignmentContainer: {
     borderRadius: theme.radius.md,
     marginBottom: theme.spacing(1),
+    position: 'relative',
+    boxSizing: 'border-box',
+    width: '100%',
+  },
+  touchableWrapper: {
+    flex: 1, // Ensure the TouchableOpacity takes full height/width
   },
   dragging: {
-    opacity: 0.85,
+    opacity: 0.85, // Original item fades out
     ...theme.shadow.soft,
+  },
+  dragOffset: {
+    marginLeft: 0,
+    marginTop: 0,
   },
   assignmentContent: {
     flexDirection: 'row',
@@ -297,8 +382,33 @@ const styles = StyleSheet.create({
     color: theme.colors.headingText,
   },
   assignmentAddress: {
-    fontSize: 10, // Smaller font for address
+    fontSize: 10,
     color: theme.colors.bodyText,
+  },
+  timeInfoContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 2,
+  },
+  timeIcon: {
+    marginRight: 4,
+  },
+  assignmentTime: {
+    fontSize: 12,
+    color: theme.colors.bodyText,
+    fontWeight: 'bold',
+  },
+  deleteButton: {
+    position: 'absolute',
+    top: 2,
+    right: 2,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: 'rgba(255,255,255,0.7)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 10,
   },
   copyButton: {
     width: theme.spacing(5),

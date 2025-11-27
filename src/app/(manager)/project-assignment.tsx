@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useContext, useRef, useEffect } from 'react';
+import React, { useState, useCallback, useContext, useRef, useEffect, useMemo } from 'react';
 import { View, Text, StyleSheet, Platform, TouchableOpacity, Image, TextInput, FlatList, ScrollView } from 'react-native';
 import moment from 'moment';
 import { DragDropContext, DropResult, Droppable } from '@hello-pangea/dnd';
@@ -12,6 +12,7 @@ import { generateId } from './project-assignment-assets/utils/generateId';
 import ScheduleGrid from './project-assignment-assets/ScheduleGrid'; // Import new component
 import CrossPlatformDatePicker from '../../components/CrossPlatformDatePicker';
 import AddAssignmentModal from './project-assignment-assets/AddAssignmentModal'; // Import AddAssignmentModal
+import SetAssignmentTimeModal from './project-assignment-assets/SetAssignmentTimeModal'; // Import SetAssignmentTimeModal
 import { hasConflict } from './project-assignment-assets/utils/conflict'; // Import hasConflict
 import { calculateStackedAssignments } from './project-assignment-assets/utils/time';
 import { theme } from '../../theme';
@@ -54,6 +55,11 @@ export default function ProjectAssignmentScreen() {
   const [isAddAssignmentModalVisible, setAddAssignmentModalVisible] = useState(false); // State for modal visibility
   const [initialDroppedProject, setInitialDroppedProject] = useState<Project | undefined>(undefined);
   const [initialDroppedWorker, setInitialDroppedWorker] = useState<Worker | undefined>(undefined);
+
+  // State for SetAssignmentTimeModal when editing existing assignments
+  const [isSetTimeModalVisible, setIsSetTimeModalVisible] = useState(false);
+  const [editingAssignmentId, setEditingAssignmentId] = useState<string | null>(null);
+  const [initialAssignedTime, setInitialAssignedTime] = useState<string | null>(null);
 
   
 
@@ -118,6 +124,10 @@ export default function ProjectAssignmentScreen() {
         assignment.id === updatedAssignment.id ? updatedAssignment : assignment
       )
     );
+  }, []);
+
+  const handleDeleteAssignment = useCallback((assignmentId: string) => {
+    setAssignments(prev => prev.filter(a => a.id !== assignmentId));
   }, []);
 
   
@@ -202,13 +212,25 @@ export default function ProjectAssignmentScreen() {
           .filter(a => a.workerId === workerId && moment(a.startDate).isSame(selectedDate, 'day'))
           .sort((a, b) => moment(a.startDate).diff(moment(b.startDate)));
 
-        const newAssignment = {
+        let newAssignmentStartDate: Date;
+        let newAssignmentEndDate: Date;
+
+        // If no specific time, calculate based on existing assignments or default to 9 AM
+        const lastAssignmentEndTime = workerAssignments.length > 0
+          ? moment(workerAssignments[workerAssignments.length - 1].endDate)
+          : moment(selectedDate).startOf('day').add(9, 'hours');
+        
+        newAssignmentStartDate = lastAssignmentEndTime.toDate();
+        newAssignmentEndDate = moment(newAssignmentStartDate).add(1, 'hour').toDate(); // Default 1 hour duration
+
+        const newAssignment: Assignment = {
           id: generateId(),
           projectId: projectId,
           workerId: workerId,
-          startDate: new Date(), // Placeholder, will be recalculated
-          endDate: moment(new Date()).add(1, 'hour').toDate(), // Default 1 hour duration
-        };
+          startDate: newAssignmentStartDate,
+          endDate: newAssignmentEndDate,
+          assignedTime: null, // No specific time on initial drop
+        } as Assignment; // Explicitly cast to Assignment
 
         // Insert the new assignment at the drop location
         workerAssignments.splice(destination.index, 0, newAssignment);
@@ -274,13 +296,80 @@ export default function ProjectAssignmentScreen() {
       const reStackedAssignments = calculateStackedAssignments(allAssignmentsForWorker, baseStartTime);
 
       const result = [
-        ...prevAssignments.filter(a => a.workerId !== newAssignment.workerId || !moment(a.startDate).isSame(newAssignment.startDate, 'day')),
+        ...prevAssignments.filter(a => a.workerId !== newAssignment.workerId || !moment(newAssignment.startDate).isSame(newAssignment.startDate, 'day')),
         ...reStackedAssignments,
       ];
       console.log("New assignments count:", result.length);
       return result;
     });
   }, []);
+
+
+  const handleSaveEditedAssignmentTime = useCallback((newAssignedTime: string | null, assignmentId?: string | null) => {
+    if (!assignmentId) return;
+
+    setAssignments(prevAssignments => {
+      const updatedAssignments = prevAssignments.map(assignment => {
+        if (assignment.id === assignmentId) {
+          let newStartDate = assignment.startDate;
+          let newEndDate = assignment.endDate;
+
+          // If a new assigned time is provided, update start and end dates
+          if (newAssignedTime) {
+            const [hours, minutes] = newAssignedTime.split(':').map(Number);
+            newStartDate = moment(assignment.startDate).set({ hour: hours, minute: minutes, second: 0, millisecond: 0 }).toDate();
+            // Maintain original duration or set a default if duration is not relevant
+            const durationMinutes = moment(assignment.endDate).diff(moment(assignment.startDate), 'minutes');
+            newEndDate = moment(newStartDate).add(durationMinutes, 'minutes').toDate();
+          } else {
+            // If assigned time is removed, revert to stacking logic.
+            // For simplicity here, we'll just set assignedTime to null and re-stack later.
+            // A more complex logic might recalculate startDate based on previous assignment immediately.
+            // For now, setting to null and relying on re-stacking during display or next re-arrangement.
+            newStartDate = moment(assignment.startDate).startOf('day').add(9, 'hours').toDate(); // Default to 9 AM
+            newEndDate = moment(newStartDate).add(1, 'hour').toDate(); // Default 1 hour duration
+          }
+
+          return {
+            ...assignment,
+            startDate: newStartDate,
+            endDate: newEndDate,
+            assignedTime: newAssignedTime,
+          } as Assignment; // Explicitly cast to Assignment
+        }
+        return assignment;
+      });
+
+      // After updating, re-stack assignments for the worker whose assignment was edited
+      const editedAssignment = updatedAssignments.find(a => a.id === assignmentId);
+      if (editedAssignment) {
+        const workerAssignmentsForDay = updatedAssignments
+          .filter(a => a.workerId === editedAssignment.workerId && moment(a.startDate).isSame(selectedDate, 'day'))
+          .sort((a, b) => moment(a.startDate).diff(moment(b.startDate)));
+
+        const baseStartTime = moment(selectedDate).startOf('day').add(9, 'hours').toDate();
+        const reStackedAssignments = calculateStackedAssignments(workerAssignmentsForDay, baseStartTime);
+
+        const otherDayAssignments = updatedAssignments.filter(a => !(a.workerId === editedAssignment.workerId && moment(a.startDate).isSame(selectedDate, 'day')));
+        
+        return [...otherDayAssignments, ...reStackedAssignments];
+      }
+
+      return updatedAssignments;
+    });
+
+    setIsSetTimeModalVisible(false);
+    setEditingAssignmentId(null);
+    setInitialAssignedTime(null);
+  }, [selectedDate]);
+
+  const handleEditAssignmentTime = useCallback((assignmentId: string, assignedTime: string | null) => {
+    setEditingAssignmentId(assignmentId);
+    setInitialAssignedTime(assignedTime);
+    setIsSetTimeModalVisible(true);
+  }, []);
+
+  const isPastDate = useMemo(() => moment(selectedDate).isBefore(moment(), 'day'), [selectedDate]);
 
   return (
     <SafeAreaProvider>
@@ -334,6 +423,9 @@ export default function ProjectAssignmentScreen() {
                   selectedDate={selectedDate}
                   selectedWorkers={selectedWorkers}
                   onCopyAssignments={handleCopyAssignments}
+                  onDeleteAssignment={handleDeleteAssignment}
+                  onEditAssignmentTime={handleEditAssignmentTime}
+                  isPastDate={isPastDate}
                 />
               )}
             </View>
@@ -390,6 +482,18 @@ export default function ProjectAssignmentScreen() {
             onSave={handleAddAssignment}
             initialProject={initialDroppedProject}
             initialWorker={initialDroppedWorker}
+        />
+
+        <SetAssignmentTimeModal
+            isVisible={isSetTimeModalVisible}
+            onClose={() => {
+              setIsSetTimeModalVisible(false);
+              setEditingAssignmentId(null);
+              setInitialAssignedTime(null);
+            }}
+            onSave={handleSaveEditedAssignmentTime}
+            assignmentId={editingAssignmentId}
+            initialTime={initialAssignedTime}
         />
       </DragDropContext>
     </SafeAreaProvider>

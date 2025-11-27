@@ -54,7 +54,7 @@ const CrossPlatformDatePicker: React.FC<CrossPlatformDatePickerProps> = ({ date,
       <>
         <style>{`
           .react-datepicker {
-            font-family: ${theme.font.regular};
+            font-family: 'Poppins', sans-serif;
             border-color: ${theme.colors.borderColor};
             border-radius: ${theme.radius.sm}px;
             box-shadow: ${theme.shadow.soft.shadowOffset.width}px ${theme.shadow.soft.shadowOffset.height}px ${theme.shadow.soft.shadowRadius}px ${theme.shadow.soft.shadowColor};

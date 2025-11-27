@@ -15,6 +15,7 @@ export interface ProjectLocation extends BaseItemForCombining {
   type: 'project'; // Add type discriminant here
   color?: string;
   lastModified: string;
+  address?: string;
 }
 
 // Discriminant union for items *within* a cluster or as a single marker

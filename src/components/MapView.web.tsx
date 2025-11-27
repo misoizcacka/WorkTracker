@@ -1,14 +1,12 @@
 import React, { useRef, useEffect, useState, useMemo, useCallback } from 'react';
 import Map, { Marker as MapLibreMarker, NavigationControl } from 'react-map-gl/maplibre';
 import 'maplibre-gl/dist/maplibre-gl.css';
-import { View, Image, StyleSheet, Text } from 'react-native';
+import { View, Image, StyleSheet, Text, ImageStyle } from 'react-native';
 import { theme } from '../theme';
-import maplibregl, { LngLatBounds } from 'maplibre-gl';
-import { Ionicons, FontAwesome5 } from '@expo/vector-icons';
+ import maplibregl, { LngLatBounds } from 'maplibre-gl';import { Ionicons, FontAwesome5 } from '@expo/vector-icons';
 import Supercluster from 'supercluster';
 import { Button } from './Button';
 import moment from 'moment';
-
 import { WorkerLocation, ProjectLocation, ItemInCluster } from './map-types';
 
 const TILE_PROVIDER_STYLE = 'https://tiles.stadiamaps.com/styles/osm_bright.json';
@@ -23,47 +21,54 @@ interface MapViewProps {
     longitudeDelta: number;
     zoom?: number;
   };
-  showNameTag?: boolean; // Prop for name tag visibility
+  showNameTag?: boolean;
 }
 
-// --- NEW MODERN MARKER COMPONENTS ---
-
+// --- MARKERS ---
 const ModernWorkerMarker = ({ marker, showNameTag = true }: { marker: WorkerLocation; showNameTag?: boolean }) => (
-  <div style={styles.markerContainer}>
+  <View style={styles.markerContainer}>
     <View style={[styles.markerBase, styles.workerMarker]}>
       {marker.avatar ? (
-        <Image source={{ uri: marker.avatar }} style={styles.avatar} />
+        <Image source={{ uri: marker.avatar }} style={[styles.avatar] as ImageStyle} />
       ) : (
         <FontAwesome5 name="hard-hat" size={20} color="white" />
       )}
     </View>
-    {showNameTag && <div style={styles.nameTag}>{marker.name}</div>}
-  </div>
+    {showNameTag && <Text style={styles.nameTag}>{marker.name}</Text>}
+  </View>
 );
 
 const ModernProjectMarker = ({ marker, showNameTag = true }: { marker: ProjectLocation; showNameTag?: boolean }) => (
-  <div style={styles.markerContainer}>
+  <View style={styles.markerContainer}>
     <View style={[styles.markerBase, { backgroundColor: marker.color || theme.colors.secondary }]}>
       <Ionicons name="briefcase" size={22} color="white" />
     </View>
-    {showNameTag && <div style={styles.nameTag}>{marker.name}</div>}
-  </div>
+    {showNameTag && <Text style={styles.nameTag}>{marker.name}</Text>}
+  </View>
 );
 
-
+// --- CLUSTER MARKER ---
 const getClusterColor = (pointCount: number): string => {
-  if (pointCount < 10) return '#51D5A4'; // Green for small clusters
-  if (pointCount < 25) return '#FFC300'; // Yellow for medium clusters
-  return '#FF5733'; // Red for large clusters
+  if (pointCount < 10) return '#51D5A4';
+  if (pointCount < 25) return '#FFC300';
+  return '#FF5733';
 };
 
-const ClusterMarker = ({ pointCount, mainItem }) => {
-  // If it's an overlap pseudo-cluster or a real cluster, show the main item.
+interface ClusterMarkerProps {
+  pointCount: number;
+  mainItem?: WorkerLocation | ProjectLocation | null;
+}
+
+const ClusterMarker: React.FC<ClusterMarkerProps> = ({ pointCount, mainItem }) => {
   if (mainItem) {
     return (
       <div style={{ cursor: 'pointer' }}>
         <View style={styles.overlapMarker}>
-          {mainItem.type === 'worker' ? <ModernWorkerMarker marker={mainItem} showNameTag={false} /> : <ModernProjectMarker marker={mainItem} showNameTag={false} />}
+          {mainItem.type === 'worker' ? (
+            <ModernWorkerMarker marker={mainItem as WorkerLocation} showNameTag={false} />
+          ) : (
+            <ModernProjectMarker marker={mainItem as ProjectLocation} showNameTag={false} />
+          )}
           <View style={styles.badge}>
             <Text style={styles.badgeText}>{pointCount}</Text>
           </View>
@@ -71,8 +76,7 @@ const ClusterMarker = ({ pointCount, mainItem }) => {
       </div>
     );
   }
-  
-  // Fallback for clusters without a main item
+
   const color = getClusterColor(pointCount);
   return (
     <div style={{ cursor: 'pointer' }}>
@@ -83,9 +87,8 @@ const ClusterMarker = ({ pointCount, mainItem }) => {
   );
 };
 
-
-// --- NEW CUSTOM POPUP ---
-const CustomPopup = ({ popupInfo, map }: { popupInfo: ItemInCluster | null, map: maplibregl.Map | null }) => {
+// --- CUSTOM POPUPS ---
+const CustomPopup = ({ popupInfo, map }: { popupInfo: ItemInCluster | null; map: maplibregl.Map | null }) => {
   const [position, setPosition] = useState<{ x: number; y: number } | null>(null);
 
   useEffect(() => {
@@ -100,12 +103,20 @@ const CustomPopup = ({ popupInfo, map }: { popupInfo: ItemInCluster | null, map:
   if (!popupInfo || !position) return null;
 
   const isWorker = popupInfo.type === 'worker';
+  const popupWidth = 180; // same as minWidth in styles.popupContent
+  const popupHeight = 60; // estimated popup height
 
   return (
-    <div style={{ ...styles.popupContainer, top: position.y, left: position.x }}>
-      <div style={styles.popupContent}>
+    <View
+      style={{
+        ...styles.popupContainer,
+        top: position.y - popupHeight,
+        left: position.x - popupWidth / 2,
+      }}
+    >
+      <View style={styles.popupContent}>
         {isWorker && (popupInfo as WorkerLocation).avatar && (
-          <Image source={{ uri: (popupInfo as WorkerLocation).avatar }} style={styles.popupAvatar} />
+          <Image source={{ uri: (popupInfo as WorkerLocation).avatar }} style={[styles.popupAvatar] as ImageStyle} />
         )}
         <View style={{ flex: 1 }}>
           <Text style={styles.popupTitle}>{popupInfo.name}</Text>
@@ -114,42 +125,44 @@ const CustomPopup = ({ popupInfo, map }: { popupInfo: ItemInCluster | null, map:
               Last seen: {moment((popupInfo as WorkerLocation).lastSeen).fromNow()}
             </Text>
           )}
-           {!isWorker && (
-            <Text style={styles.popupText}>
-              {(popupInfo as ProjectLocation).address}
-            </Text>
-          )}
+          {!isWorker && <Text style={styles.popupText}>{(popupInfo as ProjectLocation)?.address || 'No address available'}</Text>}
         </View>
-      </div>
-    </div>
+      </View>
+    </View>
   );
 };
 
-const HoverPopup = ({ hoverInfo }: { hoverInfo: ItemInCluster | null }) => {
-  const [mousePosition, setMousePosition] = useState<{ x: number, y: number } | null>(null);
+const HoverPopup = ({ hoverInfo, map }: { hoverInfo: ItemInCluster | null; map: maplibregl.Map | null }) => {
+  const [position, setPosition] = useState<{ x: number; y: number } | null>(null);
 
   useEffect(() => {
-    const handleMouseMove = (event: MouseEvent) => {
-      setMousePosition({ x: event.clientX, y: event.clientY });
-    };
-
-    if (hoverInfo) {
-      window.addEventListener('mousemove', handleMouseMove);
+    if (hoverInfo && hoverInfo.location && map) {
+      const point = map.project([hoverInfo.location.longitude, hoverInfo.location.latitude]);
+      const markerHeight = 42; // Based on markerBase style
+      setPosition({ x: point.x, y: point.y - markerHeight / 2 }); // Position at the top edge of the marker
+    } else {
+      setPosition(null);
     }
+  }, [hoverInfo, map]);
 
-    return () => {
-      window.removeEventListener('mousemove', handleMouseMove);
-      setMousePosition(null);
-    };
-  }, [hoverInfo]);
-
-  if (!hoverInfo || !mousePosition) return null;
+  if (!hoverInfo || !position) return null;
 
   const isWorker = hoverInfo.type === 'worker';
+  const popupWidth = 180;
+  const popupHeight = 60; // This is the estimated height of the popup content itself
 
   return (
-    <div style={{ ...styles.hoverPopupContainer, top: mousePosition.y, left: mousePosition.x }}>
-      <div style={styles.popupContent}>
+    <View
+      style={{
+        ...styles.hoverPopupContainer,
+        top: position.y - popupHeight - 10, // 10px padding from the marker
+        left: position.x - popupWidth / 2,
+      }}
+    >
+      <View style={styles.popupContent}>
+        {isWorker && (hoverInfo as WorkerLocation).avatar && (
+          <Image source={{ uri: (hoverInfo as WorkerLocation).avatar }} style={[styles.popupAvatar]} />
+        )}
         <View style={{ flex: 1 }}>
           <Text style={styles.popupTitle}>{hoverInfo.name}</Text>
           {isWorker && (hoverInfo as WorkerLocation).lastSeen && (
@@ -157,24 +170,29 @@ const HoverPopup = ({ hoverInfo }: { hoverInfo: ItemInCluster | null }) => {
               Last seen: {moment((hoverInfo as WorkerLocation).lastSeen).fromNow()}
             </Text>
           )}
-          {!isWorker && (
-            <Text style={styles.popupText}>
-              {(hoverInfo as ProjectLocation).address}
-            </Text>
-          )}
+          {!isWorker && <Text style={styles.popupText}>{(hoverInfo as ProjectLocation).address || 'No address available'}</Text>}
         </View>
-      </div>
-    </div>
+      </View>
+    </View>
   );
 };
 
-
-export const MapView: React.FC<MapViewProps> = ({ selectedWorkers = [], selectedProjects = [], initialRegion, showNameTag = true }) => {
+// --- MAIN MAP VIEW ---
+export const MapView: React.FC<MapViewProps> = ({
+  selectedWorkers = [],
+  selectedProjects = [],
+  initialRegion,
+  showNameTag = true,
+}) => {
   const mapRef = useRef<any>(null);
 
   const [popupInfo, setPopupInfo] = useState<ItemInCluster | null>(null);
   const [hoverInfo, setHoverInfo] = useState<ItemInCluster | null>(null);
-  const [zoom, setZoom] = useState(initialRegion?.zoom || 10);
+  const [viewState, setViewState] = useState({
+    latitude: initialRegion?.latitude || 52.52,
+    longitude: initialRegion?.longitude || 13.405,
+    zoom: initialRegion?.zoom || 10,
+  });
   const [bounds, setBounds] = useState<[number, number, number, number]>([-180, -90, 180, 90]);
   const [isMapLoaded, setIsMapLoaded] = useState(false);
   const [spiderfiedMarkers, setSpiderfiedMarkers] = useState<any[]>([]);
@@ -193,6 +211,25 @@ export const MapView: React.FC<MapViewProps> = ({ selectedWorkers = [], selected
     })),
   ], [selectedWorkers, selectedProjects]);
 
+  useEffect(() => {
+    if (!isMapLoaded || !mapRef.current) return;
+    const map = mapRef.current;
+
+    const allLocations = features.map(f => f.geometry.coordinates as [number, number]);
+    if (features.length === 0) {
+      if (initialRegion) {
+        map.easeTo({ center: [initialRegion.longitude, initialRegion.latitude], zoom: initialRegion.zoom || 10, duration: 1000 });
+      }
+      return;
+    };
+
+    const boundsToFit = new LngLatBounds();
+    allLocations.forEach(loc => boundsToFit.extend(loc));
+    if(!boundsToFit.isEmpty()) {
+      map.fitBounds(boundsToFit, { padding: 100, maxZoom: 15, duration: 1000 });
+    }
+  }, [features, isMapLoaded]); // Removed initialRegion dependency
+
   const supercluster = useMemo(() => {
     const sc = new Supercluster({ radius: 40, maxZoom: 16 });
     sc.load(features as Supercluster.PointFeature<ItemInCluster>[]);
@@ -201,11 +238,11 @@ export const MapView: React.FC<MapViewProps> = ({ selectedWorkers = [], selected
 
   const clusters = useMemo(() => {
     if (!supercluster) return [];
-    return supercluster.getClusters(bounds, Math.floor(zoom));
-  }, [supercluster, bounds, zoom]);
+    return supercluster.getClusters(bounds, Math.floor(viewState.zoom));
+  }, [supercluster, bounds, viewState.zoom]); // Changed zoom to viewState.zoom
 
   const renderableItems = useMemo(() => {
-    const items = [];
+    const items: any[] = [];
     const overlappingPoints: { [key: string]: any[] } = {};
 
     for (const item of clusters) {
@@ -215,9 +252,7 @@ export const MapView: React.FC<MapViewProps> = ({ selectedWorkers = [], selected
         const lon = item.geometry.coordinates[0].toFixed(5);
         const lat = item.geometry.coordinates[1].toFixed(5);
         const coords = `${lon},${lat}`;
-        if (!overlappingPoints[coords]) {
-          overlappingPoints[coords] = [];
-        }
+        if (!overlappingPoints[coords]) overlappingPoints[coords] = [];
         overlappingPoints[coords].push(item);
       }
     }
@@ -244,68 +279,31 @@ export const MapView: React.FC<MapViewProps> = ({ selectedWorkers = [], selected
     return items;
   }, [clusters]);
 
-
   const onMapLoad = useCallback((evt: maplibregl.MapLibreEvent) => {
     mapRef.current = evt.target;
-    const map = mapRef.current;
-    if (!map) return;
+    if (!mapRef.current) return;
     setIsMapLoaded(true);
-
-    const onMoveEnd = () => {
-      if (!mapRef.current) return;
-      const map = mapRef.current;
-      setZoom(map.getZoom());
-      const newBounds = map.getBounds();
-      setBounds([newBounds.getWest(), newBounds.getSouth(), newBounds.getEast(), newBounds.getNorth()]);
-    };
-    map.on('moveend', onMoveEnd);
-    return () => {
-      map.off('moveend', onMoveEnd);
-    }
   }, []);
 
-  useEffect(() => {
-    if (!isMapLoaded || !mapRef.current) return;
-    const map = mapRef.current;
-
-    const allLocations = features.map(f => f.geometry.coordinates as [number, number]);
-    if (features.length === 0) {
-      if (initialRegion) {
-        map.easeTo({ center: [initialRegion.longitude, initialRegion.latitude], zoom: initialRegion.zoom || 10, duration: 1000 });
-      }
-      return;
-    };
-    
-    const boundsToFit = new LngLatBounds();
-    allLocations.forEach(loc => boundsToFit.extend(loc));
-    if(!boundsToFit.isEmpty()) {
-      map.fitBounds(boundsToFit, { padding: 100, maxZoom: 15, duration: 1000 });
-    }
-  }, [features, isMapLoaded, initialRegion]);
-
-  const generateCircleParams = (count: number, center: [number, number], radius: number): { x: number; y: number; angle: number; }[] => {
+  const generateCircleParams = (count: number, center: [number, number], radius: number) => {
     const angleStep = (Math.PI * 2) / count;
-    const points = [];
-    for (let i = 0; i < count; i++) {
-        const angle = i * angleStep;
-        points.push({
-            x: center[0] + radius * Math.cos(angle),
-            y: center[1] + radius * Math.sin(angle),
-            angle: angle,
-        });
-    }
-    return points;
+    return Array.from({ length: count }, (_, i) => {
+      const angle = i * angleStep;
+      return {
+        x: center[0] + radius * Math.cos(angle),
+        y: center[1] + radius * Math.sin(angle),
+        angle,
+      };
+    });
   };
 
   const handleSingleMarkerClick = (item: any) => {
     const map = mapRef.current;
     if (!map) return;
-    clearAll();
-    map.easeTo({
-      center: item.geometry.coordinates,
-      offset: [0, -100],
-      duration: 500,
-    });
+    setSpiderfiedMarkers([]); // Ensure immediate clear
+    setSpiderfiedParentId(null); // Ensure immediate clear
+    setPopupInfo(null);
+    setHoverInfo(null);
     setPopupInfo(item.properties as ItemInCluster);
   };
 
@@ -327,8 +325,8 @@ export const MapView: React.FC<MapViewProps> = ({ selectedWorkers = [], selected
       centerCoord = clusterOrOverlap.geometry.coordinates;
       parentId = clusterOrOverlap.id;
     }
-    
-    const spiderfyRadius = 50; 
+
+    const spiderfyRadius = 50;
     const pixelCenter = map.project(centerCoord);
     const spiderfyPoints = generateCircleParams(leaves.length, [pixelCenter.x, pixelCenter.y], spiderfyRadius);
 
@@ -337,7 +335,7 @@ export const MapView: React.FC<MapViewProps> = ({ selectedWorkers = [], selected
       const spiderfyLatLng = map.unproject([spiderfyPixel.x, spiderfyPixel.y]);
       return {
         ...leaf,
-        id: `spider-${leaf.properties.id}`,
+        id: `spider-${leaf.properties.type}-${leaf.properties.id}`,
         properties: {
           ...leaf.properties,
           location: {
@@ -356,96 +354,114 @@ export const MapView: React.FC<MapViewProps> = ({ selectedWorkers = [], selected
     setSpiderfiedParentId(null);
     setPopupInfo(null);
     setHoverInfo(null);
-  }
+  };
 
   return (
     <View style={styles.mapContainer}>
       <Map
         ref={mapRef}
-        initialViewState={{ latitude: initialRegion?.latitude || 52.52, longitude: initialRegion?.longitude || 13.405, zoom: initialRegion?.zoom || 10 }}
+        {...viewState}
+        onMove={evt => {
+          setViewState(evt.viewState);
+          if (mapRef.current) {
+            const map = mapRef.current;
+            const newBounds = map.getBounds();
+            setBounds([newBounds.getWest(), newBounds.getSouth(), newBounds.getEast(), newBounds.getNorth()]);
+          }
+        }}
         style={{ width: '100%', height: '100%' }}
         mapStyle={TILE_PROVIDER_STYLE as any}
         attributionControl={false}
         onLoad={onMapLoad}
         onClick={clearAll}
-        onMove={() => { 
+        onMoveEnd={() => { // Changed from onMove to onMoveEnd to avoid too many re-renders
           if (popupInfo) setPopupInfo(null);
           if (hoverInfo) setHoverInfo(null);
           if (spiderfiedMarkers.length > 0) clearAll();
         }}
       >
-        {renderableItems.filter(item => item.id !== spiderfiedParentId).map(item => {
-          if (item.properties.cluster) { // Real Supercluster cluster
-            const pointCount = item.properties.point_count;
-            const leaves = supercluster.getLeaves(item.properties.cluster_id, Infinity);
-            const projects = leaves.map(l => l.properties).filter(p => p.type === 'project');
-            const workers = leaves.map(l => l.properties).filter(w => w.type === 'worker');
-            projects.sort((a, b) => new Date(a.lastModified).getTime() - new Date(b.lastModified).getTime());
-            workers.sort((a, b) => parseInt(a.id, 10) - parseInt(b.id, 10));
-            const mainItem = projects[0] || workers[0];
-            
-            return (
-              <MapLibreMarker
-                key={item.id}
-                latitude={item.geometry.coordinates[1]}
-                longitude={item.geometry.coordinates[0]}
-              >
-                <div 
-                  onClick={(e) => { e.stopPropagation(); handleSpiderfy(item); }}
-                  onMouseEnter={() => { if (!popupInfo) setHoverInfo(mainItem); }}
-                  onMouseLeave={() => setHoverInfo(null)}
-                >
-                  <ClusterMarker pointCount={pointCount} mainItem={mainItem} />
-                </div>
-              </MapLibreMarker>
-            );
-          } else if (item.isOverlap) { // Overlapping points
-            return (
-              <MapLibreMarker
-                key={item.id}
-                latitude={item.geometry.coordinates[1]}
-                longitude={item.geometry.coordinates[0]}
-              >
-                <div 
-                  onClick={(e) => { e.stopPropagation(); handleSpiderfy(item); }}
-                  onMouseEnter={() => { if (!popupInfo) setHoverInfo(item.properties.mainItem); }}
-                  onMouseLeave={() => setHoverInfo(null)}
-                >
-                  <ClusterMarker pointCount={item.properties.point_count} mainItem={item.properties.mainItem} />
-                </div>
-              </MapLibreMarker>
-            );
-          } else { // Single marker
-            return (
-              <MapLibreMarker
-                key={item.id}
-                latitude={item.geometry.coordinates[1]}
-                longitude={item.geometry.coordinates[0]}
-              >
-                <div 
-                  onClick={e => { e.stopPropagation(); handleSingleMarkerClick(item); }}
-                  onMouseEnter={() => { if (!popupInfo) setHoverInfo(item.properties); }}
-                  onMouseLeave={() => setHoverInfo(null)}
-                >
-                  {item.properties.type === 'worker' ? 
-                    <ModernWorkerMarker marker={item.properties as WorkerLocation} showNameTag={showNameTag} /> : 
-                    <ModernProjectMarker marker={item.properties as ProjectLocation} showNameTag={showNameTag} />}
-                </div>
-              </MapLibreMarker>
-            );
-          }
-        })}
+        {renderableItems
+          .filter(item => item.id !== spiderfiedParentId)
+          .map(item => {
+            const isCluster = !!item.properties.cluster;
+            const isOverlap = !!item.isOverlap;
 
-        {spiderfiedMarkers.map((marker) => (
-          <MapLibreMarker
-            key={marker.id}
-            latitude={marker.properties.location.latitude}
-            longitude={marker.properties.location.longitude}
-            style={{ zIndex: 100 }}
-          >
-            <div 
-              onClick={e => { e.stopPropagation(); handleSingleMarkerClick(marker)}}
-              onMouseEnter={() => { if (!popupInfo) setHoverInfo(marker.properties); }}
+            if (isCluster) {
+              const pointCount = item.properties.point_count;
+              const leaves = supercluster.getLeaves(item.properties.cluster_id, Infinity);
+              const projects = leaves.map(l => l.properties).filter(p => p.type === 'project');
+              const workers = leaves.map(l => l.properties).filter(w => w.type === 'worker');
+              projects.sort((a, b) => new Date(a.lastModified).getTime() - new Date(b.lastModified).getTime());
+              workers.sort((a, b) => parseInt(a.id, 10) - parseInt(b.id, 10));
+              const mainItem = projects[0] || workers[0];
+
+              return (
+                <MapLibreMarker key={item.id} latitude={item.geometry.coordinates[1]} longitude={item.geometry.coordinates[0]}>
+                  <div
+                    onClick={e => {
+                      e.stopPropagation();
+                      handleSpiderfy(item);
+                    }}
+                    onMouseEnter={() => {
+                      if (!popupInfo && mainItem) setHoverInfo(mainItem as ItemInCluster);
+                    }}
+                    onMouseLeave={() => setHoverInfo(null)}
+                  >
+                    <ClusterMarker pointCount={pointCount} mainItem={mainItem as WorkerLocation | ProjectLocation} />
+                  </div>
+                </MapLibreMarker>
+              );
+            } else if (isOverlap) {
+              return (
+                <MapLibreMarker key={item.id} latitude={item.geometry.coordinates[1]} longitude={item.geometry.coordinates[0]}>
+                  <div
+                    onClick={e => {
+                      e.stopPropagation();
+                      handleSpiderfy(item);
+                    }}
+                    onMouseEnter={() => {
+                      if (!popupInfo && item.properties.mainItem) setHoverInfo(item.properties.mainItem as ItemInCluster);
+                    }}
+                    onMouseLeave={() => setHoverInfo(null)}
+                  >
+                    <ClusterMarker pointCount={item.properties.point_count} mainItem={item.properties.mainItem as WorkerLocation | ProjectLocation} />
+                  </div>
+                </MapLibreMarker>
+              );
+            } else {
+              return (
+                <MapLibreMarker key={item.id} latitude={item.geometry.coordinates[1]} longitude={item.geometry.coordinates[0]}>
+                  <div
+                    onClick={e => {
+                      e.stopPropagation();
+                      handleSingleMarkerClick(item);
+                    }}
+                    onMouseEnter={() => {
+                      if (!popupInfo) setHoverInfo(item.properties as ItemInCluster);
+                    }}
+                    onMouseLeave={() => setHoverInfo(null)}
+                  >
+                    {item.properties.type === 'worker' ? (
+                      <ModernWorkerMarker marker={item.properties as WorkerLocation} showNameTag={showNameTag} />
+                    ) : (
+                      <ModernProjectMarker marker={item.properties as ProjectLocation} showNameTag={showNameTag} />
+                    )}
+                  </div>
+                </MapLibreMarker>
+              );
+            }
+          })}
+
+        {spiderfiedMarkers.map(marker => (
+          <MapLibreMarker key={marker.id} latitude={marker.properties.location.latitude} longitude={marker.properties.location.longitude} style={{ zIndex: 100 }}>
+            <div
+              onClick={e => {
+                e.stopPropagation();
+                handleSingleMarkerClick(marker);
+              }}
+              onMouseEnter={() => {
+                if (!popupInfo) setHoverInfo(marker.properties as ItemInCluster);
+              }}
               onMouseLeave={() => setHoverInfo(null)}
             >
               {marker.properties.type === 'worker' ? (
@@ -458,7 +474,7 @@ export const MapView: React.FC<MapViewProps> = ({ selectedWorkers = [], selected
         ))}
 
         <CustomPopup popupInfo={popupInfo} map={mapRef.current} />
-        <HoverPopup hoverInfo={hoverInfo} />
+        <HoverPopup hoverInfo={hoverInfo} map={mapRef.current} />
 
         <NavigationControl />
         {spiderfiedMarkers.length > 0 && (
@@ -477,15 +493,23 @@ export const MapView: React.FC<MapViewProps> = ({ selectedWorkers = [], selected
   );
 };
 
+// --- STYLES ---
 const styles = StyleSheet.create({
-  mapContainer: { flex: 1, borderRadius: theme.radius.md, overflow: 'hidden', borderWidth: 1, borderColor: theme.colors.borderColor, margin: theme.spacing(2) },
-  // --- New Marker Styles ---
+  mapContainer: {
+    flex: 1,
+    borderRadius: theme.radius.md,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: theme.colors.borderColor,
+    margin: theme.spacing(2),
+  },
+
   markerContainer: {
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',
-    animation: 'fadeIn 0.3s ease-in-out',
   },
+
   markerBase: {
     width: 42,
     height: 42,
@@ -494,20 +518,18 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderWidth: 2,
     borderColor: 'white',
-    boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-    cursor: 'pointer',
   },
-  workerMarker: { 
-    backgroundColor: theme.colors.primary, 
+
+  workerMarker: {
+    backgroundColor: theme.colors.primary,
   },
-  projectMarker: {
-    // Color is set inline
+
+  avatar: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
   },
-  avatar: { 
-    width: 38, 
-    height: 38, 
-    borderRadius: 19 
-  },
+
   nameTag: {
     backgroundColor: 'rgba(255, 255, 255, 0.9)',
     borderRadius: 10,
@@ -517,108 +539,106 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '500',
     color: '#333',
-    boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-    whiteSpace: 'nowrap',
   },
-  overlapMarker: { 
-    position: 'relative', 
-    alignItems: 'center', 
-    justifyContent: 'center' 
+
+  overlapMarker: {
+    position: 'relative',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  // --- Cluster & Badge ---
+
   clusterMarker: {
-     // inherits from markerBase
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: 'white',
   },
+
   clusterMarkerText: {
     color: 'white',
     fontWeight: 'bold',
     fontSize: 16,
   },
-  badge: { 
-    position: 'absolute', 
-    top: -4, 
-    right: -4, 
+
+  badge: {
+    position: 'absolute',
+    top: -4,
+    right: -4,
     backgroundColor: theme.colors.danger,
     width: 20,
     height: 20,
     borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1, 
-    borderColor: 'white' 
+    borderWidth: 1,
+    borderColor: 'white',
   },
-  badgeText: { 
-    color: 'white', 
-    fontSize: 10, 
-    fontWeight: 'bold' 
+
+  badgeText: {
+    color: 'white',
+    fontSize: 10,
+    fontWeight: 'bold',
   },
-  // --- New Popup Styles ---
+
   popupContainer: {
     position: 'absolute',
-    transform: 'translate(-50%, -100%)', // Center above the point, then move up
     zIndex: 200,
-    animation: 'fadeScaleIn 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
-    marginTop: -25, // Negative margin to create space between marker and popup
-    pointerEvents: 'none', 
+    pointerEvents: 'none',
   },
+
   hoverPopupContainer: {
-    position: 'fixed',
-    transform: 'translate(15px, 15px)', // Offset from cursor
+    position: 'absolute',
     zIndex: 300,
     pointerEvents: 'none',
-    animation: 'fadeScaleIn 0.2s ease-out',
   },
+
   popupContent: {
     flexDirection: 'row',
     alignItems: 'center',
     padding: theme.spacing(1.5),
     backgroundColor: 'white',
     borderRadius: theme.radius.lg,
-    boxShadow: '0 8px 24px rgba(0,0,0,0.2)',
     minWidth: 180,
   },
+
   popupAvatar: {
     width: 40,
     height: 40,
     borderRadius: 20,
     marginRight: theme.spacing(1.5),
   },
+
   popupTitle: {
     fontWeight: '600',
     fontSize: 15,
     color: theme.colors.headingText,
   },
+
   popupText: {
     fontSize: 12,
     color: theme.colors.bodyText,
     marginTop: 2,
   },
 
-  // --- Controls ---
   clearSpiderfyButtonContainer: {
     position: 'absolute',
     bottom: theme.spacing(3),
     left: '50%',
-    transform: 'translateX(-50%)',
+    transform: [{ translateX: -50 }] as any,
     zIndex: 150,
   },
+
   clearSpiderfyButton: {
     paddingVertical: theme.spacing(1),
     paddingHorizontal: theme.spacing(2),
     minHeight: 'auto',
   },
+
   clearSpiderfyButtonText: {
     fontSize: 14,
     fontWeight: '600',
-  },
-
-  // --- Keyframe Animations ---
-  '@keyframes fadeIn': {
-    '0%': { opacity: 0 },
-    '100%': { opacity: 1 },
-  },
-  '@keyframes fadeScaleIn': {
-    '0%': { opacity: 0, transform: 'translateY(5px) scale(0.95)' },
-    '100%': { opacity: 1, transform: 'translateY(0) scale(1)' },
   },
 });

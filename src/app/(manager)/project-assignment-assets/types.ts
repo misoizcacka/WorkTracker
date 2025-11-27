@@ -17,4 +17,5 @@ export interface Assignment {
   startDate: Date;
   endDate: Date;
   notes?: string;
+  assignedTime?: string | null; // New optional field for specific assignment time (HH:mm)
 }
