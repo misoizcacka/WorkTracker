@@ -9,11 +9,11 @@ import { Worker } from '../../types';
 
 import { Assignment } from './project-assignment-assets/types';
 import { generateId } from './project-assignment-assets/utils/generateId';
-import ScheduleGrid from './project-assignment-assets/ScheduleGrid'; // Import new component
+import ScheduleGrid from './project-assignment-assets/ScheduleGrid';
 import CrossPlatformDatePicker from '../../components/CrossPlatformDatePicker';
-import AddAssignmentModal from './project-assignment-assets/AddAssignmentModal'; // Import AddAssignmentModal
-import SetAssignmentTimeModal from './project-assignment-assets/SetAssignmentTimeModal'; // Import SetAssignmentTimeModal
-import { hasConflict } from './project-assignment-assets/utils/conflict'; // Import hasConflict
+import AddAssignmentModal from './project-assignment-assets/AddAssignmentModal';
+import SetAssignmentTimeModal from './project-assignment-assets/SetAssignmentTimeModal';
+import { hasConflict } from './project-assignment-assets/utils/conflict';
 import { calculateStackedAssignments } from './project-assignment-assets/utils/time';
 import { theme } from '../../theme';
 import { WorkersContext } from './WorkersContext';

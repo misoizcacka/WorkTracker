@@ -17,6 +17,7 @@ export const theme = {
 
     success: "#16A34A", // balanced green
     warning: "#F59E0B", // subtle amber
+    warningMuted: "#FFF3E0", // light orange background
     danger: "#DC2626", // standard red for errors
     background: "#F2F3F5",
   },

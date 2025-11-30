@@ -1,6 +1,5 @@
 import React, { useState, useRef } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Animated } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import CountryFlag from "react-native-country-flag";
 import { useTranslation } from 'react-i18next';
 import { theme } from '../theme';
@@ -13,7 +12,6 @@ const LANGUAGES = [
 ];
 
 export function LanguageSelector() {
-  const { top } = useSafeAreaInsets();
   const { i18n } = useTranslation();
   const [popoverVisible, setPopoverVisible] = useState(false);
   const [currentLanguage, setCurrentLanguage] = useState(i18n.language.split('-')[0]);
@@ -60,9 +58,10 @@ export function LanguageSelector() {
   const currentLang = LANGUAGES.find(lang => lang.code === currentLanguage) || LANGUAGES[0];
 
   return (
-    <View style={[styles.container, { top: top + 10 }]}>
+    <View style={styles.container}>
       <TouchableOpacity onPress={togglePopover} style={styles.button}>
         <CountryFlag isoCode={currentLang.countryCode} size={24} style={styles.flag} />
+        <Text style={styles.currentLangLabel}>{currentLang.label}</Text>
       </TouchableOpacity>
 
       {popoverVisible && (
@@ -84,41 +83,51 @@ export function LanguageSelector() {
 
 const styles = StyleSheet.create({
   container: {
-    position: 'absolute',
-    right: 10,
-    zIndex: 1000, // Ensure it's above other content
+    position: 'relative', // Changed to relative
+    alignSelf: 'flex-start', // Align to start
   },
   button: {
-    padding: 2, // Reduced padding for a thinner border appearance
-    borderRadius: 50,
-    backgroundColor: 'transparent', // Make background transparent to show only the border
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: theme.colors.cardBackground,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: theme.radius.md,
+    borderColor: theme.colors.borderColor,
     borderWidth: 1,
-    borderColor: theme.colors.cardBackground,
   },
   flag: {
     width: 24,
     height: 24,
-    borderRadius: 12, // Make it rounded
+    borderRadius: 12,
+    marginRight: 8,
+  },
+  currentLangLabel: {
+    fontSize: 16,
+    color: theme.colors.bodyText,
+    fontWeight: '500',
   },
   popoverContent: {
     position: 'absolute',
-    top: 50, // Position below the button
+    top: '100%', // Position below the button
     right: 0,
-    backgroundColor: 'white',
+    backgroundColor: theme.colors.cardBackground,
     borderRadius: 10,
-    padding: 10,
+    padding: 5,
     shadowColor: theme.shadow.soft.shadowColor,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
     shadowRadius: 3.84,
     elevation: 5,
     minWidth: 180,
+    zIndex: 1000, // Ensure it's above other content when open
+    marginTop: 5,
   },
   langOption: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 10,
-    paddingHorizontal: 5,
+    paddingVertical: 8,
+    paddingHorizontal: 10,
   },
   langFlag: {
     width: 24,

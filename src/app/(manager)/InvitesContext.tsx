@@ -3,7 +3,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { Invite } from '../../types';
 import { WorkersContext } from './WorkersContext';
 
-type InviteData = Omit<Invite, 'id' | 'status' | 'token' | 'role'>;
+type InviteData = Omit<Invite, 'id' | 'status' | 'token'>;
 
 interface InvitesContextType {
   invites: Invite[];
@@ -26,7 +26,6 @@ export function InvitesProvider({ children }: { children: React.ReactNode }) {
                 ...inviteData,
                 id: (invites.length + 1).toString(),
                 status: 'pending',
-                role: 'worker',
                 token,
             };
             setInvites(prevInvites => [...prevInvites, newInvite]);

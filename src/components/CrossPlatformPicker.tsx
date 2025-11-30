@@ -44,7 +44,7 @@ const CrossPlatformPicker: React.FC<CrossPlatformPickerProps> = ({
           onValueChange={(itemValue: string | null) => onValueChange(itemValue)} // Explicitly type itemValue
           style={styles.nativePicker}
         >
-          {placeholder && <NativePicker.Item label={placeholder} value="" enabled={false} />}
+          {placeholder && <NativePicker.Item label={placeholder} value="" />}
           {options.map((option) => (
             <NativePicker.Item key={option.value} label={option.label} value={option.value} />
           ))}
@@ -58,23 +58,25 @@ const styles = StyleSheet.create({
   webPicker: {
     height: 50,
     width: '100%',
-    borderColor: theme.colors.borderColor,
+    borderColor: '#ddd',
     borderWidth: 1,
-    borderRadius: theme.radius.sm,
+    borderRadius: 10,
     color: theme.colors.bodyText,
-    paddingHorizontal: 10,
+    paddingHorizontal: 15,
     backgroundColor: theme.colors.cardBackground,
     fontSize: 16,
+    marginBottom: 15,
   },
   nativePickerContainer: {
     height: 50,
     width: '100%',
-    borderColor: theme.colors.borderColor,
+    borderColor: '#ddd',
     borderWidth: 1,
-    borderRadius: theme.radius.sm,
+    borderRadius: 10,
     overflow: 'hidden', // Ensures the picker content stays within bounds
     justifyContent: 'center',
     backgroundColor: theme.colors.cardBackground,
+    marginBottom: 15,
   },
   nativePicker: {
     width: '100%',

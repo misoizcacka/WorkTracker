@@ -5,13 +5,12 @@ import { Ionicons } from "@expo/vector-icons";
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { withLayoutContext } from 'expo-router';
 import { useDebouncedWindowDimensions } from "../../hooks/useDebouncedWindowDimensions";
+import { DrawerToggleButton } from '@react-navigation/drawer';
 
 import { theme } from "../../theme";
 import { WorkersProvider } from "./WorkersContext";
-
 import { ProjectsProvider } from "./ProjectsContext";
 import { AssignmentsProvider } from "./AssignmentsContext";
-
 import { InvitesProvider } from "./InvitesContext";
 
 const { Navigator } = createBottomTabNavigator();
@@ -32,7 +31,8 @@ function ManagerProviders({ children }: { children: React.ReactNode }) {
   );
 }
 
-export default function ManagerLayout() {
+
+export default function TabsLayout() { // Renamed from ManagerLayout
   const { width } = useDebouncedWindowDimensions(50);
   const isLargeScreen = width >= 900;
 
@@ -43,12 +43,13 @@ export default function ManagerLayout() {
         <Drawer
           screenOptions={{
             headerShown: true,
+            headerLeft: () => <DrawerToggleButton tintColor={theme.colors.cardBackground} />, // Add DrawerToggleButton here
             headerStyle: {
               backgroundColor: theme.colors.primary,
               elevation: 0, // Remove shadow on Android
               shadowOpacity: 0, // Remove shadow on iOS
             },
-            headerTintColor: theme.colors.pageBackground,
+            headerTintColor: theme.colors.primary,
             headerTitle: () => (
               <Image
                 source={require('../../../assets/logowhitenavy.png')}
@@ -58,6 +59,7 @@ export default function ManagerLayout() {
             drawerStyle: { backgroundColor: theme.colors.pageBackground, width: 260 },
             drawerActiveTintColor: "#2563EB",
             drawerLabelStyle: { fontSize: 16, fontWeight: "500" },
+            drawerItemStyle: { display: 'none' }
           }}
         >
           <Drawer.Screen
@@ -67,6 +69,7 @@ export default function ManagerLayout() {
               drawerIcon: ({ color, size }: { color: string; size: number }) => (
                 <Ionicons name="home-outline" color={color} size={size} />
               ),
+              drawerItemStyle: { display: 'flex' }
             }}
           />
           <Drawer.Screen
@@ -76,15 +79,17 @@ export default function ManagerLayout() {
               drawerIcon: ({ color, size }: { color: string; size: number }) => (
                 <Ionicons name="map-outline" color={color} size={size} />
               ),
+              drawerItemStyle: { display: 'flex' }
             }}
           />
           <Drawer.Screen
-            name="workers"
+            name="employees"
             options={{
-              title: "Workers",
+              title: "Employees",
               drawerIcon: ({ color, size }: { color: string; size: number }) => (
                 <Ionicons name="people-outline" color={color} size={size} />
               ),
+              drawerItemStyle: { display: 'flex' }
             }}
           />
           <Drawer.Screen
@@ -92,10 +97,12 @@ export default function ManagerLayout() {
             options={{
               title: "Projects",
               drawerIcon: ({ color, size }: { color: string; size: number }) => (
-                <Ionicons name="briefcase-outline" color={color} size={size} />
+                <Ionicons name="folder-outline" color={color} size={size} />
               ),
+              drawerItemStyle: { display: 'flex' }
             }}
           />
+
           <Drawer.Screen
             name="project-assignment"
             options={{
@@ -103,15 +110,17 @@ export default function ManagerLayout() {
               drawerIcon: ({ color, size }: { color: string; size: number }) => (
                 <Ionicons name="calendar-outline" color={color} size={size} />
               ),
+              drawerItemStyle: { display: 'flex' }
             }}
           />
           <Drawer.Screen
-            name="reports"
+            name="reports/index"
             options={{
               title: "Reports",
               drawerIcon: ({ color, size }: { color: string; size: number }) => (
                 <Ionicons name="document-text-outline" color={color} size={size} />
               ),
+              drawerItemStyle: { display: 'flex' }
             }}
           />
           <Drawer.Screen
@@ -121,6 +130,7 @@ export default function ManagerLayout() {
               drawerIcon: ({ color, size }: { color: string; size: number }) => (
                 <Ionicons name="person-circle-outline" color={color} size={size} />
               ),
+              drawerItemStyle: { display: 'flex' }
             }}
           />
         </Drawer>
@@ -133,18 +143,7 @@ export default function ManagerLayout() {
     <ManagerProviders>
       <BottomTabs
         screenOptions={{
-          headerShown: true,
-          headerStyle: {
-            backgroundColor: theme.colors.primary, // Use navy from theme
-            elevation: 0, // Remove shadow on Android
-            shadowOpacity: 0, // Remove shadow on iOS
-          },
-          headerTitle: () => (
-            <Image
-              source={require('../../../assets/logowhitenavy.png')}
-              style={{ width: 150, height: 40, resizeMode: 'contain' }}
-            />
-          ),
+          headerShown: false,
           tabBarActiveTintColor: theme.colors.cardBackground,
                   tabBarStyle: {
                     backgroundColor: "rgba(0,0,0,0.25)",
@@ -181,21 +180,22 @@ export default function ManagerLayout() {
         <BottomTabs.Screen
           name="workers"
           options={{
-            title: "Workers",
+            title: "Employees",
             tabBarIcon: ({ color, size }: { color: string; size: number }) => (
               <Ionicons name="people-outline" color={color} size={size} />
             ),
           }}
         />
         <BottomTabs.Screen
-          name="projects"
+          name="projects/index"
           options={{
             title: "Projects",
             tabBarIcon: ({ color, size }: { color: string; size: number }) => (
-              <Ionicons name="briefcase-outline" color={color} size={size} />
+              <Ionicons name="folder-outline" color={color} size={size} />
             ),
           }}
         />
+
         <BottomTabs.Screen
           name="project-assignment"
           options={{
@@ -227,3 +227,4 @@ export default function ManagerLayout() {
     </ManagerProviders>
   );
 }
+

@@ -1,19 +1,22 @@
 import React, { useState, useContext } from 'react';
-import { Modal, View, Text, TextInput, StyleSheet, ActivityIndicator, Switch, Platform } from 'react-native';
+import { Modal, View, Text, TextInput, StyleSheet, ActivityIndicator, Switch, Platform, TouchableOpacity } from 'react-native';
 import { InvitesContext } from '../app/(manager)/InvitesContext';
 import { Button } from './Button';
 import { theme } from '../theme';
+import { Ionicons } from '@expo/vector-icons';
+import { Dropdown } from 'react-native-element-dropdown'; // Import Dropdown
 
-interface InviteWorkerModalProps {
+interface InvitePersonModalProps {
   visible: boolean;
   onClose: () => void;
 }
 
-const InviteWorkerModal: React.FC<InviteWorkerModalProps> = ({ visible, onClose }) => {
+const InvitePersonModal: React.FC<InvitePersonModalProps> = ({ visible, onClose }) => {
   const [invitationMethod, setInvitationMethod] = useState<'email' | 'phone'>('email');
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
+  const [role, setRole] = useState<'worker' | 'manager'>('worker'); // New state for role
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -41,6 +44,7 @@ const InviteWorkerModal: React.FC<InviteWorkerModalProps> = ({ visible, onClose 
         email,
         phone,
         invitationMethod,
+        role, // Pass the selected role
       });
       setLoading(false);
       onClose();
@@ -52,6 +56,11 @@ const InviteWorkerModal: React.FC<InviteWorkerModalProps> = ({ visible, onClose 
 
   const isEmailInvite = invitationMethod === 'email';
 
+  const roleOptions = [
+    { label: 'Worker', value: 'worker' },
+    { label: 'Manager', value: 'manager' },
+  ];
+
   return (
     <Modal
       animationType="slide"
@@ -61,6 +70,9 @@ const InviteWorkerModal: React.FC<InviteWorkerModalProps> = ({ visible, onClose 
     >
       <View style={styles.centeredView}>
         <View style={styles.modalView}>
+          <TouchableOpacity style={styles.closeButton} onPress={onClose}>
+            <Ionicons name="close-circle-outline" size={24} color={theme.colors.bodyText} />
+          </TouchableOpacity>
           <Text style={styles.modalText}>Invite Worker</Text>
 
           <View style={styles.toggleContainer}>
@@ -100,9 +112,24 @@ const InviteWorkerModal: React.FC<InviteWorkerModalProps> = ({ visible, onClose 
             keyboardType="phone-pad"
             placeholderTextColor="#999"
           />
+
+          <Dropdown
+            style={styles.dropdown}
+            placeholderStyle={styles.placeholderStyle}
+            selectedTextStyle={styles.selectedTextStyle}
+            iconStyle={styles.iconStyle}
+            data={roleOptions}
+            maxHeight={300}
+            labelField="label"
+            valueField="value"
+            placeholder="Select Role"
+            value={role}
+            onChange={item => {
+              setRole(item.value as 'worker' | 'manager');
+            }}
+          />
           
           <View style={styles.buttonContainer}>
-            <Button title="Cancel" onPress={onClose} style={{backgroundColor: theme.colors.accent, marginRight: 10}} textStyle={{color: theme.colors.bodyText}} />
             <Button onPress={handleInvite} disabled={loading} style={{flex: 1}}>
               {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Send Invite</Text>}
             </Button>
@@ -143,6 +170,13 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: 'bold',
   },
+  closeButton: {
+    position: 'absolute',
+    top: 10,
+    right: 10,
+    zIndex: 1,
+    padding: 5,
+  },
   toggleContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -167,6 +201,14 @@ const styles = StyleSheet.create({
     marginBottom: 15,
     fontSize: 16,
   },
+  inputLabel: {
+    alignSelf: 'flex-start',
+    marginLeft: 5,
+    marginBottom: 5,
+    fontSize: 16,
+    color: theme.colors.bodyText,
+    fontWeight: '500',
+  },
   buttonContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -183,6 +225,27 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     textAlign: 'center',
   },
+  dropdown: {
+    width: '100%',
+    height: 50,
+    borderColor: '#ddd',
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingHorizontal: 15,
+    marginBottom: 15,
+    backgroundColor: 'white',
+  },
+  placeholderStyle: {
+    fontSize: 16,
+    color: '#999',
+  },
+  selectedTextStyle: {
+    fontSize: 16,
+  },
+  iconStyle: {
+    width: 20,
+    height: 20,
+  },
 });
 
-export default InviteWorkerModal;
+export default InvitePersonModal;

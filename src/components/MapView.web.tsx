@@ -330,7 +330,7 @@ export const MapView: React.FC<MapViewProps> = ({
     const pixelCenter = map.project(centerCoord);
     const spiderfyPoints = generateCircleParams(leaves.length, [pixelCenter.x, pixelCenter.y], spiderfyRadius);
 
-    const newSpiderfiedMarkers = leaves.map((leaf, index) => {
+    const newSpiderfiedMarkers = leaves.map((leaf: any, index: any) => {
       const spiderfyPixel = spiderfyPoints[index];
       const spiderfyLatLng = map.unproject([spiderfyPixel.x, spiderfyPixel.y]);
       return {

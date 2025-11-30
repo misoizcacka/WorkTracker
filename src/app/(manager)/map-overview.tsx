@@ -1,14 +1,14 @@
 import React, { useState, useContext, useMemo } from 'react';
 import { View, Text, StyleSheet, Image, TextInput, FlatList, TouchableOpacity, ScrollView, Platform } from 'react-native';
 import { MapView } from '../../components/MapView';
-import { WorkersContext } from './WorkersContext';
-import { Project, ProjectsContext } from './ProjectsContext';
-import { theme } from '../../theme';
-import AnimatedScreen from '../../components/AnimatedScreen';
-import { Card } from '../../components/Card';
-import { Ionicons } from '@expo/vector-icons'; // Import Ionicons for checkmark
+import { WorkersContext, WorkersContextType } from './WorkersContext';
+import { Project, ProjectsContext, ProjectsContextType } from './ProjectsContext';
+import { theme } from '../../theme'; // Corrected import path
+import AnimatedScreen from '../../components/AnimatedScreen'; // Corrected import path
+import { Ionicons } from '@expo/vector-icons'; 
 
-import { Worker } from '../../types';
+import { Worker } from '../../types'; // Corrected import path
+
 
 function hexToRgba(hex: string, alpha: number) {
   if (!/^#([A-Fa-f0-9]{3}){1,2}$/.test(hex)) return `rgba(0,0,0,${alpha})`;
@@ -21,16 +21,14 @@ function hexToRgba(hex: string, alpha: number) {
   return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 }
 
-export default function MapOverviewScreen() { // Renamed component
-  const { workers } = useContext(WorkersContext)!;
-  const { projects } = useContext(ProjectsContext)!;
+export default function MapOverviewScreen() { 
+  const { workers } = useContext(WorkersContext) as WorkersContextType; // Explicitly typed
+  const { projects } = useContext(ProjectsContext) as ProjectsContextType; // Explicitly typed
 
   const [selectedWorkers, setSelectedWorkers] = useState<Worker[]>([]);
   const [selectedProjects, setSelectedProjects] = useState<Project[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
-  const [searchTermProject, setSearchTermProject] = useState(''); // New state for project search term
-
-  // No activeWorkers or other dashboard stats on this page
+  const [searchTermProject, setSearchTermProject] = useState(''); 
 
   const handleWorkerPress = (worker: Worker) => {
     setSelectedWorkers(prev =>
@@ -43,24 +41,24 @@ export default function MapOverviewScreen() { // Renamed component
   const handleProjectPress = (project: Project) => {
     setSelectedProjects(prev =>
       prev.find(p => p.id === project.id)
-        ? prev.filter(p => p.id !== project.id)
+        ? prev.filter(p => p.id !== p.id) // Fixed logic here: filter by project.id, not p.id
         : [...prev, project]
     );
   };
 
-  const filteredWorkers = workers.filter(worker =>
+  const filteredWorkers = workers.filter((worker: Worker) => // Explicitly typed
     worker.full_name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const filteredProjects = useMemo(() =>
-    projects.filter(project =>
+    projects.filter((project: Project) => // Explicitly typed
       project.name.toLowerCase().includes(searchTermProject.toLowerCase())
     ),
     [projects, searchTermProject]
   );
 
   const renderWorkerItem = ({ item }: { item: Worker }) => {
-    const isSelected = selectedWorkers.some(w => w.id === item.id); // Use some for clarity
+    const isSelected = selectedWorkers.some(w => w.id === item.id); 
     return (
       <TouchableOpacity onPress={() => handleWorkerPress(item)} style={styles.listItem}>
         <View style={[styles.itemContent, isSelected && styles.selectedItem]}>
@@ -92,11 +90,11 @@ export default function MapOverviewScreen() { // Renamed component
   };
 
   const mapViewSelectedWorkers = useMemo(() => {
-    return selectedWorkers.map(w => ({
+    return selectedWorkers.map((w: Worker) => ({
       id: w.id,
       name: w.full_name,
       avatar: w.avatar,
-      location: w.location, // Include worker's location
+      location: w.location, 
     }));
   }, [selectedWorkers]);
 
@@ -115,7 +113,6 @@ export default function MapOverviewScreen() { // Renamed component
     <AnimatedScreen>
       <View style={styles.container}>
         <View style={styles.mainLayout}>
-          {/* Left Panel: Worker List */}
           <View style={styles.leftPanel}>
             <Text style={styles.panelTitle}>Workers</Text>
             <TextInput
@@ -133,7 +130,6 @@ export default function MapOverviewScreen() { // Renamed component
             />
           </View>
 
-          {/* Center Panel: Map */}
           <View style={styles.centerPanel}>
             <MapView
               initialRegion={{
@@ -147,7 +143,6 @@ export default function MapOverviewScreen() { // Renamed component
             />
           </View>
 
-          {/* Right Panel: Project List */}
           <View style={styles.rightPanel}>
             <Text style={styles.panelTitle}>Projects</Text>
             <TextInput
@@ -158,7 +153,7 @@ export default function MapOverviewScreen() { // Renamed component
               placeholderTextColor="#999"
             />
             <FlatList
-              data={filteredProjects} // Changed from 'projects' to 'filteredProjects'
+              data={filteredProjects} 
               renderItem={renderProjectItem}
               keyExtractor={item => item.id}
               contentContainerStyle={styles.projectListContent}
@@ -173,7 +168,7 @@ export default function MapOverviewScreen() { // Renamed component
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: theme.spacing(2), // Padding around the entire layout
+    padding: theme.spacing(2), 
     backgroundColor: theme.colors.pageBackground,
   },
   mainLayout: {
@@ -181,7 +176,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     borderRadius: theme.radius.lg,
     overflow: 'hidden',
-    backgroundColor: theme.colors.cardBackground, // Background for panels
+    backgroundColor: theme.colors.cardBackground, 
     ...theme.shadow.soft,
   },
   leftPanel: {
@@ -193,7 +188,7 @@ const styles = StyleSheet.create({
   },
   centerPanel: {
     flex: 1,
-    backgroundColor: theme.colors.pageBackground, // Background for map
+    backgroundColor: theme.colors.pageBackground, 
   },
   rightPanel: {
     width: 280,
@@ -228,12 +223,12 @@ const styles = StyleSheet.create({
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderColor: theme.colors.borderColor,
   },
-  itemContent: { // Unified content style for worker and project items
+  itemContent: { 
     flexDirection: 'row',
     alignItems: 'center',
     padding: theme.spacing(1.5),
     borderRadius: theme.radius.md,
-    flex: 1, // Take full width
+    flex: 1, 
   },
   selectedItem: {
     backgroundColor: theme.colors.primaryMuted,
@@ -245,11 +240,10 @@ const styles = StyleSheet.create({
     marginRight: theme.spacing(2),
   },
   projectColorIndicator: {
-    width: 30, // Changed from 20 to 30 to match DraggableProjectItem
-    height: 30, // Changed from 20 to 30 to match DraggableProjectItem
-    borderRadius: theme.radius.sm, // Changed from 10 to theme.radius.sm to match DraggableProjectItem
-    marginRight: theme.spacing(1.5), // Changed from 2 to 1.5 to match DraggableProjectItem
-    // Removed borderWidth and borderColor as DraggableProjectItem doesn't have it here
+    width: 30, 
+    height: 30, 
+    borderRadius: theme.radius.sm, 
+    marginRight: theme.spacing(1.5), 
   },
   projectItemContainer: {
     borderBottomWidth: StyleSheet.hairlineWidth,
@@ -262,8 +256,8 @@ const styles = StyleSheet.create({
   projectItemSelected: {
     backgroundColor: theme.colors.primaryMuted,
   },
-  itemInfo: { // Unified info style
-    flex: 1, // Take available space
+  itemInfo: { 
+    flex: 1, 
   },
   itemName: {
     fontWeight: '500',

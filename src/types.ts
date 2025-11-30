@@ -2,12 +2,14 @@ export interface Worker {
   id: string;
   full_name: string;
   email?: string;
-  phone?: string;
+  phone_number?: string;
   role: 'worker' | 'manager';
   status: 'active' | 'invited' | 'pending';
   avatar?: string;
   pin?: string;
   location?: { latitude: number; longitude: number; };
+  joined_at?: string;
+  reporting_to?: string;
 }
 
 export interface Invite {

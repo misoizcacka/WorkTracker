@@ -61,12 +61,15 @@ function Main() {
   }, [user, segments, isLoading]);
 
   return (
-    <Stack>
-      <Stack.Screen name="(guest)" options={{ headerShown: false }} />
-      <Stack.Screen name="auth" options={{ headerShown: false }} />
-      <Stack.Screen name="subscription" options={{ headerShown: false }} />
-      <Stack.Screen name="onboarding" options={{ headerShown: false }} />
-      <Stack.Screen name="(manager)" options={{ headerShown: false }} />
+    <Stack screenOptions={{
+      headerShown: false,
+    }}>
+      <Stack.Screen name="(guest)" />
+      <Stack.Screen name="auth" />
+      <Stack.Screen name="subscription" />
+      <Stack.Screen name="onboarding" />
+      <Stack.Screen name="(manager)" />
+      <Stack.Screen name="(worker)" />
     </Stack>
   );
 }

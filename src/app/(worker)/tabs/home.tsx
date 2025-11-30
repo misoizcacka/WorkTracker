@@ -40,7 +40,7 @@ export default function WorkerHomeScreen() {
 
   // ⏱ Track elapsed time
   useEffect(() => {
-    let timer: NodeJS.Timeout;
+    let timer: number;
     if (checkedIn && startTime) {
       timer = setInterval(() => {
         setElapsedTime(Math.floor((Date.now() - startTime) / 1000));
