@@ -1,13 +1,13 @@
 import React, { useState, useContext, useMemo } from 'react';
 import { View, Text, StyleSheet, Image, TextInput, FlatList, TouchableOpacity, ScrollView, Platform } from 'react-native';
 import { MapView } from '../../components/MapView';
-import { WorkersContext, WorkersContextType } from './WorkersContext';
-import { Project, ProjectsContext, ProjectsContextType } from './ProjectsContext';
+import { EmployeesContext, EmployeesContextType } from '~/context/EmployeesContext';
+import { Project, ProjectsContext, ProjectsContextType } from '~/context/ProjectsContext';
 import { theme } from '../../theme'; // Corrected import path
 import AnimatedScreen from '../../components/AnimatedScreen'; // Corrected import path
 import { Ionicons } from '@expo/vector-icons'; 
 
-import { Worker } from '../../types'; // Corrected import path
+import { Employee } from '../../types';
 
 
 function hexToRgba(hex: string, alpha: number) {
@@ -22,32 +22,32 @@ function hexToRgba(hex: string, alpha: number) {
 }
 
 export default function MapOverviewScreen() { 
-  const { workers } = useContext(WorkersContext) as WorkersContextType; // Explicitly typed
+  const { employees } = useContext(EmployeesContext) as EmployeesContextType;
   const { projects } = useContext(ProjectsContext) as ProjectsContextType; // Explicitly typed
 
-  const [selectedWorkers, setSelectedWorkers] = useState<Worker[]>([]);
+  const [selectedWorkers, setSelectedWorkers] = useState<Employee[]>([]);
   const [selectedProjects, setSelectedProjects] = useState<Project[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [searchTermProject, setSearchTermProject] = useState(''); 
 
-  const handleWorkerPress = (worker: Worker) => {
+  const handleWorkerPress = (employee: Employee) => {
     setSelectedWorkers(prev =>
-      prev.find(w => w.id === worker.id)
-        ? prev.filter(w => w.id !== worker.id)
-        : [...prev, worker]
+      prev.find(e => e.id === employee.id)
+        ? prev.filter(e => e.id !== employee.id)
+        : [...prev, employee]
     );
   };
 
   const handleProjectPress = (project: Project) => {
     setSelectedProjects(prev =>
       prev.find(p => p.id === project.id)
-        ? prev.filter(p => p.id !== p.id) // Fixed logic here: filter by project.id, not p.id
+        ? prev.filter(p => p.id !== project.id) // Fixed logic here: filter by project.id, not p.id
         : [...prev, project]
     );
   };
 
-  const filteredWorkers = workers.filter((worker: Worker) => // Explicitly typed
-    worker.full_name.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredWorkers = employees.filter((employee: Employee) => // Explicitly typed
+    employee.full_name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const filteredProjects = useMemo(() =>
@@ -57,12 +57,12 @@ export default function MapOverviewScreen() {
     [projects, searchTermProject]
   );
 
-  const renderWorkerItem = ({ item }: { item: Worker }) => {
-    const isSelected = selectedWorkers.some(w => w.id === item.id); 
+  const renderWorkerItem = ({ item }: { item: Employee }) => {
+    const isSelected = selectedWorkers.some(e => e.id === item.id); 
     return (
       <TouchableOpacity onPress={() => handleWorkerPress(item)} style={styles.listItem}>
         <View style={[styles.itemContent, isSelected && styles.selectedItem]}>
-          <Image source={{ uri: item.avatar }} style={styles.avatar} />
+          <Image source={{ uri: item.avatar_url }} style={styles.avatar} />
           <View style={styles.itemInfo}>
             <Text style={styles.itemName}>{item.full_name}</Text>
             <Text style={styles.itemSubtitle}>{item.email}</Text>
@@ -90,11 +90,10 @@ export default function MapOverviewScreen() {
   };
 
   const mapViewSelectedWorkers = useMemo(() => {
-    return selectedWorkers.map((w: Worker) => ({
-      id: w.id,
-      name: w.full_name,
-      avatar: w.avatar,
-      location: w.location, 
+    return selectedWorkers.map((e: Employee) => ({
+      id: e.id,
+      name: e.full_name,
+      avatar: e.avatar_url,
     }));
   }, [selectedWorkers]);
 

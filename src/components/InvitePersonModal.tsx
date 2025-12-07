@@ -1,10 +1,11 @@
-import React, { useState, useContext } from 'react';
-import { Modal, View, Text, TextInput, StyleSheet, ActivityIndicator, Switch, Platform, TouchableOpacity } from 'react-native';
-import { InvitesContext } from '../app/(manager)/InvitesContext';
+import React, { useState, useContext, useEffect } from 'react';
+import { Modal, View, Text, TextInput, StyleSheet, ActivityIndicator, TouchableOpacity } from 'react-native';
+import { InvitesContext } from '../context/InvitesContext';
 import { Button } from './Button';
 import { theme } from '../theme';
 import { Ionicons } from '@expo/vector-icons';
-import { Dropdown } from 'react-native-element-dropdown'; // Import Dropdown
+import { Dropdown } from 'react-native-element-dropdown';
+import Toast from 'react-native-toast-message';
 
 interface InvitePersonModalProps {
   visible: boolean;
@@ -12,50 +13,60 @@ interface InvitePersonModalProps {
 }
 
 const InvitePersonModal: React.FC<InvitePersonModalProps> = ({ visible, onClose }) => {
-  const [invitationMethod, setInvitationMethod] = useState<'email' | 'phone'>('email');
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
-  const [phone, setPhone] = useState('');
-  const [role, setRole] = useState<'worker' | 'manager'>('worker'); // New state for role
+  const [role, setRole] = useState<'worker' | 'manager'>('worker');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
   const invitesContext = useContext(InvitesContext);
 
+  // Reset form state when the modal is closed
+  useEffect(() => {
+    if (!visible) {
+      setFullName('');
+      setEmail('');
+      setRole('worker');
+      setError('');
+      setLoading(false);
+    }
+  }, [visible]);
+
   const handleInvite = async () => {
-    if (!fullName) {
-      setError('Full name is required.');
-      return;
-    }
-    if (invitationMethod === 'email' && !email) {
-      setError('Email is required for email invites.');
-      return;
-    }
-    if (invitationMethod === 'phone' && !phone) {
-      setError('Phone number is required for phone invites.');
+    if (!fullName || !email) {
+      setError('Full name and email are required.');
       return;
     }
 
     setError('');
     setLoading(true);
     try {
-      await invitesContext?.addInvite({
+      await invitesContext?.sendEmailInvite({
         full_name: fullName,
         email,
-        phone,
-        invitationMethod,
-        role, // Pass the selected role
+        role,
       });
-      setLoading(false);
-      onClose();
+      
+      Toast.show({
+        type: 'success',
+        text1: 'Invite Sent',
+        text2: `An invitation has been sent to ${email}.`
+      });
+      
+      onClose(); // Close modal on success
     } catch (e) {
-      setLoading(false);
       setError('Failed to send invite. Please try again.');
+      Toast.show({
+        type: 'error',
+        text1: 'Invite Failed',
+        text2: 'Could not send an invitation. Please try again.'
+      });
+    } finally {
+      setLoading(false);
     }
   };
-
-  const isEmailInvite = invitationMethod === 'email';
-
+  
+  // ... (rest of the component is the same)
   const roleOptions = [
     { label: 'Worker', value: 'worker' },
     { label: 'Manager', value: 'manager' },
@@ -75,17 +86,6 @@ const InvitePersonModal: React.FC<InvitePersonModalProps> = ({ visible, onClose 
           </TouchableOpacity>
           <Text style={styles.modalText}>Invite Worker</Text>
 
-          <View style={styles.toggleContainer}>
-            <Text style={[styles.toggleLabel, isEmailInvite && styles.activeToggle]}>Email</Text>
-            <Switch
-              value={!isEmailInvite}
-              onValueChange={() => setInvitationMethod(isEmailInvite ? 'phone' : 'email')}
-              trackColor={{ false: theme.colors.primary, true: theme.colors.primary }}
-              thumbColor={theme.colors.cardBackground}
-            />
-            <Text style={[styles.toggleLabel, !isEmailInvite && styles.activeToggle]}>Phone</Text>
-          </View>
-
           {error && <Text style={styles.errorText}>{error}</Text>}
 
           <TextInput
@@ -97,19 +97,11 @@ const InvitePersonModal: React.FC<InvitePersonModalProps> = ({ visible, onClose 
           />
           <TextInput
             style={styles.input}
-            placeholder={isEmailInvite ? "Email Address *" : "Email Address (Optional)"}
+            placeholder="Email Address *"
             value={email}
             onChangeText={setEmail}
             keyboardType="email-address"
             autoCapitalize="none"
-            placeholderTextColor="#999"
-          />
-          <TextInput
-            style={styles.input}
-            placeholder={isEmailInvite ? "Phone Number (Optional)" : "Phone Number *"}
-            value={phone}
-            onChangeText={setPhone}
-            keyboardType="phone-pad"
             placeholderTextColor="#999"
           />
 
@@ -177,20 +169,6 @@ const styles = StyleSheet.create({
     zIndex: 1,
     padding: 5,
   },
-  toggleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  toggleLabel: {
-    fontSize: 16,
-    color: '#999',
-    marginHorizontal: 10,
-  },
-  activeToggle: {
-    color: theme.colors.primary,
-    fontWeight: 'bold',
-  },
   input: {
     width: '100%',
     height: 50,
@@ -200,14 +178,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 15,
     marginBottom: 15,
     fontSize: 16,
-  },
-  inputLabel: {
-    alignSelf: 'flex-start',
-    marginLeft: 5,
-    marginBottom: 5,
-    fontSize: 16,
-    color: theme.colors.bodyText,
-    fontWeight: '500',
   },
   buttonContainer: {
     flexDirection: 'row',

@@ -1,15 +1,15 @@
 import React, { useState, useContext, useMemo } from "react";
 import { View, Text, StyleSheet, ScrollView, useWindowDimensions, TextInput, TouchableOpacity, Image, Platform, Animated } from "react-native";
-import { Card } from "../../../components/Card"; // Assuming Card is still used or adapted
-import AnimatedScreen from "../../../components/AnimatedScreen";
-import { theme } from "../../../theme";
+import { Card } from "~/components/Card"; // Assuming Card is still used or adapted
+import AnimatedScreen from "~/components/AnimatedScreen";
+import { theme } from "~/theme";
 import { useRouter } from "expo-router";
-import { ProjectsContext, Project } from "../ProjectsContext"; // Import Project type
+import { ProjectsContext, Project } from "~/context/ProjectsContext"; // Import Project type
 import { Ionicons } from "@expo/vector-icons";
-import { Button } from "../../../components/Button";
-import { AssignmentsContext } from "../AssignmentsContext";
-import { CreateProjectModal } from "../../../components/CreateProjectModal"; // Corrected import
-import CustomDropdown from "../../../components/CustomDropdown";
+import { Button } from "~/components/Button";
+import { AssignmentsContext } from "~/context/AssignmentsContext";
+import { CreateProjectModal } from "~/components/CreateProjectModal";
+import CustomDropdown from "~/components/CustomDropdown";
 
 interface DropdownOption {
   label: string;

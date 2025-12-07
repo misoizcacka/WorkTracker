@@ -4,22 +4,22 @@ import moment from 'moment';
 import { DragDropContext, DropResult, Droppable } from '@hello-pangea/dnd';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
-import { mockAssignments } from './project-assignment-assets/mockData';
-import { Worker } from '../../types';
+import { mockAssignments } from '~/utils/mockData';
+import { Employee } from '~/types';
 
-import { Assignment } from './project-assignment-assets/types';
-import { generateId } from './project-assignment-assets/utils/generateId';
-import ScheduleGrid from './project-assignment-assets/ScheduleGrid';
-import CrossPlatformDatePicker from '../../components/CrossPlatformDatePicker';
-import AddAssignmentModal from './project-assignment-assets/AddAssignmentModal';
-import SetAssignmentTimeModal from './project-assignment-assets/SetAssignmentTimeModal';
-import { hasConflict } from './project-assignment-assets/utils/conflict';
-import { calculateStackedAssignments } from './project-assignment-assets/utils/time';
-import { theme } from '../../theme';
-import { WorkersContext } from './WorkersContext';
+import { Assignment } from '~/utils/project-assignment-types';
+import { generateId } from '~/utils/generateId';
+import ScheduleGrid from '~/components/ScheduleGrid';
+import CrossPlatformDatePicker from '~/components/CrossPlatformDatePicker';
+import AddAssignmentModal from '~/components/AddAssignmentModal';
+import SetAssignmentTimeModal from '~/components/SetAssignmentTimeModal';
+import { hasConflict } from '~/utils/conflict';
+import { calculateStackedAssignments } from '~/utils/time';
+import { theme } from '~/theme';
+import { EmployeesContext } from '~/context/EmployeesContext';
 
-import { ProjectsContext, Project } from './ProjectsContext';
-import DraggableProjectItem from './project-assignment-assets/DraggableProjectItem';
+import { ProjectsContext, Project } from '~/context/ProjectsContext';
+import DraggableProjectItem from '~/components/DraggableProjectItem';
 import { Ionicons } from '@expo/vector-icons';
 
 
@@ -48,13 +48,13 @@ const CrossPlatformScrollContainer = React.forwardRef((props: any, ref) => {
   });
 
 export default function ProjectAssignmentScreen() {
-  const { workers } = useContext(WorkersContext)!;
+  const { employees } = useContext(EmployeesContext)!;
   const { projects } = useContext(ProjectsContext)!;
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [assignments, setAssignments] = useState<Assignment[]>(mockAssignments);
   const [isAddAssignmentModalVisible, setAddAssignmentModalVisible] = useState(false); // State for modal visibility
   const [initialDroppedProject, setInitialDroppedProject] = useState<Project | undefined>(undefined);
-  const [initialDroppedWorker, setInitialDroppedWorker] = useState<Worker | undefined>(undefined);
+  const [initialDroppedWorker, setInitialDroppedWorker] = useState<Employee | undefined>(undefined);
 
   // State for SetAssignmentTimeModal when editing existing assignments
   const [isSetTimeModalVisible, setIsSetTimeModalVisible] = useState(false);
@@ -63,17 +63,17 @@ export default function ProjectAssignmentScreen() {
 
   
 
-  const [selectedWorkers, setSelectedWorkers] = useState<Worker[]>([]);
+  const [selectedWorkers, setSelectedWorkers] = useState<Employee[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedProjects, setSelectedProjects] = useState<Project[]>([]);
   const [searchTermProject, setSearchTermProject] = useState('');
 
 
-  const handleWorkerPress = (worker: Worker) => {
+  const handleWorkerPress = (employee: Employee) => {
     setSelectedWorkers(prev =>
-      prev.find(w => w.id === worker.id)
-        ? prev.filter(w => w.id !== worker.id)
-        : [...prev, worker]
+      prev.find(e => e.id === employee.id)
+        ? prev.filter(e => e.id !== employee.id)
+        : [...prev, employee]
     );
   };
 
@@ -85,8 +85,8 @@ export default function ProjectAssignmentScreen() {
     );
   };
 
-  const filteredWorkers = workers.filter(worker =>
-    worker.full_name.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredWorkers = employees.filter(employee =>
+    employee.full_name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const filteredProjects = React.useMemo(() => 
@@ -102,12 +102,12 @@ export default function ProjectAssignmentScreen() {
     setDisplayProjects(filteredProjects);
   }, [filteredProjects]);
 
-  const renderWorkerItem = ({ item }: { item: Worker }) => {
-    const isSelected = selectedWorkers.some(w => w.id === item.id); // Use some for clarity
+  const renderWorkerItem = ({ item }: { item: Employee }) => {
+    const isSelected = selectedWorkers.some(e => e.id === item.id); // Use some for clarity
     return (
       <TouchableOpacity onPress={() => handleWorkerPress(item)} style={styles.listItem}>
         <View style={[styles.workerItemContent, isSelected && styles.selectedItem]}>
-          <Image source={{ uri: item.avatar }} style={styles.avatar} />
+          <Image source={{ uri: item.avatar_url }} style={styles.avatar} />
           <View style={styles.workerInfo}>
             <Text style={styles.itemName}>{item.full_name}</Text>
             <Text style={styles.itemSubtitle}>{item.email}</Text>
@@ -417,11 +417,11 @@ export default function ProjectAssignmentScreen() {
                 </View>
               ) : (
                 <ScheduleGrid
-                  workers={selectedWorkers}
+                  employees={selectedWorkers}
                   projects={projects}
                   assignments={assignments}
                   selectedDate={selectedDate}
-                  selectedWorkers={selectedWorkers}
+                  selectedEmployees={selectedWorkers}
                   onCopyAssignments={handleCopyAssignments}
                   onDeleteAssignment={handleDeleteAssignment}
                   onEditAssignmentTime={handleEditAssignmentTime}
@@ -476,12 +476,12 @@ export default function ProjectAssignmentScreen() {
               setInitialDroppedProject(undefined);
               setInitialDroppedWorker(undefined);
             }}
-            workers={workers}
+            employees={employees}
             projects={projects}
             selectedDate={selectedDate}
             onSave={handleAddAssignment}
             initialProject={initialDroppedProject}
-            initialWorker={initialDroppedWorker}
+            initialEmployee={initialDroppedWorker}
         />
 
         <SetAssignmentTimeModal

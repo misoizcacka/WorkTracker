@@ -1,8 +1,7 @@
 import React, { useState, useEffect, useContext } from 'react';
-import { View, Text, TextInput, StyleSheet, ActivityIndicator, Alert, ScrollView, Platform } from 'react-native';
+import { View, Text, TextInput, StyleSheet, ActivityIndicator, ScrollView, Platform } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { InvitesContext } from '../(manager)/InvitesContext';
-import { WorkersContext } from '../(manager)/WorkersContext';
+import { InvitesContext } from '~/context/InvitesContext';
 import { theme } from '../../theme';
 import { Button } from '../../components/Button';
 import { Invite } from '../../types';
@@ -14,86 +13,32 @@ export default function WorkerSignup() {
   const { invite: inviteToken } = useLocalSearchParams<{ invite: string }>();
 
   const invitesContext = useContext(InvitesContext);
-  const workersContext = useContext(WorkersContext);
 
   const [loading, setLoading] = useState(true);
   const [invite, setInvite] = useState<Invite | null>(null);
-  
-  // Form state
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [pin, setPin] = useState('');
-  const [confirmPin, setConfirmPin] = useState('');
-  const [optionalEmail, setOptionalEmail] = useState('');
-
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
-    if (!inviteToken) {
-      router.replace('/(guest)/invalid-invite');
-      return;
-    }
-    if (invitesContext) {
-      const foundInvite = invitesContext.getInviteByToken(inviteToken);
-      if (foundInvite) {
-        setInvite(foundInvite);
-      } else {
+    const fetchInvite = async () => {
+      if (!inviteToken) {
         router.replace('/(guest)/invalid-invite');
+        return;
       }
+      if (invitesContext) {
+        const foundInvite = await invitesContext.getInviteByToken(inviteToken);
+        if (foundInvite) {
+          setInvite(foundInvite);
+        } else {
+          router.replace('/(guest)/invalid-invite');
+        }
+      }
+      setLoading(false);
     }
-    setLoading(false);
+    fetchInvite();
   }, [inviteToken, invitesContext, router]);
 
   const handleSignup = () => {
-    if (!invite) return;
-
-    if (invite.invitationMethod === 'email') {
-      if (!password || !confirmPassword) {
-        Alert.alert('Error', 'Please fill out all password fields.');
-        return;
-      }
-      if (password !== confirmPassword) {
-        Alert.alert('Error', 'Passwords do not match.');
-        return;
-      }
-      if (password.length < 6) {
-        Alert.alert('Error', 'Password must be at least 6 characters long.');
-        return;
-      }
-    }
-
-    if (invite.invitationMethod === 'phone') {
-      if (!pin || !confirmPin) {
-        Alert.alert('Error', 'Please fill out all PIN fields.');
-        return;
-      }
-      if (pin !== confirmPin) {
-        Alert.alert('Error', 'PINs do not match.');
-        return;
-      }
-      if (pin.length < 4) {
-        Alert.alert('Error', 'PIN must be at least 4 digits long.');
-        return;
-      }
-    }
-
-    setIsSubmitting(true);
-    setTimeout(() => {
-      if (workersContext && invitesContext) {
-        const workerData = {
-          full_name: invite.full_name,
-          email: invite.invitationMethod === 'email' ? invite.email : optionalEmail,
-          phone: invite.phone,
-          pin: invite.invitationMethod === 'phone' ? pin : undefined,
-        };
-        workersContext.createWorker(workerData);
-        invitesContext.updateInviteStatus(invite.token, 'used');
-        router.replace('/(guest)/signup-success');
-      } else {
-        Alert.alert('Error', 'Something went wrong. Please try again.');
-      }
-      setIsSubmitting(false);
-    }, 1500);
+    // This logic is deprecated and now handled by /auth/invite
+    // Kept here to prevent breaking other potential dependencies on this function's existence.
   };
 
   if (loading || !invite) {
@@ -104,64 +49,8 @@ export default function WorkerSignup() {
     );
   }
 
-  const renderEmailForm = () => (
-    <>
-      <TextInput
-        style={styles.input}
-        placeholder="Password"
-        value={password}
-        onChangeText={setPassword}
-        secureTextEntry
-        placeholderTextColor="#999"
-      />
-      <TextInput
-        style={styles.input}
-        placeholder="Confirm Password"
-        value={confirmPassword}
-        onChangeText={setConfirmPassword}
-        secureTextEntry
-        placeholderTextColor="#999"
-      />
-    </>
-  );
-
-  const renderPhoneForm = () => (
-    <>
-      <TextInput
-        style={styles.input}
-        placeholder="Email (Optional)"
-        value={optionalEmail}
-        onChangeText={setOptionalEmail}
-        keyboardType="email-address"
-        autoCapitalize="none"
-        placeholderTextColor="#999"
-      />
-      <TextInput
-        style={styles.input}
-        placeholder="4-Digit PIN"
-        value={pin}
-        onChangeText={setPin}
-        keyboardType="number-pad"
-        maxLength={4}
-        secureTextEntry
-        placeholderTextColor="#999"
-      />
-      <TextInput
-        style={styles.input}
-        placeholder="Confirm PIN"
-        value={confirmPin}
-        onChangeText={setConfirmPin}
-        keyboardType="number-pad"
-        maxLength={4}
-        secureTextEntry
-        placeholderTextColor="#999"
-      />
-    </>
-  );
-
   return (
     <AnimatedScreen>
-
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.content}>
           <Text style={styles.title}>Create Your Account</Text>
@@ -181,23 +70,13 @@ export default function WorkerSignup() {
               editable={false}
             />
           )}
-          {invite.phone && (
-             <TextInput
-              style={[styles.input, styles.readOnlyInput]}
-              value={invite.phone}
-              editable={false}
-            />
-          )}
-
-          {invite.invitationMethod === 'email' ? renderEmailForm() : renderPhoneForm()}
 
           <Button
             onPress={handleSignup}
-            disabled={isSubmitting}
             style={styles.primaryButton}
             textStyle={styles.primaryButtonText}
           >
-            {isSubmitting ? <ActivityIndicator color="#fff" /> : <Text style={styles.primaryButtonText}>Complete Signup</Text>}
+            <Text style={styles.primaryButtonText}>Complete Signup</Text>
           </Button>
         </View>
       </ScrollView>

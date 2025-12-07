@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, TextInput, StyleSheet, ActivityIndicator, Alert, ScrollView, Platform, Dimensions, Image, Pressable } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useRouter, Link } from 'expo-router';
+import { useSession } from '../../context/AuthContext'; // Import useSession
 import { Button } from '../../components/Button';
 import { theme } from '../../theme';
 import AnimatedScreen from '../../components/AnimatedScreen';
@@ -13,17 +14,20 @@ const isLargeScreen = width > 768; // Define what constitutes a large screen
 
 export default function Signup() {
   const router = useRouter();
+  const { refreshUser } = useSession(); // Get refreshUser from useSession
 
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  // const [companyName, setCompanyName] = useState(''); // Removed state for company name
   const [passwordVisible, setPasswordVisible] = useState(false); // New state for password visibility
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [errors, setErrors] = useState<{ fullName?: string; email?: string; password?: string; general?: string }>({});
+  const [errors, setErrors] = useState<{ fullName?: string; email?: string; password?: string; general?: string }>({}); // Removed companyName from errors type
 
   const handleSignup = async () => {
     console.log("Analytics: Signup initiated.");
-    const newErrors: { fullName?: string; email?: string; password?: string } = {};
+    const newErrors: { fullName?: string; email?: string; password?: string } = {}; // Removed companyName from newErrors type
+    // if (!companyName) newErrors.companyName = 'Company name is required.'; // Removed validation
     if (!fullName) newErrors.fullName = 'Full name is required.';
     if (!email) {
       newErrors.email = 'Email is required.';
@@ -47,13 +51,14 @@ export default function Signup() {
     console.log("Analytics: Attempting Supabase signup.");
 
     try {
+      // First, sign up the user in Supabase Auth
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
           data: {
-            full_name: fullName,
-            role: 'manager', // Set default role to manager
+            full_name: fullName, // Put fullName back
+            role: 'owner',   // Put default role back to satisfy internal auth triggers/policies
           },
         },
       });
@@ -61,9 +66,39 @@ export default function Signup() {
       if (error) {
         console.error("Analytics: Supabase signup failed.", error.message);
         setErrors({ general: error.message });
-      } else if (data.user) {
-        console.log("Analytics: Supabase signup successful, user created/confirmation required. User ID:", data.user.id);
-        localStorage.setItem('user', JSON.stringify({ id: data.user.id, email: data.user.email, fullName })); // Store user.id and other basic info
+        return;
+      }
+
+      if (data.user) {
+        console.log("Analytics: Supabase signup successful, user created. User ID:", data.user.id);
+
+        // Invoke the Edge Function to create company and owner employee
+        const { data: edgeFunctionData, error: edgeFunctionError } = await supabase.functions.invoke('create-owner-and-company', {
+          body: {
+            userId: data.user.id,
+            fullName: fullName,
+            email: email,
+            companyName: `New Company - ${email}`, // Pass a placeholder company name
+          }
+        });
+
+        if (edgeFunctionError) {
+          console.error('Error invoking create-owner-and-company Edge Function:', edgeFunctionError);
+          setErrors({ general: 'Signup successful, but failed to setup company and owner employee.' });
+          // Optionally, you might want to delete the auth user here if the company setup fails
+          // await supabase.auth.admin.deleteUser(data.user.id);
+          return;
+        }
+        
+        // Edge function should return the company and employee data
+        const { company, employee } = edgeFunctionData;
+        console.log('Company and owner employee created:', company, employee);
+
+        // --- NEW: Refresh user session after successful company/owner creation ---
+        await refreshUser(); // Refresh user data to get updated user_metadata including company_id
+
+        localStorage.setItem('user', JSON.stringify({ id: data.user.id, email: data.user.email, fullName }));
+        // If successful, redirect to subscription setup
         router.push('/subscription/setup');
       } else {
         // This case might happen if email confirmation is required and no user data is returned immediately

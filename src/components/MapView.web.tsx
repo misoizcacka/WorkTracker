@@ -177,14 +177,38 @@ const HoverPopup = ({ hoverInfo, map }: { hoverInfo: ItemInCluster | null; map: 
   );
 };
 
+// --- DUMMY CIRCLE FOR WEB (renders nothing) ---
+export const Circle = () => null;
+
 // --- MAIN MAP VIEW ---
-export const MapView: React.FC<MapViewProps> = ({
+export const MapView = React.forwardRef<any, MapViewProps>(({
   selectedWorkers = [],
   selectedProjects = [],
   initialRegion,
   showNameTag = true,
-}) => {
+}, ref) => {
   const mapRef = useRef<any>(null);
+
+  // Expose methods to parent components
+  React.useImperativeHandle(ref, () => ({
+    fitToCoordinates: (coordinates: { latitude: number; longitude: number }[], options: { edgePadding: { top: number; right: number; bottom: number; left: number; } }) => {
+      if (!mapRef.current) return;
+      const bounds = new LngLatBounds();
+      coordinates.forEach(coord => {
+        bounds.extend([coord.longitude, coord.latitude]);
+      });
+      mapRef.current.fitBounds(bounds, { padding: options.edgePadding.top, duration: 1000 });
+    },
+    animateToRegion: (region: { latitude: number; longitude: number; latitudeDelta: number; longitudeDelta: number; }, duration: number) => {
+      if (!mapRef.current) return;
+      const zoom = Math.log2(360 / region.latitudeDelta) - 8;
+      mapRef.current.easeTo({
+        center: [region.longitude, region.latitude],
+        zoom,
+        duration,
+      });
+    },
+  }));
 
   const [popupInfo, setPopupInfo] = useState<ItemInCluster | null>(null);
   const [hoverInfo, setHoverInfo] = useState<ItemInCluster | null>(null);
@@ -491,7 +515,7 @@ export const MapView: React.FC<MapViewProps> = ({
       </Map>
     </View>
   );
-};
+});
 
 // --- STYLES ---
 const styles = StyleSheet.create({

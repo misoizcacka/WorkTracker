@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useRef, useEffect } from 'react';
-import RNMapView, { Marker, Callout, MapViewProps as RNMapViewProps } from 'react-native-maps';
+import RNMapView, { Marker, Callout, Circle, MapViewProps as RNMapViewProps, LatLng, FitToOptions, Region } from 'react-native-maps';
 import { View, Image, Text, StyleSheet, Dimensions } from 'react-native';
 import { theme } from '../theme';
 import Supercluster from 'supercluster';
@@ -26,10 +26,27 @@ interface NativeMapViewProps extends RNMapViewProps {
   };
 }
 
-export const MapView: React.FC<NativeMapViewProps> = ({ selectedWorkers = [], selectedProjects = [], initialRegion, children, ...props }) => {
-  const mapViewRef = useRef<RNMapView>(null);
-  const [zoom, setZoom] = useState(initialRegion?.zoom || 10);
-  const [bounds, setBounds] = useState<[number, number, number, number]>([-180, -90, 180, 90]);
+interface MapViewHandle {
+  fitToCoordinates: (coordinates: LatLng[], options?: FitToOptions) => void;
+  animateToRegion: (region: Region, duration?: number) => void;
+}
+
+export const MapView = React.forwardRef<MapViewHandle, NativeMapViewProps>(
+  ({ selectedWorkers = [], selectedProjects = [], initialRegion, children, ...props }, ref) => {
+    const mapViewRef = useRef<RNMapView>(null);
+
+    // Expose specific methods to the parent component via the ref
+    React.useImperativeHandle(ref, () => ({
+      fitToCoordinates: (coordinates, options) => {
+        mapViewRef.current?.fitToCoordinates(coordinates, options);
+      },
+      animateToRegion: (region, duration) => {
+        mapViewRef.current?.animateToRegion(region, duration);
+      },
+    }));
+
+    const [zoom, setZoom] = useState(initialRegion?.zoom || 10);
+    const [bounds, setBounds] = useState<[number, number, number, number]>([-180, -90, 180, 90]);
 
   // Memoize features
   const features = useMemo(() => [
@@ -186,9 +203,9 @@ export const MapView: React.FC<NativeMapViewProps> = ({ selectedWorkers = [], se
       {children}
     </RNMapView>
   );
-};
+});
 
-export { Marker, Callout };
+export { Marker, Callout, Circle };
 
 const styles = StyleSheet.create({
     markerContainer: {

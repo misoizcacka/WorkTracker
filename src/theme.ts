@@ -1,8 +1,8 @@
 export const theme = {
   colors: {
     // User-defined colors
-    pageBackground: "#F2F3F5",
-    cardBackground: "#FFFFFF",
+    pageBackground: "#FFFFFF",
+    cardBackground: "#F2F3F5",
     headingText: "#1A1A1C",
     bodyText: "#3A3A3C",
     iconColor: "#5A5A5C",
@@ -20,6 +20,15 @@ export const theme = {
     warningMuted: "#FFF3E0", // light orange background
     danger: "#DC2626", // standard red for errors
     background: "#F2F3F5",
+  },
+
+  statusColors: {
+    successBackground: '#E6F4EA',
+    successText: '#1F7A3F',
+    warningBackground: '#FDECEA',
+    warningText: '#B42318',
+    neutralBackground: '#E8EAF6',
+    neutralText: '#3F51B5',
   },
 
   spacing: (n: number) => n * 8,

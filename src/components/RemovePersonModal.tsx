@@ -2,21 +2,21 @@ import React from 'react';
 import { Modal, View, Text, StyleSheet, ActivityIndicator, TouchableOpacity } from 'react-native';
 import { Button } from './Button';
 import { theme } from '../theme';
-import { Worker } from '../types';
+import { Employee } from '../types';
 import { Ionicons } from '@expo/vector-icons';
 
 interface RemovePersonModalProps {
   visible: boolean;
   onClose: () => void;
-  worker: Worker | null;
-  onConfirm: (worker: Worker) => void;
+  employee: Employee | null;
+  onConfirm: (employee: Employee) => void;
   loading: boolean;
 }
 
-const RemovePersonModal: React.FC<RemovePersonModalProps> = ({ visible, onClose, worker, onConfirm, loading }) => {
+const RemovePersonModal: React.FC<RemovePersonModalProps> = ({ visible, onClose, employee, onConfirm, loading }) => {
   const handleConfirm = () => {
-    if (worker) {
-      onConfirm(worker);
+    if (employee) {
+      onConfirm(employee);
     }
   };
 
@@ -32,10 +32,10 @@ const RemovePersonModal: React.FC<RemovePersonModalProps> = ({ visible, onClose,
           <TouchableOpacity style={styles.closeButton} onPress={onClose}>
             <Ionicons name="close-circle-outline" size={24} color={theme.colors.bodyText} />
           </TouchableOpacity>
-          <Text style={styles.modalText}>Remove Worker</Text>
+          <Text style={styles.modalText}>Remove Employee</Text>
 
           <Text style={styles.confirmationText}>
-            Are you sure you want to remove {worker?.full_name}? This action cannot be undone.
+            Are you sure you want to remove {employee?.full_name}? This action cannot be undone.
           </Text>
           
           <View style={styles.buttonContainer}>

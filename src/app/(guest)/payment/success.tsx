@@ -38,7 +38,7 @@ export default function PaymentSuccess() {
         await refreshUser(); // Refresh user data in the session context
         setStatus('success');
         localStorage.removeItem('pendingSubscription');
-        router.replace({ pathname: '/onboarding/company-details', params: { organizationId: data.organizationId } });
+        router.replace('/(manager)/company-setup'); // Correct redirect to company setup
       } else {
         setStatus('failed');
         setError('Payment verification failed.');

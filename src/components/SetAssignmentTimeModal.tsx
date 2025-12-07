@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Modal, View, Text, TouchableOpacity, TextInput, StyleSheet } from 'react-native';
-import { theme } from '../../../theme';
+import { theme } from '~/theme';
 import { Ionicons } from '@expo/vector-icons'; // Import Ionicons
 
 interface SetAssignmentTimeModalProps {

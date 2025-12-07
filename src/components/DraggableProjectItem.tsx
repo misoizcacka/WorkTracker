@@ -1,8 +1,8 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Platform } from 'react-native';
 import { Draggable, DraggableProvided } from '@hello-pangea/dnd';
-import { Project } from '../ProjectsContext';
-import { theme } from '../../../theme';
+import { Project } from '../context/ProjectsContext';
+import { theme } from '~/theme';
 import { Ionicons } from '@expo/vector-icons';
 
 type DraggableProjectItemProps = {

@@ -20,7 +20,7 @@ export interface Project {
 export interface ProjectsContextType {
   projects: Project[];
   updateProject: (updatedProject: Project) => void;
-  createProject: (projectData: Omit<Project, 'id' | 'lastModified' | 'priority' | 'type'>) => void;
+  createProject: (projectData: Omit<Project, 'id' | 'lastModified'>) => void;
 }
 
 export const ProjectsContext = createContext<ProjectsContextType | null>(null);

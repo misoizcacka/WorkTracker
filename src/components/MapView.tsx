@@ -1,3 +1,4 @@
+import React from 'react'; // Import React
 import { Platform } from 'react-native';
 import { MapViewProps as RNMapViewProps, MapMarkerProps, MapCalloutProps } from 'react-native-maps';
 
@@ -33,20 +34,35 @@ interface CommonMapViewProps extends RNMapViewProps {
     latitudeDelta: number;
     longitudeDelta: number;
   };
+  // Add children prop as MapView might render markers/circles as children
+  children?: React.ReactNode;
 }
 
-let MapView: React.ComponentType<CommonMapViewProps>;
-let Marker: React.ComponentType<MapMarkerProps>;
-let Callout: React.ComponentType<MapCalloutProps>;
+// Dynamically import platform-specific MapView implementations
+const MapViewWeb = require('./MapView.web').MapView;
+const MapViewNative = require('./MapView.native').MapView;
 
-if (Platform.OS === 'web') {
-  MapView = require('./MapView.web').MapView;
-  Marker = require('./MapView.web').Marker;
-  Callout = require('./MapView.web').Callout;
-} else {
-  MapView = require('./MapView.native').MapView;
-  Marker = require('./MapView.native').Marker;
-  Callout = require('./MapView.native').Callout;
-}
+// Dynamically import Marker and Callout
+const MarkerWeb = require('./MapView.web').Marker;
+const MarkerNative = require('./MapView.native').Marker;
+const CalloutWeb = require('./MapView.web').Callout;
+const CalloutNative = require('./MapView.native').Callout;
+const CircleWeb = require('./MapView.web').Circle;
+const CircleNative = require('./MapView.native').Circle;
 
-export { MapView, Marker, Callout };
+
+// Create a ref-forwarding wrapper for MapView
+const ForwardedMapView = React.forwardRef<any, CommonMapViewProps>((props, ref) => {
+  if (Platform.OS === 'web') {
+    return <MapViewWeb {...props} ref={ref} />;
+  } else {
+    return <MapViewNative {...props} ref={ref} />;
+  }
+});
+
+// Create ref-forwarding wrappers for Marker and Callout (if needed, or just re-export)
+const MarkerComponent = Platform.OS === 'web' ? MarkerWeb : MarkerNative;
+const CalloutComponent = Platform.OS === 'web' ? CalloutWeb : CalloutNative;
+const CircleComponent = Platform.OS === 'web' ? CircleWeb : CircleNative;
+
+export { ForwardedMapView as MapView, MarkerComponent as Marker, CalloutComponent as Callout, CircleComponent as Circle };

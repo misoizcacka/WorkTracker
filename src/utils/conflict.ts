@@ -1,5 +1,5 @@
 import moment from 'moment';
-import { Assignment } from '../types';
+import { Assignment } from './project-assignment-types';
 
 export function hasConflict(newAssignment: Assignment, existingAssignments: Assignment[]): boolean {
   const newStart = moment(newAssignment.startDate);

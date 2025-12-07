@@ -1,4 +1,4 @@
-import { Worker, Project, Assignment } from './types';
+import { Worker, Project, Assignment } from './project-assignment-types';
 
 export const mockWorkers: Worker[] = [
   { id: '1', name: 'Alice' },

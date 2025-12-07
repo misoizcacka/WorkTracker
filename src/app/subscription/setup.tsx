@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react'; // Added useContext
 import { View, Text, StyleSheet, Platform, Dimensions, ScrollView, TextInput, Pressable, ActivityIndicator, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSession } from '../../context/AuthContext';
@@ -7,6 +7,7 @@ import { supabase } from '../../utils/supabase'; // Import supabase
 import { Button } from '../../components/Button';
 import { theme } from '../../theme';
 import AnimatedScreen from '../../components/AnimatedScreen';
+// import { EmployeesContext } from '../../context/EmployeesContext'; // Removed EmployeesContext import
 
 const { width } = Dimensions.get('window');
 const isLargeScreen = width > 768;
@@ -16,17 +17,17 @@ const WORKER_FEE = 5; // EUR/month per worker
 const MAX_WORKERS = 200; // Increased maximum workers
 const MIN_WORKERS = 1; // Minimum workers
 
-// Placeholder for your backend endpoint
-// In a real application, this should be an environment variable
-// const CHECKOUT_SESSION_ENDPOINT = 'https://ofivipdtbweijzywpytd.supabase.co/functions/v1/create-checkout-session';
-
 export default function SubscriptionSetup() {
-  const { user } = useSession()!;
+  const { user, userCompanyId, isCompanyIdLoading } = useSession()!; // Get userCompanyId and isCompanyIdLoading from AuthContext
   const router = useRouter();
   const [workerCount, setWorkerCount] = useState(MIN_WORKERS);
   const [calculatedPrice, setCalculatedPrice] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Removed employeesContext usage
+  // const employeesContext = useContext(EmployeesContext);
+  // const userCompanyId = employeesContext?.userCompanyId;
 
   useEffect(() => {
     setCalculatedPrice(BASE_FEE + workerCount * WORKER_FEE);
@@ -71,6 +72,13 @@ export default function SubscriptionSetup() {
         return;
       }
 
+      if (isCompanyIdLoading || !userCompanyId) { // Ensure company ID is available and not loading
+        console.error("Analytics: User company ID not found or still loading.");
+        Alert.alert("Company Error", "Company ID is not available. Please wait or try logging in again.");
+        setIsSubmitting(false);
+        return;
+      }
+
       // Save chosen workerCount locally before redirecting
       localStorage.setItem('pendingSubscription', JSON.stringify({ workerCount, calculatedPrice }));
 
@@ -81,6 +89,8 @@ export default function SubscriptionSetup() {
           workerCount,
           currency: 'EUR',
           billingCycle: 'monthly',
+          intendedRole: 'owner',
+          companyId: userCompanyId, // Pass companyId to the Edge Function
         },
       });
 
@@ -113,66 +123,81 @@ export default function SubscriptionSetup() {
     }
   };
 
+
+
   return (
     <AnimatedScreen>
-      <ScrollView contentContainerStyle={styles.scrollContent}>
-        <View style={styles.content}>
-          <Text style={styles.title}>Choose Your Plan</Text>
-          <Text style={styles.description}>Select the number of workers to get your personalized pricing.</Text>
-
-          {error && <View style={styles.errorContainer}><Text style={styles.errorText}>{error}</Text></View>}
-
-          <View style={styles.pricingSummary}>
-            <Text style={styles.pricingText}>Base Fee: {BASE_FEE} EUR/month</Text>
-            <Text style={styles.pricingText}>Worker Fee: {WORKER_FEE} EUR/month per worker</Text>
-          </View>
-
-          <View style={styles.workerCountContainer}>
-            <Text style={styles.label}>Number of Workers: {workerCount}</Text>
-            <View style={styles.workerCountControl}>
-                <Pressable onPress={decrementWorkerCount} style={styles.workerCountButton} disabled={workerCount <= MIN_WORKERS}>
-                    <AntDesign name="minus" size={24} color={workerCount <= MIN_WORKERS ? theme.colors.borderColor : theme.colors.iconColor} />
-                </Pressable>
-                <TextInput
-                    style={styles.workerCountInput}
-                    keyboardType="numeric"
-                    value={String(workerCount)}
-                    onChangeText={(text) => {
-                      const num = parseInt(text);
-                      if (!isNaN(num) && num >= MIN_WORKERS && num <= MAX_WORKERS) {
-                        handleWorkerCountChange(num);
-                      } else if (text === '') {
-                        handleWorkerCountChange(MIN_WORKERS); // Default to MIN_WORKERS if input is cleared
-                      }
-                    }}
-                    onBlur={() => {
-                      // Ensure a valid number is set on blur if text input is invalid
-                      if (isNaN(workerCount) || workerCount < MIN_WORKERS || workerCount > MAX_WORKERS) {
-                        handleWorkerCountChange(MIN_WORKERS);
-                      }
-                    }}
-                />
-                <Pressable onPress={incrementWorkerCount} style={styles.workerCountButton} disabled={workerCount >= MAX_WORKERS}>
-                    <AntDesign name="plus" size={24} color={workerCount >= MAX_WORKERS ? theme.colors.borderColor : theme.colors.iconColor} />
-                </Pressable>
-            </View>
-          </View>
-
-          <View style={styles.totalContainer}>
-            <Text style={styles.totalLabel}>Monthly Total:</Text>
-            <Text style={styles.totalPrice}>{calculatedPrice} EUR</Text>
-          </View>
-
-          <Button
-            onPress={handleContinue}
-            disabled={isSubmitting}
-            style={styles.primaryButton}
-            textStyle={styles.primaryButtonText}
-          >
-            {isSubmitting ? <ActivityIndicator color="#fff" /> : <Text style={styles.primaryButtonText}>Proceed to Payment</Text>}
-          </Button>
+      {isCompanyIdLoading ? (
+        <View style={styles.fullscreenLoading}>
+          <ActivityIndicator size="large" color={theme.colors.primary} />
+          <Text style={styles.loadingText}>Loading company information...</Text>
         </View>
-      </ScrollView>
+      ) : (!userCompanyId ? ( // If company ID is not available after loading, something went wrong
+        <View style={styles.fullscreenLoading}>
+          <Text style={styles.loadingText}>Error: Company information not found. Redirecting...</Text>
+          {/* Redirect to a more appropriate error/signup page */}
+          {setTimeout(() => router.replace('/auth/signup'), 3000)}
+        </View>
+      ) : (
+        <ScrollView contentContainerStyle={styles.scrollContent}>
+          <View style={styles.content}>
+            <Text style={styles.title}>Choose Your Plan</Text>
+            <Text style={styles.description}>Select the number of workers to get your personalized pricing.</Text>
+
+            {error && <View style={styles.errorContainer}><Text style={styles.errorText}>{error}</Text></View>}
+
+            <View style={styles.pricingSummary}>
+              <Text style={styles.pricingText}>Base Fee: {BASE_FEE} EUR/month</Text>
+              <Text style={styles.pricingText}>Worker Fee: {WORKER_FEE} EUR/month per worker</Text>
+            </View>
+
+            <View style={styles.workerCountContainer}>
+              <Text style={styles.label}>Number of Workers: {workerCount}</Text>
+              <View style={styles.workerCountControl}>
+                  <Pressable onPress={decrementWorkerCount} style={styles.workerCountButton} disabled={workerCount <= MIN_WORKERS}>
+                      <AntDesign name="minus" size={24} color={workerCount <= MIN_WORKERS ? theme.colors.borderColor : theme.colors.iconColor} />
+                  </Pressable>
+                  <TextInput
+                      style={styles.workerCountInput}
+                      keyboardType="numeric"
+                      value={String(workerCount)}
+                      onChangeText={(text) => {
+                        const num = parseInt(text);
+                        if (!isNaN(num) && num >= MIN_WORKERS && num <= MAX_WORKERS) {
+                          handleWorkerCountChange(num);
+                        } else if (text === '') {
+                          handleWorkerCountChange(MIN_WORKERS); // Default to MIN_WORKERS if input is cleared
+                        }
+                      }}
+                      onBlur={() => {
+                        // Ensure a valid number is set on blur if text input is invalid
+                        if (isNaN(workerCount) || workerCount < MIN_WORKERS || workerCount > MAX_WORKERS) {
+                          handleWorkerCountChange(MIN_WORKERS);
+                        }
+                      }}
+                  />
+                  <Pressable onPress={incrementWorkerCount} style={styles.workerCountButton} disabled={workerCount >= MAX_WORKERS}>
+                      <AntDesign name="plus" size={24} color={workerCount >= MAX_WORKERS ? theme.colors.borderColor : theme.colors.iconColor} />
+                  </Pressable>
+              </View>
+            </View>
+
+            <View style={styles.totalContainer}>
+              <Text style={styles.totalLabel}>Monthly Total:</Text>
+              <Text style={styles.totalPrice}>{calculatedPrice} EUR</Text>
+            </View>
+
+            <Button
+              onPress={handleContinue}
+              disabled={isSubmitting || isCompanyIdLoading || !userCompanyId} // Disable if company ID is loading or not available
+              style={styles.primaryButton}
+              textStyle={styles.primaryButtonText}
+            >
+              {isSubmitting ? <ActivityIndicator color="#fff" /> : <Text style={styles.primaryButtonText}>Proceed to Payment</Text>}
+            </Button>
+          </View>
+        </ScrollView>
+      ))}
     </AnimatedScreen>
   );
 }
@@ -320,5 +345,16 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: 'bold',
     textAlign: 'center',
+  },
+  fullscreenLoading: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: theme.colors.background,
+  },
+  loadingText: {
+    fontSize: 18,
+    color: theme.colors.bodyText,
+    marginTop: theme.spacing(2),
   },
 });

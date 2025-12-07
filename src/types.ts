@@ -1,24 +1,23 @@
-export interface Worker {
+export interface Employee {
   id: string;
   full_name: string;
-  email?: string;
+  email: string;
   phone_number?: string;
-  role: 'worker' | 'manager';
-  status: 'active' | 'invited' | 'pending';
-  avatar?: string;
-  pin?: string;
-  location?: { latitude: number; longitude: number; };
-  joined_at?: string;
-  reporting_to?: string;
+  role: 'worker' | 'manager' | 'owner';
+  status: 'pending' | 'active' | 'disabled';
+  avatar_url?: string;
+  reporting_to?: string; // Re-added reporting_to
+  created_at: string;
+  company_id: string; // New: Add company_id
 }
 
 export interface Invite {
   id: string;
   full_name: string;
-  email?: string;
-  phone?: string;
+  email: string;
   role: 'worker' | 'manager';
-  status: 'pending' | 'used';
+  status: 'pending' | 'accepted' | 'expired';
   token: string;
-  invitationMethod: 'email' | 'phone';
+  created_at: string;
+  company_id: string; // New: Add company_id
 }

@@ -1,6 +1,6 @@
 import React, { useState, useContext, useEffect, useRef, useCallback } from 'react';
 import { Modal, View, Text, TextInput, StyleSheet, ActivityIndicator, TouchableOpacity, ScrollView, Animated, Platform, Dimensions, Image, Easing } from 'react-native';
-import { ProjectsContext, ProjectsContextType } from '../app/(manager)/ProjectsContext';
+import { ProjectsContext, ProjectsContextType } from '../context/ProjectsContext';
 import { Button } from './Button';
 import { theme } from '../theme';
 import { Ionicons } from '@expo/vector-icons';

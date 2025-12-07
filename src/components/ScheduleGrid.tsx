@@ -4,11 +4,11 @@ import { Droppable, Draggable } from '@hello-pangea/dnd';
 import moment from 'moment';
 import { Ionicons } from '@expo/vector-icons';
 import Animated, { Layout } from 'react-native-reanimated';
-import { Worker } from '../../../../types';
-import { Project } from '../../ProjectsContext';
-import { Assignment } from '../types';
+import { Employee } from '~/types';
+import { Project } from '../context/ProjectsContext';
+import { Assignment } from '../utils/project-assignment-types';
 import { isSameDay } from '../utils/time';
-import { theme } from '../../../../theme';
+import { theme } from '~/theme';
 
 export const TOTAL_HOURS = 24;
 const TIME_LABEL_WIDTH = 60;
@@ -138,7 +138,7 @@ const AssignmentBlock = React.memo(function AssignmentBlock({ assignment, projec
 });
 
 interface WorkerColumnProps {
-  worker: Worker;
+  employee: Employee; // Changed from worker
   projects: Project[];
   assignments: Assignment[];
   selectedDate: Date;
@@ -163,38 +163,42 @@ const WebSafeScrollView = React.forwardRef(({ children, style, ...rest }: any, r
   }
 });
 
-const WorkerColumn = React.memo(function WorkerColumn({ worker, projects, assignments, selectedDate, onDeleteAssignment, onEditAssignmentTime, isPastDate }: WorkerColumnProps) {
+const WorkerColumn = React.memo(function WorkerColumn({ employee, projects, assignments, selectedDate, onDeleteAssignment, onEditAssignmentTime, isPastDate }: WorkerColumnProps) { // Changed from worker
   const workerAssignments = assignments.filter(
-    (a) => a.workerId === worker.id && isSameDay(a.startDate, selectedDate)
+    (a) => a.workerId === employee.id && isSameDay(a.startDate, selectedDate) // Changed from worker.id
   );
 
   return (
     <View style={styles.workerColumn}>
       <View style={styles.workerColumnHeader}>
-        <Text style={styles.workerName}>{worker.full_name}</Text>
+        <Text style={styles.workerName}>{employee.full_name}</Text> // Changed from worker.full_name
       </View>
-      <Droppable droppableId={`worker-${worker.id}`} type="TASK" direction="vertical" isDropDisabled={isPastDate}>
+      <Droppable droppableId={`worker-${employee.id}`} type="TASK" direction="vertical" isDropDisabled={isPastDate}>
         {(provided, snapshot) => (
-          <WebSafeScrollView
+          <View
             ref={(ref: any) => provided.innerRef(ref)}
             {...provided.droppableProps}
-            style={[styles.timelineScrollView, snapshot.isDraggingOver && styles.dragOver]}
+            style={[styles.timelineScrollView, snapshot.isDraggingOver && styles.dragOver]} // Apply styles to the outer View
           >
-            <View style={styles.timeline}>
-              {workerAssignments.map((assignment, index) => (
-                <AssignmentBlock
-                  key={assignment.id}
-                  assignment={assignment}
-                  project={projects.find((p) => p.id === assignment.projectId)}
-                  index={index}
-                  onDeleteAssignment={onDeleteAssignment}
-                  onEditAssignmentTime={onEditAssignmentTime}
-                  isPastDate={isPastDate}
-                />
-              ))}
-              {provided.placeholder}
-            </View>
-          </WebSafeScrollView>
+            <WebSafeScrollView // No longer needs ref or droppableProps
+              style={styles.timelineInnerScrollView} // New style for inner scroll view
+            >
+              <View style={styles.timeline}>
+                {workerAssignments.map((assignment, index) => (
+                  <AssignmentBlock
+                    key={assignment.id}
+                    assignment={assignment}
+                    project={projects.find((p) => p.id === assignment.projectId)}
+                    index={index}
+                    onDeleteAssignment={onDeleteAssignment}
+                    onEditAssignmentTime={onEditAssignmentTime}
+                    isPastDate={isPastDate}
+                  />
+                ))}
+                {provided.placeholder}
+              </View>
+            </WebSafeScrollView>
+          </View>
         )}
       </Droppable>
     </View>
@@ -225,11 +229,11 @@ const WorkerLaneCopyButton: React.FC<WorkerLaneCopyButtonProps> = ({ sourceWorke
 };
 
 interface ScheduleGridProps {
-  workers: Worker[];
+  employees: Employee[]; // Changed from workers
   projects: Project[];
   assignments: Assignment[];
   selectedDate: Date;
-  selectedWorkers: Worker[];
+  selectedEmployees: Employee[]; // Changed from selectedWorkers
   onCopyAssignments: (sourceWorkerId: string, targetWorkerId: string) => void;
   onDeleteAssignment: (assignmentId: string) => void;
   onEditAssignmentTime: (assignmentId: string, assignedTime: string | null) => void;
@@ -237,32 +241,32 @@ interface ScheduleGridProps {
 }
 
 const ScheduleGrid: React.FC<ScheduleGridProps> = ({
-  workers,
+  employees, // Changed from workers
   projects,
   assignments,
   selectedDate,
-  selectedWorkers,
+  selectedEmployees, // Changed from selectedWorkers
   onCopyAssignments,
   onDeleteAssignment,
   onEditAssignmentTime,
   isPastDate,
 }) => {
-  const workersToDisplay = selectedWorkers.length > 0 ? workers.filter(w => selectedWorkers.some(sw => sw.id === w.id)) : workers;
+  const employeesToDisplay = selectedEmployees.length > 0 ? employees.filter(e => selectedEmployees.some(se => se.id === e.id)) : employees; // Changed from workers and selectedWorkers
 
   return (
     <View style={[styles.container, isPastDate && styles.pastDateOverlay]}>
       <ScrollView horizontal showsHorizontalScrollIndicator={true}>
-        {workersToDisplay.map((worker, index) => (
-          <React.Fragment key={worker.id}>
+        {employeesToDisplay.map((employee, index) => ( // Changed from workersToDisplay.map((worker, index)
+          <React.Fragment key={employee.id}> // Changed from worker.id
             <Animated.View
               layout={Layout.springify().damping(20).stiffness(100)}
               style={[
                 styles.workerColumnWrapper,
-                index < workersToDisplay.length - 1 && styles.workerColumnSeparator,
+                index < employeesToDisplay.length - 1 && styles.workerColumnSeparator, // Changed from workersToDisplay.length
               ]}
             >
               <WorkerColumn
-                worker={worker}
+                employee={employee} // Changed from worker
                 projects={projects}
                 assignments={assignments}
                 selectedDate={selectedDate}
@@ -271,18 +275,18 @@ const ScheduleGrid: React.FC<ScheduleGridProps> = ({
                 isPastDate={isPastDate}
               />
             </Animated.View>
-            {index < workersToDisplay.length - 1 && (
+            {index < employeesToDisplay.length - 1 && ( // Changed from workersToDisplay.length
               <View style={styles.copyButtonContainerWrapper}>
                 <View style={styles.copyButtonContainer}>
                   <WorkerLaneCopyButton
-                    sourceWorkerId={worker.id}
-                    targetWorkerId={workersToDisplay[index + 1].id}
+                    sourceWorkerId={employee.id} // Changed from worker.id
+                    targetWorkerId={employeesToDisplay[index + 1].id} // Changed from workersToDisplay
                     onCopyAssignments={onCopyAssignments}
                     direction="left-to-right"
                   />
                   <WorkerLaneCopyButton
-                    sourceWorkerId={workersToDisplay[index + 1].id}
-                    targetWorkerId={worker.id}
+                    sourceWorkerId={employeesToDisplay[index + 1].id} // Changed from workersToDisplay
+                    targetWorkerId={employee.id} // Changed from worker.id
                     onCopyAssignments={onCopyAssignments}
                     direction="right-to-left"
                   />
@@ -295,6 +299,7 @@ const ScheduleGrid: React.FC<ScheduleGridProps> = ({
     </View>
   );
 };
+
 
 const styles = StyleSheet.create({
   container: {
@@ -335,6 +340,9 @@ const styles = StyleSheet.create({
     flex: 1,
     minHeight: 120,
     padding: theme.spacing(1),
+  },
+  timelineInnerScrollView: { // New style
+    flex: 1,
   },
   dragOver: {
     backgroundColor: theme.colors.primaryMuted,

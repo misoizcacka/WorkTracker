@@ -1,4 +1,4 @@
-import React, { useState, useEffect, createContext, useContext } from 'react';
+import React, { useState, useEffect, createContext, useContext, useCallback } from 'react';
 import { supabase } from '../utils/supabase'; // Make sure this path is correct
 import { Session, User } from '@supabase/supabase-js';
 
@@ -8,7 +8,12 @@ interface AuthContextType {
   signOut: () => void;
   session: Session | null;
   user: User | null;
-  isLoading: boolean;
+  isLoading: boolean; // Is auth session loading
+  userCompanyId: string | null; // NEW: The company ID for the logged-in user
+  isCompanyIdLoading: boolean; // NEW: Is company ID being loaded
+  userCompanyName: string | null; // NEW: Company name
+  userCompanyCountry: string | null; // NEW: Company country
+  isCompanyDetailsComplete: boolean; // NEW: Flag if company name is not placeholder
   refreshUser: () => Promise<void>;
 }
 
@@ -28,33 +33,98 @@ export function useSession() {
 export function SessionProvider(props: React.PropsWithChildren<{}>) {
   const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<User | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(true); // For auth session
+  const [userCompanyId, setUserCompanyId] = useState<string | null>(null); // NEW
+  const [isCompanyIdLoading, setIsCompanyIdLoading] = useState(true); // NEW
+  const [userCompanyName, setUserCompanyName] = useState<string | null>(null); // NEW
+  const [userCompanyCountry, setUserCompanyCountry] = useState<string | null>(null); // NEW
+  const [isCompanyDetailsComplete, setIsCompanyDetailsComplete] = useState(false); // NEW
+
+  // Function to fetch and set company ID and details
+  const fetchUserCompanyIdAndDetails = useCallback(async (loggedInUser: User | null) => {
+    setIsCompanyIdLoading(true);
+    setUserCompanyName(null);
+    setUserCompanyCountry(null);
+    setIsCompanyDetailsComplete(false);
+
+    if (!loggedInUser) {
+      setUserCompanyId(null);
+      setIsCompanyIdLoading(false);
+      return;
+    }
+
+    let currentCompanyId: string | null = null;
+
+    if (loggedInUser.user_metadata?.company_id) {
+      currentCompanyId = loggedInUser.user_metadata.company_id;
+      setUserCompanyId(currentCompanyId);
+    } else {
+      // Fallback: fetch from employee table if not in user_metadata
+      const { data: employeeData, error: employeeError } = await supabase
+        .from('employees')
+        .select('company_id')
+        .eq('id', loggedInUser.id)
+        .maybeSingle();
+      
+      if (employeeData?.company_id) {
+          currentCompanyId = employeeData.company_id;
+          setUserCompanyId(currentCompanyId);
+      } else if (employeeError) {
+          console.error('Error fetching company_id from employee table in AuthContext:', employeeError);
+      } else {
+          setUserCompanyId(null);
+      }
+    }
+
+    // Now fetch company details if companyId is found
+    if (currentCompanyId) {
+      const { data: companyDetails, error: companyDetailsError } = await supabase
+        .from('companies')
+        .select('name, country')
+        .eq('id', currentCompanyId)
+        .single();
+      
+      if (companyDetailsError) {
+        console.error('Error fetching company details in AuthContext:', companyDetailsError);
+      } else if (companyDetails) {
+        setUserCompanyName(companyDetails.name);
+        setUserCompanyCountry(companyDetails.country);
+        // Check if company name is the placeholder name
+        const isPlaceholderName = companyDetails.name?.startsWith('New Company - ');
+        setIsCompanyDetailsComplete(!isPlaceholderName);
+      }
+    }
+
+    setIsCompanyIdLoading(false);
+  }, []); // Dependencies for useCallback. No external dependencies needed here.
 
   useEffect(() => {
-    // Start loading
+    // Start loading auth session
     setIsLoading(true);
 
-    // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
+    // Initial session check
+    supabase.auth.getSession().then(({ data: { session: initialSession } }) => {
+      setSession(initialSession);
+      setUser(initialSession?.user ?? null);
       setIsLoading(false);
+      fetchUserCompanyIdAndDetails(initialSession?.user ?? null); // Fetch company ID and details for initial user
     });
 
     // Set up auth state change listener
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-      setUser(session?.user ?? null);
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, newSession) => {
+      setSession(newSession);
+      setUser(newSession?.user ?? null);
       setIsLoading(false);
+      fetchUserCompanyIdAndDetails(newSession?.user ?? null); // Fetch company ID and details for changed user state
     });
 
     // Cleanup subscription on unmount
     return () => {
       subscription?.unsubscribe();
     };
-  }, []);
+  }, [fetchUserCompanyIdAndDetails]); // Add fetchUserCompanyIdAndDetails to dependencies for useEffect
 
-  const refreshUser = async () => {
+  const refreshUser = useCallback(async () => {
     // Explicitly refresh the session to get the latest data from the server
     const { data: { session: refreshedSession }, error: sessionError } = await supabase.auth.refreshSession();
 
@@ -64,26 +134,35 @@ export function SessionProvider(props: React.PropsWithChildren<{}>) {
       return;
     }
 
-        setSession(refreshedSession);
-        setUser(refreshedSession?.user ?? null); // Use user from the refreshed session directly
-      };
+    setSession(refreshedSession);
+    setUser(refreshedSession?.user ?? null); // Use user from the refreshed session directly
+    fetchUserCompanyIdAndDetails(refreshedSession?.user ?? null); // Refresh company ID and details after user refresh
+  }, [fetchUserCompanyIdAndDetails]); // Add fetchUserCompanyIdAndDetails to dependencies for useCallback
+
 
   const value: AuthContextType = {
     signIn: (user: User) => {
-      // In this setup, signIn is handled by Supabase's auth UI or methods,
-      // and the onAuthStateChange listener will update the state.
-      // This function can be used for manual sign-in logic if needed.
       console.log("User signed in:", user);
     },
     signOut: async () => {
       await supabase.auth.signOut();
       setSession(null);
       setUser(null);
-      localStorage.removeItem('biometricUser'); // Explicitly clear biometricUser from localStorage
+      setUserCompanyId(null); // Clear company ID on sign out
+      setIsCompanyIdLoading(false); // Reset loading state
+      setUserCompanyName(null);
+      setUserCompanyCountry(null);
+      setIsCompanyDetailsComplete(false);
+      localStorage.removeItem('biometricUser');
     },
     session,
     user,
-    isLoading,
+    isLoading, // Auth session loading
+    userCompanyId,
+    isCompanyIdLoading,
+    userCompanyName,
+    userCompanyCountry,
+    isCompanyDetailsComplete,
     refreshUser,
   };
 

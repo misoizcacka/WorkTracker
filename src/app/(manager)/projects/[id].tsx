@@ -24,7 +24,7 @@ import { EmbedMapView } from '../../../components/EmbedMapView.web';
 import ImageCarouselModal from '../../../components/ImageCarouselModal';
 import ProjectGallery from '../../../components/ProjectGallery';
 import MessageInput from '../../../components/MessageInput';
-import { ProjectsContext } from '../ProjectsContext';
+import { ProjectsContext } from '~/context/ProjectsContext';
 
 interface Message {
   id: string;

@@ -2,19 +2,19 @@ import React, { useState, useEffect } from 'react';
 import { Modal, View, Text, TextInput, StyleSheet, ActivityIndicator, TouchableOpacity, Image } from 'react-native';
 import { Button } from './Button';
 import { theme } from '../theme';
-import { Worker } from '../types';
+import { Employee } from '../types';
 import { Ionicons } from '@expo/vector-icons';
 import { Dropdown } from 'react-native-element-dropdown';
 
 interface EditPersonModalProps {
   visible: boolean;
   onClose: () => void;
-  worker: Worker | null;
-  onSave: (worker: Worker) => void;
-  allWorkers: Worker[];
+  employee: Employee | null;
+  onSave: (employee: Employee) => void;
+  allEmployees: Employee[];
 }
 
-const EditPersonModal: React.FC<EditPersonModalProps> = ({ visible, onClose, worker, onSave, allWorkers }) => {
+const EditPersonModal: React.FC<EditPersonModalProps> = ({ visible, onClose, employee, onSave, allEmployees }) => {
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
@@ -22,23 +22,23 @@ const EditPersonModal: React.FC<EditPersonModalProps> = ({ visible, onClose, wor
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const managers = allWorkers.filter(w => w.role === 'manager');
+  const managers = allEmployees.filter(e => e.role === 'manager');
 
   useEffect(() => {
-    if (worker) {
-      setFullName(worker.full_name);
-      setEmail(worker.email || '');
-      setPhone(worker.phone_number || '');
-      setReportingTo(worker.reporting_to);
+    if (employee) {
+      setFullName(employee.full_name);
+      setEmail(employee.email || '');
+      setPhone(employee.phone_number || '');
+      setReportingTo(employee.reporting_to);
     }
-  }, [worker]);
+  }, [employee]);
 
   const handleSave = async () => {
     if (!fullName) {
       setError('Full name is required.');
       return;
     }
-    if (!worker) {
+    if (!employee) {
       return;
     }
 
@@ -46,7 +46,7 @@ const EditPersonModal: React.FC<EditPersonModalProps> = ({ visible, onClose, wor
     setLoading(true);
     try {
       onSave({
-        ...worker,
+        ...employee,
         full_name: fullName,
         email,
         phone_number: phone,
@@ -78,7 +78,7 @@ const EditPersonModal: React.FC<EditPersonModalProps> = ({ visible, onClose, wor
 
           <View style={styles.contentLayout}>
             <View style={styles.avatarContainer}>
-              <Image source={{ uri: worker?.avatar }} style={styles.avatar} />
+              <Image source={{ uri: employee?.avatar_url }} style={styles.avatar} />
               <TouchableOpacity style={styles.avatarEditButton}>
                 <Ionicons name="pencil" size={20} color="white" />
               </TouchableOpacity>
@@ -118,7 +118,7 @@ const EditPersonModal: React.FC<EditPersonModalProps> = ({ visible, onClose, wor
                   placeholderTextColor="#999"
                 />
               </View>
-              {worker?.role === 'worker' && (
+              {employee?.role === 'worker' && (
                 <View style={styles.fieldRow}>
                   <Text style={styles.label}>Reports to</Text>
                   <Dropdown

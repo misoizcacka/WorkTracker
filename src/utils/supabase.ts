@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Supabase project URL and Publishable Key
 // In a production environment, these should be loaded from environment variables
@@ -9,7 +10,7 @@ const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY!; // Us
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
     persistSession: true,
-    storage: localStorage,
+    storage: AsyncStorage,
     autoRefreshToken: true,
   },
 });

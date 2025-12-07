@@ -1,5 +1,4 @@
 import React from "react";
-import { Image } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { theme } from "../../../theme";
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
@@ -13,20 +12,26 @@ const WorkerTabsLayout = () => {
   // 📱 Mobile → Tabs
   return (
     <BottomTabs
+      safeAreaInsets={{ bottom: 0 }}
       screenOptions={{
         headerShown: false, // The header is shown in the parent stack navigator
         tabBarActiveTintColor: theme.colors.primary,
         tabBarStyle: {
-          backgroundColor: theme.colors.cardBackground,
+          backgroundColor: theme.colors.pageBackground,
           borderTopColor: theme.colors.borderColor,
-          position: 'absolute',
-          bottom: 0,
-          left: 0,
-          right: 0,
         },
         tabBarLabelStyle: { fontSize: 12, fontWeight: "600" },
       }}
     >
+      <BottomTabs.Screen
+        name="account"
+        options={{
+          title: "Account",
+          tabBarIcon: ({ color, size }: { color: string; size: number }) => (
+            <Ionicons name="person-outline" color={color} size={size} />
+          ),
+        }}
+      />
       <BottomTabs.Screen
         name="home"
         options={{
@@ -51,15 +56,6 @@ const WorkerTabsLayout = () => {
           title: "Dashboard",
           tabBarIcon: ({ color, size }: { color: string; size: number }) => (
             <Ionicons name="bar-chart-outline" color={color} size={size} />
-          ),
-        }}
-      />
-      <BottomTabs.Screen
-        name="account"
-        options={{
-          title: "Account",
-          tabBarIcon: ({ color, size }: { color: string; size: number }) => (
-            <Ionicons name="person-outline" color={color} size={size} />
           ),
         }}
       />
