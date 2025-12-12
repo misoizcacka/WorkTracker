@@ -8,14 +8,14 @@ export default function GuestLayout() {
   return (
     <I18nextProvider i18n={i18n}>
       <StatusBar style="dark" backgroundColor={theme.colors.pageBackground} />
-      <Stack>
-        <Stack.Screen name="index" options={{ headerShown: false }} />
-        <Stack.Screen name="pricing" options={{ headerShown: false }} />
-        <Stack.Screen name="login" options={{ headerShown: false }} />
-        <Stack.Screen name="invalid-invite" options={{ headerShown: false }} />
-        <Stack.Screen name="company-details" options={{ headerShown: false }} />
-        <Stack.Screen name="signup-success" options={{ headerShown: false }} />
-        <Stack.Screen name="register" options={{ headerShown: false }} />
+      <Stack screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="index" />
+        <Stack.Screen name="pricing" />
+        <Stack.Screen name="login" />
+        <Stack.Screen name="invalid-invite" />
+        <Stack.Screen name="company-details" />
+        <Stack.Screen name="signup-success" />
+        <Stack.Screen name="register" />
       </Stack>
     </I18nextProvider>
   );

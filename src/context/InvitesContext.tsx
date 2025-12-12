@@ -1,12 +1,18 @@
 import React, { createContext, useState, useCallback, useMemo, useEffect } from 'react';
-import { supabase } from '../utils/supabase';
+import { createClient } from '@supabase/supabase-js';
+import { supabase, supabaseAnonKey } from '../utils/supabase';
 import { Invite } from '../types';
+
+interface Company {
+  name: string;
+}
 
 interface InvitesContextType {
   invites: Invite[];
   sendEmailInvite: (inviteData: { full_name: string; email: string; role: 'worker' | 'manager' }) => Promise<Invite | undefined>;
   getInviteByToken: (token: string) => Promise<Invite | undefined>;
   updateInviteStatus: (token: string, status: 'pending' | 'accepted' | 'expired') => Promise<void>;
+  updateInvite: (updatedInvite: Invite) => Promise<Invite>; // NEW: Function to update an invite
   deleteInvite: (inviteId: string) => Promise<void>;
 }
 
@@ -127,7 +133,6 @@ export function InvitesProvider({ children }: { children: React.ReactNode }) {
         full_name: inviteData.full_name,
         email: inviteData.email,
         role: inviteData.role,
-        access_token: session.access_token, // Pass the inviter's access token
         company_id: userCompanyId, // Pass the inviter's company ID
       }
     });
@@ -148,13 +153,36 @@ export function InvitesProvider({ children }: { children: React.ReactNode }) {
     return undefined;
   }, [userCompanyId]); // Re-run useCallback when userCompanyId changes
 
-  const getInviteByToken = useCallback(async (token: string): Promise<Invite | undefined> => {
-    if (!userCompanyId) return undefined; // Don't fetch without company ID
+  const updateInvite = useCallback(async (updatedInvite: Invite): Promise<Invite> => { // NEW: updateInvite function
+    if (!userCompanyId) throw new Error("Company ID not available.");
 
     const { data, error } = await supabase
+      .from('invites')
+      .update({ 
+        full_name: updatedInvite.full_name,
+        email: updatedInvite.email,
+        role: updatedInvite.role,
+      })
+      .eq('id', updatedInvite.id)
+      .eq('company_id', userCompanyId) // Ensure update is scoped to company
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error updating invite:', error);
+      throw error;
+    }
+
+    setInvites(prevInvites => prevInvites.map(inv => inv.id === updatedInvite.id ? data : inv));
+    return data;
+  }, [userCompanyId]);
+
+  const getInviteByToken = useCallback(async (token: string): Promise<Invite | undefined> => {
+    console.log('getInviteByToken called with token:', token);
+
+    // Use the standard supabase client. The RPC functions are security definers.
+    const { data, error } = await supabase
       .rpc('get_invite_details', { invite_token: token })
-      // RPCs typically don't have company_id filter directly, needs to be in the RPC definition
-      // Or, the RPC needs to use auth.uid() and get company_id from there.
       .single();
 
     if (error) {
@@ -162,17 +190,29 @@ export function InvitesProvider({ children }: { children: React.ReactNode }) {
       return undefined;
     }
 
-    // Explicitly cast data to Invite
+    console.log('Invite details from get_invite_details:', data);
     const inviteData = data as Invite;
 
-    // Additional check if RPC doesn't filter by company_id
-    if (inviteData && inviteData.company_id !== userCompanyId) { // Use inviteData
-        console.warn('Invite found but does not belong to current user\'s company.');
-        return undefined;
-    }
+    // Fetch company name separately if inviteData is valid.
+    if (inviteData) {
+        console.log('Fetching company name for invite_token:', token);
+        const { data: company, error: companyError } = await supabase
+            .rpc('get_company_name_for_invite', { invite_token: token })
+            .single() as { data: Company | null, error: any };
 
-    return inviteData; // Return inviteData
-  }, [userCompanyId]);
+        if (companyError) {
+            console.error('Error fetching company name for invite:', companyError);
+        }
+
+        console.log('Company data from get_company_name_for_invite:', company);
+        if (company) {
+            inviteData.company_name = company.name; // Assign company name to the invite object
+        }
+    }
+    
+    console.log('Returning inviteData:', inviteData);
+    return inviteData; // Return inviteData, now potentially with company_name
+  }, []); // No userCompanyId dependency needed here
 
   const updateInviteStatus = useCallback(async (token: string, status: 'pending' | 'accepted' | 'expired') => {
     if (!userCompanyId) throw new Error("Company ID not available.");
@@ -208,8 +248,9 @@ export function InvitesProvider({ children }: { children: React.ReactNode }) {
     sendEmailInvite,
     getInviteByToken,
     updateInviteStatus,
+    updateInvite, // NEW: Add updateInvite to the context value
     deleteInvite,
-  }), [invites, sendEmailInvite, getInviteByToken, updateInviteStatus, deleteInvite]);
+  }), [invites, sendEmailInvite, getInviteByToken, updateInviteStatus, updateInvite, deleteInvite]);
 
   return (
     <InvitesContext.Provider value={value}>

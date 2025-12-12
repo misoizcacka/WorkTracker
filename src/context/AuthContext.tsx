@@ -1,4 +1,5 @@
 import React, { useState, useEffect, createContext, useContext, useCallback } from 'react';
+import { setStorageItemAsync } from '../hooks/useStorageState';
 import { supabase } from '../utils/supabase'; // Make sure this path is correct
 import { Session, User } from '@supabase/supabase-js';
 
@@ -14,6 +15,7 @@ interface AuthContextType {
   userCompanyName: string | null; // NEW: Company name
   userCompanyCountry: string | null; // NEW: Company country
   isCompanyDetailsComplete: boolean; // NEW: Flag if company name is not placeholder
+  userRole: string | null; // NEW: The role of the logged-in user
   refreshUser: () => Promise<void>;
 }
 
@@ -39,13 +41,15 @@ export function SessionProvider(props: React.PropsWithChildren<{}>) {
   const [userCompanyName, setUserCompanyName] = useState<string | null>(null); // NEW
   const [userCompanyCountry, setUserCompanyCountry] = useState<string | null>(null); // NEW
   const [isCompanyDetailsComplete, setIsCompanyDetailsComplete] = useState(false); // NEW
+  const [userRole, setUserRole] = useState<string | null>(null); // NEW
 
   // Function to fetch and set company ID and details
-  const fetchUserCompanyIdAndDetails = useCallback(async (loggedInUser: User | null) => {
+  const fetchUserDetailsAndCompany = useCallback(async (loggedInUser: User | null) => {
     setIsCompanyIdLoading(true);
     setUserCompanyName(null);
     setUserCompanyCountry(null);
     setIsCompanyDetailsComplete(false);
+    setUserRole(null); // Clear user role when fetching new details
 
     if (!loggedInUser) {
       setUserCompanyId(null);
@@ -54,27 +58,41 @@ export function SessionProvider(props: React.PropsWithChildren<{}>) {
     }
 
     let currentCompanyId: string | null = null;
+    let currentRole: string | null = null;
+
+    // Prioritize app_metadata then user_metadata for role. For company_id, user_metadata is fine.
+    if (loggedInUser.app_metadata?.role) {
+      currentRole = loggedInUser.app_metadata.role;
+    } else if (loggedInUser.user_metadata?.role) {
+      currentRole = loggedInUser.user_metadata.role;
+    }
 
     if (loggedInUser.user_metadata?.company_id) {
       currentCompanyId = loggedInUser.user_metadata.company_id;
-      setUserCompanyId(currentCompanyId);
-    } else {
-      // Fallback: fetch from employee table if not in user_metadata
+    }
+
+    // Fallback to employees table if company_id or role is not in user_metadata
+    if (!currentCompanyId || !currentRole) {
       const { data: employeeData, error: employeeError } = await supabase
         .from('employees')
-        .select('company_id')
+        .select('company_id, role')
         .eq('id', loggedInUser.id)
         .maybeSingle();
       
-      if (employeeData?.company_id) {
-          currentCompanyId = employeeData.company_id;
-          setUserCompanyId(currentCompanyId);
+      if (employeeData) {
+          if (!currentCompanyId && employeeData.company_id) {
+              currentCompanyId = employeeData.company_id;
+          }
+          if (!currentRole && employeeData.role) {
+              currentRole = employeeData.role;
+          }
       } else if (employeeError) {
-          console.error('Error fetching company_id from employee table in AuthContext:', employeeError);
-      } else {
-          setUserCompanyId(null);
+          console.error('Error fetching company_id and role from employee table in AuthContext:', employeeError);
       }
     }
+
+    setUserCompanyId(currentCompanyId);
+    setUserRole(currentRole); // Set the resolved user role
 
     // Now fetch company details if companyId is found
     if (currentCompanyId) {
@@ -82,7 +100,7 @@ export function SessionProvider(props: React.PropsWithChildren<{}>) {
         .from('companies')
         .select('name, country')
         .eq('id', currentCompanyId)
-        .single();
+        .maybeSingle();
       
       if (companyDetailsError) {
         console.error('Error fetching company details in AuthContext:', companyDetailsError);
@@ -107,7 +125,7 @@ export function SessionProvider(props: React.PropsWithChildren<{}>) {
       setSession(initialSession);
       setUser(initialSession?.user ?? null);
       setIsLoading(false);
-      fetchUserCompanyIdAndDetails(initialSession?.user ?? null); // Fetch company ID and details for initial user
+      fetchUserDetailsAndCompany(initialSession?.user ?? null); // Fetch company ID and details for initial user
     });
 
     // Set up auth state change listener
@@ -115,14 +133,14 @@ export function SessionProvider(props: React.PropsWithChildren<{}>) {
       setSession(newSession);
       setUser(newSession?.user ?? null);
       setIsLoading(false);
-      fetchUserCompanyIdAndDetails(newSession?.user ?? null); // Fetch company ID and details for changed user state
+      fetchUserDetailsAndCompany(newSession?.user ?? null); // Fetch company ID and details for changed user state
     });
 
     // Cleanup subscription on unmount
     return () => {
       subscription?.unsubscribe();
     };
-  }, [fetchUserCompanyIdAndDetails]); // Add fetchUserCompanyIdAndDetails to dependencies for useEffect
+  }, [fetchUserDetailsAndCompany]); // Add fetchUserDetailsAndCompany to dependencies for useEffect
 
   const refreshUser = useCallback(async () => {
     // Explicitly refresh the session to get the latest data from the server
@@ -136,8 +154,8 @@ export function SessionProvider(props: React.PropsWithChildren<{}>) {
 
     setSession(refreshedSession);
     setUser(refreshedSession?.user ?? null); // Use user from the refreshed session directly
-    fetchUserCompanyIdAndDetails(refreshedSession?.user ?? null); // Refresh company ID and details after user refresh
-  }, [fetchUserCompanyIdAndDetails]); // Add fetchUserCompanyIdAndDetails to dependencies for useCallback
+    fetchUserDetailsAndCompany(refreshedSession?.user ?? null); // Refresh company ID and details after user refresh
+  }, [fetchUserDetailsAndCompany]); // Add fetchUserDetailsAndCompany to dependencies for useCallback
 
 
   const value: AuthContextType = {
@@ -153,7 +171,8 @@ export function SessionProvider(props: React.PropsWithChildren<{}>) {
       setUserCompanyName(null);
       setUserCompanyCountry(null);
       setIsCompanyDetailsComplete(false);
-      localStorage.removeItem('biometricUser');
+      setUserRole(null); // NEW: Clear user role
+      await setStorageItemAsync('biometricUser', null); // NEW LINE
     },
     session,
     user,
@@ -163,6 +182,7 @@ export function SessionProvider(props: React.PropsWithChildren<{}>) {
     userCompanyName,
     userCompanyCountry,
     isCompanyDetailsComplete,
+    userRole, // NEW
     refreshUser,
   };
 

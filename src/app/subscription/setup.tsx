@@ -19,6 +19,7 @@ const MIN_WORKERS = 1; // Minimum workers
 
 export default function SubscriptionSetup() {
   const { user, userCompanyId, isCompanyIdLoading } = useSession()!; // Get userCompanyId and isCompanyIdLoading from AuthContext
+
   const router = useRouter();
   const [workerCount, setWorkerCount] = useState(MIN_WORKERS);
   const [calculatedPrice, setCalculatedPrice] = useState(0);
@@ -127,16 +128,15 @@ export default function SubscriptionSetup() {
 
   return (
     <AnimatedScreen>
-      {isCompanyIdLoading ? (
+      {isCompanyIdLoading ? ( // Use isCompanyIdLoading from AuthContext to cover all initial loading
         <View style={styles.fullscreenLoading}>
           <ActivityIndicator size="large" color={theme.colors.primary} />
           <Text style={styles.loadingText}>Loading company information...</Text>
         </View>
-      ) : (!userCompanyId ? ( // If company ID is not available after loading, something went wrong
+      ) : (!userCompanyId ? ( // If isCompanyIdLoading is false and userCompanyId is null, means no company ID
         <View style={styles.fullscreenLoading}>
-          <Text style={styles.loadingText}>Error: Company information not found. Redirecting...</Text>
-          {/* Redirect to a more appropriate error/signup page */}
-          {setTimeout(() => router.replace('/auth/signup'), 3000)}
+          <Text style={styles.loadingText}>Error: Company information not found. Please try logging in again.</Text>
+          {/* Removed setTimeout to prevent redirect loop */}
         </View>
       ) : (
         <ScrollView contentContainerStyle={styles.scrollContent}>

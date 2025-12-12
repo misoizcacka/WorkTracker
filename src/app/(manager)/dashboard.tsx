@@ -339,7 +339,7 @@ const styles = StyleSheet.create({
   },
   headerContainer: {
     padding: theme.spacing(3),
-    backgroundColor: theme.colors.cardBackground,
+    backgroundColor: 'transparent',
     borderBottomWidth: 1,
     borderColor: theme.colors.borderColor,
     alignItems: 'center',

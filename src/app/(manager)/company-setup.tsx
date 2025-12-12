@@ -1,39 +1,39 @@
 import React, { useState, useContext, useEffect } from 'react';
-import { View, Text, TextInput, StyleSheet, ActivityIndicator, ScrollView, Platform, Alert } from 'react-native';
+import { View, Text, TextInput, StyleSheet, ActivityIndicator, ScrollView, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
+import Toast from 'react-native-toast-message';
 import { Button } from '~/components/Button';
 import { theme } from '~/theme';
 import AnimatedScreen from '~/components/AnimatedScreen';
 import { useSession } from '~/context/AuthContext';
 import { EmployeesContext } from '~/context/EmployeesContext';
 import { supabase } from '~/utils/supabase';
+import { Dropdown } from 'react-native-element-dropdown';
+import { countries } from '~/utils/countries';
 
 export default function CompanySetup() {
   const router = useRouter();
-  const { user, session } = useSession();
+  const { user, session, refreshUser, isLoading } = useSession();
   const employeesContext = useContext(EmployeesContext);
 
   const [companyName, setCompanyName] = useState('');
-  const [country, setCountry] = useState(''); // Example additional field
+  const [selectedCountry, setSelectedCountry] = useState<{ name: string; emoji: string, code: string } | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    if (isLoading) return;
     if (!user || !session || !employeesContext?.userCompanyId) {
-      // User should be logged in and have a company_id
-      // If not, redirect to dashboard or login
-      router.replace('/(manager)/dashboard'); // Or another appropriate redirect
       return;
     }
 
-    // Try to pre-fill company name if already available (from signup)
     const fetchCompanyDetails = async () => {
         setLoading(true);
         setError(null);
         try {
             const { data, error: companyFetchError } = await supabase
                 .from('companies')
-                .select('name, country') // Assuming 'country' column exists or will be added
+                .select('name, country')
                 .eq('id', employeesContext.userCompanyId)
                 .single();
 
@@ -42,7 +42,10 @@ export default function CompanySetup() {
                 setError('Failed to load company details.');
             } else if (data) {
                 setCompanyName(data.name || '');
-                setCountry(data.country || ''); // Pre-fill if exists
+                if (data.country) {
+                  const country = countries.find(c => c.name === data.country);
+                  setSelectedCountry(country || null);
+                }
             }
         } catch (err: any) {
             console.error('Unexpected error fetching company details:', err.message);
@@ -52,12 +55,15 @@ export default function CompanySetup() {
         }
     };
     fetchCompanyDetails();
-  }, [user, session, employeesContext?.userCompanyId, router]);
-
+  }, [user, session, employeesContext?.userCompanyId, router, isLoading]);
 
   const handleSaveCompanyDetails = async () => {
-    if (!companyName) {
+    if (!companyName.trim()) {
       setError('Company name is required.');
+      return;
+    }
+    if (!selectedCountry) {
+      setError('Please select a country.');
       return;
     }
     if (!employeesContext?.userCompanyId) {
@@ -67,28 +73,49 @@ export default function CompanySetup() {
 
     setLoading(true);
     setError(null);
+
     try {
       const { error: updateError } = await supabase
         .from('companies')
-        .update({ name: companyName, country: country }) // Assuming 'country' column can be updated
+        .update({ name: companyName.trim(), country: selectedCountry.name })
         .eq('id', employeesContext.userCompanyId);
 
       if (updateError) {
-        console.error('Error updating company details:', updateError);
-        setError('Failed to save company details. Please try again.');
-      } else {
-        Alert.alert('Success', 'Company details saved!');
-        router.replace('/(manager)/dashboard'); // Redirect to dashboard after saving
+        throw updateError;
       }
+
+      const { data: updatedUser, error: userUpdateError } = await supabase.auth.updateUser({
+        data: { company_setup_complete: true }
+      });
+
+      if (userUpdateError) {
+        throw userUpdateError;
+      }
+
+      await refreshUser();
+      
+      Toast.show({
+        type: 'success',
+        text1: 'Success',
+        text2: 'Company details saved successfully!',
+      });
+
+      router.replace('/(manager)/dashboard');
+
     } catch (err: any) {
       console.error('Unexpected error saving company details:', err.message);
-      setError('An unexpected error occurred.');
+      setError('An unexpected error occurred. Please try again.');
+      Toast.show({
+        type: 'error',
+        text1: 'Error',
+        text2: 'Failed to save details. Please try again.',
+      });
     } finally {
       setLoading(false);
     }
   };
 
-  if (loading) {
+  if (loading && !error) {
     return (
         <View style={styles.centered}>
             <ActivityIndicator size="large" color={theme.colors.primary} />
@@ -115,13 +142,26 @@ export default function CompanySetup() {
             autoCapitalize="words"
             placeholderTextColor="#999"
           />
-          <TextInput
-            style={styles.input}
-            placeholder="Country"
-            value={country}
-            onChangeText={setCountry}
-            autoCapitalize="words"
-            placeholderTextColor="#999"
+          <Dropdown
+            style={styles.dropdown}
+            placeholderStyle={styles.placeholderStyle}
+            selectedTextStyle={styles.selectedTextStyle}
+            inputSearchStyle={styles.inputSearchStyle}
+            iconStyle={styles.iconStyle}
+            data={countries}
+            search
+            maxHeight={300}
+            labelField="name"
+            valueField="code"
+            placeholder="Select Country *"
+            searchPlaceholder="Search..."
+            value={selectedCountry?.code}
+            onChange={item => {
+              setSelectedCountry(item);
+            }}
+            renderLeftIcon={() => (
+              <Text style={{ marginRight: 10, fontSize: 18 }}>{selectedCountry?.emoji}</Text>
+            )}
           />
           
           <Button
@@ -217,5 +257,29 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
     textAlign: 'center',
+  },
+  dropdown: {
+    height: 50,
+    borderColor: theme.colors.borderColor,
+    borderWidth: 1,
+    borderRadius: theme.radius.md,
+    paddingHorizontal: theme.spacing(2),
+    marginBottom: theme.spacing(2),
+    backgroundColor: 'white',
+  },
+  placeholderStyle: {
+    fontSize: 16,
+    color: '#999',
+  },
+  selectedTextStyle: {
+    fontSize: 16,
+  },
+  iconStyle: {
+    width: 20,
+    height: 20,
+  },
+  inputSearchStyle: {
+    height: 40,
+    fontSize: 16,
   },
 });

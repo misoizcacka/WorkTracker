@@ -7,9 +7,11 @@ interface SearchableDropdownProps<T> {
   data: T[];
   placeholder: string;
   onSelect: (item: T) => void;
-  labelExtractor: (item: T) => string;
+  labelExtractor?: (item: T) => string;
   keyExtractor: (item: T) => string;
   selectedValue?: T | null;
+  renderItem?: (item: T) => React.ReactNode;
+  itemStyle?: object;
 }
 
 export function SearchableDropdown<T>({
@@ -19,17 +21,23 @@ export function SearchableDropdown<T>({
   labelExtractor,
   keyExtractor,
   selectedValue,
+  renderItem,
+  itemStyle,
 }: SearchableDropdownProps<T>) {
   const [searchText, setSearchText] = useState('');
   const [modalVisible, setModalVisible] = useState(false);
 
-  const filteredData = data.filter(item =>
-    labelExtractor(item).toLowerCase().includes(searchText.toLowerCase())
-  );
+  const filteredData = labelExtractor
+    ? data.filter(item =>
+        labelExtractor(item).toLowerCase().includes(searchText.toLowerCase())
+      )
+    : data;
 
   const handleSelectItem = (item: T) => {
     onSelect(item);
-    setSearchText(labelExtractor(item));
+    if (labelExtractor) {
+      setSearchText(labelExtractor(item));
+    }
     setModalVisible(false);
   };
 
@@ -40,9 +48,8 @@ export function SearchableDropdown<T>({
           style={styles.textInput}
           placeholder={placeholder}
           placeholderTextColor={theme.colors.bodyText}
-          value={selectedValue ? labelExtractor(selectedValue) : searchText}
-          onChangeText={setSearchText}
-          editable={false} // Make it non-editable to force selection via modal
+          value={selectedValue && labelExtractor ? labelExtractor(selectedValue) : searchText}
+          editable={false}
         />
         <Ionicons name="chevron-down" size={20} color={theme.colors.iconColor} />
       </TouchableOpacity>
@@ -70,14 +77,23 @@ export function SearchableDropdown<T>({
             <FlatList
               data={filteredData}
               keyExtractor={keyExtractor}
-              renderItem={({ item }) => (
-                <TouchableOpacity
-                  style={styles.item}
-                  onPress={() => handleSelectItem(item)}
-                >
-                  <Text style={styles.itemText}>{labelExtractor(item)}</Text>
-                </TouchableOpacity>
-              )}
+              renderItem={({ item }) =>
+                renderItem ? (
+                  <TouchableOpacity
+                    style={[styles.item, itemStyle]}
+                    onPress={() => handleSelectItem(item)}
+                  >
+                    {renderItem(item)}
+                  </TouchableOpacity>
+                ) : (
+                  <TouchableOpacity
+                    style={styles.item}
+                    onPress={() => handleSelectItem(item)}
+                  >
+                    <Text style={styles.itemText}>{labelExtractor ? labelExtractor(item) : ''}</Text>
+                  </TouchableOpacity>
+                )
+              }
               ListEmptyComponent={<Text style={styles.emptyText}>No results found</Text>}
             />
             <TouchableOpacity style={styles.closeButton} onPress={() => setModalVisible(false)}>

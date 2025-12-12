@@ -1,106 +1,74 @@
-import React from 'react';
-import { View, Text, StyleSheet, Platform, Linking } from 'react-native';
-import { Link, useLocalSearchParams } from 'expo-router';
-import { theme } from '../../theme';
+import { View, Text, StyleSheet } from 'react-native';
+import { Link } from 'expo-router';
+import { StoreButtons } from '../../components/StoreButtons';
+import { View as ThemedView } from '../../components/Themed';
 import { Button } from '../../components/Button';
-import AnimatedScreen from '../../components/AnimatedScreen';
-import { Ionicons } from '@expo/vector-icons';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
-const EXPO_GO_APP_STORE_URL = 'https://apps.apple.com/us/app/expo-go/id982107779';
-const EXPO_GO_PLAY_STORE_URL = 'https://play.google.com/store/apps/details?id=host.exp.exponent';
+// TODO: Replace with your actual app's deep link scheme. For Expo Go testing, use your local Expo Go URL (e.g., 'exp://192.168.1.XXX:19000').
+const DEEP_LINK_URL = 'exp://YOUR_LOCAL_IP:PORT';
 
 export default function SignupSuccessScreen() {
-  const { role } = useLocalSearchParams<{ role?: string }>();
-
-  const renderWorkerContent = () => {
-    if (Platform.OS === 'ios') {
-      return (
-        <>
-          <Text style={styles.message}>
-            To use the app, please download the Expo Go client from the App Store.
-          </Text>
-          <Button onPress={() => Linking.openURL(EXPO_GO_APP_STORE_URL)} style={styles.storeButton}>
-            <Ionicons name="logo-apple-appstore" size={24} color="white" />
-            <Text style={styles.buttonText}>Download from App Store</Text>
-          </Button>
-        </>
-      );
-    }
-    if (Platform.OS === 'android') {
-      return (
-        <>
-          <Text style={styles.message}>
-            To use the app, please download the Expo Go client from the Google Play Store.
-          </Text>
-          <Button onPress={() => Linking.openURL(EXPO_GO_PLAY_STORE_URL)} style={styles.storeButton}>
-            <Ionicons name="logo-google-playstore" size={24} color="white" />
-            <Text style={styles.buttonText}>Download from Google Play</Text>
-          </Button>
-        </>
-      );
-    }
-    // Fallback for web for workers
-    return (
-      <Link href="/(guest)/login" asChild>
-        <Button>
-          <Text style={styles.buttonText}>Continue to Login</Text>
-        </Button>
-      </Link>
-    );
-  };
-
   return (
-    <AnimatedScreen>
-      <View style={styles.container}>
-        <Text style={styles.title}>Welcome Aboard!</Text>
-        <Text style={styles.message}>
-          Your account has been successfully created. Please check your email to verify your account.
+    <ThemedView style={styles.container}>
+      <SafeAreaView style={styles.content}>
+        <Text style={styles.icon}>🎉</Text>
+        <Text style={styles.title}>Your account has been created!</Text>
+        <Text style={styles.subtitle}>
+          To continue, please download the mobile app and log in there.
         </Text>
         
-        {role === 'worker' ? renderWorkerContent() : (
-          <Link href="/(guest)/login" asChild>
+        <StoreButtons />
+
+        <View style={styles.buttonContainer}>
+          <Link href={DEEP_LINK_URL} asChild>
             <Button>
-              <Text style={styles.buttonText}>Go to Login</Text>
+                <Text>Open the App</Text>
             </Button>
           </Link>
-        )}
-      </View>
-    </AnimatedScreen>
+          <View style={{ height: 10 }} />
+          <Link href="/(guest)/login" asChild>
+            <Button type="secondary">
+                <Text>I'll open the app later</Text>
+            </Button>
+          </Link>
+        </View>
+      </SafeAreaView>
+    </ThemedView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: 'center',
     alignItems: 'center',
+    justifyContent: 'center',
+  },
+  content: {
     padding: 20,
-    backgroundColor: theme.colors.pageBackground,
+    alignItems: 'center',
+  },
+  icon: {
+    fontSize: 48,
+    textAlign: 'center',
+    marginBottom: 20,
   },
   title: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: theme.colors.success,
-    marginBottom: 20,
-  },
-  message: {
-    fontSize: 16,
     textAlign: 'center',
-    color: theme.colors.bodyText,
-    marginBottom: 30,
-    maxWidth: 300,
+    marginBottom: 10,
   },
-  storeButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#007AFF', // A generic blue
-    paddingHorizontal: 20,
-  },
-  buttonText: {
-    color: 'white',
+  subtitle: {
     fontSize: 16,
-    marginLeft: 10,
-    fontWeight: 'bold',
+    color: '#666',
+    textAlign: 'center',
+    marginBottom: 20,
+    maxWidth: 320,
+  },
+  buttonContainer: {
+    marginTop: 20,
+    width: '80%',
+    maxWidth: 300,
   },
 });

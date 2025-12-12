@@ -107,7 +107,7 @@ export default function ProjectAssignmentScreen() {
     return (
       <TouchableOpacity onPress={() => handleWorkerPress(item)} style={styles.listItem}>
         <View style={[styles.workerItemContent, isSelected && styles.selectedItem]}>
-          <Image source={{ uri: item.avatar_url }} style={styles.avatar} />
+          <Image source={{ uri: item.avatar_url || undefined }} style={styles.avatar} />
           <View style={styles.workerInfo}>
             <Text style={styles.itemName}>{item.full_name}</Text>
             <Text style={styles.itemSubtitle}>{item.email}</Text>
@@ -241,6 +241,9 @@ export default function ProjectAssignmentScreen() {
         
         const otherDayAssignments = prevAssignments.filter(a => !(a.workerId === workerId && moment(a.startDate).isSame(selectedDate, 'day')));
         
+        const worker = employees.find(e => e.id === workerId);
+        console.log(`Assignments for worker ${worker?.full_name} (${workerId}) after drop:`, reStackedAssignments);
+
         return [...otherDayAssignments, ...reStackedAssignments];
       });
       return;
@@ -262,6 +265,9 @@ export default function ProjectAssignmentScreen() {
         const reStackedAssignments = calculateStackedAssignments(workerAssignments, baseStartTime);
 
         const otherDayAssignments = prevAssignments.filter(a => !(a.workerId === workerId && moment(a.startDate).isSame(selectedDate, 'day')));
+        
+        const worker = employees.find(e => e.id === workerId);
+        console.log(`Assignments for worker ${worker?.full_name} (${workerId}) after reordering:`, reStackedAssignments);
         
         return [...otherDayAssignments, ...reStackedAssignments];
       });

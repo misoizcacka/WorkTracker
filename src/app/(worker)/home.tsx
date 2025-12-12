@@ -4,12 +4,12 @@ import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import * as Location from "expo-location";
 import * as Notifications from "expo-notifications";
 import { getDistance } from "geolib";
-import { Button } from "../../../components/Button";
-import { Card } from "../../../components/Card";
-import { CircularTimer } from "../../../components/CircularTimer";
-import AnimatedScreen from "../../../components/AnimatedScreen";
-import { theme } from "../../../theme";
-import { MapView, Marker, Circle } from '../../../components/MapView'; // Custom MapView component
+import { Button } from "../../components/Button";
+import { Card } from "../../components/Card";
+import { CircularTimer } from "../../components/CircularTimer";
+import AnimatedScreen from "../../components/AnimatedScreen";
+import { theme } from "../../theme";
+import { MapView, Marker, Circle } from '../../components/MapView'; // Custom MapView component
 
 // ✅ Configure notifications (no deprecated fields)
 Notifications.setNotificationHandler({

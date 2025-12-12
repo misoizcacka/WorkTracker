@@ -14,13 +14,13 @@ import {
   Linking,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { Card } from '../../components/Card';
-import { theme } from '../../theme';
-import AnimatedScreen from '../../components/AnimatedScreen';
+import { Card } from '../../../components/Card';
+import { theme } from '../../../theme';
+import AnimatedScreen from '../../../components/AnimatedScreen';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
-import { MapView, Marker } from '../../components/MapView';
-import ImageCarouselModal from '../../components/ImageCarouselModal';
+import { MapView, Marker } from '../../../components/MapView';
+import ImageCarouselModal from '../../../components/ImageCarouselModal';
 
 const { width } = Dimensions.get('window');
 

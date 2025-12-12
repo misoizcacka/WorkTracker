@@ -2,12 +2,12 @@ import React, { useState, useEffect } from "react";
 import { Text, StyleSheet, Switch, View, ScrollView } from "react-native";
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import * as LocalAuthentication from "expo-local-authentication";
-import { Card } from "../../../components/Card";
-import { Button } from "../../../components/Button";
-import { theme } from "../../../theme";
-import AnimatedScreen from "../../../components/AnimatedScreen";
-import { useSession } from "../../../context/AuthContext";
-import { setStorageItemAsync, useStorageState } from "../../../hooks/useStorageState";
+import { Card } from "../../components/Card";
+import { Button } from "../../components/Button";
+import { theme } from "../../theme";
+import AnimatedScreen from "../../components/AnimatedScreen";
+import { useSession } from "../../context/AuthContext";
+import { setStorageItemAsync, useStorageState } from "../../hooks/useStorageState";
 import { Ionicons } from "@expo/vector-icons";
 
 export default function WorkerAccountScreen() {

@@ -169,9 +169,9 @@ const WorkerColumn = React.memo(function WorkerColumn({ employee, projects, assi
   );
 
   return (
-    <View style={styles.workerColumn}>
-      <View style={styles.workerColumnHeader}>
-        <Text style={styles.workerName}>{employee.full_name}</Text> // Changed from worker.full_name
+    <View style={styles.workerColumn}> 
+      <View style={styles.workerColumnHeader}> 
+        <Text style={styles.workerName}>{employee.full_name}</Text> 
       </View>
       <Droppable droppableId={`worker-${employee.id}`} type="TASK" direction="vertical" isDropDisabled={isPastDate}>
         {(provided, snapshot) => (
@@ -257,7 +257,7 @@ const ScheduleGrid: React.FC<ScheduleGridProps> = ({
     <View style={[styles.container, isPastDate && styles.pastDateOverlay]}>
       <ScrollView horizontal showsHorizontalScrollIndicator={true}>
         {employeesToDisplay.map((employee, index) => ( // Changed from workersToDisplay.map((worker, index)
-          <React.Fragment key={employee.id}> // Changed from worker.id
+          <React.Fragment key={employee.id}>
             <Animated.View
               layout={Layout.springify().damping(20).stiffness(100)}
               style={[

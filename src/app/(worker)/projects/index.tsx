@@ -43,7 +43,7 @@ export default function ProjectsScreen() {
   const router = useRouter();
 
   const handleProjectPress = (projectId: string) => {
-    router.push(`/(worker)/${projectId}`);
+    router.push(`/(worker)/projects/${projectId}`);
   };
 
   const renderProject = ({ item }: { item: Project }) => (

@@ -1,9 +1,9 @@
 import React, { useState } from "react";
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, Platform, TextInput } from "react-native";
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
-import { Card } from "../../../components/Card";
-import AnimatedScreen from "../../../components/AnimatedScreen";
-import { theme } from "../../../theme";
+import { Card } from "../../components/Card";
+import AnimatedScreen from "../../components/AnimatedScreen";
+import { theme } from "../../theme";
 import { Ionicons } from "@expo/vector-icons";
 
 const FILTERS = ["Yesterday", "This Week", "Last Week", "This Month", "Custom"];

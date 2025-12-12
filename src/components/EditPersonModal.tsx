@@ -18,7 +18,7 @@ const EditPersonModal: React.FC<EditPersonModalProps> = ({ visible, onClose, emp
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
-  const [reportingTo, setReportingTo] = useState<string | undefined>(undefined);
+  const [reportingTo, setReportingTo] = useState<string | null>(null); // Changed to string | null
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -78,7 +78,7 @@ const EditPersonModal: React.FC<EditPersonModalProps> = ({ visible, onClose, emp
 
           <View style={styles.contentLayout}>
             <View style={styles.avatarContainer}>
-              <Image source={{ uri: employee?.avatar_url }} style={styles.avatar} />
+              <Image source={{ uri: employee?.avatar_url || undefined }} style={styles.avatar} />
               <TouchableOpacity style={styles.avatarEditButton}>
                 <Ionicons name="pencil" size={20} color="white" />
               </TouchableOpacity>

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useContext } from 'react';
-import { View, Text, StyleSheet, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ActivityIndicator, Platform } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { InvitesContext } from '~/context/InvitesContext';
 import ThemedInput from '../../../components/ThemedInput';
@@ -79,7 +79,7 @@ const InviteSignUpScreen = () => {
     setIsSubmitting(true);
 
     try {
-      const { data, error: signUpError } = await supabase.auth.signUp({
+      const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
         email: invite.email,
         password: password,
         options: {
@@ -95,16 +95,43 @@ const InviteSignUpScreen = () => {
         setIsSubmitting(false);
         return;
       }
-      
-      // The user is signed up, but email confirmation is likely required.
-      // Update the invite status to 'accepted'.
-      await invitesContext?.updateInviteStatus(invite.token, 'accepted');
 
-      // Redirect user to a page that informs them to check their email to confirm.
+      // Ensure user was created successfully
+      if (!signUpData.user) {
+        setFormError("User signup failed unexpectedly.");
+        setIsSubmitting(false);
+        return;
+      }
+
+      // Call the Edge Function to create the employee and update invite status
+      const { data: employeeCreationData, error: employeeCreationError } = await supabase.functions.invoke('create-employee-from-invite', {
+        body: {
+          userId: signUpData.user.id,
+          inviteId: invite.id,       // Pass invite ID
+          inviteToken: invite.token,  // Pass invite token for verification
+          fullName: invite.full_name,
+          email: invite.email,
+          role: invite.role,
+          companyId: invite.company_id,
+        }
+      });
+
+      if (employeeCreationError) {
+        console.error("Error calling create-employee-from-invite Edge Function:", employeeCreationError);
+        setFormError(employeeCreationError.message || "Failed to finalize account setup.");
+        setIsSubmitting(false);
+        // Consider rolling back the auth.user creation here if this is critical
+        return;
+      }
+
+      // IMPORTANT: Sign out the user immediately after signup to prevent auto-login on web
+      await supabase.auth.signOut();
+
+      // Redirect to the signup success page
       router.replace(`/(guest)/signup-success?role=${invite.role}`);
 
     } catch (e: any) {
-      setFormError(e.message || 'An unexpected error occurred during sign up.');
+      setFormError(e.message || 'An unexpected error occurred during sign-up.');
     } finally {
       setIsSubmitting(false);
     }
@@ -112,133 +139,182 @@ const InviteSignUpScreen = () => {
 
   if (loading) {
     return (
-      <View style={styles.container}>
+      <View style={styles.centered}>
         <ActivityIndicator size="large" color={theme.colors.primary} />
-        <Text style={styles.infoText}>Verifying your invite...</Text>
+        <Text style={styles.infoText}>Verifying your invitation…</Text>
       </View>
     );
   }
 
   if (error) {
     return (
-      <View style={styles.container}>
-        <Text style={styles.errorTitle}>Invalid Invitation</Text>
+      <View style={styles.centered}>
+        <Text style={styles.errorTitle}>Invitation Error</Text>
         <Text style={styles.errorText}>{error}</Text>
         <Button onPress={() => router.push('/')}>
-            <Text>Go to Homepage</Text>
+          <Text>Return Home</Text>
         </Button>
       </View>
     );
   }
 
-  if (invite) {
-    return (
-      <View style={styles.formContainer}>
-        <Text style={styles.title}>Create Your Account</Text>
-        
-        <View>
-          <Text style={styles.label}>Full Name</Text>
-          <ThemedInput
-            value={invite.full_name}
-            editable={false}
-          />
-        </View>
+  if (!invite) return null;
 
-        <View>
-          <Text style={styles.label}>Email</Text>
-          <ThemedInput
-            value={invite.email}
-            editable={false}
-          />
-        </View>
+  return (
+    <View style={styles.formContainer}>
+      {/* Welcome Header */}
+      <Text style={styles.title}>🎉 Welcome to {invite.company_name}!</Text>
+      <Text style={styles.subtitle}>
+        You’ve been invited to join the team as a {invite.role}.
+      </Text>
 
-        <View>
-          <Text style={styles.label}>Role</Text>
-          <ThemedInput
-            value={invite.role.charAt(0).toUpperCase() + invite.role.slice(1)}
-            editable={false}
-          />
-        </View>
-        
-        <View>
-          <Text style={styles.label}>Password</Text>
-          <ThemedInput
-            value={password}
-            onChangeText={setPassword}
-            secureTextEntry
-            placeholder="Enter your password"
-          />
-        </View>
-
-        <View>
-          <Text style={styles.label}>Confirm Password</Text>
-          <ThemedInput
-            value={confirmPassword}
-            onChangeText={setConfirmPassword}
-            secureTextEntry
-            placeholder="Confirm your password"
-          />
-        </View>
-
-        {formError && <Text style={styles.formErrorText}>{formError}</Text>}
-        <Button onPress={handleSignUp} disabled={isSubmitting}>
-          {isSubmitting ? <ActivityIndicator color="#fff" /> : <Text>Sign Up</Text>}
-        </Button>
+      {/* Preview of Their Account */}
+      <View style={styles.inputGroup}>
+        <Text style={styles.label}>Full Name</Text>
+        <ThemedInput value={invite.full_name} editable={false} />
       </View>
-    );
-  }
 
-  return null; // Should not be reached
+      <View style={styles.inputGroup}>
+        <Text style={styles.label}>Email</Text>
+        <ThemedInput value={invite.email} editable={false} />
+      </View>
+
+      {/* Password fields */}
+      <View style={styles.inputGroup}>
+        <Text style={styles.label}>Password</Text>
+        <ThemedInput
+          value={password}
+          onChangeText={setPassword}
+          secureTextEntry
+          placeholder="Create a password"
+        />
+      </View>
+
+      <View style={styles.inputGroup}>
+        <Text style={styles.label}>Confirm Password</Text>
+        <ThemedInput
+          value={confirmPassword}
+          onChangeText={setConfirmPassword}
+          secureTextEntry
+          placeholder="Re-enter password"
+        />
+      </View>
+
+      {formError && <Text style={styles.formErrorText}>{formError}</Text>}
+
+      <Button
+        onPress={handleSignUp}
+        disabled={isSubmitting}
+        style={styles.signupButton}
+      >
+        {isSubmitting ? (
+          <ActivityIndicator color="#fff" />
+        ) : (
+          <Text style={styles.signupButtonText}>Create Account</Text>
+        )}
+      </Button>
+    </View>
+  );
 };
 
 const styles = StyleSheet.create({
-  container: {
+  centered: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 20,
-    backgroundColor: theme.colors.background,
+    padding: theme.spacing(2),
+    backgroundColor: theme.colors.pageBackground,
   },
+
   formContainer: {
     flex: 1,
     justifyContent: 'center',
-    padding: 20,
-    backgroundColor: theme.colors.background,
+    paddingHorizontal: theme.spacing(4),
+    paddingVertical: theme.spacing(4),
+    backgroundColor: 'white',
+    maxWidth: 500,
+    width: '100%',
+    marginHorizontal: 'auto',
+    borderRadius: theme.radius.lg,
+    ...Platform.select({
+      web: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.1,
+        shadowRadius: 12,
+      },
+      native: {
+        elevation: 8,
+      },
+    }),
   },
-  label: {
+
+  title: {
+    fontSize: 26,
+    fontWeight: '700',
+    color: theme.colors.headingText,
+    textAlign: 'center',
+    marginBottom: theme.spacing(1),
+  },
+
+  subtitle: {
     fontSize: 16,
     color: theme.colors.bodyText,
-    marginBottom: 8,
+    textAlign: 'center',
+    marginBottom: theme.spacing(4),
+  },
+
+  label: {
+    fontSize: 15,
+    color: theme.colors.bodyText,
+    marginBottom: 6,
     fontWeight: '500',
   },
+
+  inputGroup: {
+    marginBottom: theme.spacing(2),
+  },
+
   infoText: {
     marginTop: 10,
     fontSize: 16,
     color: theme.colors.bodyText,
   },
+
   errorTitle: {
-    fontSize: 24,
+    fontSize: 22,
     fontWeight: 'bold',
     color: 'red',
-    marginBottom: 10,
+    marginBottom: 8,
+    textAlign: 'center',
   },
+
   errorText: {
     fontSize: 16,
     color: theme.colors.bodyText,
     textAlign: 'center',
     marginBottom: 20,
   },
-  title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: theme.colors.primary,
-    marginBottom: 30,
-    textAlign: 'center',
-  },
+
   formErrorText: {
     color: 'red',
     textAlign: 'center',
-    marginBottom: 15,
+    marginBottom: theme.spacing(2),
+  },
+
+  signupButton: {
+    backgroundColor: theme.colors.primary,
+    borderRadius: theme.radius.md,
+    marginTop: theme.spacing(2),
+    height: 50,
+    justifyContent: 'center',
+  },
+
+  signupButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: 'bold',
+    textAlign: 'center',
   },
 });
 

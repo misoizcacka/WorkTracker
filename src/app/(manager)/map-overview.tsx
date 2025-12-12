@@ -62,7 +62,7 @@ export default function MapOverviewScreen() {
     return (
       <TouchableOpacity onPress={() => handleWorkerPress(item)} style={styles.listItem}>
         <View style={[styles.itemContent, isSelected && styles.selectedItem]}>
-          <Image source={{ uri: item.avatar_url }} style={styles.avatar} />
+          <Image source={{ uri: item.avatar_url || undefined }} style={styles.avatar} />
           <View style={styles.itemInfo}>
             <Text style={styles.itemName}>{item.full_name}</Text>
             <Text style={styles.itemSubtitle}>{item.email}</Text>
@@ -93,7 +93,7 @@ export default function MapOverviewScreen() {
     return selectedWorkers.map((e: Employee) => ({
       id: e.id,
       name: e.full_name,
-      avatar: e.avatar_url,
+      avatar: e.avatar_url ?? undefined, // Convert null to undefined
     }));
   }, [selectedWorkers]);
 

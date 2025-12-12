@@ -1,17 +1,18 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { Image } from "react-native";
 import { Drawer } from "expo-router/drawer";
 import { Ionicons } from "@expo/vector-icons";
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { withLayoutContext } from 'expo-router';
+import { withLayoutContext, useRouter, useSegments } from 'expo-router';
 import { useDebouncedWindowDimensions } from "../../hooks/useDebouncedWindowDimensions";
 import { DrawerToggleButton } from '@react-navigation/drawer';
 
 import { theme } from "../../theme";
-import { EmployeesProvider } from "../../context/EmployeesContext"; // Correct path and name
+import { EmployeesProvider } from "../../context/EmployeesContext";
 import { ProjectsProvider } from "../../context/ProjectsContext";
 import { AssignmentsProvider } from "../../context/AssignmentsContext";
 import { InvitesProvider } from "../../context/InvitesContext";
+import { useSession } from "../../context/AuthContext";
 
 const { Navigator } = createBottomTabNavigator();
 
@@ -19,17 +20,38 @@ export const BottomTabs = withLayoutContext(Navigator);
 
 import { StatusBar } from "expo-status-bar";
 
+import { ProfileProvider } from "../../context/ProfileContext";
+
 function ManagerProviders({ children }: { children: React.ReactNode }) {
+  const { user, isLoading, userRole } = useSession(); // Add userRole here
+  const router = useRouter();
+  const segments = useSegments();
+
+  useEffect(() => {
+    if (isLoading) return;
+    // Only apply this logic for managers/owners
+    if (user && (userRole === 'manager' || userRole === 'owner')) {
+      const companySetupComplete = user.user_metadata?.company_setup_complete || false;
+      const inCompanySetup = segments.includes('company-setup');
+
+      if (!companySetupComplete && !inCompanySetup) {
+        router.replace('/(manager)/company-setup');
+      }
+    }
+  }, [user, segments, router, isLoading, userRole]);
+
   return (
-    <EmployeesProvider> {/* Renamed from WorkersProvider */}
-      <ProjectsProvider>
-        <AssignmentsProvider>
-          <InvitesProvider>
-            {children}
-          </InvitesProvider>
-        </AssignmentsProvider>
-      </ProjectsProvider>
-    </EmployeesProvider>
+    <ProfileProvider>
+      <EmployeesProvider>
+        <ProjectsProvider>
+          <AssignmentsProvider>
+            <InvitesProvider>
+              {children}
+            </InvitesProvider>
+          </AssignmentsProvider>
+        </ProjectsProvider>
+      </EmployeesProvider>
+    </ProfileProvider>
   );
 }
 
@@ -63,7 +85,6 @@ export default function TabsLayout() { // Renamed from ManagerLayout
               drawerStyle: { backgroundColor: theme.colors.pageBackground, width: 260 },
               drawerActiveTintColor: "#2563EB",
               drawerLabelStyle: { fontSize: 16, fontWeight: "500" },
-              drawerItemStyle: { display: 'none' }
             }}
           >
             <Drawer.Screen
@@ -73,7 +94,6 @@ export default function TabsLayout() { // Renamed from ManagerLayout
                 drawerIcon: ({ color, size }: { color: string; size: number }) => (
                   <Ionicons name="home-outline" color={color} size={size} />
                 ),
-                drawerItemStyle: { display: 'flex' }
               }}
             />
             <Drawer.Screen
@@ -83,7 +103,6 @@ export default function TabsLayout() { // Renamed from ManagerLayout
                 drawerIcon: ({ color, size }: { color: string; size: number }) => (
                   <Ionicons name="map-outline" color={color} size={size} />
                 ),
-                drawerItemStyle: { display: 'flex' }
               }}
             />
             <Drawer.Screen
@@ -93,7 +112,6 @@ export default function TabsLayout() { // Renamed from ManagerLayout
                 drawerIcon: ({ color, size }: { color: string; size: number }) => (
                   <Ionicons name="people-outline" color={color} size={size} />
                 ),
-                drawerItemStyle: { display: 'flex' }
               }}
             />
             <Drawer.Screen
@@ -103,7 +121,6 @@ export default function TabsLayout() { // Renamed from ManagerLayout
                 drawerIcon: ({ color, size }: { color: string; size: number }) => (
                   <Ionicons name="folder-outline" color={color} size={size} />
                 ),
-                drawerItemStyle: { display: 'flex' }
               }}
             />
 
@@ -114,7 +131,6 @@ export default function TabsLayout() { // Renamed from ManagerLayout
                 drawerIcon: ({ color, size }: { color: string; size: number }) => (
                   <Ionicons name="calendar-outline" color={color} size={size} />
                 ),
-                drawerItemStyle: { display: 'flex' }
               }}
             />
             <Drawer.Screen
@@ -124,7 +140,6 @@ export default function TabsLayout() { // Renamed from ManagerLayout
                 drawerIcon: ({ color, size }: { color: string; size: number }) => (
                   <Ionicons name="document-text-outline" color={color} size={size} />
                 ),
-                drawerItemStyle: { display: 'flex' }
               }}
             />
             <Drawer.Screen
@@ -134,7 +149,18 @@ export default function TabsLayout() { // Renamed from ManagerLayout
                 drawerIcon: ({ color, size }: { color: string; size: number }) => (
                   <Ionicons name="person-circle-outline" color={color} size={size} />
                 ),
-                drawerItemStyle: { display: 'flex' }
+              }}
+            />
+            <Drawer.Screen
+              name="company-setup"
+              options={{
+                drawerItemStyle: { display: 'none' },
+              }}
+            />
+            <Drawer.Screen
+              name="setup-complete"
+              options={{
+                drawerItemStyle: { display: 'none' },
               }}
             />
           </Drawer>
@@ -230,4 +256,3 @@ export default function TabsLayout() { // Renamed from ManagerLayout
     </>
   );
 }
-
