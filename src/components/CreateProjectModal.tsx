@@ -8,6 +8,7 @@ import ThemedInput from './ThemedInput';
 import CustomDropdown from './CustomDropdown';
 import { debounce, fetchGeoapifySuggestions, GeoapifyFeature } from '~/utils/geocoding';
 import * as ImagePicker from 'expo-image-picker';
+import { MediaType } from 'expo-image-picker';
 import { MapView } from './MapView'; // Import MapView
 import { EmbedMapView } from './EmbedMapView.web'; // Import EmbedMapView
 
@@ -21,25 +22,23 @@ interface DropdownOption {
   value: string;
 }
 
-// Type options removed (as per user request)
 const PREDEFINED_COLORS = ['#FF6347', '#4682B4', '#32CD32', '#DAA520', '#6A5ACD', '#FF69B4', '#FFD700', '#ADFF2F', '#87CEEB', '#FF69B4'];
 
-
 const MAX_MODAL_WIDTH = 500;
-const MOBILE_MAX_WIDTH = 420; // For full width on mobile-like screens
+const MOBILE_MAX_WIDTH = 420;
 
 export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({ visible, onClose }) => {
   const { width } = Dimensions.get('window');
   const isMobile = width < MOBILE_MAX_WIDTH;
 
+  const { createProject, isLoading, error: contextError } = useContext(ProjectsContext) as ProjectsContextType;
+
   const [name, setName] = useState('');
-  const [address, setAddress] = useState(''); // Stores the full formatted address
-  const [addressSearchTerm, setAddressSearchTerm] = useState(''); // For the autocomplete input
+  const [address, setAddress] = useState('');
+  const [addressSearchTerm, setAddressSearchTerm] = useState('');
   const [explanation, setExplanation] = useState('');
-  // Type state removed
   const [notes, setNotes] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [formError, setFormError] = useState('');
 
   const [suggestions, setSuggestions] = useState<GeoapifyFeature[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -47,42 +46,43 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({ visible,
   const [suggestionsLoading, setSuggestionsLoading] = useState(false);
   const [selectedImages, setSelectedImages] = useState<ImagePicker.ImagePickerAsset[]>([]);
 
-
-  const projectsContext = useContext(ProjectsContext) as ProjectsContextType;
   const addressInputRef = useRef<TextInput>(null);
   const modalAnimatedValue = useRef(new Animated.Value(0)).current;
 
-
-  // Modal Animations
   useEffect(() => {
-    if (visible) {
-      Animated.timing(modalAnimatedValue, {
-        toValue: 1,
-        duration: 300,
-        easing: Easing.out(Easing.ease),
-        useNativeDriver: true,
-      }).start();
-    } else {
-      Animated.timing(modalAnimatedValue, {
-        toValue: 0,
-        duration: 200,
-        easing: Easing.in(Easing.ease),
-        useNativeDriver: true,
-      }).start();
+    if (!visible) {
+      setTimeout(() => {
+        setName('');
+        setAddress('');
+        setAddressSearchTerm('');
+        setExplanation('');
+        setNotes('');
+        setSelectedAddressLocation(null);
+        setSelectedImages([]);
+        setFormError('');
+      }, 300);
     }
+  }, [visible]);
+
+  useEffect(() => {
+    Animated.timing(modalAnimatedValue, {
+      toValue: visible ? 1 : 0,
+      duration: visible ? 300 : 200,
+      easing: visible ? Easing.out(Easing.ease) : Easing.in(Easing.ease),
+      useNativeDriver: true,
+    }).start();
   }, [visible, modalAnimatedValue]);
 
   const modalTranslateY = modalAnimatedValue.interpolate({
     inputRange: [0, 1],
-    outputRange: [300, 0], // Slide in from bottom
+    outputRange: [300, 0],
   });
 
   const modalOpacity = modalAnimatedValue.interpolate({
     inputRange: [0, 1],
-    outputRange: [0, 1], // Fade in
+    outputRange: [0, 1],
   });
 
-  // Debounced search function
   const debouncedSearch = useCallback(
     debounce(async (term: string) => {
       if (term.length < 3) {
@@ -92,14 +92,12 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({ visible,
       }
       setSuggestionsLoading(true);
       const result = await fetchGeoapifySuggestions(term);
-
       if ('error' in result) {
-        console.error('Geoapify error:', result.error);
         setSuggestions([]);
-        setError(result.error);
+        setFormError(result.error);
       } else {
         setSuggestions(result.features);
-        setError('');
+        setFormError('');
       }
       setSuggestionsLoading(false);
     }, 400),
@@ -109,11 +107,7 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({ visible,
   useEffect(() => {
     if (addressSearchTerm) {
       debouncedSearch(addressSearchTerm);
-      if (addressSearchTerm !== address) {
-        setShowSuggestions(true);
-      } else {
-        setShowSuggestions(false);
-      }
+      setShowSuggestions(addressSearchTerm !== address);
     } else {
       setSuggestions([]);
       setSelectedAddressLocation(null);
@@ -132,19 +126,19 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({ visible,
   };
 
   const handlePickImage = async () => {
+    const remainingSlots = 10 - selectedImages.length;
+    if (remainingSlots <= 0) {
+      setFormError('You can only select a maximum of 10 photos.');
+      return;
+    }
     let result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      mediaTypes: 'images',
       allowsMultipleSelection: true,
       quality: 1,
-      // aspect: [4, 3], // Optional: constrain aspect ratio
-      // base64: true, // If you need base64 string
+      selectionLimit: remainingSlots,
     });
-
     if (!result.canceled) {
-      const newImages = result.assets.filter(asset =>
-        asset.type === 'image' && asset.uri
-      );
-      setSelectedImages(prev => [...prev, ...newImages]);
+      setSelectedImages(prev => [...prev, ...result.assets]);
     }
   };
 
@@ -154,43 +148,27 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({ visible,
 
   const handleCreate = async () => {
     if (!name.trim() || !address.trim() || !selectedAddressLocation) {
-      setError('Project name, address, and valid coordinates are required.');
+      setFormError('Project name, address, and a valid location are required.');
       return;
     }
-
-    setError('');
-    setLoading(true);
-
+    setFormError('');
     const randomColor = PREDEFINED_COLORS[Math.floor(Math.random() * PREDEFINED_COLORS.length)];
-
-    try {
-      projectsContext.createProject({
-        name: name.trim(),
-        address: address.trim(),
-        explanation: explanation.trim(),
-        color: randomColor,
-        notes: notes.trim(),
-        location: selectedAddressLocation, // Already checked for null
-        photos: selectedImages.map(img => img.uri),
-      });
-      setLoading(false);
+    const createdProject = await createProject({
+      name: name.trim(),
+      address: address.trim(),
+      explanation: explanation.trim(),
+      color: randomColor,
+      notes: notes.trim(),
+      location: selectedAddressLocation,
+      photos: selectedImages.map(img => img.uri),
+    });
+    if (createdProject) {
       onClose();
-      // Reset form fields
-      setName('');
-      setAddress('');
-      setAddressSearchTerm('');
-      setExplanation('');
-      // setType('Construction'); // Type removed
-      setNotes('');
-      setSelectedAddressLocation(null);
-      setSelectedImages([]);
-    } catch (e) {
-      setLoading(false);
-      setError('Failed to create project. Please try again.');
     }
   };
 
-  const isCreateButtonDisabled = loading || !name.trim() || !address.trim() || !selectedAddressLocation;
+  const isCreateButtonDisabled = isLoading || !name.trim() || !address.trim() || !selectedAddressLocation;
+  const displayError = formError || contextError;
 
   return (
     <Modal
@@ -209,140 +187,114 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({ visible,
             <Ionicons name="close-circle-outline" size={24} color={theme.colors.bodyText} />
           </TouchableOpacity>
           <Text style={styles.modalTitle}>Create New Project</Text>
-
-          {error && <Text style={styles.errorText}>{error}</Text>}
-
-          <ThemedInput
-            style={styles.inputField}
-            placeholder="Project Name *"
-            value={name}
-            onChangeText={setName}
-          />
           
-          {/* Address Autocomplete Input */}
-          <View style={[styles.addressInputContainer, { zIndex: 20 }]}> {/* Higher zIndex for this container */}
-            <Ionicons name="search" size={20} color={theme.colors.bodyText} style={styles.addressInputIcon} />
+          <ScrollView 
+            style={styles.scrollContainer} 
+            contentContainerStyle={styles.scrollContentContainer}
+            keyboardShouldPersistTaps="handled"
+          >
+            {displayError && <Text style={styles.errorText}>{displayError}</Text>}
+
             <ThemedInput
-              ref={addressInputRef}
-              style={styles.addressInput}
-              placeholder="Address *"
-              value={addressSearchTerm}
-              onChangeText={(text) => {
-                setAddressSearchTerm(text);
-                if (text !== address) {
-                  setSelectedAddressLocation(null);
-                }
-              }}
-              onFocus={() => setShowSuggestions(true)}
-              onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
+              style={styles.inputField}
+              placeholder="Project Name *"
+              value={name}
+              onChangeText={setName}
             />
-            {selectedAddressLocation && (
-              <Ionicons name="checkmark-circle" size={20} color={theme.colors.success} style={styles.addressCheckmarkIcon} />
-            )}
-            {/* Suggestions Dropdown */}
-            {showSuggestions && suggestions.length > 0 && (
-              <Animated.View style={[styles.suggestionsDropdown, { opacity: modalOpacity }]}>
-                <ScrollView nestedScrollEnabled keyboardShouldPersistTaps="handled">
-                  {suggestions.map((feature, index) => (
-                    <TouchableOpacity
-                      key={feature.properties.formatted + index}
-                      style={styles.suggestionItem}
-                      onPress={() => handleSelectSuggestion(feature)}
-                    >
-                      <Text style={styles.suggestionText}>{feature.properties.formatted}</Text>
-                    </TouchableOpacity>
-                  ))}
-                </ScrollView>
-                {suggestionsLoading && (
-                  <View style={styles.suggestionsLoadingOverlay}>
-                    <ActivityIndicator size="small" color={theme.colors.primary} />
-                  </View>
-                )}
-              </Animated.View>
-            )}
-          </View>
-          
-          {selectedAddressLocation && (
-            <View style={styles.mapPreviewContainer}>
-              <Text style={styles.mapPreviewTitle}>Selected Location</Text>
-              <View style={styles.mapWrapper}>
-                {Platform.OS === 'web' ? (
-                  <EmbedMapView
-                    latitude={selectedAddressLocation.latitude}
-                    longitude={selectedAddressLocation.longitude}
-                    name={address}
-                  />
-                ) : (
-                  <MapView
-                    initialRegion={{
-                      latitude: selectedAddressLocation.latitude,
-                      longitude: selectedAddressLocation.longitude,
-                      latitudeDelta: 0.005,
-                      longitudeDelta: 0.005,
-                    }}
-                    scrollEnabled={false}
-                    pitchEnabled={false}
-                    rotateEnabled={false}
-                  />
-                )}
-              </View>
+            
+            <View style={[styles.addressInputContainer, { zIndex: 20 }]}>
+              <Ionicons name="search" size={20} color={theme.colors.bodyText} style={styles.addressInputIcon} />
+              <ThemedInput
+                ref={addressInputRef}
+                style={styles.addressInput}
+                placeholder="Address *"
+                value={addressSearchTerm}
+                onChangeText={(text) => {
+                  setAddressSearchTerm(text);
+                  if (text !== address) setSelectedAddressLocation(null);
+                }}
+                onFocus={() => setShowSuggestions(true)}
+                onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
+              />
+              {selectedAddressLocation && (
+                <Ionicons name="checkmark-circle" size={20} color={theme.colors.success} style={styles.addressCheckmarkIcon} />
+              )}
+              {showSuggestions && suggestions.length > 0 && (
+                <Animated.View style={[styles.suggestionsDropdown, { opacity: modalOpacity }]}>
+                  <ScrollView nestedScrollEnabled keyboardShouldPersistTaps="handled">
+                    {suggestions.map((feature, index) => (
+                      <TouchableOpacity
+                        key={feature.properties.formatted + index}
+                        style={styles.suggestionItem}
+                        onPress={() => handleSelectSuggestion(feature)}
+                      >
+                        <Text style={styles.suggestionText}>{feature.properties.formatted}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </ScrollView>
+                  {suggestionsLoading && (
+                    <View style={styles.suggestionsLoadingOverlay}>
+                      <ActivityIndicator size="small" color={theme.colors.primary} />
+                    </View>
+                  )}
+                </Animated.View>
+              )}
             </View>
-          )}
-
-          <ThemedInput
-            style={[styles.inputField, styles.multilineInput]}
-            placeholder="Explanation"
-            value={explanation}
-            onChangeText={setExplanation}
-            multiline
-          />
-          
-          {/* Priority dropdown removed */}
-
-          {/* Type dropdown removed - as per user request */}
-          {/* <CustomDropdown
-            data={typeOptions}
-            value={type}
-            onChange={item => setType(item.value)}
-            placeholder="Select Type"
-            searchable={true}
-            style={styles.dropdownField}
-          /> */}
-
-          {/* Project Color selector removed */}
-
-          <Text style={styles.inputLabel}>Upload Photos</Text>
-          <TouchableOpacity style={styles.uploadButton} onPress={handlePickImage}>
-            <Ionicons name="cloud-upload-outline" size={24} color={theme.colors.primary} />
-            <Text style={styles.uploadButtonText}>Choose Images</Text>
-          </TouchableOpacity>
-
-          {selectedImages.length > 0 && (
-            <ScrollView horizontal style={styles.imagePreviewContainer}>
-              {selectedImages.map((image, index) => (
-                <View key={image.uri} style={styles.imagePreviewWrapper}>
-                  <Image source={{ uri: image.uri }} style={styles.imagePreview} />
-                  <TouchableOpacity onPress={() => handleRemoveImage(image.uri)} style={styles.removeImageButton}>
-                    <Ionicons name="close-circle" size={20} color={theme.colors.danger} />
-                  </TouchableOpacity>
+            
+            {selectedAddressLocation && (
+              <View style={styles.mapPreviewContainer}>
+                <Text style={styles.mapPreviewTitle}>Selected Location</Text>
+                <View style={styles.mapWrapper}>
+                  {Platform.OS === 'web' ? (
+                    <EmbedMapView latitude={selectedAddressLocation.latitude} longitude={selectedAddressLocation.longitude} name={address} />
+                  ) : (
+                    <MapView initialRegion={{ ...selectedAddressLocation, latitudeDelta: 0.005, longitudeDelta: 0.005 }} scrollEnabled={false} pitchEnabled={false} rotateEnabled={false} />
+                  )}
                 </View>
-              ))}
-            </ScrollView>
-          )}
+              </View>
+            )}
 
-          <ThemedInput
-            style={[styles.inputField, styles.multilineInput]}
-            placeholder="Notes"
-            value={notes}
-            onChangeText={setNotes}
-            multiline
-          />
-          
-          <View style={styles.buttonContainer}>
-            <Button onPress={handleCreate} disabled={isCreateButtonDisabled} style={styles.createButton}>
-              {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.createButtonText}>Create Project</Text>}
-            </Button>
-          </View>
+            <ThemedInput
+              style={[styles.inputField, styles.multilineInput]}
+              placeholder="Explanation"
+              value={explanation}
+              onChangeText={setExplanation}
+              multiline
+            />
+            
+            <Text style={styles.inputLabel}>Upload Photos (up to 10)</Text>
+            <TouchableOpacity style={styles.uploadButton} onPress={handlePickImage}>
+              <Ionicons name="cloud-upload-outline" size={24} color={theme.colors.primary} />
+              <Text style={styles.uploadButtonText}>Choose Images</Text>
+            </TouchableOpacity>
+
+            {selectedImages.length > 0 && (
+              <ScrollView horizontal style={styles.imagePreviewContainer}>
+                {selectedImages.map((image) => (
+                  <View key={image.uri} style={styles.imagePreviewWrapper}>
+                    <Image source={{ uri: image.uri }} style={styles.imagePreview} />
+                    <TouchableOpacity onPress={() => handleRemoveImage(image.uri)} style={styles.removeImageButton}>
+                      <Ionicons name="close-circle" size={20} color={theme.colors.danger} />
+                    </TouchableOpacity>
+                  </View>
+                ))}
+              </ScrollView>
+            )}
+
+            <ThemedInput
+              style={[styles.inputField, styles.multilineInput]}
+              placeholder="Notes"
+              value={notes}
+              onChangeText={setNotes}
+              multiline
+            />
+            
+            <View style={styles.buttonContainer}>
+              <Button onPress={handleCreate} disabled={isCreateButtonDisabled} style={styles.createButton}>
+                {isLoading ? <ActivityIndicator color="#fff" /> : <Text style={styles.createButtonText}>Create Project</Text>}
+              </Button>
+            </View>
+          </ScrollView>
         </Animated.View>
       </Animated.View>
     </Modal>
@@ -355,11 +307,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    ...Platform.select({
-      web: {
-        // backdropFilter: 'blur(5px)', // Modern browsers only
-      },
-    }),
   },
   modalView: {
     backgroundColor: theme.colors.cardBackground,
@@ -367,6 +314,7 @@ const styles = StyleSheet.create({
     padding: theme.spacing(4),
     alignItems: 'center',
     ...theme.shadow.soft,
+    maxHeight: '90%', // <-- REQUIREMENT MET
   },
   modalViewMobile: {
     width: '90%',
@@ -374,11 +322,17 @@ const styles = StyleSheet.create({
   modalViewDesktop: {
     width: MAX_MODAL_WIDTH,
   },
+  scrollContainer: { // <-- NEW STYLE for ScrollView
+    width: '100%',
+  },
+  scrollContentContainer: { // <-- NEW STYLE for ScrollView content
+    paddingBottom: theme.spacing(2),
+  },
   modalTitle: {
     marginBottom: theme.spacing(3),
     textAlign: 'center',
     fontSize: 22,
-    fontWeight: '500', // Lighter heading
+    fontWeight: '500',
     color: theme.colors.headingText,
   },
   closeButton: {
@@ -399,43 +353,9 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
     marginLeft: theme.spacing(1),
     marginBottom: theme.spacing(1),
-    fontSize: 15, // Slightly smaller label
+    fontSize: 15,
     color: theme.colors.bodyText,
     fontWeight: '500',
-  },
-  dropdownField: {
-    marginBottom: theme.spacing(2),
-    zIndex: 15, // Higher zIndex for dropdowns
-  },
-  colorSelector: {
-    flexDirection: 'row',
-    justifyContent: 'space-around', // Changed to space-around for better distribution
-    width: '100%',
-    marginBottom: theme.spacing(3),
-  },
-  colorOption: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    borderWidth: 2,
-    borderColor: 'transparent',
-    justifyContent: 'center', // For checkmark
-    alignItems: 'center', // For checkmark
-    ...Platform.select({
-      web: {
-        transitionDuration: '0.2s',
-        transitionProperty: 'transform, border-color',
-        '&:hover': {
-          transform: 'scale(1.1)',
-        },
-      },
-    }),
-  },
-  selectedColorOption: {
-    borderColor: theme.colors.primary,
-  },
-  colorCheckmark: {
-    // Style for the checkmark icon
   },
   buttonContainer: {
     flexDirection: 'row',
@@ -445,7 +365,7 @@ const styles = StyleSheet.create({
   },
   createButton: {
     flex: 1,
-    backgroundColor: theme.colors.primary, // Navy color
+    backgroundColor: theme.colors.primary,
   },
   createButtonText: {
     color: 'white',
@@ -464,7 +384,7 @@ const styles = StyleSheet.create({
     width: '100%',
     position: 'relative',
     marginBottom: theme.spacing(2),
-    zIndex: 20, // Higher zIndex for address input and its dropdown
+    zIndex: 20,
   },
   addressInput: {
     flex: 1,
@@ -484,14 +404,14 @@ const styles = StyleSheet.create({
   },
   suggestionsDropdown: {
     position: 'absolute',
-    top: '100%', // Position directly below the input
-    marginTop: theme.spacing(1), // Small gap
+    top: '100%',
+    marginTop: theme.spacing(1),
     width: '100%',
     maxHeight: 200,
     backgroundColor: theme.colors.cardBackground,
     borderRadius: theme.radius.md,
     ...theme.shadow.soft,
-    zIndex: 1000, // Even higher zIndex to ensure it's on top
+    zIndex: 1000,
     overflow: 'hidden',
     borderColor: theme.colors.borderColor,
     borderWidth: 1,
@@ -501,16 +421,6 @@ const styles = StyleSheet.create({
     padding: theme.spacing(2),
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: theme.colors.borderColor,
-    ...Platform.select({
-      web: {
-        transitionDuration: '0.1s',
-        transitionProperty: 'background-color, transform',
-        '&:hover': {
-          backgroundColor: theme.colors.primaryMuted,
-          transform: 'scale(1.01)',
-        },
-      },
-    }),
   },
   suggestionText: {
     fontSize: 16,
@@ -585,7 +495,7 @@ const styles = StyleSheet.create({
     marginLeft: theme.spacing(1),
   },
   mapWrapper: {
-    height: 150, // Smaller map preview
+    height: 150,
     width: '100%',
     borderRadius: theme.radius.md,
     overflow: 'hidden',

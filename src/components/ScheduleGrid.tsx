@@ -1,28 +1,25 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, Platform, TouchableOpacity } from 'react-native';
-import { Droppable, Draggable } from '@hello-pangea/dnd';
-import moment from 'moment';
+import { View, Text, StyleSheet, ScrollView, Platform, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { Droppable, Draggable, DragDropContext, DropResult } from '@hello-pangea/dnd';
 import { Ionicons } from '@expo/vector-icons';
 import Animated, { Layout } from 'react-native-reanimated';
-import { Employee } from '~/types';
-import { Project } from '../context/ProjectsContext';
-import { Assignment } from '../utils/project-assignment-types';
-import { isSameDay } from '../utils/time';
+import { Employee, ProcessedAssignmentStep } from '~/types';
 import { theme } from '~/theme';
 
-export const TOTAL_HOURS = 24;
-const TIME_LABEL_WIDTH = 60;
-
-interface AssignmentBlockProps {
-  assignment: Assignment;
-  project: Project | undefined;
-  index: number;
-  onDeleteAssignment: (assignmentId: string) => void;
-  onEditAssignmentTime: (assignmentId: string, assignedTime: string | null) => void;
-  isPastDate: boolean;
-}
+// --- Helper Components ---
 
 const WebSafeView = React.forwardRef(({ children, style, ...rest }: any, ref) => {
+    if (Platform.OS === 'web') {
+      return (
+        <div ref={ref} style={StyleSheet.flatten(style)} {...rest}>
+          {children}
+        </div>
+      );
+    }
+    return <View ref={ref} style={style} {...rest}>{children}</View>;
+});
+
+const WebSafeScrollView = React.forwardRef(({ children, style, ...rest }: any, ref) => {
   if (Platform.OS === 'web') {
     return (
       <div ref={ref} style={StyleSheet.flatten(style)} {...rest}>
@@ -31,9 +28,9 @@ const WebSafeView = React.forwardRef(({ children, style, ...rest }: any, ref) =>
     );
   } else {
     return (
-      <View ref={ref} style={style} {...rest}>
+      <ScrollView ref={ref} style={style} {...rest}>
         {children}
-      </View>
+      </ScrollView>
     );
   }
 });
@@ -53,8 +50,25 @@ function hexToRgba(hex: string, alpha: number) {
   return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 }
 
-const AssignmentBlock = React.memo(function AssignmentBlock({ assignment, project, index, onDeleteAssignment, onEditAssignmentTime, isPastDate }: AssignmentBlockProps) {
-  if (!project) return null;
+// --- Main Components ---
+
+interface AssignmentBlockProps {
+  assignment: ProcessedAssignmentStep;
+  workerId: string;
+  index: number;
+  onDeleteAssignment: (workerId: string, stepId: string) => void;
+  onEditAssignmentTime: (workerId: string, stepId: string, startTime: string | null) => void;    
+  isPastDate: boolean;
+}
+
+const AssignmentBlock = React.memo(function AssignmentBlock({
+  assignment,
+  workerId,
+  index,
+  onDeleteAssignment,
+  onEditAssignmentTime,
+  isPastDate
+}: AssignmentBlockProps) {
 
   // You can adjust these values to fine-tune the clone's position relative to the cursor
   const DRAG_OFFSET_X = -300; // Move left by 30px
@@ -65,12 +79,12 @@ const AssignmentBlock = React.memo(function AssignmentBlock({ assignment, projec
     if (!providedTransform || providedTransform === 'none') {
       return `translate(${offsetX}px, ${offsetY}px)`;
     }
-  
+
     // Attempt to parse existing translate values
     const match = providedTransform.match(/translate\(([^,]+), ([^)]+)\)/);
     let currentX = 0;
     let currentY = 0;
-  
+
     if (match) {
       currentX = parseFloat(match[1]);
       currentY = parseFloat(match[2]);
@@ -78,7 +92,7 @@ const AssignmentBlock = React.memo(function AssignmentBlock({ assignment, projec
       // If there's another transform, we just layer on a new translate
       return `${providedTransform} translate(${offsetX}px, ${offsetY}px)`;
     }
-  
+
     // Combine with the new offset
     return providedTransform.replace(
       /translate\(([^,]+), ([^)]+)\)/,
@@ -86,9 +100,39 @@ const AssignmentBlock = React.memo(function AssignmentBlock({ assignment, projec
     );
   };
 
+  const content = assignment.type === 'project' ? (
+    assignment.project ? (
+      <View style={[styles.assignmentContent, { backgroundColor: hexToRgba(assignment.project.color, 0.08) }]}>
+        <View style={[styles.colorIndicator, { backgroundColor: assignment.project.color }]} />    
+        <View style={styles.assignmentInfo}>
+          <Text style={styles.assignmentName} numberOfLines={1}>{assignment.project.name}</Text>   
+          <Text style={styles.assignmentAddress} numberOfLines={1}>{assignment.project.address}</Text>
+        </View>
+      </View>
+    ) : (
+      <View style={[styles.assignmentContent, styles.assignmentPlaceholder]}>
+        <ActivityIndicator size="small" />
+        <Text style={styles.placeholderText}>Loading Project...</Text>
+      </View>
+    )
+  ) : (
+    assignment.location ? (
+      <View style={[styles.assignmentContent, { backgroundColor: theme.colors.cardBackground }]}>  
+        <View style={[styles.colorIndicator, { backgroundColor: theme.colors.secondary }]} />      
+        <View style={styles.assignmentInfo}>
+          <Text style={styles.assignmentName} numberOfLines={1}>{assignment.location.name}</Text>  
+        </View>
+      </View>
+    ) : (
+      <View style={[styles.assignmentContent, styles.assignmentPlaceholder]}>
+        <ActivityIndicator size="small" />
+        <Text style={styles.placeholderText}>Loading Location...</Text>
+      </View>
+    )
+  );
 
   return (
-    <Draggable draggableId={`assignment-${assignment.id}`} index={index} isDragDisabled={isPastDate}>
+    <Draggable draggableId={assignment.id} index={index} isDragDisabled={isPastDate}>
       {(provided, snapshot) => (
         <WebSafeView
           ref={(ref: any) => provided.innerRef(ref)}
@@ -105,201 +149,131 @@ const AssignmentBlock = React.memo(function AssignmentBlock({ assignment, projec
             },
           ]}
         >
-          <TouchableOpacity 
-            onLongPress={() => onEditAssignmentTime(assignment.id, assignment.assignedTime ?? null)}
+          <TouchableOpacity
+            onLongPress={() => onEditAssignmentTime(workerId, assignment.id, assignment.start_time ?? null)}
             disabled={isPastDate}
-            style={styles.touchableWrapper} // Add a style for the wrapper if needed
+            style={styles.touchableWrapper}
           >
-            <View style={[snapshot.isDragging && styles.dragOffset]}>
-              <View style={[styles.assignmentContent, { backgroundColor: hexToRgba(project.color, 0.08) }]}>
-                  <View style={[styles.colorIndicator, { backgroundColor: project.color }]} />
-                  <View style={styles.assignmentInfo}>
-                      <Text style={styles.assignmentName} numberOfLines={1}>{project?.name}</Text>
-                      <Text style={styles.assignmentAddress} numberOfLines={1}>{project?.address}</Text>
-                      {assignment.assignedTime && (
-                          <View style={styles.timeInfoContainer}>
-                              <Ionicons name="time-outline" size={14} color={theme.colors.bodyText} style={styles.timeIcon} />
-                              <Text style={styles.assignmentTime}>{assignment.assignedTime}</Text>
-                          </View>
-                      )}
-                  </View>
-              </View>
+            <View>
+              {content}
+              {assignment.start_time && (
+                <View style={styles.timeInfoContainer}>
+                    <Ionicons name="time-outline" size={14} color={theme.colors.bodyText} style={styles.timeIcon} />
+                    <Text style={styles.assignmentTime}>Be there at: {assignment.start_time}</Text>
+                </View>
+              )}
+            </View>
               {!isPastDate && (
-                <TouchableOpacity style={styles.deleteButton} onPress={() => onDeleteAssignment(assignment.id)}>
+                <TouchableOpacity style={styles.deleteButton} onPress={() => onDeleteAssignment(workerId, assignment.id)}>
                   <Ionicons name="close-circle" size={18} color={theme.colors.danger} />
                 </TouchableOpacity>
               )}
-            </View>
           </TouchableOpacity>
         </WebSafeView>
       )}
     </Draggable>
   );
 });
-
 interface WorkerColumnProps {
-  employee: Employee; // Changed from worker
-  projects: Project[];
-  assignments: Assignment[];
-  selectedDate: Date;
-  onDeleteAssignment: (assignmentId: string) => void;
-  onEditAssignmentTime: (assignmentId: string, assignedTime: string | null) => void;
+  employee: Employee;
+  assignments: ProcessedAssignmentStep[];
+  onDeleteAssignment: (workerId: string, stepId: string) => void;
+  onEditAssignmentTime: (workerId: string, stepId: string, startTime: string | null) => void;
+  onAddAssignment: (workerId: string) => void;
   isPastDate: boolean;
 }
 
-const WebSafeScrollView = React.forwardRef(({ children, style, ...rest }: any, ref) => {
-  if (Platform.OS === 'web') {
-    return (
-      <div ref={ref} style={StyleSheet.flatten(style)} {...rest}>
-        {children}
-      </div>
-    );
-  } else {
-    return (
-      <ScrollView ref={ref} style={style} {...rest}>
-        {children}
-      </ScrollView>
-    );
-  }
-});
-
-const WorkerColumn = React.memo(function WorkerColumn({ employee, projects, assignments, selectedDate, onDeleteAssignment, onEditAssignmentTime, isPastDate }: WorkerColumnProps) { // Changed from worker
-  const workerAssignments = assignments.filter(
-    (a) => a.workerId === employee.id && isSameDay(a.startDate, selectedDate) // Changed from worker.id
-  );
+const WorkerColumn = React.memo(function WorkerColumn({
+  employee,
+  assignments,
+  onDeleteAssignment,
+  onEditAssignmentTime,
+  onAddAssignment,
+  isPastDate
+}: WorkerColumnProps) {
 
   return (
-    <View style={styles.workerColumn}> 
-      <View style={styles.workerColumnHeader}> 
-        <Text style={styles.workerName}>{employee.full_name}</Text> 
+    <View style={styles.workerColumn}>
+      <View style={styles.workerColumnHeader}>
+        <Text style={styles.workerName}>{employee.full_name}</Text>
       </View>
       <Droppable droppableId={`worker-${employee.id}`} type="TASK" direction="vertical" isDropDisabled={isPastDate}>
         {(provided, snapshot) => (
-          <View
-            ref={(ref: any) => provided.innerRef(ref)}
-            {...provided.droppableProps}
-            style={[styles.timelineScrollView, snapshot.isDraggingOver && styles.dragOver]} // Apply styles to the outer View
-          >
-            <WebSafeScrollView // No longer needs ref or droppableProps
-              style={styles.timelineInnerScrollView} // New style for inner scroll view
-            >
-              <View style={styles.timeline}>
-                {workerAssignments.map((assignment, index) => (
-                  <AssignmentBlock
-                    key={assignment.id}
-                    assignment={assignment}
-                    project={projects.find((p) => p.id === assignment.projectId)}
-                    index={index}
-                    onDeleteAssignment={onDeleteAssignment}
-                    onEditAssignmentTime={onEditAssignmentTime}
-                    isPastDate={isPastDate}
-                  />
-                ))}
-                {provided.placeholder}
-              </View>
-            </WebSafeScrollView>
-          </View>
-        )}
+                    <View
+                      ref={(ref: any) => provided.innerRef(ref)}
+                      {...provided.droppableProps}
+                      style={[styles.timelineScrollView, snapshot.isDraggingOver && styles.dragOver]}      
+                    >
+                      <WebSafeScrollView style={styles.timelineInnerScrollView}>
+                        <View style={styles.timeline}>
+                          {assignments.map((assignment, index) => (
+                            <AssignmentBlock
+                              key={assignment.id}
+                              assignment={assignment}
+                              workerId={employee.id}
+                              index={index}
+                              onDeleteAssignment={onDeleteAssignment}
+                              onEditAssignmentTime={onEditAssignmentTime}
+                              isPastDate={isPastDate}
+                            />
+                          ))}
+                          {provided.placeholder}
+                        </View>
+                      </WebSafeScrollView>
+                    </View>        )}
       </Droppable>
     </View>
   );
 });
 
-interface WorkerLaneCopyButtonProps {
-  sourceWorkerId: string;
-  targetWorkerId: string;
-  onCopyAssignments: (sourceWorkerId: string, targetWorkerId: string) => void;
-  direction: 'left-to-right' | 'right-to-left';
-}
-
-const WorkerLaneCopyButton: React.FC<WorkerLaneCopyButtonProps> = ({ sourceWorkerId, targetWorkerId, onCopyAssignments, direction }) => {
-  const iconName = direction === 'left-to-right' ? 'arrow-forward-circle-outline' : 'arrow-back-circle-outline';
-  const handlePress = () => {
-    onCopyAssignments(sourceWorkerId, targetWorkerId);
-  };
-
-  return (
-    <TouchableOpacity
-      style={styles.copyButton}
-      onPress={handlePress}
-    >
-      <Ionicons name={iconName} size={24} color={theme.colors.primary} />
-    </TouchableOpacity>
-  );
-};
-
 interface ScheduleGridProps {
-  employees: Employee[]; // Changed from workers
-  projects: Project[];
-  assignments: Assignment[];
-  selectedDate: Date;
-  selectedEmployees: Employee[]; // Changed from selectedWorkers
-  onCopyAssignments: (sourceWorkerId: string, targetWorkerId: string) => void;
-  onDeleteAssignment: (assignmentId: string) => void;
-  onEditAssignmentTime: (assignmentId: string, assignedTime: string | null) => void;
+  employees: Employee[];
+  assignments: Record<string, ProcessedAssignmentStep[]>;
+  selectedEmployees: Employee[];
+  onDeleteAssignment: (workerId: string, stepId: string) => void;
+  onEditAssignmentTime: (workerId: string, stepId: string, startTime: string | null) => void;
+  onAddAssignment: (workerId: string) => void;
   isPastDate: boolean;
 }
 
 const ScheduleGrid: React.FC<ScheduleGridProps> = ({
-  employees, // Changed from workers
-  projects,
+  employees,
   assignments,
-  selectedDate,
-  selectedEmployees, // Changed from selectedWorkers
-  onCopyAssignments,
+  selectedEmployees,
   onDeleteAssignment,
   onEditAssignmentTime,
+  onAddAssignment,
   isPastDate,
 }) => {
-  const employeesToDisplay = selectedEmployees.length > 0 ? employees.filter(e => selectedEmployees.some(se => se.id === e.id)) : employees; // Changed from workers and selectedWorkers
+  const employeesToDisplay = selectedEmployees.length > 0 ? employees.filter(e => selectedEmployees.some(se => se.id === e.id)) : employees;
 
   return (
     <View style={[styles.container, isPastDate && styles.pastDateOverlay]}>
-      <ScrollView horizontal showsHorizontalScrollIndicator={true}>
-        {employeesToDisplay.map((employee, index) => ( // Changed from workersToDisplay.map((worker, index)
+      <ScrollView horizontal contentContainerStyle={styles.scrollViewContent} showsHorizontalScrollIndicator={true}>
+        {employeesToDisplay.map((employee, index) => (
           <React.Fragment key={employee.id}>
             <Animated.View
               layout={Layout.springify().damping(20).stiffness(100)}
               style={[
                 styles.workerColumnWrapper,
-                index < employeesToDisplay.length - 1 && styles.workerColumnSeparator, // Changed from workersToDisplay.length
+                index < employeesToDisplay.length - 1 && styles.workerColumnSeparator,
               ]}
             >
               <WorkerColumn
-                employee={employee} // Changed from worker
-                projects={projects}
-                assignments={assignments}
-                selectedDate={selectedDate}
+                employee={employee}
+                assignments={assignments[employee.id] || []}
                 onDeleteAssignment={onDeleteAssignment}
                 onEditAssignmentTime={onEditAssignmentTime}
+                onAddAssignment={onAddAssignment}
                 isPastDate={isPastDate}
               />
             </Animated.View>
-            {index < employeesToDisplay.length - 1 && ( // Changed from workersToDisplay.length
-              <View style={styles.copyButtonContainerWrapper}>
-                <View style={styles.copyButtonContainer}>
-                  <WorkerLaneCopyButton
-                    sourceWorkerId={employee.id} // Changed from worker.id
-                    targetWorkerId={employeesToDisplay[index + 1].id} // Changed from workersToDisplay
-                    onCopyAssignments={onCopyAssignments}
-                    direction="left-to-right"
-                  />
-                  <WorkerLaneCopyButton
-                    sourceWorkerId={employeesToDisplay[index + 1].id} // Changed from workersToDisplay
-                    targetWorkerId={employee.id} // Changed from worker.id
-                    onCopyAssignments={onCopyAssignments}
-                    direction="right-to-left"
-                  />
-                </View>
-              </View>
-            )}
           </React.Fragment>
         ))}
       </ScrollView>
     </View>
   );
 };
-
 
 const styles = StyleSheet.create({
   container: {
@@ -384,6 +358,18 @@ const styles = StyleSheet.create({
   assignmentInfo: {
     flex: 1,
   },
+  assignmentPlaceholder: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: theme.colors.pageBackground,
+  },
+  placeholderText: {
+    marginLeft: theme.spacing(1),
+    fontSize: 11,
+    color: theme.colors.bodyText,
+    fontStyle: 'italic',
+  },
   assignmentName: {
     fontWeight: '500',
     fontSize: 11,
@@ -450,6 +436,9 @@ const styles = StyleSheet.create({
     height: '100%',
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  scrollViewContent: {
+    flexGrow: 1, // Allow content to grow within ScrollView
   },
 });
 

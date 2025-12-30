@@ -1,8 +1,7 @@
-import React, { useState, useContext, useRef } from 'react';
+import React, { useState, useContext, useEffect, useRef } from 'react';
 import {
   StyleSheet,
   View,
-  TextInput,
   FlatList,
   TouchableOpacity,
   KeyboardAvoidingView,
@@ -12,65 +11,43 @@ import {
   ScrollView,
   useWindowDimensions,
   Linking,
+  ActivityIndicator,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Card } from '../../../components/Card';
 import { theme } from '../../../theme';
 import AnimatedScreen from '../../../components/AnimatedScreen';
 import { Ionicons } from '@expo/vector-icons';
-import * as ImagePicker from 'expo-image-picker';
 import { MapView, Marker } from '../../../components/MapView';
 import { EmbedMapView } from '../../../components/EmbedMapView.web';
 import ImageCarouselModal from '../../../components/ImageCarouselModal';
 import ProjectGallery from '../../../components/ProjectGallery';
 import MessageInput from '../../../components/MessageInput';
-import { ProjectsContext } from '~/context/ProjectsContext';
-
-interface Message {
-  id: string;
-  text?: string;
-  type: 'text' | 'image';
-  image?: string | null;
-  sender: string;
-  timestamp: string;
-}
-
-const mockMessages: Message[] = [
-  { id: '1', text: 'Scaffolding is complete on the north side.', type: 'text', sender: 'John Doe', timestamp: '10:30 AM' },
-  { id: '2', image: 'https://loremflickr.com/640/480/house', type: 'image', sender: 'John Doe', timestamp: '10:32 AM' },
-  { id: '3', text: 'Found some damage on the east wall. Sending a picture.', type: 'text', sender: 'Jane Smith', timestamp: '11:05 AM' },
-  { id: '4', image: 'https://loremflickr.com/640/480/scaffolding', type: 'image', sender: 'Jane Smith', timestamp: '11:06 AM' },
-];
+import { ProjectsContext, ProjectMessage } from '~/context/ProjectsContext';
+import { useSession } from '~/context/AuthContext';
 
 export default function ProjectDetailsScreen() {
   const { id } = useLocalSearchParams();
   const router = useRouter();
-  const { projects, updateProject } = useContext(ProjectsContext)!;
-  const project = projects.find((p) => p.id === id);
+  const { user } = useSession();
+  const { projects, isLoading: isProjectsLoading, getProjectMessages, sendTextMessage, sendImageMessage } = useContext(ProjectsContext)!;
+  const project = projects.find((p) => p.id === id as string);
 
+  const MESSAGES_PER_PAGE = 20; // Define messages per page
+
+  const [allMessages, setAllMessages] = useState<ProjectMessage[]>([]); // Renamed from 'messages'
+  const [initialMessagesLoading, setInitialMessagesLoading] = useState(true); // For initial load
+  const [hasMoreMessages, setHasMoreMessages] = useState(true); // Whether more messages can be loaded
+  const [isFetchingMoreMessages, setIsFetchingMoreMessages] = useState(false); // For loading more messages
+  
   const { width } = useWindowDimensions();
   const isLargeScreen = width > 768;
 
-  const [messages, setMessages] = useState<Message[]>(mockMessages);
-  // Removed newMessage, selectedImages states
   const [isModalVisible, setModalVisible] = useState(false);
   const [modalImages, setModalImages] = useState<string[]>([]);
   const [initialModalIndex, setInitialModalIndex] = useState(0);
 
-  const flatListRef = useRef<FlatList<Message>>(null);
-
-  if (!project) {
-    return (
-      <AnimatedScreen>
-        <View style={styles.container}>
-          <Text style={styles.title}>Project not found.</Text>
-          <TouchableOpacity onPress={() => router.back()}>
-            <Text style={{ color: theme.colors.primary, marginTop: 10 }}>Go Back</Text>
-          </TouchableOpacity>
-        </View>
-      </AnimatedScreen>
-    );
-  }
+  const flatListRef = useRef<FlatList<ProjectMessage>>(null);
 
   const openImageModal = (images: string[], index: number) => {
     setModalImages(images);
@@ -78,40 +55,75 @@ export default function ProjectDetailsScreen() {
     setModalVisible(true);
   };
 
-  const handleSendMessage = (text: string, imageUris: string[]) => {
-    // text and imageUris are now passed from MessageInput
-    const trimmedMessage = text.trim();
-    if (trimmedMessage === '' && imageUris.length === 0) return;
-
-    let newMessages: Message[] = [];
-
-    if (trimmedMessage !== '') {
-        const textMessage: Message = {
-            id: `msg-${Date.now()}-text`,
-            text: trimmedMessage,
-            type: 'text',
-            sender: 'You (Manager)',
-            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        };
-        newMessages.push(textMessage);
+  const loadMessages = async (isInitialLoad = true) => {
+    if (!project) return;
+    if (isInitialLoad) {
+      setInitialMessagesLoading(true);
+      setAllMessages([]); // Clear messages on initial load
+      setHasMoreMessages(true); // Reset hasMoreMessages
+    } else {
+      setIsFetchingMoreMessages(true);
     }
     
-    if (imageUris.length > 0) {
-      const imageMessages: Message[] = imageUris.map((uri, index) => ({
-        id: `msg-${Date.now()}-img-${index}`,
-        type: 'image',
-        image: uri,
-        sender: 'You (Manager)',
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      }));
-      newMessages.push(...imageMessages);
-    }
+    try {
+      const oldestMessageTimestamp = !isInitialLoad && allMessages.length > 0
+        ? allMessages[allMessages.length - 1].created_at
+        : undefined;
 
-    setMessages(prevMessages => [...newMessages, ...prevMessages]);
+      const { messages: fetchedMessages, hasMore: newHasMore } = await getProjectMessages(
+        project.id,
+        MESSAGES_PER_PAGE,
+        oldestMessageTimestamp
+      );
+      
+      setAllMessages(prevMessages => isInitialLoad
+        ? fetchedMessages.reverse() // Reverse for initial load to have oldest at top, newest at bottom
+        : [...fetchedMessages.reverse(), ...prevMessages] // Prepend for load more
+      );
+      setHasMoreMessages(newHasMore);
+      flatListRef.current?.scrollToEnd({ animated: false }); // Scroll to bottom on initial load
+    } catch (error) {
+      console.error("Failed to load messages:", error);
+    } finally {
+      if (isInitialLoad) {
+        setInitialMessagesLoading(false);
+      } else {
+        setIsFetchingMoreMessages(false);
+      }
+    }
   };
 
-  // Removed handlePickImage and removeSelectedImage functions
+  const loadMoreMessages = async () => {
+    if (!project || !hasMoreMessages || isFetchingMoreMessages || initialMessagesLoading) {
+      return;
+    }
+    await loadMessages(false);
+  };
 
+  useEffect(() => {
+    if (project?.id) {
+      loadMessages();
+    }
+  }, [project?.id]);
+
+  const handleSendMessage = async (text: string, imageUris: string[]) => {
+    if (!project || (text.trim() === '' && imageUris.length === 0)) return;
+
+    try {
+      if (text.trim() !== '') {
+        await sendTextMessage(project.id, text.trim());
+      }
+      if (imageUris.length > 0) {
+        for (const imageUri of imageUris) {
+          await sendImageMessage(project.id, imageUri);
+        }
+      }
+      await loadMessages();
+    } catch (error) {
+      console.error("Failed to send message:", error);
+    }
+  };
+  
   const handleMapPress = () => {
     if (!project) return;
     const { latitude, longitude } = project.location;
@@ -124,31 +136,50 @@ export default function ProjectDetailsScreen() {
     if (url) Linking.openURL(url);
   };
 
-  const renderMessage = ({ item }: { item: Message }) => {
-    const isMyMessage = item.sender === 'You (Manager)';
+  if (isProjectsLoading && !project) {
+    return (
+      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+        <ActivityIndicator size="large" color={theme.colors.primary} />
+      </View>
+    );
+  }
+
+  if (!project) {
+    return (
+      <AnimatedScreen>
+        <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+          <Text style={styles.title}>Project not found.</Text>
+          <TouchableOpacity onPress={() => router.back()}>
+            <Text style={{ color: theme.colors.primary, marginTop: 10 }}>Go Back</Text>
+          </TouchableOpacity>
+        </View>
+      </AnimatedScreen>
+    );
+  }
+
+  const renderMessage = ({ item }: { item: ProjectMessage }) => {
+    const isMyMessage = item.sender_id === user?.id;
     const messageBubbleStyle = isMyMessage ? styles.myMessageBubble : styles.otherMessageBubble;
     const messageTextStyle = isMyMessage ? styles.myMessageText : styles.otherMessageText;
 
     return (
       <View style={[styles.messageWrapper, isMyMessage ? styles.myMessageContainer : styles.otherMessageContainer]}>
         <View style={[styles.messageBubble, messageBubbleStyle]}>
-          {!isMyMessage && <Text style={styles.senderName}>{item.sender}</Text>}
+          {!isMyMessage && <Text style={styles.senderName}>{item.employees?.full_name || 'Unknown User'}</Text>}
           {item.type === 'text' && <Text style={messageTextStyle}>{item.text}</Text>}
-          {item.type === 'image' && item.image && (
-            <TouchableOpacity onPress={() => openImageModal([item.image!], 0)}>
-              <Image source={{ uri: item.image }} style={styles.messageImage} />
+          {item.type === 'image' && item.image_url && (
+            <TouchableOpacity onPress={() => openImageModal([item.image_url!], 0)}>
+              <Image source={{ uri: item.image_url }} style={styles.messageImage} />
             </TouchableOpacity>
           )}
-          <Text style={[styles.timestamp, isMyMessage ? styles.myTimestamp : styles.otherTimestamp]}>{item.timestamp}</Text>
+          <Text style={[styles.timestamp, isMyMessage ? styles.myTimestamp : styles.otherTimestamp]}>{new Date(item.created_at).toLocaleTimeString()}</Text>
         </View>
       </View>
     );
   };
   
-  // Removed renderSelectedImagePreview as it's now in MessageInput
-
   const ProjectDetails = () => (
-    <ScrollView style={styles.detailsColumn}>
+    <View style={styles.detailsColumnHeader}>
       <Text style={styles.title}>{project.name}</Text>
       <TouchableOpacity onPress={handleMapPress} style={styles.addressContainer}>
         <Ionicons name="location-outline" size={18} color={theme.colors.bodyText} />
@@ -161,11 +192,11 @@ export default function ProjectDetailsScreen() {
       </Card>
 
       {project.photos && project.photos.length > 0 && (
-        <Card style={styles.card}>
-          <Text style={styles.cardTitle}>Project Images</Text>
-          <ProjectGallery images={project.photos} onImagePress={openImageModal} />
-        </Card>
-      )}
+              <Card style={styles.card}>
+                <Text style={styles.cardTitle}>Project Images</Text>
+
+                <ProjectGallery images={project.photos} onImagePress={openImageModal} />
+              </Card>      )}
 
       <Card style={styles.card}>
         <Text style={styles.cardTitle}>Location</Text>
@@ -181,21 +212,36 @@ export default function ProjectDetailsScreen() {
             </View>
         </TouchableOpacity>
       </Card>
-    </ScrollView>
+
+      {!isLargeScreen && <Text style={styles.discussionSectionTitle}>Discussion</Text>}
+    </View>
   );
 
   const Discussion = () => (
     <View style={styles.discussionContainer}>
-        {isLargeScreen && <Text style={styles.cardTitle}>Discussion</Text>}
-        <FlatList
-            ref={flatListRef}
-            data={messages}
-            renderItem={renderMessage}
-            keyExtractor={(item) => item.id}
-            contentContainerStyle={styles.messageListContainer}
-            inverted={true}
-        />
-        <MessageInput onSendMessage={handleSendMessage} />
+        {initialMessagesLoading ? (
+            <ActivityIndicator style={{ flex: 1 }} size="large" color={theme.colors.primary} />
+        ) : allMessages.length === 0 ? (
+            <View style={styles.emptyDiscussionContainer}>
+                <Text style={styles.emptyDiscussionText}>No messages yet.</Text>
+            </View>
+        ) : (
+            <FlatList
+                ref={flatListRef}
+                data={allMessages}
+                renderItem={renderMessage}
+                keyExtractor={(item) => item.id}
+                contentContainerStyle={styles.messageListContainer}
+                inverted={true}
+                onEndReached={loadMoreMessages}
+                onEndReachedThreshold={0.5}
+                ListFooterComponent={() => (
+                    isFetchingMoreMessages ? (
+                        <ActivityIndicator size="small" color={theme.colors.primary} style={{ marginVertical: 10 }} />
+                    ) : null
+                )}
+            />
+        )}
     </View>
   )
 
@@ -208,10 +254,36 @@ export default function ProjectDetailsScreen() {
                     <Discussion/>
                 </View>
             ) : (
-                <ScrollView>
-                    <ProjectDetails/>
-                    <Discussion/>
-                </ScrollView>
+                <View style={{ flex: 1 }}>
+                    {initialMessagesLoading ? (
+                        <ActivityIndicator style={{ flex: 1 }} size="large" color={theme.colors.primary} />
+                    ) : allMessages.length === 0 ? (
+                        <ScrollView contentContainerStyle={styles.messageListContainer}>
+                            <ProjectDetails />
+                            <View style={styles.emptyDiscussionContainer}>
+                                <Text style={styles.emptyDiscussionText}>No messages yet.</Text>
+                            </View>
+                        </ScrollView>
+                    ) : (
+                        <FlatList
+                            ref={flatListRef}
+                            data={allMessages}
+                            renderItem={renderMessage}
+                            keyExtractor={(item) => item.id}
+                            contentContainerStyle={styles.messageListContainer}
+                            inverted={true}
+                            onEndReached={loadMoreMessages}
+                            onEndReachedThreshold={0.5}
+                            ListHeaderComponent={<ProjectDetails />}
+                            ListFooterComponent={() => (
+                                isFetchingMoreMessages ? (
+                                    <ActivityIndicator size="small" color={theme.colors.primary} style={{ marginVertical: 10 }} />
+                                ) : null
+                            )}
+                        />
+                    )}
+                    <MessageInput onSendMessage={handleSendMessage} />
+                </View>
             )}
         </KeyboardAvoidingView>
       <ImageCarouselModal visible={isModalVisible} images={modalImages} initialIndex={initialModalIndex} onClose={() => setModalVisible(false)} />
@@ -228,17 +300,23 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         flex: 1,
     },
-    detailsColumn: {
-        flex: 1,
+    detailsColumnHeader: {
         padding: theme.spacing(2),
-        borderRightWidth: 1,
-        borderRightColor: theme.colors.borderColor,
+        // No borderRightWidth here, as it's now a ListHeaderComponent for FlatList
+    },
+    discussionSectionTitle: {
+        fontSize: 22,
+        fontWeight: 'bold',
+        color: theme.colors.headingText,
+        marginTop: theme.spacing(3),
+        marginBottom: theme.spacing(2),
+        paddingHorizontal: theme.spacing(2), // Add horizontal padding for consistency
     },
     title: {
         fontSize: 28,
         fontWeight: 'bold',
         color: theme.colors.headingText,
-        marginBottom: theme.spacing(0.5), // Reduced margin to bring address closer
+        marginBottom: theme.spacing(0.5),
     },
     card: {
         marginBottom: theme.spacing(2),
@@ -257,7 +335,7 @@ const styles = StyleSheet.create({
     addressContainer: {
         flexDirection: 'row',
         alignItems: 'center',
-        marginBottom: theme.spacing(2), // Add margin bottom to separate from next card
+        marginBottom: theme.spacing(2),
     },
     addressText: {
         color: theme.colors.bodyText,
@@ -284,6 +362,17 @@ const styles = StyleSheet.create({
     messageListContainer: {
         paddingTop: theme.spacing(2),
         flexGrow: 1,
+        justifyContent: 'flex-end',
+    },
+    emptyDiscussionContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    emptyDiscussionText: {
+        textAlign: 'center',
+        color: theme.colors.bodyText,
+        fontSize: 16,
     },
     messageWrapper: {
         marginVertical: 4,
@@ -340,6 +429,4 @@ const styles = StyleSheet.create({
         borderRadius: theme.radius.md,
         marginTop: 8,
     },
-    // Removed input related styles
 });
-

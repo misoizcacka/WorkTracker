@@ -72,7 +72,7 @@ const DraggableProjectItem: React.FC<DraggableProjectItemProps> = ({
             {...provided.draggableProps}
             {...provided.dragHandleProps}
             onClick={() => onPress(item)}
-            style={StyleSheet.flatten([provided.draggableProps.style])} // preserve style, no extra background
+            style={{...provided.draggableProps.style}} // Use object spread instead of StyleSheet.flatten
           >
             {itemContent}
           </div>

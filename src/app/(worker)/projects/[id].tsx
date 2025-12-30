@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+// THIS FILE IS USING LIVE DATABASE DATA FOR THE DISCUSSION FEATURE.
+import React, { useState, useEffect } from 'react';
 import {
   StyleSheet,
   View,
@@ -12,109 +13,88 @@ import {
   ScrollView,
   Dimensions,
   Linking,
+  ActivityIndicator,
 } from 'react-native';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams } from 'expo-router';
 import { Card } from '../../../components/Card';
 import { theme } from '../../../theme';
 import AnimatedScreen from '../../../components/AnimatedScreen';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
+import { MediaType } from 'expo-image-picker';
 import { MapView, Marker } from '../../../components/MapView';
 import ImageCarouselModal from '../../../components/ImageCarouselModal';
+import { useProjects, ProjectMessage } from '../../../context/ProjectsContext';
 
 const { width } = Dimensions.get('window');
 
-interface Message {
-  id: string;
-  text?: string;
-  type: 'text' | 'image';
-  image?: string | null;
-  sender: string;
-  timestamp: string;
-}
-
-// Mock data - in a real app, this would come from an API
-const mockProjects = [
-  {
-    id: '1',
-    name: 'Modern Villa Construction',
-    address: '123 Luxury Lane, Berlin',
-    explanation:
-      'This project involves the construction of a high-end modern villa. Key tasks include laying the foundation, erecting the steel frame, and installing glass curtain walls. Attention to detail is paramount.',
-    pictures: [
-      'https://loremflickr.com/640/480/villa,construction/all',
-      'https://loremflickr.com/640/480/villa,building/all',
-      'https://loremflickr.com/640/480/villa,architecture/all',
-    ],
-    location: {
-      latitude: 52.52,
-      longitude: 13.405,
-    },
-  },
-  {
-    id: '2',
-    name: 'Downtown Office Renovation',
-    address: '456 Business Blvd, Berlin',
-    explanation:
-      'Renovation of a 10-story office building. The focus is on modernizing the interior, upgrading the HVAC system, and improving energy efficiency. Work needs to be completed floor by floor.',
-    pictures: [
-      'https://loremflickr.com/640/480/office,renovation/all',
-      'https://loremflickr.com/640/480/office,interior/all',
-    ],
-    location: {
-      latitude: 52.516,
-      longitude: 13.3777,
-    },
-  },
-  {
-    id: '3',
-    name: 'Suburban Home Scaffolding',
-    address: '789 Family Rd, Potsdam',
-    explanation:
-      'Erect scaffolding around a two-story suburban home for roof and facade repairs. Safety protocols must be strictly followed. The project is expected to take one week.',
-    pictures: [
-      'https://loremflickr.com/640/480/house,scaffolding/all',
-    ],
-    location: {
-      latitude: 52.4,
-      longitude: 13.06,
-    },
-  },
-  {
-    id: '4',
-    name: 'Historic Building Restoration',
-    address: '101 History Alley, Berlin',
-    explanation:
-      "Restoration of a 19th-century building. This requires careful handling of original materials and adherence to historical preservation guidelines. The sandstone facade needs special attention.",
-    pictures: [
-      'https://loremflickr.com/640/480/historic,building/all',
-      'https://loremflickr.com/640/480/building,restoration/all',
-    ],
-    location: {
-      latitude: 52.524,
-      longitude: 13.41,
-    },
-  },
-];
-
-const mockMessages: Message[] = [
-  { id: '1', text: 'Scaffolding is complete on the north side.', type: 'text', sender: 'John Doe', timestamp: '10:30 AM' },
-  { id: '2', image: 'https://loremflickr.com/640/480/house', type: 'image', sender: 'John Doe', timestamp: '10:32 AM' },
-  { id: '3', text: 'Found some damage on the east wall. Sending a picture.', type: 'text', sender: 'Jane Smith', timestamp: '11:05 AM' },
-  { id: '4', image: 'https://loremflickr.com/640/480/scaffolding', type: 'image', sender: 'Jane Smith', timestamp: '11:06 AM' },
-];
-
 export default function ProjectDetailsScreen() {
   const { id } = useLocalSearchParams();
-  const router = useRouter();
-  const project = mockProjects.find((p) => p.id === id);
+  const { projects, isLoading, getProjectMessages, sendTextMessage, sendImageMessage } = useProjects();
+  const project = projects.find((p) => p.id === id as string);
 
-  const [messages, setMessages] = useState<Message[]>(mockMessages);
+  const MESSAGES_PER_PAGE = 20; // Define messages per page
+
+  const [allMessages, setAllMessages] = useState<ProjectMessage[]>([]); // Renamed from 'messages'
+  const [initialMessagesLoading, setInitialMessagesLoading] = useState(true); // For initial load
+  const [hasMoreMessages, setHasMoreMessages] = useState(true); // Whether more messages can be loaded
+  const [isFetchingMoreMessages, setIsFetchingMoreMessages] = useState(false); // For loading more messages
+  
   const [newMessage, setNewMessage] = useState('');
   const [selectedImages, setSelectedImages] = useState<string[]>([]);
   const [isModalVisible, setModalVisible] = useState(false);
   const [modalImages, setModalImages] = useState<string[]>([]);
   const [initialModalIndex, setInitialModalIndex] = useState(0);
+
+  const loadMessages = async (isInitialLoad = true) => {
+    if (!project) return;
+    if (isInitialLoad) {
+      setInitialMessagesLoading(true);
+      setAllMessages([]); // Clear messages on initial load
+      setHasMoreMessages(true); // Reset hasMoreMessages
+    } else {
+      setIsFetchingMoreMessages(true);
+    }
+    
+    try {
+      const oldestMessageTimestamp = !isInitialLoad && allMessages.length > 0
+        ? allMessages[allMessages.length - 1].created_at
+        : undefined;
+
+      const { messages: fetchedMessages, hasMore: newHasMore } = await getProjectMessages(
+        project.id,
+        MESSAGES_PER_PAGE,
+        oldestMessageTimestamp
+      );
+      
+      setAllMessages(prevMessages => isInitialLoad
+        ? fetchedMessages.reverse() // Reverse for initial load to have oldest at top, newest at bottom
+        : [...fetchedMessages.reverse(), ...prevMessages] // Prepend for load more
+      );
+      setHasMoreMessages(newHasMore);
+    } catch (error) {
+      console.error("Failed to load messages:", error);
+    } finally {
+      if (isInitialLoad) {
+        setInitialMessagesLoading(false);
+      } else {
+        setIsFetchingMoreMessages(false);
+      }
+    }
+  };
+
+  const loadMoreMessages = async () => {
+    if (!project || !hasMoreMessages || isFetchingMoreMessages || initialMessagesLoading) {
+      return;
+    }
+    await loadMessages(false);
+  };
+
+  useEffect(() => {
+    if (project?.id) { // Only run if project.id is available
+      loadMessages();
+    }
+  }, [project?.id]);
 
   const openImageModal = (images: string[], index: number) => {
     setModalImages(images);
@@ -122,49 +102,39 @@ export default function ProjectDetailsScreen() {
     setModalVisible(true);
   };
 
-  const handleSendMessage = () => {
-    const trimmedMessage = newMessage.trim();
-    if (trimmedMessage === '' && selectedImages.length === 0) return;
+  const handleSendMessage = async () => {
+    if (!project || (newMessage.trim() === '' && selectedImages.length === 0)) return;
 
-    let newMessages: Message[] = [];
-
-    // Create messages for images
-    if (selectedImages.length > 0) {
-      newMessages = selectedImages.map((uri, index) => ({
-        id: (messages.length + index + 1).toString(),
-        type: 'image',
-        image: uri,
-        sender: 'You',
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      }));
+    try {
+      if (newMessage.trim() !== '') {
+        await sendTextMessage(project.id, newMessage.trim());
+      }
+      if (selectedImages.length > 0) {
+        for (const imageUri of selectedImages) {
+          await sendImageMessage(project.id, imageUri);
+        }
+      }
+    } catch (error) {
+      console.error("Failed to send message:", error);
+    } finally {
+      setNewMessage('');
+      setSelectedImages([]);
+      // After sending, refresh messages to show the new one
+      await loadMessages(true);
     }
-
-    // Create message for text
-    if (trimmedMessage !== '') {
-      const textMessage: Message = {
-        id: (messages.length + newMessages.length + 1).toString(),
-        text: trimmedMessage,
-        type: 'text',
-        sender: 'You',
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      };
-      newMessages.push(textMessage);
-    }
-
-    setMessages(prevMessages => [...newMessages, ...prevMessages]);
-    setNewMessage('');
-    setSelectedImages([]);
   };
 
   const handlePickImage = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      mediaTypes: 'images',
       quality: 1,
       allowsMultipleSelection: true,
+      selectionLimit: 5,
     });
 
     if (!result.canceled) {
-      setSelectedImages(prev => [...prev, ...result.assets.map(a => a.uri)]);
+      const uris = result.assets.map(a => a.uri);
+      setSelectedImages(prev => [...prev, ...uris].slice(0, 5));
     }
   };
 
@@ -183,31 +153,39 @@ export default function ProjectDetailsScreen() {
     if (url) Linking.openURL(url);
   };
 
+  if (isLoading && !project) {
+    return (
+      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+        <ActivityIndicator size="large" color={theme.colors.primary} />
+      </View>
+    );
+  }
+
   if (!project) {
     return (
-      <View style={styles.container}>
+      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
         <Text>Project not found.</Text>
       </View>
     );
   }
 
-  const renderMessage = ({ item }: { item: Message }) => (
+  const renderMessage = ({ item }: { item: ProjectMessage }) => (
     <Card style={styles.messageCard}>
       <View style={styles.messageHeader}>
-        <Text style={styles.senderText}>{item.sender}</Text>
-        <Text style={styles.timestampText}>{item.timestamp}</Text>
+        <Text style={styles.senderText}>{item.employees?.full_name || 'Unknown User'}</Text>
+        <Text style={styles.timestampText}>{new Date(item.created_at).toLocaleTimeString()}</Text>
       </View>
       {item.type === 'text' && <Text>{item.text}</Text>}
-      {item.type === 'image' && item.image && (
-        <TouchableOpacity onPress={() => openImageModal([item.image!], 0)}>
-          <Image source={{ uri: item.image }} style={styles.messageImage} />
+      {item.type === 'image' && item.image_url && (
+        <TouchableOpacity onPress={() => openImageModal([item.image_url!], 0)}>
+          <Image source={{ uri: item.image_url }} style={styles.messageImage} />
         </TouchableOpacity>
       )}
     </Card>
   );
 
   const renderProjectImage = ({ item, index }: { item: string, index: number }) => (
-    <TouchableOpacity onPress={() => openImageModal(project.pictures, index)}>
+    <TouchableOpacity onPress={() => openImageModal(project.photos, index)}>
       <Image source={{ uri: item }} style={styles.projectImage} />
     </TouchableOpacity>
   );
@@ -226,9 +204,10 @@ export default function ProjectDetailsScreen() {
       <KeyboardAvoidingView
         style={styles.container}
         behavior={Platform.OS === "ios" ? "padding" : "height"}
-        keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 50 : 0}
       >
         <ScrollView style={{ flex: 1 }}>
+          {/* ... (rest of the JSX is the same) ... */}
           <View style={styles.headerCard}>
             <Text style={styles.title}>{project.name}</Text>
             <Text style={styles.addressText}>{project.address}</Text>
@@ -242,7 +221,7 @@ export default function ProjectDetailsScreen() {
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Project Images</Text>
             <FlatList
-              data={project.pictures}
+              data={project.photos}
               renderItem={renderProjectImage}
               keyExtractor={(item, index) => index.toString()}
               horizontal
@@ -276,14 +255,26 @@ export default function ProjectDetailsScreen() {
 
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Discussion</Text>
-            <FlatList
-              data={messages}
-              renderItem={renderMessage}
-              keyExtractor={(item) => item.id}
-              contentContainerStyle={styles.listContainer}
-              scrollEnabled={false} // Disable scroll for this list
-              inverted={false} // No longer inverted as the main scrollview handles it
-            />
+            {initialMessagesLoading ? (
+              <ActivityIndicator style={{ marginVertical: 20 }} size="large" color={theme.colors.primary} />
+            ) : allMessages.length === 0 ? (
+              <Text style={styles.emptyDiscussionText}>No messages yet.</Text>
+            ) : (
+              <FlatList
+                data={allMessages}
+                renderItem={renderMessage}
+                keyExtractor={(item) => item.id}
+                contentContainerStyle={styles.listContainer}
+                inverted={true}
+                onEndReached={loadMoreMessages}
+                onEndReachedThreshold={0.5} // When 50% from the end, load more
+                ListFooterComponent={() => ( // This will appear at the top of an inverted list
+                    isFetchingMoreMessages ? (
+                        <ActivityIndicator size="small" color={theme.colors.primary} style={{ marginVertical: 10 }} />
+                    ) : null
+                )}
+              />
+            )}
           </View>
         </ScrollView>
 
@@ -441,5 +432,12 @@ const styles = StyleSheet.create({
     right: -5,
     backgroundColor: 'white',
     borderRadius: 12,
+  },
+  emptyDiscussionText: {
+    textAlign: 'center',
+    color: theme.colors.bodyText,
+    marginTop: theme.spacing(4),
+    marginBottom: theme.spacing(4),
+    fontSize: 16,
   },
 });

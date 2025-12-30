@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { Modal, View, Text, TouchableOpacity, TextInput, StyleSheet } from 'react-native';
+import { Modal, View, Text, TouchableOpacity, TextInput, StyleSheet, Alert } from 'react-native';
 import { theme } from '~/theme';
-import { Ionicons } from '@expo/vector-icons'; // Import Ionicons
+import { Ionicons } from '@expo/vector-icons';
 
 interface SetAssignmentTimeModalProps {
   isVisible: boolean;
   onClose: () => void;
-  onSave: (assignedTime: string | null, assignmentId?: string | null) => void;
+  onSave: (startTime: string | null, assignmentId?: string | null) => void;
   assignmentId?: string | null;
   initialTime?: string | null;
 }
@@ -18,85 +18,61 @@ const SetAssignmentTimeModal: React.FC<SetAssignmentTimeModalProps> = ({
   assignmentId,
   initialTime,
 }) => {
-  const [timeInput, setTimeInput] = useState<string>('');
-  const [useSpecificTime, setUseSpecificTime] = useState<boolean>(false);
+  const [hour, setHour] = useState('');
+  const [minute, setMinute] = useState('');
 
   useEffect(() => {
     if (isVisible) {
       if (initialTime) {
-        setTimeInput(initialTime);
-        setUseSpecificTime(true);
+        const [h, m] = initialTime.split(':');
+        setHour(h || '');
+        setMinute(m || '');
       } else {
-        setTimeInput('');
-        setUseSpecificTime(false);
+        setHour('');
+        setMinute('');
       }
     }
   }, [isVisible, initialTime]);
 
   const handleSave = () => {
-    if (useSpecificTime) {
-      // Validate HH:MM
-      const match = /^([01]?\d|2[0-3]):([0-5]\d)$/.exec(timeInput);
-      if (match) {
-        onSave(timeInput, assignmentId);
-      } else {
-        alert('Please enter a valid time in HH:mm format (24-hour).');
-        return;
-      }
-    } else {
+    if (hour === '' && minute === '') {
       onSave(null, assignmentId);
+      return;
     }
-    onClose();
+
+    const h = parseInt(hour, 10);
+    const m = parseInt(minute, 10);
+
+    if (isNaN(h) || h < 0 || h > 23 || isNaN(m) || m < 0 || m > 59) {
+      Alert.alert('Invalid Time', 'Please enter a valid time (HH:MM).');
+      return;
+    }
+
+    const formattedTime = `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
+    onSave(formattedTime, assignmentId);
   };
 
-  const toggleUseSpecificTime = () => setUseSpecificTime(prev => !prev);
+  const handleClear = () => {
+    onSave(null, assignmentId);
+  };
 
-  // Optional: auto-add colon after typing 2 digits
-  const handleTimeChange = (text: string) => {
-    let cleanedText = text.replace(/\D/g, ''); // Remove all non-digit characters
-    let formattedText = cleanedText;
+  const enforceHH = (t: string) => {
+    const n = t.replace(/\D/g, '');
+    if (n === '') return setHour('');
+    if (parseInt(n) > 23) return;
+    setHour(n);
+  };
 
-    if (cleanedText.length > 2) {
-      formattedText = cleanedText.slice(0, 2) + ':' + cleanedText.slice(2);
-    }
-    if (formattedText.length > 5) { // Limit to HH:MM format
-      formattedText = formattedText.slice(0, 5);
-    }
-
-    // Apply real-time validation
-    let [hoursStr, minutesStr] = formattedText.split(':');
-    
-    // Validate hours
-    if (hoursStr && hoursStr.length === 2) {
-      const hours = parseInt(hoursStr, 10);
-      if (isNaN(hours) || hours < 0 || hours > 23) {
-        hoursStr = '00'; // Reset to 00 if invalid
-      }
-    } else if (hoursStr && hoursStr.length === 1 && parseInt(hoursStr, 10) > 2) {
-      hoursStr = '0' + hoursStr; // Prepend 0 if first digit > 2
-    }
-    
-    // Validate minutes
-    if (minutesStr && minutesStr.length === 2) {
-      const minutes = parseInt(minutesStr, 10);
-      if (isNaN(minutes) || minutes < 0 || minutes > 59) {
-        minutesStr = '00'; // Reset to 00 if invalid
-      }
-    } else if (minutesStr && minutesStr.length === 1 && parseInt(minutesStr, 10) > 5) {
-      minutesStr = '0' + minutesStr; // Prepend 0 if first digit > 5
-    }
-
-    let finalTime = hoursStr || '';
-    if (minutesStr !== undefined) {
-      finalTime += ':' + (minutesStr || '');
-    }
-
-    setTimeInput(finalTime);
+  const enforceMM = (t: string) => {
+    const n = t.replace(/\D/g, '');
+    if (n === '') return setMinute('');
+    if (parseInt(n) > 59) return;
+    setMinute(n);
   };
 
   return (
     <Modal
-      animationType="slide"
+      animationType="fade"
       transparent={true}
       visible={isVisible}
       onRequestClose={onClose}
@@ -106,34 +82,44 @@ const SetAssignmentTimeModal: React.FC<SetAssignmentTimeModalProps> = ({
           <TouchableOpacity style={styles.closeButton} onPress={onClose}>
             <Ionicons name="close-circle-outline" size={24} color={theme.colors.bodyText} />
           </TouchableOpacity>
-          <Text style={styles.modalTitle}>Set Assignment Time</Text>
+          <Text style={styles.modalTitle}>Set Arrival Time (Optional)</Text>
 
-          <TouchableOpacity onPress={toggleUseSpecificTime} style={styles.checkboxContainer}>
-            <View style={[styles.checkbox, useSpecificTime && styles.checkboxChecked]}>
-              {useSpecificTime && <Text style={styles.checkmark}>✓</Text>}
-            </View>
-            <Text style={styles.label}>Set specific start time</Text>
-          </TouchableOpacity>
+          <Text style={styles.infoText}>
+            Order defines flow. Set a time only if a specific arrival is critical. 
+            If no time is set, the worker goes here after the previous project.
+          </Text>
 
-          {useSpecificTime ? (
+          <View style={styles.timeRow}>
             <TextInput
-              style={styles.timeInput}
-              value={timeInput}
-              onChangeText={handleTimeChange}
-              placeholder="HH:MM"
-              placeholderTextColor={theme.colors.bodyText}
+              value={hour}
+              onChangeText={enforceHH}
+              maxLength={2}
               keyboardType="numeric"
-              maxLength={5} // HH:MM
+              style={styles.timeBox}
+              placeholder="HH"
+              placeholderTextColor={theme.colors.bodyText}
             />
-          ) : (
-            <Text style={styles.infoText}>
-              If no specific time is set, the assignment will be stacked after the previous one.
-            </Text>
-          )}
+            <Text style={styles.colon}>:</Text>
+            <TextInput
+              value={minute}
+              onChangeText={enforceMM}
+              maxLength={2}
+              keyboardType="numeric"
+              style={styles.timeBox}
+              placeholder="MM"
+              placeholderTextColor={theme.colors.bodyText}
+            />
+          </View>
 
           <View style={styles.buttonContainer}>
             <TouchableOpacity
-              style={[styles.actionButton, { backgroundColor: theme.colors.primary }]}
+              style={[styles.actionButton, styles.clearButton]}
+              onPress={handleClear}
+            >
+              <Text style={[styles.actionButtonText, styles.clearButtonText]}>Clear Time</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.actionButton, styles.saveButton]}
               onPress={handleSave}
             >
               <Text style={styles.actionButtonText}>Save</Text>
@@ -146,99 +132,95 @@ const SetAssignmentTimeModal: React.FC<SetAssignmentTimeModalProps> = ({
 };
 
 const styles = StyleSheet.create({
-  centeredView: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'rgba(0,0,0,0.5)',
-  },
-  modalView: {
-    margin: 20,
-    backgroundColor: theme.colors.cardBackground,
-    borderRadius: theme.radius.sm,
-    padding: 35,
-    alignItems: 'center',
-    width: '80%',
-    maxWidth: 400,
-  },
-  modalTitle: {
-    marginBottom: 15,
-    textAlign: 'center',
-    fontSize: 20,
-    fontWeight: '600',
-    color: theme.colors.headingText,
-  },
-  closeButton: {
-    position: 'absolute',
-    top: 10,
-    right: 10,
-    zIndex: 1,
-    padding: 5,
-  },
-  checkboxContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 10,
-  },
-  checkbox: {
-    width: 24,
-    height: 24,
-    borderRadius: 4,
-    borderWidth: 2,
-    borderColor: theme.colors.primary,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  checkboxChecked: {
-    backgroundColor: theme.colors.primary,
-  },
-  checkmark: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  label: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: theme.colors.bodyText,
-    marginLeft: 8,
-  },
-  infoText: {
-    fontSize: 12,
-    color: theme.colors.bodyText,
-    marginTop: 5,
-    textAlign: 'left',
-  },
-  timeInput: {
-    borderWidth: 1,
-    borderColor: theme.colors.borderColor,
-    borderRadius: theme.radius.sm,
-    padding: 10,
-    fontSize: 16,
-    width: 100,
-    textAlign: 'center',
-    color: theme.colors.bodyText,
-    backgroundColor: theme.colors.accent,
-    marginVertical: 10,
-  },
-  buttonContainer: {
-    flexDirection: 'row',
-    justifyContent: 'center', // Centered
-    width: '100%',
-    marginTop: 20,
-  },
-  actionButton: {
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    borderRadius: theme.radius.sm,
-    minWidth: 100,
-    alignItems: 'center',
-  },
-  actionButtonText: {
-    color: theme.colors.pageBackground,
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
+    centeredView: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor: 'rgba(0,0,0,0.5)',
+      },
+      modalView: {
+        margin: 20,
+        backgroundColor: theme.colors.cardBackground,
+        borderRadius: theme.radius.lg,
+        padding: 25,
+        alignItems: 'center',
+        width: '90%',
+        maxWidth: 340,
+      },
+      modalTitle: {
+        marginBottom: 10,
+        textAlign: 'center',
+        fontSize: 22,
+        fontWeight: '600',
+        color: theme.colors.headingText,
+      },
+      infoText: {
+        marginBottom: 20,
+        textAlign: 'center',
+        fontSize: 14,
+        color: theme.colors.bodyText,
+        paddingHorizontal: 10,
+      },
+      closeButton: {
+        position: 'absolute',
+        top: 10,
+        right: 10,
+        zIndex: 1,
+        padding: 5,
+      },
+      timeRow: {
+        flexDirection: 'row',
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginBottom: 25,
+      },
+      timeBox: {
+        width: 75,
+        height: 65,
+        backgroundColor: theme.colors.accent,
+        borderRadius: theme.radius.md,
+        textAlign: 'center',
+        fontSize: 30,
+        fontWeight: 'bold',
+        borderWidth: 1,
+        borderColor: theme.colors.borderColor,
+        color: theme.colors.headingText,
+      },
+      colon: {
+        fontSize: 32,
+        fontWeight: 'bold',
+        marginHorizontal: 10,
+        color: theme.colors.headingText,
+      },
+      buttonContainer: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        width: '100%',
+        marginTop: 10,
+      },
+      actionButton: {
+        paddingVertical: 12,
+        borderRadius: theme.radius.md,
+        flex: 1,
+        alignItems: 'center',
+        marginHorizontal: 5,
+      },
+      saveButton: {
+        backgroundColor: theme.colors.primary,
+      },
+      clearButton: {
+        backgroundColor: 'transparent',
+        borderWidth: 1,
+        borderColor: theme.colors.danger,
+      },
+      actionButtonText: {
+        color: 'white',
+        fontSize: 16,
+        fontWeight: 'bold',
+      },
+      clearButtonText: {
+        color: theme.colors.danger,
+      }
 });
 
 export default SetAssignmentTimeModal;

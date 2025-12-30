@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { View, TextInput, TouchableOpacity, StyleSheet, Text, FlatList, Platform, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
+import { MediaType } from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system';
 import { theme } from '../theme';
 
@@ -15,7 +16,7 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSendMessage }) => {
 
   const handlePickImage = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      mediaTypes: 'images',
       quality: 1,
       allowsMultipleSelection: true,
       base64: true, // Request base64 directly from ImagePicker

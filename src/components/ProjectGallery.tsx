@@ -40,7 +40,7 @@ const ProjectGallery: React.FC<ProjectGalleryProps> = ({ images, onImagePress })
         onPress={() => onImagePress && onImagePress(images, currentImageIndex)}
         activeOpacity={0.9}
       >
-        <Image source={{ uri: mainImageUri }} style={styles.mainImage} />
+        {mainImageUri ? <Image source={{ uri: mainImageUri }} style={styles.mainImage} /> : <View style={styles.mainImagePlaceholder} />}
         {images.length > 1 && (
           <>
             <TouchableOpacity onPress={goToPreviousImage} style={[styles.arrowButton, styles.leftArrow]}>
@@ -67,7 +67,7 @@ const ProjectGallery: React.FC<ProjectGalleryProps> = ({ images, onImagePress })
                 index === currentImageIndex && styles.thumbnailSelected,
               ]}
             >
-              <Image source={{ uri: imageUri }} style={styles.thumbnailImage} />
+              {imageUri ? <Image source={{ uri: imageUri }} style={styles.thumbnailImage} /> : <View style={styles.thumbnailImagePlaceholder} />}
             </TouchableOpacity>
           ))}
         </ScrollView>
@@ -112,6 +112,13 @@ const styles = StyleSheet.create({
     height: '100%',
     resizeMode: 'cover',
   },
+  mainImagePlaceholder: {
+    width: '100%',
+    height: '100%',
+    backgroundColor: theme.colors.borderColor, // Or any placeholder color
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   arrowButton: {
     position: 'absolute',
     backgroundColor: 'rgba(0,0,0,0.4)',
@@ -146,6 +153,13 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
     resizeMode: 'cover',
+  },
+  thumbnailImagePlaceholder: {
+    width: '100%',
+    height: '100%',
+    backgroundColor: theme.colors.borderColor, // Or any placeholder color
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 });
 

@@ -1,100 +1,85 @@
-import React, { useState, useEffect, useContext } from 'react';
-import { Modal, View, Text, TextInput, Button, StyleSheet, TouchableOpacity } from 'react-native';
-import moment from 'moment';
-import { Employee } from '~/types';
-import { Project } from '../context/ProjectsContext';
-import { Assignment } from '../utils/project-assignment-types';
-import { generateId } from '../utils/generateId';
-import CrossPlatformDatePicker from './CrossPlatformDatePicker';
-import CrossPlatformPicker from './CrossPlatformPicker'; // Import CrossPlatformPicker
+import React, { useState, useContext } from 'react';
+import { Modal, View, Text, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { AssignmentStep } from '~/types';
 import { theme } from '~/theme';
-import { EmployeesContext } from '~/context/EmployeesContext'; // Import EmployeesContext
+import { useAssignments } from '~/context/AssignmentsContext';
+import { useProjects } from '~/context/ProjectsContext';
+import { generateKeyBetween } from '~/utils/fractionalIndexing';
+import { SearchableDropdown } from './SearchableDropdown';
+import Toast from 'react-native-toast-message';
 
 interface AddAssignmentModalProps {
   isVisible: boolean;
   onClose: () => void;
-  employees: Employee[]; // Changed from workers: Worker[]
-  projects: Project[];
-  selectedDate: Date;
-  onSave: (assignment: Assignment) => void;
-  initialProject?: Project;
-  initialEmployee?: Employee; // Changed from initialWorker?: Worker
+  workerId: string | null;
+  assignedDate: string; // YYYY-MM-DD
 }
+
+type AssignmentType = 'project' | 'common_location';
 
 const AddAssignmentModal: React.FC<AddAssignmentModalProps> = ({
   isVisible,
   onClose,
-  employees, // Changed from workers
-  projects,
-  selectedDate,
-  onSave,
-  initialProject,
-  initialEmployee, // Changed from initialWorker
+  workerId,
+  assignedDate,
 }) => {
-  const { employees: contextEmployees } = useContext(EmployeesContext)!; // Renamed to avoid conflict
-  const [selectedWorkerId, setSelectedWorkerId] = useState<string | null>(initialEmployee?.id || (employees.length > 0 ? employees[0].id : null)); // Use initialEmployee
-  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(initialProject?.id || (projects.length > 0 ? projects[0].id : null)); // Use initialProject
-  const [assignmentStartDate, setAssignmentStartDate] = useState(selectedDate);
-  const [assignmentStartTime, setAssignmentStartTime] = useState<string>('09:00'); // Declared startTime as string
-  const [assignmentEndTime, setAssignmentEndTime] = useState<string>('17:00'); // Declared endTime as string
-  const [notes, setNotes] = useState<string>(''); // Declared notes as string
+  const { assignments, insertAssignmentStep, commonLocations } = useAssignments(); // Updated destructuring
+  const { projects } = useProjects();
+  
+  const [assignmentType, setAssignmentType] = useState<AssignmentType>('project');
+  const [selectedItem, setSelectedItem] = useState<{label: string, value: string} | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
 
-  useEffect(() => {
-    if (initialProject) {
-      setSelectedProjectId(initialProject.id);
-    } else if (projects.length > 0) {
-      setSelectedProjectId(projects[0].id);
-    }
-  }, [initialProject, projects]);
+  const projectOptions = projects.map(p => ({ label: p.name, value: p.id }));
+  const locationOptions = commonLocations.map(l => ({ label: l.name, value: l.id }));
 
-  useEffect(() => {
-    if (initialEmployee) { // Use initialEmployee
-      setSelectedWorkerId(initialEmployee.id);
-    } else if (employees.length > 0) {
-      setSelectedWorkerId(employees[0].id);
-    }
-  }, [initialEmployee, employees]);
-
-  const handleSave = () => {
-    if (!selectedWorkerId || !selectedProjectId) {
-      alert('Please select a worker and a project.');
+  const handleSave = async () => {
+    if (!workerId || !selectedItem) {
+      Toast.show({ type: 'error', text1: 'Missing Information', text2: 'Please select a worker and an item to assign.' });
       return;
     }
+    setIsLoading(true);
 
-    let newAssignment: Assignment = {
-      id: generateId(),
-      workerId: selectedWorkerId,
-      projectId: selectedProjectId,
-      startDate: moment(assignmentStartDate).set({
-        hour: parseInt(assignmentStartTime.split(':')[0]),
-        minute: parseInt(assignmentStartTime.split(':')[1]),
-      }).toDate(),
-      endDate: moment(assignmentStartDate).set({
-        hour: parseInt(assignmentEndTime.split(':')[0]),
-        minute: parseInt(assignmentEndTime.split(':')[1]),
-      }).toDate(),
-      notes: notes,
-    };
-    onSave(newAssignment);
-    onClose();
+    // Filter assignments for the target worker and date
+    const workerAssignmentsForDay = assignments.filter(
+        assign => assign.worker_id === workerId && assign.assigned_date === assignedDate
+    ).sort((a, b) => a.sort_key.localeCompare(b.sort_key)); // Ensure sorted for fractional indexing
+    
+    // Check for duplicates
+    if (workerAssignmentsForDay.some(assign => assign.ref_id === selectedItem.value)) {
+        Toast.show({ type: 'info', text1: 'Assignment Exists', text2: 'This item is already assigned to this worker on this day.' });
+        setIsLoading(false);
+        return;
+    }
+
+    const lastIndex = workerAssignmentsForDay.length > 0 ? workerAssignmentsForDay[workerAssignmentsForDay.length - 1].sort_key : null;
+    const newSortKey = generateKeyBetween(lastIndex, null);
+
+    try {
+      await insertAssignmentStep({
+        worker_id: workerId,
+        assigned_date: assignedDate,
+        sort_key: newSortKey,
+        ref_id: selectedItem.value,
+        ref_type: assignmentType,
+        start_time: null, // Default to null for new assignments
+      });
+      Toast.show({ type: 'success', text1: 'Assignment Added' });
+      setSelectedItem(null); // Reset for next time
+      onClose();
+    } catch (error) {
+      console.error("Failed to save assignment:", error);
+      Toast.show({ type: 'error', text1: 'Save Failed', text2: 'Could not add the new assignment.' });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const renderTimePicker = (timeString: string, onTimeChange: (newTimeString: string) => void) => {
-    return (
-      <TextInput
-        style={styles.input}
-        value={timeString}
-        onChangeText={(text) => {
-          // Basic validation for HH:MM format
-          if (/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/.test(text) || text === '') {
-            onTimeChange(text);
-          }
-        }}
-        keyboardType="numbers-and-punctuation"
-        placeholder="HH:MM"
-      />
-    );
-  };
+  const handleSelectItem = (item: {label: string, value: string} | null) => {
+    setSelectedItem(item);
+  }
+
+  const currentOptions = assignmentType === 'project' ? projectOptions : locationOptions;
 
   return (
     <Modal
@@ -106,57 +91,44 @@ const AddAssignmentModal: React.FC<AddAssignmentModalProps> = ({
       <View style={styles.centeredView}>
         <View style={styles.modalView}>
           <Text style={styles.modalTitle}>Add Assignment</Text>
-
-          <View style={styles.formGroup}>
-            <Text style={styles.label}>Worker:</Text>
-            <CrossPlatformPicker
-              selectedValue={selectedWorkerId}
-              onValueChange={(itemValue: string | null) => setSelectedWorkerId(itemValue)}
-              options={employees.map(employee => ({ label: employee.full_name, value: employee.id }))}
-              placeholder="Select Worker"
-            />
+          
+          <View style={styles.toggleContainer}>
+            <TouchableOpacity 
+              style={[styles.toggleButton, assignmentType === 'project' && styles.toggleButtonActive]} 
+              onPress={() => {
+                setAssignmentType('project');
+                setSelectedItem(null);
+              }}
+            >
+              <Text style={[styles.toggleButtonText, assignmentType === 'project' && styles.toggleButtonTextActive]}>Project</Text>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={[styles.toggleButton, assignmentType === 'common_location' && styles.toggleButtonActive]} 
+              onPress={() => {
+                setAssignmentType('common_location');
+                setSelectedItem(null);
+              }}
+            >
+              <Text style={[styles.toggleButtonText, assignmentType === 'common_location' && styles.toggleButtonTextActive]}>Location</Text>
+            </TouchableOpacity>
           </View>
 
           <View style={styles.formGroup}>
-            <Text style={styles.label}>Project:</Text>
-            <CrossPlatformPicker
-              selectedValue={selectedProjectId}
-              onValueChange={(itemValue: string | null) => setSelectedProjectId(itemValue)}
-              options={projects.map(project => ({ label: project.name, value: project.id }))}
-              placeholder="Select Project"
-            />
-          </View>
-
-          <View style={styles.formGroup}>
-            <Text style={styles.label}>Date:</Text>
-            <CrossPlatformDatePicker date={selectedDate} onDateChange={setAssignmentStartDate} />
-          </View>
-
-          <View style={styles.formGroup}>
-            <Text style={styles.label}>Start Time:</Text>
-            {renderTimePicker(assignmentStartTime, setAssignmentStartTime)}
-          </View>
-          <View style={styles.formGroup}>
-            <Text style={styles.label}>End Time:</Text>
-            {renderTimePicker(assignmentEndTime, setAssignmentEndTime)}
-          </View>
-
-          <View style={styles.formGroup}>
-            <Text style={styles.label}>Notes:</Text>
-            <TextInput
-              style={styles.input}
-              value={notes}
-              onChangeText={setNotes}
-              multiline
+            <SearchableDropdown
+              data={currentOptions}
+              onSelect={handleSelectItem}
+              labelExtractor={(item) => item.label}
+              keyExtractor={(item) => item.value}
+              placeholder={`Search for a ${assignmentType}...`}
             />
           </View>
 
           <View style={styles.buttonContainer}>
-            <TouchableOpacity style={[styles.actionButton, { backgroundColor: theme.colors.danger }]} onPress={onClose}>
+            <TouchableOpacity style={[styles.actionButton, styles.cancelButton]} onPress={onClose} disabled={isLoading}>
               <Text style={styles.actionButtonText}>Cancel</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={[styles.actionButton, { backgroundColor: theme.colors.primary }]} onPress={handleSave}>
-              <Text style={styles.actionButtonText}>Save</Text>
+            <TouchableOpacity style={[styles.actionButton, styles.saveButton]} onPress={handleSave} disabled={!selectedItem || isLoading}>
+              {isLoading ? <ActivityIndicator color="#fff" /> : <Text style={styles.actionButtonText}>Save</Text>}
             </TouchableOpacity>
           </View>
         </View>
@@ -175,68 +147,75 @@ const styles = StyleSheet.create({
   modalView: {
     margin: 20,
     backgroundColor: theme.colors.cardBackground,
-    borderRadius: theme.radius.sm,
-    padding: 35,
+    borderRadius: theme.radius.lg,
+    padding: 25,
     alignItems: 'center',
     shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
     shadowRadius: 4,
     elevation: 5,
-    width: '80%',
+    width: '90%',
     maxWidth: 500,
   },
   modalTitle: {
-    marginBottom: 15,
+    marginBottom: 20,
     textAlign: 'center',
-    fontSize: 20,
+    fontSize: 22,
     fontWeight: '600',
     color: theme.colors.headingText,
   },
-  formGroup: {
-    width: '100%',
-    marginBottom: 15,
+  toggleContainer: {
+    flexDirection: 'row',
+    marginBottom: 20,
+    backgroundColor: theme.colors.pageBackground,
+    borderRadius: theme.radius.md,
   },
-  label: {
+  toggleButton: {
+    flex: 1,
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: theme.radius.md,
+    alignItems: 'center',
+  },
+  toggleButtonActive: {
+    backgroundColor: theme.colors.primary,
+  },
+  toggleButtonText: {
     fontSize: 16,
-    marginBottom: 5,
     fontWeight: '500',
     color: theme.colors.bodyText,
   },
-  input: {
-    borderWidth: 1,
-    borderColor: theme.colors.borderColor,
-    borderRadius: theme.radius.sm,
-    padding: 10,
-    fontSize: 16,
-    color: theme.colors.bodyText,
+  toggleButtonTextActive: {
+    color: '#fff',
   },
-  picker: {
-    height: 50,
+  formGroup: {
     width: '100%',
-    borderColor: theme.colors.borderColor,
-    borderWidth: 1,
-    borderRadius: theme.radius.sm,
-    color: theme.colors.bodyText,
+    marginBottom: 20,
+    zIndex: 1000, // For dropdown visibility
   },
   buttonContainer: {
     flexDirection: 'row',
-    justifyContent: 'space-around',
+    justifyContent: 'space-between',
     width: '100%',
     marginTop: 20,
   },
   actionButton: {
-    paddingVertical: 10,
+    paddingVertical: 12,
     paddingHorizontal: 20,
-    borderRadius: theme.radius.sm,
-    minWidth: 100,
+    borderRadius: theme.radius.md,
+    minWidth: 120,
     alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cancelButton: {
+    backgroundColor: theme.colors.accent,
+  },
+  saveButton: {
+    backgroundColor: theme.colors.primary,
   },
   actionButtonText: {
-    color: theme.colors.pageBackground,
+    color: theme.colors.headingText,
     fontSize: 16,
     fontWeight: 'bold',
   },

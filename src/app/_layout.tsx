@@ -106,7 +106,7 @@ export default function RootLayout() {
               // Redirect owner/manager to dashboard, worker to worker home
               router.replace(userRole === 'worker' ? '/(worker)/home' : '/(manager)/dashboard');
             }
-          }    }, [user, segments, isLoading, userRole]);
+          }    }, [user, segments, isLoading, userRole, userCompanyId, isCompanyIdLoading]);
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: theme.colors.pageBackground }}>

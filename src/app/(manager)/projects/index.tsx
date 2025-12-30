@@ -1,10 +1,10 @@
-import React, { useState, useContext, useMemo } from "react";
-import { View, Text, StyleSheet, ScrollView, useWindowDimensions, TextInput, TouchableOpacity, Image, Platform, Animated } from "react-native";
-import { Card } from "~/components/Card"; // Assuming Card is still used or adapted
+import React, { useState, useContext, useMemo, useEffect } from "react";
+import { View, Text, StyleSheet, ScrollView, useWindowDimensions, TextInput, TouchableOpacity, Image, Platform, ActivityIndicator, Animated } from "react-native";
+import { Card } from "~/components/Card";
 import AnimatedScreen from "~/components/AnimatedScreen";
 import { theme } from "~/theme";
 import { useRouter } from "expo-router";
-import { ProjectsContext, Project } from "~/context/ProjectsContext"; // Import Project type
+import { ProjectsContext, Project, ProjectsContextType } from "~/context/ProjectsContext";
 import { Ionicons } from "@expo/vector-icons";
 import { Button } from "~/components/Button";
 import { AssignmentsContext } from "~/context/AssignmentsContext";
@@ -16,7 +16,6 @@ interface DropdownOption {
   value: string;
 }
 
-// typeOptions removed
 const sortOptions: DropdownOption[] = [
   { label: 'Last Modified (Newest)', value: 'newest' },
   { label: 'Alphabetical (A-Z)', value: 'alphabetical' },
@@ -25,26 +24,28 @@ const sortOptions: DropdownOption[] = [
 export default function ManagerProjects() {
   const { width } = useWindowDimensions();
   const router = useRouter();
-  const { projects } = useContext(ProjectsContext)!;
+  const { projects, loadInitialProjects, isLoading: projectsLoading } = useContext(ProjectsContext) as ProjectsContextType;
   const { assignments } = useContext(AssignmentsContext)!;
   
   const [searchTerm, setSearchTerm] = useState('');
-  // selectedType removed
-  const [sortBy, setSortBy] = useState('newest'); // priority and type removed
+  const [sortBy, setSortBy] = useState('newest');
   const [isModalVisible, setModalVisible] = useState(false);
 
+  useEffect(() => {
+    loadInitialProjects();
+  }, [loadInitialProjects]);
+
   const getNumColumns = () => {
-    if (width < 600) return 1; // Mobile
-    if (width < 1200) return 2; // Tablet
-    return 3; // Desktop
+    if (width < 600) return 1;
+    if (width < 1200) return 2;
+    return 3;
   };
 
   const numColumns = getNumColumns();
   const cardWidth = useMemo(() => {
-    // Calculate card width based on number of columns and spacing
-    const totalHorizontalPadding = theme.spacing(1) * 2; // Padding for cards themselves
-    const gutter = theme.spacing(2); // Spacing between cards (half of this on each side)
-    const containerPadding = theme.spacing(3) * 2; // ScrollContentContainer padding
+    const totalHorizontalPadding = theme.spacing(1) * 2;
+    const gutter = theme.spacing(2);
+    const containerPadding = theme.spacing(3) * 2;
 
     const availableWidth = width - containerPadding;
     const itemWidth = (availableWidth - (gutter * (numColumns - 1))) / numColumns;
@@ -56,8 +57,8 @@ export default function ManagerProjects() {
   const getWorkerCountForProject = (projectId: string) => {
     const workerIds = new Set();
     assignments.forEach(assignment => {
-      if (assignment.projectId === projectId) {
-        workerIds.add(assignment.workerId);
+      if (assignment.ref_id === projectId) { // Check ref_id
+        workerIds.add(assignment.worker_id); // Use worker_id
       }
     });
     return workerIds.size;
@@ -66,17 +67,12 @@ export default function ManagerProjects() {
   const sortedAndFilteredProjects = useMemo(() => {
     let currentProjects = [...projects];
 
-    // Filter by search term
     if (searchTerm) {
       currentProjects = currentProjects.filter(project =>
         project.name.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
 
-    // Filter by type removed
-    // Filter by priority removed
-
-    // Sort
     if (sortBy === 'newest') {
       currentProjects.sort((a, b) => new Date(b.lastModified).getTime() - new Date(a.lastModified).getTime());
     } else if (sortBy === 'alphabetical') {
@@ -84,7 +80,7 @@ export default function ManagerProjects() {
     }
 
     return currentProjects;
-  }, [projects, searchTerm, sortBy]); // selectedType and selectedPriority removed
+  }, [projects, searchTerm, sortBy]);
 
   const handleProjectPress = (projectId: string) => {
     router.push(`/(manager)/projects/${projectId}`);
@@ -96,7 +92,6 @@ export default function ManagerProjects() {
 
   const ProjectCardItem = ({ item }: { item: Project }) => {
     const workerCount = getWorkerCountForProject(item.id as string);
-    // Removed isHovered state and onHoverIn/onHoverOut props
 
     return (
       <View style={[styles.cardContainer, { width: cardWidth }]}>
@@ -117,10 +112,10 @@ export default function ManagerProjects() {
             )}
             <View style={styles.cardContent}>
               <Text style={styles.projectName} numberOfLines={1}>{item.name}</Text>
-              <Text style={styles.projectAddress} numberOfLines={1}>{item.address}</Text>
+              <Text style={styles.projectAddress} numberOfLines={1}>{item.address}</Text>        
               <View style={styles.cardFooter}>
                 <View style={styles.footerStat}>
-                  <Ionicons name="people-outline" size={16} color={theme.colors.bodyText} />
+                  <Ionicons name="people-outline" size={16} color={theme.colors.bodyText} />     
                   <Text style={styles.footerStatText}>{workerCount}</Text>
                 </View>
                 <Text style={styles.lastModified}>{new Date(item.lastModified).toLocaleDateString()}</Text>
@@ -134,7 +129,11 @@ export default function ManagerProjects() {
 
   return (
     <AnimatedScreen>
-      <ScrollView style={styles.container} contentContainerStyle={styles.scrollContentContainer}>
+      <ScrollView 
+        style={styles.container} 
+        contentContainerStyle={styles.scrollContentContainer}
+        scrollEventThrottle={400}
+      >
         <Text style={styles.title}>Projects</Text>
         
         <View style={styles.headerControls}>
@@ -146,8 +145,6 @@ export default function ManagerProjects() {
               onChangeText={setSearchTerm}
               placeholderTextColor="#999"
             />
-            {/* Type dropdown removed */}
-            {/* Priority dropdown removed */}
             <CustomDropdown
               data={sortOptions}
               value={sortBy}
@@ -159,13 +156,19 @@ export default function ManagerProjects() {
           <Button title="Create Project" onPress={handleCreateProject} style={styles.createButton} />
         </View>
 
-        <View style={styles.grid}>
-          {sortedAndFilteredProjects.map((item) => (
-            <ProjectCardItem key={item.id} item={item} />
-          ))}
-        </View>
+        {projectsLoading && projects.length === 0 ? (
+          <ActivityIndicator size="large" color={theme.colors.primary} style={{ marginTop: theme.spacing(4) }} />
+        ) : sortedAndFilteredProjects.length === 0 ? (
+          <Text style={styles.noProjectsText}>No projects found matching your criteria.</Text>
+        ) : (
+          <View style={styles.grid}>
+            {sortedAndFilteredProjects.map((item) => (
+              <ProjectCardItem key={item.id} item={item} />
+            ))}
+          </View>
+        )}
       </ScrollView>
-      <CreateProjectModal visible={isModalVisible} onClose={() => setModalVisible(false)} />
+      <CreateProjectModal visible={isModalVisible} onClose={() => setModalVisible(false)} />     
     </AnimatedScreen>
   );
 }
@@ -195,11 +198,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     marginBottom: theme.spacing(2),
-    flex: 1, // Allow filters to take available space
+    flex: 1,
   },
   searchInput: {
     flex: 1,
-    minWidth: 180, // Minimum width for search input
+    minWidth: 180,
     height: 45,
     backgroundColor: theme.colors.cardBackground,
     borderColor: theme.colors.borderColor,
@@ -210,41 +213,35 @@ const styles = StyleSheet.create({
     marginRight: theme.spacing(2),
     color: theme.colors.headingText,
   },
-  dropdownFilter: {
-    width: 150, // Fixed width for filter dropdowns
-    marginRight: theme.spacing(2),
-    marginBottom: theme.spacing(2), // For wrapping on smaller screens
-    zIndex: 10, // Ensure dropdowns appear above content
-  },
   dropdownSort: {
-    width: 180, // Fixed width for sort dropdown
-    zIndex: 10, // Ensure dropdowns appear above content
+    width: 180,
+    zIndex: 10,
   },
   createButton: {
     height: 45,
     paddingHorizontal: theme.spacing(3),
-    marginBottom: theme.spacing(2), // Align with filters if they wrap
+    marginBottom: theme.spacing(2),
   },
   grid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    marginHorizontal: -theme.spacing(1), // Counteract cardContainer padding
+    marginHorizontal: -theme.spacing(1),
   },
   cardContainer: {
-    paddingHorizontal: theme.spacing(1), // Space between cards
+    paddingHorizontal: theme.spacing(1),
     marginBottom: theme.spacing(2),
   },
   projectCardWrapper: {
     borderRadius: theme.radius.lg,
     ...theme.shadow.soft,
-    overflow: 'hidden', // Ensures rounded corners and shadow apply correctly
+    overflow: 'hidden',
     ...Platform.select({
       web: {
         transitionDuration: '0.2s',
         transitionProperty: 'transform, box-shadow',
         '&:hover': {
           transform: 'scale(1.02)',
-          boxShadow: `0px 4px 10px rgba(0,0,0,0.1)`, // A bit more pronounced shadow on hover
+          boxShadow: `0px 4px 10px rgba(0,0,0,0.1)`,
         },
       },
     }),
@@ -252,9 +249,9 @@ const styles = StyleSheet.create({
   projectCard: {
     backgroundColor: theme.colors.cardBackground,
     flexDirection: 'column',
-    borderLeftWidth: theme.spacing(1), // Colored left border
-    paddingBottom: 0, // No padding bottom if footer is there
-    minHeight: 280, // Ensure minimum height for consistency
+    borderLeftWidth: theme.spacing(1),
+    paddingBottom: 0,
+    minHeight: 280,
   },
   projectImage: {
     width: '100%',
@@ -289,7 +286,7 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: theme.colors.borderColor,
     paddingTop: theme.spacing(1.5),
-    marginTop: 'auto', // Pushes footer to bottom
+    marginTop: 'auto',
   },
   footerStat: {
     flexDirection: 'row',
@@ -303,5 +300,11 @@ const styles = StyleSheet.create({
   lastModified: {
     fontSize: 12,
     color: theme.colors.bodyText,
+  },
+  noProjectsText: {
+    textAlign: 'center',
+    fontSize: 16,
+    color: theme.colors.bodyText,
+    marginTop: theme.spacing(4),
   },
 });

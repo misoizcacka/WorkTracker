@@ -24,11 +24,21 @@ export const theme = {
 
   statusColors: {
     successBackground: '#E6F4EA',
-    successText: '#1F7A3F',
-    warningBackground: '#FDECEA',
-    warningText: '#B42318',
-    neutralBackground: '#E8EAF6',
-    neutralText: '#3F51B5',
+    successText: '#16A34A', // Using success color
+    warningBackground: '#FDECEC',
+    warningText: '#DC2626', // Using danger color for warnings related to order violation
+    neutralBackground: '#F0F4F8',
+    neutralText: '#3A3A3C',
+
+    // New status colors for assignments
+    activeBackground: '#E6E6FA', // Light primary muted for active
+    activeText: '#000000', // Dark primary for active
+    completedBackground: '#E0E1E5', // Border color for completed background
+    completedText: '#5A5A5C', // Icon color for completed text
+    nextBackground: '#D1FAE5', // A lighter success shade for 'next'
+    nextText: '#065F46', // A darker success shade for 'next'
+    pendingBackground: '#FFFBEB', // A lighter warning shade for 'pending'
+    pendingText: '#92400E', // A darker warning shade for 'pending'
   },
 
   spacing: (n: number) => n * 8,
