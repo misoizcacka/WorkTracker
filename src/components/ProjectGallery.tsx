@@ -98,7 +98,7 @@ const styles = StyleSheet.create({
   },
   mainImageContainer: {
     width: '100%',
-    aspectRatio: 16 / 9, // Common aspect ratio for images
+    height: 200,
     borderRadius: theme.radius.md,
     overflow: 'hidden',
     backgroundColor: theme.colors.borderColor,

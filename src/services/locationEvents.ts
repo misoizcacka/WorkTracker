@@ -13,6 +13,13 @@ export interface LocationEventRecord {
   notes?: string;
 }
 
+export interface LatestLocation {
+  worker_id: string;
+  latitude: number;
+  longitude: number;
+  timestamp: string;
+}
+
 /**
  * Inserts a new location event record into Supabase.
  */
@@ -29,4 +36,26 @@ export async function insertLocationEvent(event: Omit<LocationEventRecord, 'id' 
   }
 
   return data as LocationEventRecord;
+}
+
+/**
+ * Fetches the most recent location for a given list of worker IDs.
+ * @param workerIds An array of worker UUIDs.
+ * @returns A promise that resolves to an array of LatestLocation objects.
+ */
+export async function fetchLatestLocationForWorkers(workerIds: string[]): Promise<LatestLocation[]> {
+  if (workerIds.length === 0) {
+    return [];
+  }
+
+  const { data, error } = await supabase.rpc('get_latest_worker_locations', {
+    worker_ids: workerIds,
+  });
+
+  if (error) {
+    console.error('Error fetching latest worker locations:', error);
+    throw error;
+  }
+
+  return data as LatestLocation[];
 }

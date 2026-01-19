@@ -225,7 +225,7 @@ export const MapView = React.forwardRef<any, MapViewProps>(({
   const features = useMemo(() => [
     ...selectedWorkers.filter(w => w.location).map(w => ({
       type: 'Feature' as const,
-      properties: { ...w, type: 'worker' as const, lastSeen: moment().subtract(Math.random() * 60, 'minutes').toISOString() },
+      properties: { ...w, type: 'worker' as const, lastSeen: w.lastSeen },
       geometry: { type: 'Point' as const, coordinates: [w.location.longitude, w.location.latitude] },
     })),
     ...selectedProjects.filter(p => p.location).map(p => ({

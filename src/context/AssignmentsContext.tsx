@@ -20,19 +20,29 @@ import {
   endWorkSession as endWorkSessionService,
   updateWorkSessionAssignment as updateWorkSessionAssignmentService,
   fetchWorkSessionsByDate,
+  upsertWorkSessions,
 } from '../services/workSessions';
+import { insertLocationEvent } from '../services/locationEvents';
 import { useSession } from '~/context/AuthContext';
 import { useProjects } from '~/context/ProjectsContext';
+import {
+  startHeartbeatTracking,
+  stopHeartbeatTracking,
+} from '../services/heartbeatTracking';
 import {
   getDb,
   insertLocalAssignment, getLocalAssignments,
   insertLocalWorkSession, updateLocalWorkSession,
   insertLocalLocationEvent, getUnsyncedLocationEvents, markLocationEventsAsSynced,
   getLocalWorkSessions,
+  getUnsyncedWorkSessions,
+  markWorkSessionsAsSynced,
 } from '~/db/database';
 import NetInfo, { NetInfoState } from '@react-native-community/netinfo';
 import * as SQLite from 'expo-sqlite'; // Import SQLite for typing (though no longer SQLiteTransaction)
-import { TransitionEventType } from '~/utils/localTransitionEvents';
+import AsyncStorage from '@react-native-async-storage/async-storage'; // Import AsyncStorage
+import moment from 'moment';
+import { generateId } from '~/utils/generateId';
 
 export type AssignmentStatus = 'active' | 'completed' | 'next' | 'pending';
 
@@ -64,16 +74,25 @@ interface AssignmentsContextType {
   // Work Session Management
   activeWorkSession: WorkSession | null;
   workSessionsToday: WorkSession[];
-  startWorkSession: (assignmentId: string) => Promise<void>;
-  endWorkSession: (sessionId: string) => Promise<void>;
+  startWorkSession: (assignmentId: string, location: { latitude: number; longitude: number }) => Promise<void>;
+  endWorkSession: (sessionId: string, location: { latitude: number; longitude: number }) => Promise<void>;
   updateWorkSessionAssignment: (sessionId: string, newAssignmentId: string) => Promise<void>;
 
   // Offline-First
   syncLocalChanges: () => Promise<void>;
   isOffline: boolean;
+  lastCheckoutAssignmentId: string | null; // New prop
 }
 
 export const AssignmentsContext = React.createContext<AssignmentsContextType | null>(null);
+
+export function useAssignments() {
+  const context = useContext(AssignmentsContext);
+  if (!context) {
+    throw new Error('useAssignments must be used within an AssignmentsProvider');
+  }
+  return context;
+}
 
 const PAGE_SIZE = 50;
 
@@ -91,6 +110,8 @@ export function AssignmentsProvider({ children }: { children: React.ReactNode })
   const [activeWorkSession, setActiveWorkSession] = useState<WorkSession | null>(null);
   const [workSessionsToday, setWorkSessionsToday] = useState<WorkSession[]>([]);
   const [lastCompletedSortKey, setLastCompletedSortKey] = useState<string | null>(null);
+  const [lastCheckoutAssignmentId, setLastCheckoutAssignmentId] = useState<string | null>(null);
+  const [lastCheckoutDate, setLastCheckoutDate] = useState<string | null>(null); // YYYY-MM-DD
 
   // Initialize SQLite DB and listen for network changes, ONLY for workers.
   useEffect(() => {
@@ -106,6 +127,27 @@ export function AssignmentsProvider({ children }: { children: React.ReactNode })
       };
     }
   }, [userRole]);
+
+  // Load last checkout data from AsyncStorage on mount
+  useEffect(() => {
+      const loadLastCheckoutData = async () => {
+          const storedAssignmentId = await AsyncStorage.getItem('lastCheckoutAssignmentId');
+          const storedDate = await AsyncStorage.getItem('lastCheckoutDate');
+          const today = moment().format('YYYY-MM-DD');
+
+          if (storedAssignmentId && storedDate === today) {
+              setLastCheckoutAssignmentId(storedAssignmentId);
+              setLastCheckoutDate(storedDate);
+          } else {
+              // Clear if it's a new day or no data
+              await AsyncStorage.removeItem('lastCheckoutAssignmentId');
+              await AsyncStorage.removeItem('lastCheckoutDate');
+              setLastCheckoutAssignmentId(null);
+              setLastCheckoutDate(null);
+          }
+      };
+      loadLastCheckoutData();
+  }, []);
 
   // Sync local changes when coming online, ONLY for workers
   useEffect(() => {
@@ -133,22 +175,23 @@ export function AssignmentsProvider({ children }: { children: React.ReactNode })
     try {
       // Sync Location Events
       const unsyncedEvents = await getUnsyncedLocationEvents();
-      const successfullySyncedEventIds: number[] = [];
-      for (const event of unsyncedEvents) {
-        // Here you would typically send these events to your Supabase backend
-        // For this example, we'll just log and assume success
-        console.log("Syncing local event:", event);
-        // await supabase.from('location_events').insert({ ...event, synced: true }); // Example
-        successfullySyncedEventIds.push(event.id);
-      }
-      if (successfullySyncedEventIds.length > 0) {
+      if (unsyncedEvents.length > 0) {
+        console.log(`Found ${unsyncedEvents.length} unsynced location events. Syncing...`);
+        await supabase.from('location_events').upsert(unsyncedEvents.map(({ id, synced, ...rest }) => rest));
+        const successfullySyncedEventIds = unsyncedEvents.map(e => e.id);
         await markLocationEventsAsSynced(successfullySyncedEventIds);
         console.log(`Synced ${successfullySyncedEventIds.length} local location events.`);
       }
 
-      // TODO: Implement sync for local_assignments and local_work_sessions
-      // This is a complex step involving conflict resolution and would be part of a full offline-first implementation.
-      // For now, we prioritize syncing events.
+      // Sync Work Sessions
+      const unsyncedWorkSessions = await getUnsyncedWorkSessions();
+      if (unsyncedWorkSessions.length > 0) {
+        console.log(`Found ${unsyncedWorkSessions.length} unsynced work sessions. Syncing...`);
+        await upsertWorkSessions(unsyncedWorkSessions);
+        const successfullySyncedSessionIds = unsyncedWorkSessions.map(ws => ws.id);
+        await markWorkSessionsAsSynced(successfullySyncedSessionIds);
+        console.log(`Synced ${successfullySyncedSessionIds.length} local work sessions.`);
+      }
       
     } catch (err) {
       console.error("Error during sync:", err);
@@ -176,20 +219,6 @@ export function AssignmentsProvider({ children }: { children: React.ReactNode })
     loadActiveWorkSession();
   }, [loadActiveWorkSession]);
 
-  const loadInitialLocations = useCallback(async () => {
-    if (!userCompanyId) return;
-    try {
-      const locations = await fetchCommonLocations();
-      setCommonLocations(locations || []);
-    } catch (err: any) {
-      console.error('Failed to fetch common locations:', err);
-    }
-  }, [userCompanyId]);
-
-  useEffect(() => {
-    loadInitialLocations();
-  }, [loadInitialLocations]);
-
   const loadWorkSessionsForDate = useCallback(
     async (date: string, workerId: string) => {
       if (!userCompanyId) return;
@@ -211,6 +240,15 @@ export function AssignmentsProvider({ children }: { children: React.ReactNode })
       }
     }, [userCompanyId, isOffline]
   );
+
+  useEffect(() => {
+    if (user?.id) {
+        const today = moment().format('YYYY-MM-DD');
+        loadWorkSessionsForDate(today, user.id);
+    }
+  }, [user?.id, loadWorkSessionsForDate]);
+
+
 
   const loadAssignmentsForDate = useCallback(
     async (date: string, workerIds: string[], forceFetchFromSupabase = false) => {
@@ -279,331 +317,264 @@ export function AssignmentsProvider({ children }: { children: React.ReactNode })
         setIsLoading(false);
       }
     },
-    [userCompanyId, isOffline, loadWorkSessionsForDate]
+    [userCompanyId, isOffline, loadWorkSessionsForDate, user]
   );
 
   const clearAssignments = useCallback(() => {
     setAssignments([]);
   }, []);
 
-  const insertAssignmentStep = useCallback(
-    async (record: Omit<AssignmentRecord, 'id' | 'created_at' | 'created_by' | 'company_id'>) => {
-      if (!user || !userCompanyId) return;
+  const insertAssignmentStep = useCallback(async (
+    record: Omit<AssignmentRecord, 'id' | 'created_at' | 'created_by' | 'company_id'>
+  ) => {
+    if (!userCompanyId || !user?.id) return;
+    const newRecord = {
+      ...record,
+      id: generateId(),
+      company_id: userCompanyId,
+      created_by: user.id,
+    };
+    const inserted = await insertAssignment(newRecord);
+    if (inserted) {
+      setAssignments(prev => [...prev, inserted]);
+    }
+  }, [user, userCompanyId]);
 
-      setIsLoading(true);
-      setError(null);
-      const newAssignmentRecord: AssignmentRecord = {
-        ...record,
-        id: `local-${Math.random().toString(36).substring(2, 9)}`, // Generate local ID
-        created_by: user.id,
+  const updateAssignmentSortKey = useCallback(async (id: string, newSortKey: string) => {
+    const updated = await updateAssignment(id, { sort_key: newSortKey });
+    if (updated) {
+      setAssignments(prev => prev.map(a => a.id === id ? updated : a));
+    }
+  }, []);
+
+  const deleteAssignmentStep = useCallback(async (id: string) => {
+    await deleteAssignment(id);
+    setAssignments(prev => prev.filter(a => a.id !== id));
+  }, []);
+
+  const moveAssignmentBetweenWorkers = useCallback(async (
+    id: string,
+    newWorkerId: string,
+    newSortKey: string
+  ) => {
+    const updated = await updateAssignment(id, { worker_id: newWorkerId, sort_key: newSortKey });
+    if (updated) {
+      setAssignments(prev => prev.map(a => a.id === id ? updated : a));
+    }
+  }, []);
+
+  const updateAssignmentStartTime = useCallback(async (id: string, startTime: string | null) => {
+    const updated = await updateAssignment(id, { start_time: startTime });
+    if (updated) {
+      setAssignments(prev => prev.map(a => a.id === id ? updated : a));
+    }
+  }, []);
+
+  const startWorkSession = useCallback(async (assignmentId: string, location: { latitude: number; longitude: number }) => {
+    if (!user?.id || !userCompanyId) return;
+
+    let session: WorkSession;
+
+    if (isOffline) {
+      console.log("Offline: Creating local work session.");
+      const now = new Date().toISOString();
+      const localSession: WorkSession = {
+        id: generateId(),
+        created_at: now,
         company_id: userCompanyId,
-        created_at: new Date().toISOString(),
-        synced: false,
+        worker_id: user.id,
+        assignment_id: assignmentId,
+        start_time: now,
+        end_time: null,
+        total_break_minutes: 0,
+        synced: false, // Mark as not synced
       };
 
       try {
-        console.log("insertAssignmentStep: Entered try block.");
-        if (userRole === 'worker') {
-          await insertLocalAssignment(newAssignmentRecord); // Save to local DB first
-        }
-        setAssignments((prev: AssignmentRecord[]) => [...prev, newAssignmentRecord]);
-
-        if (!isOffline) {
-          console.log("insertAssignmentStep: Attempting to insert into Supabase.");
-          const supabaseRecord = await insertAssignment(newAssignmentRecord);
-          if (supabaseRecord) {
-            console.log("insertAssignmentStep: Supabase insert successful, updating local state with new ID.");
-            if (userRole === 'worker') {
-              // Update local record ID and mark as synced
-              const db = await getDb();
-              await db.runAsync(`UPDATE local_assignments SET id = ?, synced = 1 WHERE id = ?`, [supabaseRecord.id, newAssignmentRecord.id]);
-            }
-            setAssignments((prev: AssignmentRecord[]) =>
-              prev.map(assign => assign.id === newAssignmentRecord.id ? { ...assign, id: supabaseRecord.id, synced: true } : assign)
-            );
-          }
-        }
-      } catch (err: any) {
-        console.error("CRITICAL: Error in insertAssignmentStep:", err);
-        setError(err.message);
-      } finally {
-        setIsLoading(false);
+        await insertLocalWorkSession(localSession);
+        setActiveWorkSession(localSession);
+        setWorkSessionsToday(prev => [...prev, localSession]);
+        session = localSession;
+        console.log("Successfully created local work session.");
+      } catch (err) {
+        console.error("Failed to create local work session:", err);
+        // Re-throw or handle error appropriately for the UI
+        throw new Error("Failed to save check-in locally.");
       }
-    },
-    [user, userCompanyId, isOffline]
-  );
-
-  const updateAssignmentSortKey = useCallback(
-    async (id: string, newSortKey: string) => {
-      setIsLoading(true);
-      setError(null);
+    } else {
+      console.log("Online: Creating Supabase work session.");
       try {
-        const db = await getDb();
-        await db.runAsync(`UPDATE local_assignments SET sort_key = ?, synced = 0 WHERE id = ?`, [newSortKey, id]); // Update local, mark unsynced
-        setAssignments((prev: AssignmentRecord[]) =>
-          prev.map((assign: AssignmentRecord) => (assign.id === id ? { ...assign, sort_key: newSortKey, synced: false } : assign))
-        );
-
-        if (!isOffline) {
-          const updatedRecord = await updateAssignment(id, { sort_key: newSortKey });
-          if (updatedRecord) {
-            await db.runAsync(`UPDATE local_assignments SET synced = 1 WHERE id = ?`, [id]);
-            setAssignments((prev: AssignmentRecord[]) =>
-              prev.map((assign: AssignmentRecord) => (assign.id === id ? { ...assign, synced: true } : assign))
-            );
-          }
+        const remoteSession = await insertWorkSession(user.id, assignmentId, userCompanyId);
+        if (remoteSession) {
+          // Add synced status for UI consistency, though it's implicit
+          const onlineSession = { ...remoteSession, synced: true };
+          setActiveWorkSession(onlineSession);
+          setWorkSessionsToday(prev => [...prev, onlineSession]);
+          session = onlineSession;
+        } else {
+            throw new Error("Failed to create Supabase work session.");
         }
-      } catch (err: any) {
-        setError(err.message);
-      } finally {
-        setIsLoading(false);
+      } catch (err) {
+        console.error("Failed to create Supabase work session:", err);
+        throw err;
       }
-    },
-    [isOffline]
-  );
+    }
 
-  const updateAssignmentStartTime = useCallback(
-    async (id: string, startTime: string | null) => {
-      setIsLoading(true);
-      setError(null);
-      try {
-        const db = await getDb();
-        await db.runAsync(`UPDATE local_assignments SET start_time = ?, synced = 0 WHERE id = ?`, [startTime, id]); // Update local, mark unsynced
-        setAssignments((prev: AssignmentRecord[]) =>
-          prev.map((assign: AssignmentRecord) => (assign.id === id ? { ...assign, start_time: startTime, synced: false } : assign))
-        );
-
-        if (!isOffline) {
-          const updatedRecord = await updateAssignment(id, { start_time: startTime });
-          if (updatedRecord) {
-            await db.runAsync(`UPDATE local_assignments SET synced = 1 WHERE id = ?`, [id]);
-            setAssignments((prev: AssignmentRecord[]) =>
-              prev.map((assign: AssignmentRecord) => (assign.id === id ? { ...assign, synced: true } : assign))
-            );
-          }
-        }
-      } catch (err: any) {
-        setError(err.message);
-      } finally {
-        setIsLoading(false);
-      }
-    },
-    [isOffline]
-  );
-  
-  const deleteAssignmentStep = useCallback(
-    async (id: string) => {
-      setIsLoading(true);
-      setError(null);
-      try {
-        const db = await getDb();
-        // Mark for deletion or just delete locally for now, and ensure it's removed from Supabase
-        await db.runAsync(`DELETE FROM local_assignments WHERE id = ?`, [id]); // Local delete
-        setAssignments((prev: AssignmentRecord[]) => prev.filter((assign: AssignmentRecord) => assign.id !== id));
-
-        if (!isOffline) {
-          await deleteAssignment(id);
-        }
-      } catch (err: any) {
-        setError(err.message);
-      } finally {
-        setIsLoading(false);
-      }
-    },
-    [isOffline]
-  );
-
-  const moveAssignmentBetweenWorkers = useCallback(
-    async (id: string, newWorkerId: string, newSortKey: string) => {
-      setIsLoading(true);
-      setError(null);
-      try {
-        const db = await getDb();
-        await db.runAsync(`UPDATE local_assignments SET worker_id = ?, sort_key = ?, synced = 0 WHERE id = ?`, [newWorkerId, newSortKey, id]); // Update local, mark unsynced
-        setAssignments((prev: AssignmentRecord[]) =>
-          prev.map((assign: AssignmentRecord) =>
-            assign.id === id ? { ...assign, worker_id: newWorkerId, sort_key: newSortKey, synced: false } : assign
-          )
-        );
-
-        if (!isOffline) {
-          const updatedRecord = await updateAssignment(id, {
-            worker_id: newWorkerId,
-            sort_key: newSortKey,
-          });
-          if (updatedRecord) {
-            await db.runAsync(`UPDATE local_assignments SET synced = 1 WHERE id = ?`, [id]);
-            setAssignments((prev: AssignmentRecord[]) => (prev.map(assign => assign.id === id ? { ...assign, synced: true } : assign)));
-          }
-        }
-      } catch (err: any) {
-        setError(err.message);
-      } finally {
-        setIsLoading(false);
-      }
-    },
-    [isOffline]
-  );
-
-  // Work Session Actions
-  const startWorkSession = useCallback(async (assignmentId: string) => {
-    if (!user?.id || !userCompanyId) return;
-    setIsLoading(true);
-setError(null);
+    // After session is created, create location event and start heartbeat
+    await startHeartbeatTracking(assignmentId, userCompanyId, user.id);
     
-    // Frontend validation before calling backend
-    const { error: rpcError } = await supabase.rpc('is_valid_checkin_assignment', {
-      p_worker_id: user.id,
-      p_assignment_id: assignmentId,
-    });
-
-    if (rpcError) {
-      setError("This is not the correct assignment to start.");
-      console.error("RPC validation failed:", rpcError);
-      setIsLoading(false);
-      return;
-    }
-
-    const newSessionRecord: WorkSession = {
-      id: `local-ws-${Math.random().toString(36).substring(2, 9)}`, // Local ID
-      created_at: new Date().toISOString(),
-      company_id: userCompanyId,
-      worker_id: user.id,
-      assignment_id: assignmentId,
-      start_time: new Date().toISOString(),
-      end_time: null,
-      total_break_minutes: 0,
-      synced: false,
+    const locationEvent = {
+        company_id: userCompanyId,
+        worker_id: user.id,
+        assignment_id: assignmentId,
+        type: 'enter_geofence',
+        latitude: location.latitude,
+        longitude: location.longitude,
+        notes: 'Checked in',
     };
-    try {
-      await insertLocalWorkSession(newSessionRecord); // Save to local DB first
-      setActiveWorkSession(newSessionRecord);
 
-      if (!isOffline) {
-        const supabaseSession = await insertWorkSession(user.id, assignmentId, userCompanyId);
-        if (supabaseSession) {
-          // Update local record ID and mark as synced
-          const db = await getDb();
-          await db.runAsync(`UPDATE local_work_sessions SET id = ?, synced = 1 WHERE id = ?`, [supabaseSession.id, newSessionRecord.id]);
-          setActiveWorkSession({ ...supabaseSession, synced: true });
+    if (isOffline) {
+        await insertLocalLocationEvent({
+            ...locationEvent,
+            id: generateId(),
+            created_at: new Date().toISOString(),
+            synced: 0,
+        });
+        console.log("Successfully created local 'enter_geofence' event.");
+    } else {
+        await insertLocationEvent(locationEvent);
+        console.log("Successfully created Supabase 'enter_geofence' event.");
+    }
+
+  }, [user, userCompanyId, isOffline]);
+
+  const endWorkSession = useCallback(async (sessionId: string, location: { latitude: number; longitude: number }) => {
+    if (!user?.id || !userCompanyId) return;
+
+    const sessionToEnd = workSessionsToday.find(s => s.id === sessionId);
+    if (!sessionToEnd) {
+        console.error("Session to end not found in today's sessions.");
+        throw new Error("Session to end not found.");
+    }
+    
+    const locationEvent = {
+        company_id: sessionToEnd.company_id,
+        worker_id: sessionToEnd.worker_id,
+        assignment_id: sessionToEnd.assignment_id,
+        type: 'exit_geofence',
+        latitude: location.latitude,
+        longitude: location.longitude,
+        notes: 'Checked out',
+    };
+
+    // Stop the heartbeat tracking as soon as checkout is initiated
+    await stopHeartbeatTracking();
+
+    if (isOffline) {
+        console.log("Offline: Creating local 'exit_geofence' event.");
+        await insertLocalLocationEvent({
+            ...locationEvent,
+            id: generateId(),
+            created_at: new Date().toISOString(),
+            synced: 0,
+        });
+
+        console.log("Offline: Ending local work session.");
+        const updatedSession = { ...sessionToEnd, end_time: new Date().toISOString(), synced: false };
+        await updateLocalWorkSession(updatedSession);
+        
+        setActiveWorkSession(null);
+        setWorkSessionsToday(prev => prev.map(s => (s.id === sessionId ? updatedSession : s)));
+        
+        const assignmentId = updatedSession.assignment_id;
+        if (assignmentId) {
+            setLastCheckoutAssignmentId(assignmentId);
+            const today = moment().format('YYYY-MM-DD');
+            setLastCheckoutDate(today);
+            await AsyncStorage.setItem('lastCheckoutAssignmentId', assignmentId);
+            await AsyncStorage.setItem('lastCheckoutDate', today);
         }
-      }
-    } catch (err: any) {
-      setError(err.message);
-      console.error('Error starting work session:', err);
-    } finally {
-      setIsLoading(false);
+
+    } else {
+        console.log("Online: Creating Supabase 'exit_geofence' event.");
+        await insertLocationEvent(locationEvent);
+
+        console.log("Online: Ending Supabase work session.");
+        const endedSession = await endWorkSessionService(sessionId);
+        if (endedSession) {
+            setActiveWorkSession(null);
+            setWorkSessionsToday(prev => prev.map(s => s.id === sessionId ? endedSession : s));
+            const assignmentId = endedSession.assignment_id;
+            if (assignmentId) {
+                setLastCheckoutAssignmentId(assignmentId);
+                const today = moment().format('YYYY-MM-DD');
+                setLastCheckoutDate(today);
+                await AsyncStorage.setItem('lastCheckoutAssignmentId', assignmentId);
+                await AsyncStorage.setItem('lastCheckoutDate', today);
+            }
+        }
     }
-  }, [user?.id, userCompanyId, isOffline]);
-
-  const endWorkSession = useCallback(async (sessionId: string) => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      // For workers with local DB, mark the session as ended.
-      if (userRole === 'worker') {
-        const db = await getDb();
-        await db.runAsync(`UPDATE local_work_sessions SET end_time = ?, synced = 0 WHERE id = ?`, [new Date().toISOString(), sessionId]);
-      }
-      
-      // If online, send the update to the backend.
-      if (!isOffline) {
-        await endWorkSessionService(sessionId);
-      }
-
-      // After successfully ending the session, clear it from the app state.
-      setActiveWorkSession(null);
-
-    } catch (err: any) {
-      console.error('Error ending work session:', err);
-      setError(err.message);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [isOffline, userRole]);
+  }, [user, userCompanyId, isOffline, workSessionsToday]);
 
   const updateWorkSessionAssignment = useCallback(async (sessionId: string, newAssignmentId: string) => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      const db = await getDb();
-      await db.runAsync(`UPDATE local_work_sessions SET assignment_id = ?, synced = 0 WHERE id = ?`, [newAssignmentId, sessionId]); // Update local, mark unsynced
-      setActiveWorkSession((prev: WorkSession | null) => prev ? { ...prev, assignment_id: newAssignmentId, synced: false } : null); // Update local state
-
-      if (!isOffline) {
-        const session = await updateWorkSessionAssignmentService(sessionId, newAssignmentId);
-        if (session) {
-          await db.runAsync(`UPDATE local_work_sessions SET synced = 1 WHERE id = ?`, [sessionId]);
-          setActiveWorkSession((prev: WorkSession | null) => prev ? { ...prev, synced: true } : null);
-        }
-      }
-    } catch (err: any) {
-      setError(err.message);
-      console.error('Error updating work session assignment:', err);
-    } finally {
-      setIsLoading(false);
+    const updatedSession = await updateWorkSessionAssignmentService(sessionId, newAssignmentId);
+    if (updatedSession) {
+      setActiveWorkSession(updatedSession);
+      setWorkSessionsToday(prev => prev.map(s => s.id === sessionId ? updatedSession : s));
     }
-  }, [isOffline]);
+  }, []);
 
+  const processedAssignments = useMemo(() => {
+    const workerAssignments: Record<string, AssignmentRecord[]> = {};
+    assignments.forEach(a => {
+      if (!workerAssignments[a.worker_id]) {
+        workerAssignments[a.worker_id] = [];
+      }
+      workerAssignments[a.worker_id].push(a);
+    });
 
-  const processedAssignments = useMemo((): Record<string, ProcessedAssignmentStepWithStatus[]> => {
     const result: Record<string, ProcessedAssignmentStepWithStatus[]> = {};
-    
-    const groupedAssignments = assignments.reduce((acc: Record<string, AssignmentRecord[]>, assignment: AssignmentRecord) => {
-      if (!acc[assignment.worker_id]) {
-        acc[assignment.worker_id] = [];
-      }
-      acc[assignment.worker_id].push(assignment);
-      return acc;
-    }, {} as Record<string, AssignmentRecord[]>);
 
-    for (const workerId in groupedAssignments) {
-        const workerAssignments = groupedAssignments[workerId].sort((a: AssignmentRecord, b: AssignmentRecord) => a.sort_key.localeCompare(b.sort_key));
+    for (const workerId in workerAssignments) {
+      const sortedAssignments = [...workerAssignments[workerId]].sort((a, b) => a.sort_key.localeCompare(b.sort_key));
 
-        let nextAssignmentMarked = false;
-        result[workerId] = workerAssignments.map((record: AssignmentRecord) => {
-            let status: AssignmentStatus;
+      result[workerId] = sortedAssignments.map(assignment => {
+        let status: AssignmentStatus = 'pending';
+        const isActiveSession = activeWorkSession?.assignment_id === assignment.id;
+        const isCompleted = lastCompletedSortKey && assignment.sort_key <= lastCompletedSortKey;
 
-            if (activeWorkSession?.assignment_id === record.id) {
-                status = 'active';
-            } else if (lastCompletedSortKey && record.sort_key < lastCompletedSortKey) {
-                status = 'completed';
-            } else if (!activeWorkSession && !nextAssignmentMarked && (!lastCompletedSortKey || record.sort_key >= lastCompletedSortKey)) {
-                status = 'next';
-                nextAssignmentMarked = true;
-            } else {
-                status = 'pending';
-            }
+        if (isActiveSession) {
+          status = 'active';
+        } else if (isCompleted) {
+          status = 'completed';
+        } else if (lastCompletedSortKey && assignment.sort_key > lastCompletedSortKey) {
+          const previousIndex = sortedAssignments.findIndex(a => a.sort_key === lastCompletedSortKey);
+          const currentIndex = sortedAssignments.findIndex(a => a.id === assignment.id);
+          if (currentIndex === previousIndex + 1) {
+            status = 'next';
+          }
+        } else if (!lastCompletedSortKey && sortedAssignments.indexOf(assignment) === 0) {
+          status = 'next';
+        }
 
-            const processedStep: ProcessedAssignmentStep | null = record.ref_type === 'project'
-              ? {
-                  id: record.id,
-                  sort_key: record.sort_key,
-                  ref_id: record.ref_id,
-                  ref_type: record.ref_type,
-                  start_time: record.start_time,
-                  type: 'project',
-                  project: allProjects.find(p => p.id === record.ref_id),
-                }
-              : {
-                  id: record.id,
-                  sort_key: record.sort_key,
-                  ref_id: record.ref_id,
-                  ref_type: record.ref_type,
-                  start_time: record.start_time,
-                  type: 'common_location',
-                  location: commonLocations.find(l => l.id === record.ref_id),
-                };
-            
-            return { ...processedStep, status };
-        }).filter(Boolean) as ProcessedAssignmentStepWithStatus[];
+        const project = allProjects.find(p => p.id === assignment.ref_id && assignment.ref_type === 'project');
+        const location = commonLocations.find(l => l.id === assignment.ref_id && assignment.ref_type === 'common_location');
+
+        return {
+          ...assignment,
+          id: assignment.id,
+          title: project?.name || location?.name || 'Unknown',
+          type: assignment.ref_type,
+          project: project,
+          location: location,
+          status: status,
+        };
+      });
     }
-    
     return result;
   }, [assignments, allProjects, commonLocations, activeWorkSession, lastCompletedSortKey]);
 
-  const value: AssignmentsContextType = {
-    processedAssignments,
+  const value = {
     assignments,
     commonLocations,
     isLoading,
@@ -616,15 +587,15 @@ setError(null);
     deleteAssignmentStep,
     moveAssignmentBetweenWorkers,
     updateAssignmentStartTime,
-    
     activeWorkSession,
     workSessionsToday,
     startWorkSession,
     endWorkSession,
     updateWorkSessionAssignment,
-
+    processedAssignments,
     syncLocalChanges,
     isOffline,
+    lastCheckoutAssignmentId,
   };
 
   return (
@@ -633,11 +604,3 @@ setError(null);
     </AssignmentsContext.Provider>
   );
 }
-
-export const useAssignments = () => {
-  const context = useContext(AssignmentsContext);
-  if (!context) {
-    throw new Error('useAssignments must be used within an AssignmentsProvider');
-  }
-  return context;
-};

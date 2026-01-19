@@ -26,6 +26,8 @@ import MessageInput from '../../../components/MessageInput';
 import { ProjectsContext, ProjectMessage } from '~/context/ProjectsContext';
 import { useSession } from '~/context/AuthContext';
 
+
+
 export default function ProjectDetailsScreen() {
   const { id } = useLocalSearchParams();
   const router = useRouter();
@@ -77,8 +79,8 @@ export default function ProjectDetailsScreen() {
       );
       
       setAllMessages(prevMessages => isInitialLoad
-        ? fetchedMessages.reverse() // Reverse for initial load to have oldest at top, newest at bottom
-        : [...fetchedMessages.reverse(), ...prevMessages] // Prepend for load more
+        ? fetchedMessages
+        : [...prevMessages, ...fetchedMessages]
       );
       setHasMoreMessages(newHasMore);
       flatListRef.current?.scrollToEnd({ animated: false }); // Scroll to bottom on initial load
@@ -157,6 +159,24 @@ export default function ProjectDetailsScreen() {
     );
   }
 
+  const PageHeader = () => (
+    <View style={styles.pageHeader}>
+        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+            <Ionicons name="arrow-back" size={24} color={theme.colors.headingText} />
+        </TouchableOpacity>
+        <View style={styles.headerTextContainer}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: theme.spacing(1) }}>
+                <View style={[styles.colorIndicator, { backgroundColor: project.color }]} />
+                <Text style={styles.headerTitle}>{project.name}</Text>
+            </View>
+            <TouchableOpacity onPress={handleMapPress} style={styles.addressContainer}>
+                <Ionicons name="location-outline" size={18} color={theme.colors.headingText} />
+                <Text style={styles.headerAddress}>{project.address}</Text>
+            </TouchableOpacity>
+        </View>
+    </View>
+  );
+
   const renderMessage = ({ item }: { item: ProjectMessage }) => {
     const isMyMessage = item.sender_id === user?.id;
     const messageBubbleStyle = isMyMessage ? styles.myMessageBubble : styles.otherMessageBubble;
@@ -172,20 +192,14 @@ export default function ProjectDetailsScreen() {
               <Image source={{ uri: item.image_url }} style={styles.messageImage} />
             </TouchableOpacity>
           )}
-          <Text style={[styles.timestamp, isMyMessage ? styles.myTimestamp : styles.otherTimestamp]}>{new Date(item.created_at).toLocaleTimeString()}</Text>
+          <Text style={[styles.timestamp, isMyMessage ? styles.myTimestamp : styles.otherTimestamp]}>{new Date(item.created_at).toLocaleString()}</Text>
         </View>
       </View>
     );
   };
   
   const ProjectDetails = () => (
-    <View style={styles.detailsColumnHeader}>
-      <Text style={styles.title}>{project.name}</Text>
-      <TouchableOpacity onPress={handleMapPress} style={styles.addressContainer}>
-        <Ionicons name="location-outline" size={18} color={theme.colors.bodyText} />
-        <Text style={styles.addressText}>{project.address}</Text>
-      </TouchableOpacity>
-      
+    <ScrollView style={styles.detailsColumn}>
       <Card style={styles.card}>
         <Text style={styles.cardTitle}>Project Overview</Text>
         <Text style={styles.explanationText}>{project.explanation}</Text>
@@ -214,7 +228,7 @@ export default function ProjectDetailsScreen() {
       </Card>
 
       {!isLargeScreen && <Text style={styles.discussionSectionTitle}>Discussion</Text>}
-    </View>
+    </ScrollView>
   );
 
   const Discussion = () => (
@@ -247,11 +261,15 @@ export default function ProjectDetailsScreen() {
 
   return (
     <AnimatedScreen>
+        <PageHeader />
         <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === "ios" ? "padding" : "height"} keyboardVerticalOffset={Platform.OS === "ios" ? 100 : 0}>
             {isLargeScreen ? (
                 <View style={styles.largeScreenLayout}>
                     <ProjectDetails/>
-                    <Discussion/>
+                    <View style={{flex: 1}}>
+                      <Discussion/>
+                      <MessageInput onSendMessage={handleSendMessage} />
+                    </View>
                 </View>
             ) : (
                 <View style={{ flex: 1 }}>
@@ -300,9 +318,11 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         flex: 1,
     },
-    detailsColumnHeader: {
-        padding: theme.spacing(2),
-        // No borderRightWidth here, as it's now a ListHeaderComponent for FlatList
+    detailsColumn: {
+        flex: 1,
+        padding: theme.spacing(3),
+        borderRightWidth: 1,
+        borderRightColor: theme.colors.borderColor,
     },
     discussionSectionTitle: {
         fontSize: 22,
@@ -311,6 +331,48 @@ const styles = StyleSheet.create({
         marginTop: theme.spacing(3),
         marginBottom: theme.spacing(2),
         paddingHorizontal: theme.spacing(2), // Add horizontal padding for consistency
+    },
+    pageHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingVertical: theme.spacing(3),
+        paddingHorizontal: theme.spacing(3),
+        borderBottomWidth: 1,
+        borderColor: theme.colors.borderColor,
+    },
+    backButton: {
+        marginRight: theme.spacing(2),
+    },
+    headerTextContainer: {
+        // You can add max-width and margin auto for centered content on very wide screens
+    },
+    headerTitle: {
+        fontSize: 28,
+        fontWeight: 'bold',
+        color: theme.colors.headingText,
+    },
+    colorIndicator: {
+        width: 12,
+        height: 12,
+        borderRadius: 6,
+        marginRight: theme.spacing(2),
+    },
+    headerAddress: {
+        color: theme.colors.headingText,
+        marginLeft: theme.spacing(1),
+        fontSize: 14,
+        opacity: 0.8,
+    },
+    addressContainer: { // Re-adding the addressContainer style
+        flexDirection: 'row',
+        alignItems: 'center',
+        // marginBottom: theme.spacing(2), // Removed as it's part of the header now
+    },
+    addressText: { // Re-adding the addressText style
+        color: theme.colors.headingText,
+        marginLeft: theme.spacing(1),
+        fontSize: 16,
+        opacity: 0.8,
     },
     title: {
         fontSize: 28,
@@ -331,16 +393,6 @@ const styles = StyleSheet.create({
         fontSize: 16,
         color: theme.colors.bodyText,
         lineHeight: 24,
-    },
-    addressContainer: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        marginBottom: theme.spacing(2),
-    },
-    addressText: {
-        color: theme.colors.bodyText,
-        marginLeft: theme.spacing(1),
-        fontSize: 16,
     },
     projectImage: {
         height: 200,
@@ -385,17 +437,20 @@ const styles = StyleSheet.create({
         alignSelf: 'flex-start',
     },
     messageBubble: {
-        paddingVertical: 10,
-        paddingHorizontal: 14,
-        borderRadius: 20,
+        paddingVertical: 12,
+        paddingHorizontal: 16,
+        borderRadius: 22,
+        maxWidth: '100%', // Ensure bubble does not exceed parent
     },
     myMessageBubble: {
         backgroundColor: theme.colors.primary,
-        borderBottomRightRadius: 4,
+        borderBottomRightRadius: 6,
     },
     otherMessageBubble: {
         backgroundColor: theme.colors.cardBackground,
-        borderBottomLeftRadius: 4,
+        borderWidth: 1,
+        borderColor: theme.colors.borderColor,
+        borderBottomLeftRadius: 6,
     },
     myMessageText: {
         color: 'white',
@@ -407,21 +462,22 @@ const styles = StyleSheet.create({
     },
     senderName: {
         fontSize: 14,
-        fontWeight: '600',
-        color: theme.colors.primary,
-        marginBottom: 4,
+        fontWeight: 'bold',
+        color: theme.colors.headingText,
+        marginBottom: 6,
     },
     timestamp: {
-        fontSize: 10,
-        color: theme.colors.bodyText,
-        marginTop: 4,
+        fontSize: 11,
+        opacity: 0.7,
+        marginTop: 6,
     },
     myTimestamp: {
         alignSelf: 'flex-end',
-        color: 'rgba(255,255,255,0.7)'
+        color: 'rgba(255,255,255,0.8)'
     },
     otherTimestamp: {
         alignSelf: 'flex-start',
+        color: theme.colors.bodyText,
     },
     messageImage: {
         width: 200,

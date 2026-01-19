@@ -51,6 +51,29 @@ export async function insertWorkSession(workerId: string, assignmentId: string, 
 }
 
 /**
+ * Upserts an array of work sessions into Supabase.
+ * This is used to sync offline-created sessions.
+ * @param sessions The array of WorkSession objects to upsert.
+ * @returns The upserted WorkSession objects.
+ */
+export async function upsertWorkSessions(sessions: WorkSession[]): Promise<WorkSession[]> {
+  // We need to remove the 'synced' and any other local-only properties before sending to Supabase
+  const sessionsToUpsert = sessions.map(({ synced, worker_assignments, ...rest }) => rest);
+
+  const { data, error } = await supabase
+    .from('work_sessions')
+    .upsert(sessionsToUpsert, { onConflict: 'id' })
+    .select();
+
+  if (error) {
+    console.error('Error upserting work sessions:', error);
+    throw error;
+  }
+
+  return data as WorkSession[];
+}
+
+/**
  * Ends an existing work session.
  * @param sessionId The ID of the session to end.
  * @returns The updated WorkSession.
@@ -116,7 +139,7 @@ export async function updateWorkSessionAssignment(
 export async function fetchWorkSessionsByDate(workerId: string, date: string): Promise<WorkSession[]> {
   const { data, error } = await supabase
     .from('work_sessions')
-    .select('*, worker_assignments!inner(sort_key)')
+    .select('*, worker_assignments!inner(sort_key, ref_id, ref_type)')
     .eq('worker_id', workerId)
     .gte('start_time', `${date}T00:00:00.000Z`)
     .lte('start_time', `${date}T23:59:59.999Z`)
@@ -156,4 +179,28 @@ export async function updateWorkSession(
   }
 
   return data as WorkSession;
+}
+
+/**
+ * Fetches all work sessions for a given worker within a specific date range.
+ * @param workerId The ID of the worker.
+ * @param startDate The start date of the range.
+ * @param endDate The end date of the range.
+ * @returns An array of WorkSession objects.
+ */
+export async function fetchWorkSessionsByDateRange(workerId: string, startDate: string, endDate: string): Promise<WorkSession[]> {
+  const { data, error } = await supabase
+    .from('work_sessions')
+    .select('*, worker_assignments!inner(ref_id, ref_type)')
+    .eq('worker_id', workerId)
+    .gte('start_time', startDate)
+    .lte('start_time', endDate)
+    .order('start_time', { ascending: false });
+
+  if (error) {
+    console.error('Error fetching work sessions by date range:', error);
+    throw error;
+  }
+
+  return data as WorkSession[];
 }

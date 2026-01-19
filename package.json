@@ -54,6 +54,7 @@
     "expo-splash-screen": "~31.0.11",
     "expo-sqlite": "^16.0.10",
     "expo-status-bar": "~3.0.8",
+    "expo-task-manager": "^14.0.9",
     "geolib": "^3.3.4",
     "i18n-js": "^4.5.1",
     "i18next": "^25.6.3",

@@ -1,7 +1,6 @@
-// Placeholder for local storage/emission of transition events.
-// In a full offline-first implementation, this would save to a local database (e.g., SQLite).
-// For now, it logs to the console.
-export type TransitionEventType = 'enter_geofence' | 'exit_geofence';
+import { insertLocalLocationEvent } from '~/db/database';
+
+export type TransitionEventType = 'enter_geofence' | 'exit_geofence' | 'periodic_update';
 
 interface TransitionEvent {
   timestamp: string;
@@ -12,8 +11,20 @@ interface TransitionEvent {
   notes?: string;
 }
 
-export function saveLocalTransitionEvent(event: TransitionEvent) {
-  console.log(`[LOCAL EVENT - ${event.type.toUpperCase()}]`, event);
-  // TODO: In a real offline-first scenario, save this event to local storage (e.g., SQLite)
-  // And implement a synchronization mechanism to push these events to the backend when online.
+export async function saveLocalTransitionEvent(event: TransitionEvent) {
+  try {
+    console.log(`[SAVING LOCAL EVENT - ${event.type.toUpperCase()}]`, event);
+    await insertLocalLocationEvent({
+      timestamp: event.timestamp,
+      type: event.type,
+      assignment_id: event.assignmentId,
+      worker_id: event.workerId,
+      latitude: event.location.latitude,
+      longitude: event.location.longitude,
+      notes: event.notes,
+      synced: 0, // Mark as not synced
+    });
+  } catch (err) {
+    console.error("Failed to save local transition event:", err);
+  }
 }

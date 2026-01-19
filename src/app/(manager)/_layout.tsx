@@ -125,9 +125,9 @@ export default function TabsLayout() { // Renamed from ManagerLayout
             />
 
             <Drawer.Screen
-              name="project-assignment"
+              name="worker-assignment"
               options={{
-                title: "Project Assignment",
+                title: "Worker Assignment",
                 drawerIcon: ({ color, size }: { color: string; size: number }) => (
                   <Ionicons name="calendar-outline" color={color} size={size} />
                 ),
@@ -224,9 +224,9 @@ export default function TabsLayout() { // Renamed from ManagerLayout
             />
 
             <BottomTabs.Screen
-              name="project-assignment"
+              name="worker-assignment"
               options={{
-                title: "Assignment",
+                title: "Worker Assignment",
                 tabBarIcon: ({ color, size }: { color: string; size: number }) => (
                   <Ionicons name="calendar-outline" color={color} size={size} />
                 ),

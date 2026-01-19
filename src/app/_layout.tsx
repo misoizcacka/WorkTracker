@@ -15,6 +15,9 @@ import { theme } from '../theme';
 
 import Toast from 'react-native-toast-message';
 
+// Register the background task
+import '../tasks/locationHeartbeatTask';
+
 export default function RootLayout() {
   return (
     <SafeAreaProvider>

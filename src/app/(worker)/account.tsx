@@ -12,17 +12,18 @@ import { Ionicons } from "@expo/vector-icons";
 
 export default function WorkerAccountScreen() {
   const tabBarHeight = useBottomTabBarHeight();
-  const { signOut, user } = useSession()!;
-  const [isBiometricSupported, setIsBiometricSupported] = useState(false);
-  const [[isLoading, isBiometricEnabled], setIsBiometricEnabled] = useStorageState('biometricEnabled');
+  const { signOut, user, userRole, userCompanyName } = useSession()!; // Destructure userRole and userCompanyName
 
-  // Mock user data
-  const mockUser = {
-    firstName: "John",
-    lastName: "Worker",
-    email: user?.email || "worker@example.com",
-    role: "Construction Worker",
-  };
+  const [isBiometricSupported, setIsBiometricSupported] = useState(false);
+  const [biometricEnabledState, setIsBiometricEnabled] = useStorageState('biometricEnabled');
+  const isBiometricEnabled = biometricEnabledState[1];
+
+  const fullName = user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'N/A';
+  const firstName = fullName.split(' ')[0] || 'N/A';
+  const lastName = fullName.split(' ').slice(1).join(' ') || '';
+  const email = user?.email || "N/A";
+
+  const displayRole = userRole ? userRole.charAt(0).toUpperCase() + userRole.slice(1) : 'Worker';
 
   useEffect(() => {
     (async () => {
@@ -39,7 +40,7 @@ export default function WorkerAccountScreen() {
           promptMessage: 'Authenticate to enable biometric login',
         });
         if (result.success) {
-          await setStorageItemAsync('biometricUser', JSON.stringify({ email: mockUser.email }));
+          await setStorageItemAsync('biometricUser', JSON.stringify({ email: email }));
           setIsBiometricEnabled('true');
         }
       } else {
@@ -62,14 +63,15 @@ export default function WorkerAccountScreen() {
             <View style={styles.avatar}>
               <Ionicons name="person-outline" size={50} color={theme.colors.primary} />
             </View>
-            <Text style={styles.name}>{`${mockUser.firstName} ${mockUser.lastName}`}</Text>
-            <Text style={styles.role}>{mockUser.role}</Text>
+            <Text style={styles.name}>{`${firstName} ${lastName}`}</Text>
+            <Text style={styles.role}>{displayRole}</Text>
+            {userCompanyName && <Text style={styles.companyName}>{userCompanyName}</Text>}
           </Card>
 
           <Card style={styles.detailsCard}>
             <View style={styles.detailItem}>
               <Ionicons name="mail-outline" size={24} color={theme.colors.bodyText} />
-              <Text style={styles.detailText}>{mockUser.email}</Text>
+              <Text style={styles.detailText}>{email}</Text>
             </View>
           </Card>
 
@@ -141,6 +143,11 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: theme.colors.bodyText,
     marginTop: 4,
+  },
+  companyName: {
+    fontSize: 14,
+    color: theme.colors.bodyText,
+    marginTop: theme.spacing(1),
   },
   detailsCard: {
     padding: theme.spacing(2),

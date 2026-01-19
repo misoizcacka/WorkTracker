@@ -83,7 +83,9 @@ export default function ProjectAssignmentScreen() {
   };
 
   const filteredWorkers = employees.filter(employee =>
-    employee.full_name.toLowerCase().includes(searchTerm.toLowerCase())
+    employee.full_name.toLowerCase().includes(searchTerm.toLowerCase()) &&
+    employee.role === 'worker' &&
+    employee.id !== user?.id
   );
 
   const filteredProjects = React.useMemo(() => 
@@ -95,7 +97,7 @@ export default function ProjectAssignmentScreen() {
   
   // NEW: Filtered locations
   const filteredLocations = React.useMemo(() =>
-      commonLocations.filter(location =>
+      commonLocations.filter((location: CommonLocation) =>
           location.name.toLowerCase().includes(searchTermLocation.toLowerCase())
       ),
       [commonLocations, searchTermLocation]
@@ -120,7 +122,7 @@ export default function ProjectAssignmentScreen() {
 
     const workerIdsToFetch = newlySelectedWorkers
       .map(w => w.id)
-      .filter(id => !assignments.some(assign => assign.worker_id === id && assign.assigned_date === dateStr));
+      .filter(id => !assignments.some((assign: AssignmentRecord) => assign.worker_id === id && assign.assigned_date === dateStr));
 
     if (workerIdsToFetch.length > 0) {
       loadAssignmentsForDate(dateStr, workerIdsToFetch);
@@ -179,7 +181,7 @@ export default function ProjectAssignmentScreen() {
       const currentWorkerAssignments = getWorkerAssignments(workerId);
       
       console.log(currentWorkerAssignments)
-      if (currentWorkerAssignments.some(assign => assign.ref_id === draggedItemRefId)) { 
+      if (currentWorkerAssignments.some((assign: ProcessedAssignmentStep) => assign.ref_id === draggedItemRefId)) { 
         Toast.show({ type: 'info', text1: 'Assignment Exists', text2: 'This item is already assigned to this worker on this day.' });
         return;
       }
@@ -208,14 +210,14 @@ export default function ProjectAssignmentScreen() {
       const workerId = source.droppableId.replace('worker-', '');
       const currentWorkerAssignments = getWorkerAssignments(workerId);
       
-      const movedAssignment = currentWorkerAssignments.find(assign => assign.id === draggableId);
+      const movedAssignment = currentWorkerAssignments.find((assign: ProcessedAssignmentStep) => assign.id === draggableId);
       if (!movedAssignment) return;
 
       const tempSequence = Array.from(currentWorkerAssignments);
       tempSequence.splice(source.index, 1); // Remove from source
       tempSequence.splice(destination.index, 0, movedAssignment); // Insert at destination (local simulation)
 
-      const newSortKey = calculateNewSortKey(destination.index, tempSequence);
+      const newSortKey = calculateNewSortKey(destination.index, tempSequence as (ProcessedAssignmentStep | AssignmentRecord)[]);
 
       try {
         await updateAssignmentSortKey(movedAssignment.id, newSortKey);
@@ -235,10 +237,10 @@ export default function ProjectAssignmentScreen() {
       const sourceWorkerAssignments = getWorkerAssignments(sourceWorkerId);
       const destWorkerAssignments = getWorkerAssignments(destWorkerId);
 
-      const movedAssignment = sourceWorkerAssignments.find(assign => assign.id === draggableId);
+      const movedAssignment = sourceWorkerAssignments.find((assign: ProcessedAssignmentStep) => assign.id === draggableId);
       if (!movedAssignment) return;
 
-      if (destWorkerAssignments.some(assign => assign.ref_id === movedAssignment.ref_id)) {
+      if (destWorkerAssignments.some((assign: ProcessedAssignmentStep) => assign.ref_id === movedAssignment.ref_id)) {
         Toast.show({ type: 'info', text1: 'Assignment Exists', text2: 'This item is already assigned to this worker on this day.' });
         return;
       }
@@ -407,7 +409,7 @@ export default function ProjectAssignmentScreen() {
                                 {...provided.droppableProps}
                                 style={{flex: 1}}
                             >
-                            {filteredLocations.map((item, index) => (
+                            {filteredLocations.map((item: CommonLocation, index: number) => (
                             <DraggableLocationItem
                               key={item.id}
                               item={item}

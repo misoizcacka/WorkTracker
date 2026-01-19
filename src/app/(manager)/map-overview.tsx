@@ -1,6 +1,7 @@
-import React, { useState, useContext, useMemo } from 'react';
+import React, { useState, useContext, useMemo, useEffect } from 'react';
 import { View, Text, StyleSheet, Image, TextInput, FlatList, TouchableOpacity, ScrollView, Platform } from 'react-native';
 import { MapView } from '../../components/MapView';
+import { useSession } from '~/context/AuthContext';
 import { EmployeesContext, EmployeesContextType } from '~/context/EmployeesContext';
 import { Project, ProjectsContext, ProjectsContextType } from '~/context/ProjectsContext';
 import { theme } from '../../theme'; // Corrected import path
@@ -8,6 +9,7 @@ import AnimatedScreen from '../../components/AnimatedScreen'; // Corrected impor
 import { Ionicons } from '@expo/vector-icons'; 
 
 import { Employee } from '../../types';
+import { fetchLatestLocationForWorkers, LatestLocation } from '~/services/locationEvents';
 
 
 function hexToRgba(hex: string, alpha: number) {
@@ -22,13 +24,26 @@ function hexToRgba(hex: string, alpha: number) {
 }
 
 export default function MapOverviewScreen() { 
+  const { user } = useSession();
   const { employees } = useContext(EmployeesContext) as EmployeesContextType;
   const { projects } = useContext(ProjectsContext) as ProjectsContextType; // Explicitly typed
 
   const [selectedWorkers, setSelectedWorkers] = useState<Employee[]>([]);
   const [selectedProjects, setSelectedProjects] = useState<Project[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
-  const [searchTermProject, setSearchTermProject] = useState(''); 
+  const [searchTermProject, setSearchTermProject] = useState('');
+  const [workerLocations, setWorkerLocations] = useState<LatestLocation[]>([]);
+
+  useEffect(() => {
+    if (selectedWorkers.length > 0) {
+      const workerIds = selectedWorkers.map(w => w.id);
+      fetchLatestLocationForWorkers(workerIds).then(locations => {
+        setWorkerLocations(locations);
+      });
+    } else {
+      setWorkerLocations([]);
+    }
+  }, [selectedWorkers]);
 
   const handleWorkerPress = (employee: Employee) => {
     setSelectedWorkers(prev =>
@@ -47,7 +62,9 @@ export default function MapOverviewScreen() {
   };
 
   const filteredWorkers = employees.filter((employee: Employee) => // Explicitly typed
-    employee.full_name.toLowerCase().includes(searchTerm.toLowerCase())
+    employee.full_name.toLowerCase().includes(searchTerm.toLowerCase()) &&
+    employee.role === 'worker' &&
+    employee.id !== user?.id
   );
 
   const filteredProjects = useMemo(() =>
@@ -90,12 +107,20 @@ export default function MapOverviewScreen() {
   };
 
   const mapViewSelectedWorkers = useMemo(() => {
-    return selectedWorkers.map((e: Employee) => ({
-      id: e.id,
-      name: e.full_name,
-      avatar: e.avatar_url ?? undefined, // Convert null to undefined
-    }));
-  }, [selectedWorkers]);
+    return selectedWorkers.map((e: Employee) => {
+      const locationData = workerLocations.find(l => l.worker_id === e.id);
+      return {
+        id: e.id,
+        name: e.full_name,
+        avatar: e.avatar_url ?? undefined,
+        location: locationData ? {
+          latitude: locationData.latitude,
+          longitude: locationData.longitude,
+        } : undefined,
+        lastSeen: locationData?.timestamp,
+      };
+    });
+  }, [selectedWorkers, workerLocations]);
 
   const mapViewSelectedProjects = useMemo(() => {
     return selectedProjects.map(p => ({

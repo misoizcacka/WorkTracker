@@ -1,4 +1,5 @@
 import * as SQLite from 'expo-sqlite';
+import { WorkSession } from '~/types';
 
 // Define the database name
 const DB_NAME = 'workhourstracker.db';
@@ -189,4 +190,20 @@ export async function markLocationEventsAsSynced(eventIds: number[]) {
         `UPDATE local_location_events SET synced = 1 WHERE id IN (${placeholders})`,
         ...eventIds
     );
+}
+
+export async function getUnsyncedWorkSessions(): Promise<WorkSession[]> {
+  const db = await getDb();
+  const result = await db.getAllAsync(`SELECT * FROM local_work_sessions WHERE synced = 0`);
+  return result as WorkSession[];
+}
+
+export async function markWorkSessionsAsSynced(sessionIds: string[]) {
+  if (sessionIds.length === 0) return;
+  const db = await getDb();
+  const placeholders = sessionIds.map(() => '?').join(',');
+  return db.runAsync(
+      `UPDATE local_work_sessions SET synced = 1 WHERE id IN (${placeholders})`,
+      ...sessionIds
+  );
 }

@@ -11,11 +11,10 @@ import {
   Image,
   Text,
   ScrollView,
-  Dimensions,
   Linking,
   ActivityIndicator,
 } from 'react-native';
-import { useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router'; // Added useRouter
 import { Card } from '../../../components/Card';
 import { theme } from '../../../theme';
 import AnimatedScreen from '../../../components/AnimatedScreen';
@@ -26,10 +25,9 @@ import { MapView, Marker } from '../../../components/MapView';
 import ImageCarouselModal from '../../../components/ImageCarouselModal';
 import { useProjects, ProjectMessage } from '../../../context/ProjectsContext';
 
-const { width } = Dimensions.get('window');
-
 export default function ProjectDetailsScreen() {
   const { id } = useLocalSearchParams();
+  const router = useRouter(); // Initialize useRouter
   const { projects, isLoading, getProjectMessages, sendTextMessage, sendImageMessage } = useProjects();
   const project = projects.find((p) => p.id === id as string);
 
@@ -199,19 +197,29 @@ export default function ProjectDetailsScreen() {
     </View>
   );
 
+  const PageHeader = () => (
+    <View style={styles.pageHeader}>
+        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+            <Ionicons name="arrow-back" size={24} color={theme.colors.headingText} />
+        </TouchableOpacity>
+        <View style={[styles.colorIndicator, { backgroundColor: project.color || theme.colors.primary }]} />
+        <View style={styles.headerTextContainer}>
+            <Text style={styles.headerTitle} numberOfLines={1}>{project.name}</Text>
+            <Text style={styles.headerAddress} numberOfLines={1}>{project.address}</Text>
+        </View>
+    </View>
+  );
+
   return (
     <AnimatedScreen>
+      <PageHeader /> {/* New Header */}
       <KeyboardAvoidingView
         style={styles.container}
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         keyboardVerticalOffset={Platform.OS === "ios" ? 50 : 0}
       >
         <ScrollView style={{ flex: 1 }}>
-          {/* ... (rest of the JSX is the same) ... */}
-          <View style={styles.headerCard}>
-            <Text style={styles.title}>{project.name}</Text>
-            <Text style={styles.addressText}>{project.address}</Text>
-          </View>
+          {/* Original headerCard content removed */}
 
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Project Overview</Text>
@@ -321,21 +329,37 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: theme.colors.pageBackground,
   },
-  headerCard: {
-    padding: theme.spacing(2),
+  pageHeader: { // New header style
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: theme.spacing(2),
+    paddingHorizontal: theme.spacing(2),
     borderBottomWidth: 1,
     borderBottomColor: theme.colors.borderColor,
-    backgroundColor: 'white',
+    backgroundColor: 'white', // White background as requested
   },
-  title: {
-    fontSize: 24,
+  backButton: {
+    marginRight: theme.spacing(2),
+    padding: theme.spacing(1),
+  },
+  colorIndicator: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    marginRight: theme.spacing(2),
+  },
+  headerTextContainer: {
+    flex: 1,
+  },
+  headerTitle: {
+    fontSize: 22, // Matching manager's header title
     fontWeight: 'bold',
     color: theme.colors.headingText,
   },
-  addressText: {
+  headerAddress: {
     color: theme.colors.bodyText,
-    marginTop: 4,
-    fontSize: 16,
+    marginTop: 2,
+    fontSize: 16, // Matching manager's header address
   },
   section: {
     marginTop: theme.spacing(2),
@@ -356,8 +380,8 @@ const styles = StyleSheet.create({
     paddingVertical: theme.spacing(1),
   },
   projectImage: {
-    width: width * 0.7,
-    height: width * 0.5,
+    width: 280, // Fixed width
+    height: 180, // Fixed height
     borderRadius: theme.radius.md,
     marginRight: theme.spacing(2),
   },

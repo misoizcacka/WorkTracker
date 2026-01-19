@@ -1,106 +1,168 @@
-import React, { useState } from "react";
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, Platform, TextInput } from "react-native";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, Platform, TextInput, ActivityIndicator } from "react-native";
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { Card } from "../../components/Card";
 import AnimatedScreen from "../../components/AnimatedScreen";
 import { theme } from "../../theme";
 import { Ionicons } from "@expo/vector-icons";
+import { useSession } from '~/context/AuthContext';
+import { useProjects } from '~/context/ProjectsContext';
+import { useAssignments } from '~/context/AssignmentsContext'; // For commonLocations
+import { fetchWorkSessionsByDateRange } from '../../services/workSessions';
+import moment from 'moment';
+import CrossPlatformDatePicker from '../../components/CrossPlatformDatePicker';
 
-const FILTERS = ["Yesterday", "This Week", "Last Week", "This Month", "Custom"];
+const FILTERS = ["Last 7 Days", "This Month", "Previous Month", "Custom"] as const;
 
-interface Session {
+interface ProcessedSession {
   id: string;
   date: string;
-  project: string;
-  address: string;
+  projectName: string;
+  projectAddress: string;
   hours: number;
 }
 
-interface MockDataEntry {
-  sessions: Session[];
-  total: number;
-  avg: number;
-}
-
-interface MockData {
-  [key: string]: MockDataEntry;
-}
-
-const mockData: MockData = {
-  "Yesterday": {
-    sessions: [
-      { id: "4", date: "2025-11-10", project: "Facade Inspection", address: "Berlin", hours: 8.0 },
-    ],
-    total: 8.0,
-    avg: 8.0,
-  },
-  "This Week": {
-    sessions: [
-      { id: "1", date: "2025-11-10", project: "Facade Inspection", address: "Berlin", hours: 8.0 },
-      { id: "2", date: "2025-11-08", project: "Rooftop Garden Setup", address: "Berlin", hours: 6.5 },
-    ],
-    total: 14.5,
-    avg: 7.25,
-  },
-  "Last Week": {
-    sessions: [
-      { id: "5", date: "2025-11-03", project: "Office Renovation", address: "Potsdam", hours: 7.5 },
-      { id: "6", date: "2025-11-04", project: "Office Renovation", address: "Potsdam", hours: 8.0 },
-      { id: "7", date: "2025-11-05", project: "Apartment Painting", address: "Berlin", hours: 8.0 },
-      { id: "8", date: "2025-11-06", project: "Apartment Painting", address: "Berlin", hours: 8.0 },
-      { id: "9", date: "2025-11-07", project: "Retail Construction", address: "Berlin", hours: 6.0 },
-    ],
-    total: 37.5,
-    avg: 7.5,
-  },
-  "This Month": {
-    sessions: [
-        { id: "1", date: "2025-11-10", project: "Facade Inspection", address: "Berlin", hours: 8.0 },
-        { id: "2", date: "2025-11-08", project: "Rooftop Garden Setup", address: "Berlin", hours: 6.5 },
-        { id: "5", date: "2025-11-03", project: "Office Renovation", address: "Potsdam", hours: 7.5 },
-        { id: "6", date: "2025-11-04", project: "Office Renovation", address: "Potsdam", hours: 8.0 },
-        { id: "7", date: "2025-11-05", project: "Apartment Painting", address: "Berlin", hours: 8.0 },
-        { id: "8", date: "2025-11-06", project: "Apartment Painting", address: "Berlin", hours: 8.0 },
-        { id: "9", date: "2025-11-07", project: "Retail Construction", address: "Berlin", hours: 6.0 },
-    ],
-    total: 52.0,
-    avg: 7.43,
-  },
-  "Custom": {
-    sessions: [],
-    total: 0,
-    avg: 0,
-  }
-};
-
 export default function WorkerDashboardScreen() {
   const tabBarHeight = useBottomTabBarHeight();
-  const [selectedFilter, setSelectedFilter] = useState<keyof MockData>("This Week");
+  const [selectedFilter, setSelectedFilter] = useState<"Last 7 Days" | "This Month" | "Previous Month" | "Custom">("This Month");
+  const [workSessions, setWorkSessions] = useState<ProcessedSession[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const data = mockData[selectedFilter];
+  const [customStartDate, setCustomStartDate] = useState<Date | null>(null);
+  const [customEndDate, setCustomEndDate] = useState<Date | null>(null);
 
-  const renderSession = ({ item }: { item: Session }) => (
+  const { user } = useSession()!;
+  const { projects } = useProjects();
+  const { commonLocations } = useAssignments();
+
+  useEffect(() => {
+    if (Platform.OS === 'web') {
+      // For web, CustomInput needs to be defined within the render scope or passed as a prop
+      // to access theme. For now, this is a placeholder.
+    }
+  }, []);
+
+  const fetchData = useCallback(async () => {
+    if (!user?.id) return;
+
+    setLoading(true);
+    setError(null);
+    let startDate: moment.Moment | null = null;
+    let endDate: moment.Moment | null = null;
+
+    const today = moment();
+
+    switch (selectedFilter) {
+      case "Last 7 Days":
+        startDate = today.clone().subtract(6, 'days').startOf('day');
+        endDate = today.clone().endOf('day');
+        break;
+      case "This Month":
+        startDate = today.clone().startOf('month');
+        endDate = today.clone().endOf('month');
+        break;
+      case "Previous Month":
+        startDate = today.clone().subtract(1, 'month').startOf('month');
+        endDate = today.clone().subtract(1, 'month').endOf('month');
+        break;
+      case "Custom":
+        if (customStartDate && customEndDate) {
+          startDate = moment(customStartDate).startOf('day');
+          endDate = moment(customEndDate).endOf('day');
+        }
+        break;
+    }
+
+    if (startDate && endDate) {
+      try {
+        const fetchedSessions = await fetchWorkSessionsByDateRange(user.id, startDate.toISOString(), endDate.toISOString());
+
+        const processed = fetchedSessions.map(session => {
+          // Calculate duration in hours
+          const start = moment(session.start_time);
+          const end = session.end_time ? moment(session.end_time) : moment(); // If session is active, use current time
+          const hours = moment.duration(end.diff(start)).asHours();
+
+          // Find associated project or location details
+          const assignmentRef = session.worker_assignments; // Access the joined data
+          let projectName = "Unknown";
+          let projectAddress = "N/A";
+
+          if (assignmentRef) {
+            if (assignmentRef.ref_type === 'project') {
+              const project = projects.find(p => p.id === assignmentRef.ref_id);
+              if (project) {
+                projectName = project.name;
+                projectAddress = project.address;
+              }
+            } else if (assignmentRef.ref_type === 'common_location') {
+              const location = commonLocations.find(l => l.id === assignmentRef.ref_id);
+              if (location) {
+                projectName = location.name;
+                // No address for common locations by default, could add if needed
+                projectAddress = "";
+              }
+            }
+          }
+
+          return {
+            id: session.id,
+            date: moment(session.start_time).format('YYYY-MM-DD'),
+            projectName,
+            projectAddress,
+            hours,
+          };
+        });
+        setWorkSessions(processed);
+      } catch (err: any) {
+        console.error("Error fetching work sessions:", err);
+        setError("Failed to load work sessions.");
+      }
+    } else {
+      setWorkSessions([]);
+    }
+    setLoading(false);
+  }, [selectedFilter, customStartDate, customEndDate, user?.id, projects, commonLocations]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  const totalHours = useMemo(() => {
+    return workSessions.reduce((sum, session) => sum + session.hours, 0);
+  }, [workSessions]);
+
+  const avgDailyHours = useMemo(() => {
+    if (workSessions.length === 0) return 0;
+    const uniqueDates = new Set(workSessions.map(session => session.date)).size;
+    return totalHours / uniqueDates;
+  }, [workSessions, totalHours]);
+
+  const renderSession = ({ item }: { item: ProcessedSession }) => (
     <Card style={styles.sessionCard}>
       <View style={styles.sessionHeader}>
         <Text style={styles.sessionDate}>{item.date}</Text>
-        <Text style={styles.sessionHours}>{item.hours.toFixed(1)} hrs</Text>
       </View>
-      <Text style={styles.sessionProject}>{item.project}</Text>
-      <Text style={styles.sessionAddress}>{item.address}</Text>
+      <Text style={styles.sessionProject}>{item.projectName}</Text>
+      <Text style={styles.sessionAddress}>{item.projectAddress}</Text>
     </Card>
   );
 
-  const CustomDatePicker = () => (
+  const CustomDatePickerComponent = () => (
     <View style={styles.datePickerContainer}>
       <View style={styles.dateInputGroup}>
-        <Text style={styles.datePickerLabel}>Start Date</Text>
-        <TextInput placeholder="YYYY-MM-DD" style={styles.dateInput} />
+        <Text style={styles.datePickerLabel}>Select Month</Text>
+        <CrossPlatformDatePicker
+          date={customStartDate || new Date()}
+          onDateChange={(newDate) => {
+            setCustomStartDate(moment(newDate).startOf('month').toDate());
+            setCustomEndDate(moment(newDate).endOf('month').toDate());
+          }}
+          mode="month"
+        />
       </View>
-      <View style={styles.dateInputGroup}>
-        <Text style={styles.datePickerLabel}>End Date</Text>
-        <TextInput placeholder="YYYY-MM-DD" style={styles.dateInput} />
-      </View>
-      <TouchableOpacity style={styles.datePickerButton}>
+      <TouchableOpacity style={styles.datePickerButton} onPress={fetchData}>
         <Text style={styles.datePickerButtonText}>Apply</Text>
       </TouchableOpacity>
     </View>
@@ -110,27 +172,33 @@ export default function WorkerDashboardScreen() {
     <AnimatedScreen>
       <View style={[styles.container, { paddingBottom: tabBarHeight }]}>
         <FlatList
-          data={data.sessions}
+          data={workSessions}
           keyExtractor={(item) => item.id}
           ListHeaderComponent={
             <>
               <View style={styles.header}>
                 <Text style={styles.title}>Dashboard</Text>
+                {loading && <ActivityIndicator size="small" color={theme.colors.primary} style={{ marginLeft: theme.spacing(1) }} />}
               </View>
               
               <Card style={styles.summaryCard}>
                 <Text style={styles.summaryPeriod}>{selectedFilter}</Text>
-                <View style={styles.summaryMetrics}>
-                  <View style={styles.metric}>
-                    <Text style={styles.metricValue}>{data.total.toFixed(1)}</Text>
-                    <Text style={styles.metricLabel}>Total Hours</Text>
+                {error ? (
+                  <Text style={styles.errorText}>{error}</Text>
+                ) : (
+                  <View style={styles.summaryMetrics}>
+                    <View style={styles.metric}>
+                      <Text style={styles.metricValue}>{totalHours.toFixed(1)}</Text>
+                      <Text style={styles.metricLabel}>Total Hours</Text>
+                    </View>
+                    <View style={styles.metric}>
+                      <Text style={styles.metricValue}>{avgDailyHours.toFixed(1)}</Text>
+                      <Text style={styles.metricLabel}>Avg. Daily</Text>
+                    </View>
                   </View>
-                  <View style={styles.metric}>
-                    <Text style={styles.metricValue}>{data.avg.toFixed(1)}</Text>
-                    <Text style={styles.metricLabel}>Avg. Daily</Text>
-                  </View>
-                </View>
+                )}
               </Card>
+
 
               <View style={styles.filterContainer}>
                 <FlatList
@@ -151,7 +219,7 @@ export default function WorkerDashboardScreen() {
                 />
               </View>
 
-              {selectedFilter === 'Custom' && <CustomDatePicker />}
+              {selectedFilter === 'Custom' && <CustomDatePickerComponent />}
 
               <Text style={styles.sessionsTitle}>Work History</Text>
             </>
@@ -206,6 +274,11 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: theme.colors.bodyText,
     marginTop: 4,
+  },
+  errorText: {
+    color: theme.colors.danger,
+    textAlign: 'center',
+    fontSize: 16,
   },
   filterContainer: {
     paddingVertical: theme.spacing(2),

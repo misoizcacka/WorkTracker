@@ -1,6 +1,6 @@
 import React, { useState, useContext } from 'react';
 import { Modal, View, Text, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
-import { AssignmentStep } from '~/types';
+import { AssignmentStep, AssignmentRecord } from '~/types';
 import { theme } from '~/theme';
 import { useAssignments } from '~/context/AssignmentsContext';
 import { useProjects } from '~/context/ProjectsContext';
@@ -31,7 +31,7 @@ const AddAssignmentModal: React.FC<AddAssignmentModalProps> = ({
   const [isLoading, setIsLoading] = useState(false);
 
   const projectOptions = projects.map(p => ({ label: p.name, value: p.id }));
-  const locationOptions = commonLocations.map(l => ({ label: l.name, value: l.id }));
+  const locationOptions = commonLocations.map((l: { name: string; id: string; }) => ({ label: l.name, value: l.id }));
 
   const handleSave = async () => {
     if (!workerId || !selectedItem) {
@@ -42,11 +42,11 @@ const AddAssignmentModal: React.FC<AddAssignmentModalProps> = ({
 
     // Filter assignments for the target worker and date
     const workerAssignmentsForDay = assignments.filter(
-        assign => assign.worker_id === workerId && assign.assigned_date === assignedDate
-    ).sort((a, b) => a.sort_key.localeCompare(b.sort_key)); // Ensure sorted for fractional indexing
+        (assign: AssignmentRecord) => assign.worker_id === workerId && assign.assigned_date === assignedDate
+    ).sort((a: AssignmentRecord, b: AssignmentRecord) => a.sort_key.localeCompare(b.sort_key)); // Ensure sorted for fractional indexing
     
     // Check for duplicates
-    if (workerAssignmentsForDay.some(assign => assign.ref_id === selectedItem.value)) {
+    if (workerAssignmentsForDay.some((assign: AssignmentRecord) => assign.ref_id === selectedItem.value)) {
         Toast.show({ type: 'info', text1: 'Assignment Exists', text2: 'This item is already assigned to this worker on this day.' });
         setIsLoading(false);
         return;
@@ -117,8 +117,8 @@ const AddAssignmentModal: React.FC<AddAssignmentModalProps> = ({
             <SearchableDropdown
               data={currentOptions}
               onSelect={handleSelectItem}
-              labelExtractor={(item) => item.label}
-              keyExtractor={(item) => item.value}
+              labelExtractor={(item) => item?.label ?? ''}
+              keyExtractor={(item) => item?.value ?? ''}
               placeholder={`Search for a ${assignmentType}...`}
             />
           </View>

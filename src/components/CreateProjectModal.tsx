@@ -280,14 +280,6 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({ visible,
                 ))}
               </ScrollView>
             )}
-
-            <ThemedInput
-              style={[styles.inputField, styles.multilineInput]}
-              placeholder="Notes"
-              value={notes}
-              onChangeText={setNotes}
-              multiline
-            />
             
             <View style={styles.buttonContainer}>
               <Button onPress={handleCreate} disabled={isCreateButtonDisabled} style={styles.createButton}>

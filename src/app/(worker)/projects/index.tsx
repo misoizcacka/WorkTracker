@@ -1,5 +1,5 @@
-import React, { useMemo, useState, useRef, useEffect } from 'react';
-import { StyleSheet, ScrollView, View, Text, TouchableOpacity, LayoutChangeEvent, ActivityIndicator } from 'react-native';
+import React, { useMemo, useState, useRef, useEffect, useCallback } from 'react';
+import { StyleSheet, ScrollView, View, Text, TouchableOpacity, LayoutChangeEvent, ActivityIndicator, RefreshControl } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Card } from '../../../components/Card';
 import { theme } from '../../../theme';
@@ -62,7 +62,7 @@ const TimelineCard = ({ item, onPress, onLayout }: { item: TimelineItem; onPress
           <Text style={styles.itemTimeText}>No specific time</Text>
         )}
       </View>
-      <TouchableOpacity onPress={() => onPress(item.ref_id)} disabled={item.type === 'common_location'}> {/* Disable if common_location */}
+      <TouchableOpacity onPress={() => onPress(item.ref_id)} disabled={item.type === 'common_location'}>
         <Card style={[styles.itemCard, { borderColor: statusStyle.dotColor, borderWidth: item.status !== 'Not Started' ? 1 : 0 }]}>
           <Text style={styles.subtitle}>{item.name}</Text>
           {item.address ? <Text style={styles.addressText}>{item.address}</Text> : null}
@@ -84,14 +84,25 @@ export default function ProjectsScreen() {
   const { processedAssignments, loadAssignmentsForDate, isLoading: assignmentsLoading } = useAssignments();
   const [cardLayouts, setCardLayouts] = useState<{ [key: string]: { y: number, height: number } }>({});
   const containerRef = useRef<ScrollView>(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
-  // Fetch assignments for the worker for today
-  useEffect(() => {
+  const fetchData = useCallback(async (forceFetchFromSupabase = false) => {
     if (user?.id) {
       const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
-      loadAssignmentsForDate(today, [user.id]);
+      await loadAssignmentsForDate(today, [user.id], forceFetchFromSupabase);
     }
   }, [user?.id, loadAssignmentsForDate]);
+
+  // Fetch assignments for the worker for today on mount
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  const onRefresh = useCallback(async () => {
+    setIsRefreshing(true);
+    await fetchData(true); // Force fetch from Supabase
+    setIsRefreshing(false);
+  }, [fetchData]);
 
   const currentWorkersAssignments = user?.id ? processedAssignments[user.id] || [] : [];
 
@@ -165,7 +176,20 @@ export default function ProjectsScreen() {
 
   return (
     <AnimatedScreen>
-      <ScrollView style={styles.container} ref={containerRef} contentContainerStyle={styles.scrollContentContainer}>
+      <ScrollView 
+        style={styles.container} 
+        ref={containerRef} 
+        contentContainerStyle={styles.scrollContentContainer}
+        refreshControl={
+          <RefreshControl 
+            refreshing={isRefreshing} 
+            onRefresh={onRefresh} 
+            tintColor={theme.colors.primary} // iOS
+            progressBackgroundColor={theme.colors.cardBackground} // Android
+            colors={[theme.colors.primary]} // Android
+          />
+        }
+      >
         <Text style={styles.title}>Today's Plan</Text>
         
         {assignmentsLoading && todaysPlan.length === 0 ? (

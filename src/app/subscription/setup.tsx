@@ -7,6 +7,7 @@ import { supabase } from '../../utils/supabase'; // Import supabase
 import { Button } from '../../components/Button';
 import { theme } from '../../theme';
 import AnimatedScreen from '../../components/AnimatedScreen';
+import { setStorageItemAsync } from '../../hooks/useStorageState';
 // import { EmployeesContext } from '../../context/EmployeesContext'; // Removed EmployeesContext import
 
 const { width } = Dimensions.get('window');
@@ -18,7 +19,7 @@ const MAX_WORKERS = 200; // Increased maximum workers
 const MIN_WORKERS = 1; // Minimum workers
 
 export default function SubscriptionSetup() {
-  const { user, userCompanyId, isCompanyIdLoading } = useSession()!; // Get userCompanyId and isCompanyIdLoading from AuthContext
+  const { user, userCompanyId, isCompanyIdLoading, signOut } = useSession()!; // Get userCompanyId and isCompanyIdLoading from AuthContext
 
   const router = useRouter();
   const [workerCount, setWorkerCount] = useState(MIN_WORKERS);
@@ -52,6 +53,11 @@ export default function SubscriptionSetup() {
     }
   };
 
+  const handleCancel = async () => {
+    await setStorageItemAsync('pendingSubscription', null);
+    signOut();
+  };
+
   const handleContinue = async () => {
     setError(null);
     setIsSubmitting(true);
@@ -81,7 +87,7 @@ export default function SubscriptionSetup() {
       }
 
       // Save chosen workerCount locally before redirecting
-      localStorage.setItem('pendingSubscription', JSON.stringify({ workerCount, calculatedPrice }));
+      await setStorageItemAsync('pendingSubscription', JSON.stringify({ workerCount, calculatedPrice }));
 
       // Call backend to create checkout session
       const { data, error: funcError } = await supabase.functions.invoke('create-checkout-session', {
@@ -194,6 +200,13 @@ export default function SubscriptionSetup() {
               textStyle={styles.primaryButtonText}
             >
               {isSubmitting ? <ActivityIndicator color="#fff" /> : <Text style={styles.primaryButtonText}>Proceed to Payment</Text>}
+            </Button>
+            <Button
+              onPress={handleCancel}
+              style={styles.cancelButton}
+              textStyle={styles.cancelButtonText}
+            >
+              Cancel
             </Button>
           </View>
         </ScrollView>
@@ -341,6 +354,19 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   primaryButtonText: {
+    color: 'white',
+    fontSize: 18,
+    fontWeight: 'bold',
+    textAlign: 'center',
+  },
+  cancelButton: {
+    backgroundColor: theme.colors.danger,
+    marginTop: theme.spacing(2),
+    height: 50,
+    justifyContent: 'center',
+    borderRadius: theme.radius.md,
+  },
+  cancelButtonText: {
     color: 'white',
     fontSize: 18,
     fontWeight: 'bold',
