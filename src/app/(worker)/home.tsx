@@ -41,11 +41,25 @@ export default function WorkerHomeScreen() {
   const [locationPermission, setLocationPermission] = useState<Location.PermissionStatus | null>(null);
   const [isAssignmentSelectionModalVisible, setIsAssignmentSelectionModalVisible] = useState(false);
   const [selectedNextAssignmentId, setSelectedNextAssignmentId] = useState<string | null>(null);
+  const [currentDate, setCurrentDate] = useState(moment().format('YYYY-MM-DD'));
+
 
   const { user } = useSession()!;
   const { processedAssignments, loadAssignmentsForDate, loadWorkSessionsForDate, isLoading: assignmentsLoading, activeWorkSession, startWorkSession, endWorkSession, updateWorkSessionAssignment, lastCheckoutAssignmentId } = useAssignments();
 
   const ACCEPTABLE_DISTANCE = 150; // meters
+
+  // Update date state if the day changes
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const today = moment().format('YYYY-MM-DD');
+      if (today !== currentDate) {
+        setCurrentDate(today);
+      }
+    }, 60000); // Check every minute
+
+    return () => clearInterval(interval);
+  }, [currentDate]);
 
   // Request permissions on mount
   useEffect(() => {
@@ -157,14 +171,23 @@ export default function WorkerHomeScreen() {
     ? targetAssignmentForGeofence.project.address
     : "";
 
-  // Fetch assignments and work sessions for the worker for today
+  // Fetch assignments and work sessions based on the user's check-in status
   useEffect(() => {
     if (user?.id) {
-      const today = moment().format('YYYY-MM-DD');
-      loadAssignmentsForDate(today, [user.id]);
-      loadWorkSessionsForDate(today, user.id); // Load work sessions as well
+      // If there is an active session, load data for THAT session's date.
+      if (activeWorkSession && activeWorkSession.worker_assignments) {
+        const dateToLoad = activeWorkSession.worker_assignments.assigned_date;
+        loadAssignmentsForDate(dateToLoad, [user.id]);
+        loadWorkSessionsForDate(dateToLoad, user.id);
+      } 
+      // If there is no active session (and we have finished loading it), load data for TODAY.
+      else if (activeWorkSession === null) { 
+        loadAssignmentsForDate(currentDate, [user.id]);
+        loadWorkSessionsForDate(currentDate, user.id);
+      }
+      // If activeWorkSession is undefined, we are still loading it, so do nothing.
     }
-  }, [user?.id, loadAssignmentsForDate, loadWorkSessionsForDate]);
+  }, [user?.id, activeWorkSession, loadAssignmentsForDate, loadWorkSessionsForDate, currentDate]);
 
   // ⏱ Track elapsed time
   useEffect(() => {

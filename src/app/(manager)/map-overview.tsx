@@ -75,16 +75,25 @@ export default function MapOverviewScreen() {
   );
 
   const renderWorkerItem = ({ item }: { item: Employee }) => {
-    const isSelected = selectedWorkers.some(e => e.id === item.id); 
+    const isSelected = selectedWorkers.some(e => e.id === item.id);
+    const itemNameColor = isSelected ? theme.colors.primary : styles.itemName.color;
+    const itemSubtitleColor = isSelected ? theme.colors.bodyText : styles.itemSubtitle.color; // Keep bodyText or adjust if needed
+    const iconColor = isSelected ? theme.colors.primary : theme.colors.bodyText; // For person placeholder
+    const checkmarkColor = isSelected ? theme.colors.primary : theme.colors.primary; // For checkmark icon
+
     return (
       <TouchableOpacity onPress={() => handleWorkerPress(item)} style={styles.listItem}>
         <View style={[styles.itemContent, isSelected && styles.selectedItem]}>
-          <Image source={{ uri: item.avatar_url || undefined }} style={styles.avatar} />
+          {item.avatar_url ? (
+            <Image source={{ uri: item.avatar_url }} style={styles.avatar} />
+          ) : (
+            <Ionicons name="person" size={40} color={iconColor} style={styles.avatarPlaceholder} />
+          )}
           <View style={styles.itemInfo}>
-            <Text style={styles.itemName}>{item.full_name}</Text>
-            <Text style={styles.itemSubtitle}>{item.email}</Text>
+            <Text style={[styles.itemName, { color: itemNameColor }]}>{item.full_name}</Text>
+            <Text style={[styles.itemSubtitle, { color: itemSubtitleColor }]}>{item.email}</Text>
           </View>
-          {isSelected && <Ionicons name="checkmark-circle" size={20} color={theme.colors.primary} />}
+          {isSelected && <Ionicons name="checkmark-circle" size={20} color={checkmarkColor} />}
         </View>
       </TouchableOpacity>
     );
@@ -290,5 +299,12 @@ const styles = StyleSheet.create({
   itemSubtitle: {
     fontSize: 12,
     color: theme.colors.bodyText,
+  },
+  avatarPlaceholder: {
+    width: 40,
+    height: 40,
+    marginRight: theme.spacing(2),
+    textAlign: 'center',
+    lineHeight: 40,
   },
 });

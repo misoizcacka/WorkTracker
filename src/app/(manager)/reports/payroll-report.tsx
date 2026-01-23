@@ -1,82 +1,102 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, useWindowDimensions, TouchableOpacity } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, ScrollView, ActivityIndicator } from 'react-native';
 import AnimatedScreen from '../../../components/AnimatedScreen';
 import { Card } from '../../../components/Card';
 import { theme } from '../../../theme';
 import { Dropdown } from 'react-native-element-dropdown';
 import { Button } from '../../../components/Button';
+import { supabase } from '../../../utils/supabase';
 
-// Mock Data
-const payrollData = [
-  { id: '1', name: 'John Worker', rate: 20, regularHours: 160, otHours: 8 },
-  { id: '2', name: 'Maria Builder', rate: 22, regularHours: 150, otHours: 10 },
-  { id: '3', name: 'Lars Mason', rate: 25, regularHours: 160, otHours: 0 },
-  { id: '4', name: 'Chen Architect', rate: 35, regularHours: 160, otHours: 15 },
-  { id: '5', name: 'Fatima Engineer', rate: 30, regularHours: 140, otHours: 0 },
+interface PayrollReportItem {
+  worker_id: string;
+  worker_name: string;
+  total_work_hours: number;
+  total_break_minutes: number;
+  payable_hours: number;
+}
+
+const months = [
+  { label: 'January', value: 1 },
+  { label: 'February', value: 2 },
+  { label: 'March', value: 3 },
+  { label: 'April', value: 4 },
+  { label: 'May', value: 5 },
+  { label: 'June', value: 6 },
+  { label: 'July', value: 7 },
+  { label: 'August', value: 8 },
+  { label: 'September', value: 9 },
+  { label: 'October', value: 10 },
+  { label: 'November', value: 11 },
+  { label: 'December', value: 12 },
 ];
 
-const employees = payrollData.map(e => ({ label: e.name, value: e.id }));
-employees.unshift({ label: 'All Employees', value: 'all' });
-
-type Range = 'yesterday' | 'last_week' | 'this_month';
+const currentYear = new Date().getFullYear();
+const years = Array.from({ length: 5 }, (_, i) => ({
+  label: (currentYear - i).toString(),
+  value: currentYear - i,
+}));
 
 const PayrollReport = () => {
-  const { width } = useWindowDimensions();
-  const isLargeScreen = width >= 768;
+  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
+  const [selectedYear, setSelectedYear] = useState(currentYear);
+  const [reportData, setReportData] = useState<PayrollReportItem[]>([]);
+  const [loading, setLoading] = useState(false);
 
-  const [selectedRange, setSelectedRange] = useState<Range>('this_month');
-  const [selectedEmployee, setSelectedEmployee] = useState('all');
+  useEffect(() => {
+    const fetchReportData = async () => {
+      setLoading(true);
+      const { data, error } = await supabase.rpc('get_monthly_payroll_report', {
+        report_year: selectedYear,
+        report_month: selectedMonth,
+      });
 
-  const getGrossPay = (rate: number, regular: number, ot: number) => {
-    const otRate = rate * 1.5;
-    return (regular * rate) + (ot * otRate);
-  };
+      if (error) {
+        console.error('Error fetching payroll report:', error);
+        setReportData([]);
+      } else {
+        setReportData(data || []);
+      }
+      setLoading(false);
+    };
 
-  const filteredData = payrollData.filter(item => 
-    selectedEmployee === 'all' || item.id === selectedEmployee
-  );
+    fetchReportData();
+  }, [selectedMonth, selectedYear]);
 
-  const totalRegularHours = filteredData.reduce((sum, item) => sum + item.regularHours, 0);
-  const totalOtHours = filteredData.reduce((sum, item) => sum + item.otHours, 0);
-  const totalWages = filteredData.reduce((sum, item) => sum + getGrossPay(item.rate, item.regularHours, item.otHours), 0);
-
-  const rangeButtons: { label: string, value: Range }[] = [
-    { label: "Yesterday", value: "yesterday" },
-    { label: "Last Week", value: "last_week" },
-    { label: "This Month", value: "this_month" },
-  ];
+  const totalWorkHours = reportData.reduce((sum, item) => sum + (item.total_work_hours || 0), 0);
+  const totalBreakMinutes = reportData.reduce((sum, item) => sum + (item.total_break_minutes || 0), 0);
+  const totalPayableHours = reportData.reduce((sum, item) => sum + (item.payable_hours || 0), 0);
 
   return (
     <AnimatedScreen>
       <ScrollView style={styles.container} contentContainerStyle={styles.scrollContentContainer}>
-        <Text style={styles.title}>Payroll Report</Text>
+        <Text style={styles.title}>Monthly Payroll Report</Text>
 
         {/* --- Filters --- */}
         <Card style={styles.filterCard}>
           <View style={styles.filterControls}>
-            <View style={styles.rangeSelector}>
-              {rangeButtons.map(button => (
-                <TouchableOpacity 
-                  key={button.value} 
-                  style={[styles.rangeButton, selectedRange === button.value && styles.rangeButtonActive]} 
-                  onPress={() => setSelectedRange(button.value)}
-                >
-                  <Text style={[styles.rangeButtonText, selectedRange === button.value && styles.rangeButtonTextActive]}>{button.label}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
             <Dropdown
               style={styles.dropdown}
               placeholderStyle={styles.placeholderStyle}
               selectedTextStyle={styles.selectedTextStyle}
-              data={employees}
+              data={months}
               maxHeight={300}
               labelField="label"
               valueField="value"
-              placeholder="Select Employee"
-              value={selectedEmployee}
-              onChange={item => setSelectedEmployee(item.value)}
+              placeholder="Select Month"
+              value={selectedMonth}
+              onChange={item => setSelectedMonth(item.value)}
+            />
+            <Dropdown
+              style={[styles.dropdown, { marginLeft: theme.spacing(2) }]}
+              placeholderStyle={styles.placeholderStyle}
+              selectedTextStyle={styles.selectedTextStyle}
+              data={years}
+              maxHeight={300}
+              labelField="label"
+              valueField="value"
+              placeholder="Select Year"
+              value={selectedYear}
+              onChange={item => setSelectedYear(item.value)}
             />
           </View>
         </Card>
@@ -85,44 +105,48 @@ const PayrollReport = () => {
         <Card style={styles.tableCard}>
           <View style={styles.tableHeader}>
             <Text style={[styles.tableHeaderText, styles.colEmployee]}>Employee</Text>
-            <Text style={[styles.tableHeaderText, styles.colNumeric]}>Rate</Text>
-            <Text style={[styles.tableHeaderText, styles.colNumeric]}>Regular (hrs)</Text>
-            <Text style={[styles.tableHeaderText, styles.colNumeric]}>OT (hrs)</Text>
-            <Text style={[styles.tableHeaderText, styles.colGrossPay]}>Gross Pay</Text>
+            <Text style={[styles.tableHeaderText, styles.colNumeric]}>Total Hours</Text>
+            <Text style={[styles.tableHeaderText, styles.colNumeric]}>Break (mins)</Text>
+            <Text style={[styles.tableHeaderText, styles.colPayable]}>Payable Hours</Text>
           </View>
-          {filteredData.map(item => (
-            <View key={item.id} style={styles.tableRow}>
-              <Text style={[styles.tableCell, styles.colEmployee]}>{item.name}</Text>
-              <Text style={[styles.tableCell, styles.colNumeric]}>€{item.rate.toFixed(2)}</Text>
-              <Text style={[styles.tableCell, styles.colNumeric]}>{item.regularHours}</Text>
-              <Text style={[styles.tableCell, styles.colNumeric]}>{item.otHours}</Text>
-              <Text style={[styles.tableCell, styles.colGrossPay]}>€{getGrossPay(item.rate, item.regularHours, item.otHours).toFixed(2)}</Text>
-            </View>
-          ))}
+          {loading ? (
+            <ActivityIndicator size="large" color={theme.colors.primary} style={{ marginVertical: theme.spacing(4) }} />
+          ) : reportData.length === 0 ? (
+            <Text style={styles.noDataText}>No data available for the selected period.</Text>
+          ) : (
+            reportData.map(item => (
+              <View key={item.worker_id} style={styles.tableRow}>
+                <Text style={[styles.tableCell, styles.colEmployee]}>{item.worker_name}</Text>
+                <Text style={[styles.tableCell, styles.colNumeric]}>{item.total_work_hours.toFixed(2)}</Text>
+                <Text style={[styles.tableCell, styles.colNumeric]}>{item.total_break_minutes}</Text>
+                <Text style={[styles.tableCell, styles.colPayable]}>{item.payable_hours.toFixed(2)}</Text>
+              </View>
+            ))
+          )}
         </Card>
 
         {/* --- Summary Card --- */}
         <Card style={styles.summaryCard}>
           <Text style={styles.cardTitle}>Summary</Text>
           <View style={styles.summaryRow}>
-            <Text style={styles.summaryLabel}>Total Regular Hours</Text>
-            <Text style={styles.summaryValue}>{totalRegularHours} hrs</Text>
+            <Text style={styles.summaryLabel}>Total Work Hours</Text>
+            <Text style={styles.summaryValue}>{totalWorkHours.toFixed(2)} hrs</Text>
           </View>
           <View style={styles.summaryRow}>
-            <Text style={styles.summaryLabel}>Total OT Hours</Text>
-            <Text style={styles.summaryValue}>{totalOtHours} hrs</Text>
+            <Text style={styles.summaryLabel}>Total Break Minutes</Text>
+            <Text style={styles.summaryValue}>{totalBreakMinutes} mins</Text>
           </View>
           <View style={styles.summaryRow}>
-            <Text style={styles.summaryLabel}>Total Wages</Text>
-            <Text style={[styles.summaryValue, styles.totalWagesValue]}>€{totalWages.toFixed(2)}</Text>
+            <Text style={styles.summaryLabel}>Total Payable Hours</Text>
+            <Text style={[styles.summaryValue, styles.totalPayableValue]}>{totalPayableHours.toFixed(2)} hrs</Text>
           </View>
         </Card>
 
         {/* --- Export Buttons --- */}
         <View style={styles.exportContainer}>
-            <Button style={[styles.exportButton, {backgroundColor: theme.colors.success}]}><Text style={styles.exportButtonText}>Export as Excel</Text></Button>
-            <Button style={[styles.exportButton, {backgroundColor: theme.colors.danger}]}><Text style={styles.exportButtonText}>Export as PDF</Text></Button>
-            <Button style={[styles.exportButton, {backgroundColor: theme.colors.bodyText}]}><Text style={styles.exportButtonText}>Export as CSV</Text></Button>
+          <Button style={[styles.exportButton, { backgroundColor: theme.colors.success }]}><Text style={styles.exportButtonText}>Export as Excel</Text></Button>
+          <Button style={[styles.exportButton, { backgroundColor: theme.colors.danger }]}><Text style={styles.exportButtonText}>Export as PDF</Text></Button>
+          <Button style={[styles.exportButton, { backgroundColor: theme.colors.bodyText }]}><Text style={styles.exportButtonText}>Export as CSV</Text></Button>
         </View>
       </ScrollView>
     </AnimatedScreen>
@@ -156,37 +180,10 @@ const styles = StyleSheet.create({
   filterControls: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  rangeSelector: {
-    flexDirection: 'row',
-    backgroundColor: theme.colors.pageBackground,
-    borderRadius: theme.radius.md,
-    borderWidth: 1,
-    borderColor: theme.colors.borderColor,
-    overflow: 'hidden',
-    flex: 1,
-    marginRight: theme.spacing(2)
-  },
-  rangeButton: {
-    flex: 1,
-    paddingVertical: 12,
-    alignItems: 'center',
-  },
-  rangeButtonActive: {
-    backgroundColor: theme.colors.primary,
-  },
-  rangeButtonText: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: theme.colors.bodyText,
-  },
-  rangeButtonTextActive: {
-    color: 'white',
   },
   dropdown: {
+    flex: 1,
     height: 48,
-    width: 200,
     borderColor: theme.colors.borderColor,
     borderWidth: 1,
     borderRadius: theme.radius.md,
@@ -221,14 +218,20 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: theme.colors.bodyText,
   },
+  noDataText: {
+    textAlign: 'center',
+    paddingVertical: theme.spacing(4),
+    fontSize: 16,
+    color: theme.colors.bodyText,
+  },
   colEmployee: {
     flex: 3,
   },
   colNumeric: {
-    flex: 1.5,
+    flex: 2,
     textAlign: 'right',
   },
-  colGrossPay: {
+  colPayable: {
     flex: 2,
     textAlign: 'right',
     fontWeight: 'bold',
@@ -254,7 +257,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: theme.colors.headingText,
   },
-  totalWagesValue: {
+  totalPayableValue: {
     color: theme.colors.success,
     fontSize: 18,
   },
@@ -270,8 +273,8 @@ const styles = StyleSheet.create({
     borderRadius: theme.radius.md,
   },
   exportButtonText: {
-      color: 'white',
-      fontWeight: 'bold'
+    color: 'white',
+    fontWeight: 'bold'
   }
 });
 

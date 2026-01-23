@@ -73,7 +73,7 @@ interface AssignmentsContextType {
   
   // Work Session Management
   activeWorkSession: WorkSession | null;
-  workSessionsToday: WorkSession[];
+  loadedWorkSessions: WorkSession[];
   startWorkSession: (assignmentId: string, location: { latitude: number; longitude: number }) => Promise<void>;
   endWorkSession: (sessionId: string, location: { latitude: number; longitude: number }) => Promise<void>;
   updateWorkSessionAssignment: (sessionId: string, newAssignmentId: string) => Promise<void>;
@@ -108,7 +108,7 @@ export function AssignmentsProvider({ children }: { children: React.ReactNode })
   const [isOffline, setIsOffline] = useState(false);
 
   const [activeWorkSession, setActiveWorkSession] = useState<WorkSession | null>(null);
-  const [workSessionsToday, setWorkSessionsToday] = useState<WorkSession[]>([]);
+  const [loadedWorkSessions, setLoadedWorkSessions] = useState<WorkSession[]>([]);
   const [lastCompletedSortKey, setLastCompletedSortKey] = useState<string | null>(null);
   const [lastCheckoutAssignmentId, setLastCheckoutAssignmentId] = useState<string | null>(null);
   const [lastCheckoutDate, setLastCheckoutDate] = useState<string | null>(null); // YYYY-MM-DD
@@ -156,9 +156,9 @@ export function AssignmentsProvider({ children }: { children: React.ReactNode })
     }
   }, [userRole, isOffline, userCompanyId]);
 
-  // Determine the last completed sort key when today's sessions change
+  // Determine the last completed sort key when loaded sessions change
   useEffect(() => {
-    const completedSessions = workSessionsToday
+    const completedSessions = loadedWorkSessions
       .filter(ws => ws.end_time && ws.worker_assignments?.sort_key)
       .sort((a, b) => (b.worker_assignments?.sort_key || '').localeCompare(a.worker_assignments?.sort_key || ''));
 
@@ -167,7 +167,7 @@ export function AssignmentsProvider({ children }: { children: React.ReactNode })
     } else {
       setLastCompletedSortKey(null);
     }
-  }, [workSessionsToday]);
+  }, [loadedWorkSessions]);
 
   const syncLocalChanges = useCallback(async () => {
     if (!userCompanyId) return; // Cannot sync without companyId
@@ -222,18 +222,22 @@ export function AssignmentsProvider({ children }: { children: React.ReactNode })
   const loadWorkSessionsForDate = useCallback(
     async (date: string, workerId: string) => {
       if (!userCompanyId) return;
-      // No need to set loading state here as it's part of the parent load
       try {
+        let sessions: WorkSession[] = [];
         if (isOffline) {
           console.log("Loading work sessions from local DB (offline)");
-          const sessions = await getLocalWorkSessions(workerId, date);
-          setWorkSessionsToday(sessions);
+          sessions = await getLocalWorkSessions(workerId, date);
         } else {
-          console.log("Loading work sessions from Supabase");
-          const sessions = await fetchWorkSessionsByDate(workerId, date);
-          setWorkSessionsToday(sessions);
-          // TODO: Cache these sessions in SQLite
+          console.log("Loading work sessions from Supabase for date:", date);
+          sessions = await fetchWorkSessionsByDate(workerId, date);
         }
+        
+        setLoadedWorkSessions(prev => {
+          const newSessions = prev.filter(s => !sessions.some(ns => ns.id === s.id));
+          newSessions.push(...sessions);
+          return newSessions;
+        });
+
       } catch (err: any) {
         setError(err.message);
         console.error('Failed to fetch work sessions:', err);
@@ -241,39 +245,22 @@ export function AssignmentsProvider({ children }: { children: React.ReactNode })
     }, [userCompanyId, isOffline]
   );
 
-  useEffect(() => {
-    if (user?.id) {
-        const today = moment().format('YYYY-MM-DD');
-        loadWorkSessionsForDate(today, user.id);
-    }
-  }, [user?.id, loadWorkSessionsForDate]);
-
-
-
   const loadAssignmentsForDate = useCallback(
     async (date: string, workerIds: string[], forceFetchFromSupabase = false) => {
       if (!userCompanyId || workerIds.length === 0) return;
       setIsLoading(true);
       setError(null);
       try {
-        // In parallel, load assignments and today's work sessions for the primary worker
-        // This assumes the primary user is the first in the list, which is typical for worker views.
-        if (workerIds.length > 0) {
-          await loadWorkSessionsForDate(date, workerIds[0]);
-        }
-
         let fetchedAssignments: AssignmentRecord[] = [];
 
         if (isOffline && !forceFetchFromSupabase) {
           console.log("Loading assignments from local DB (offline)");
           fetchedAssignments = await getLocalAssignments(workerIds[0], date) as AssignmentRecord[];
         } else {
-          console.log("Loading assignments from Supabase");
-          console.log("DEBUG: Fetching assignments with params:", { userCompanyId, date, workerIds });
+          console.log("Loading assignments from Supabase for date:", date);
           const supabaseAssignments = await fetchAssignmentsForWorkers(userCompanyId, date, workerIds);
           fetchedAssignments = supabaseAssignments as AssignmentRecord[];
 
-          // For workers, update the local DB after fetching from Supabase
           if (userRole === 'worker') {
             const db = await getDb();
             await db.withTransactionAsync(async () => {
@@ -301,12 +288,8 @@ export function AssignmentsProvider({ children }: { children: React.ReactNode })
         }
         
         setAssignments((prev: AssignmentRecord[]) => {
-          const newAssignments = [...prev];
-          fetchedAssignments.forEach((fetched: AssignmentRecord) => {
-            if (!newAssignments.some((existing: AssignmentRecord) => existing.id === fetched.id)) {
-              newAssignments.push(fetched);
-            }
-          });
+          const newAssignments = prev.filter(a => !fetchedAssignments.some(fa => fa.id === a.id));
+          newAssignments.push(...fetchedAssignments);
           return newAssignments;
         });
 
@@ -317,8 +300,28 @@ export function AssignmentsProvider({ children }: { children: React.ReactNode })
         setIsLoading(false);
       }
     },
-    [userCompanyId, isOffline, loadWorkSessionsForDate, user]
+    [userCompanyId, isOffline, userRole]
   );
+  
+  // If there's an active session from a previous day, load its data
+  useEffect(() => {
+    if (activeWorkSession?.worker_assignments && user) {
+      const sessionDate = activeWorkSession.worker_assignments.assigned_date;
+      
+      // Load assignments for the stale session's date if not already loaded
+      const assignmentsLoaded = assignments.some(a => a.assigned_date === sessionDate && a.worker_id === user.id);
+      if (!assignmentsLoaded) {
+        loadAssignmentsForDate(sessionDate, [user.id], true);
+      }
+      
+      // Load work sessions for the stale session's date if not already loaded
+      const sessionsLoaded = loadedWorkSessions.some(ws => moment(ws.start_time).isSame(sessionDate, 'day'));
+      if (!sessionsLoaded) {
+        loadWorkSessionsForDate(sessionDate, user.id);
+      }
+    }
+  }, [activeWorkSession, user, assignments, loadedWorkSessions, loadAssignmentsForDate, loadWorkSessionsForDate]);
+
 
   const clearAssignments = useCallback(() => {
     setAssignments([]);
@@ -387,18 +390,17 @@ export function AssignmentsProvider({ children }: { children: React.ReactNode })
         start_time: now,
         end_time: null,
         total_break_minutes: 0,
-        synced: false, // Mark as not synced
+        synced: false,
       };
 
       try {
         await insertLocalWorkSession(localSession);
         setActiveWorkSession(localSession);
-        setWorkSessionsToday(prev => [...prev, localSession]);
+        setLoadedWorkSessions(prev => [...prev, localSession]);
         session = localSession;
         console.log("Successfully created local work session.");
       } catch (err) {
         console.error("Failed to create local work session:", err);
-        // Re-throw or handle error appropriately for the UI
         throw new Error("Failed to save check-in locally.");
       }
     } else {
@@ -406,10 +408,9 @@ export function AssignmentsProvider({ children }: { children: React.ReactNode })
       try {
         const remoteSession = await insertWorkSession(user.id, assignmentId, userCompanyId);
         if (remoteSession) {
-          // Add synced status for UI consistency, though it's implicit
           const onlineSession = { ...remoteSession, synced: true };
           setActiveWorkSession(onlineSession);
-          setWorkSessionsToday(prev => [...prev, onlineSession]);
+          setLoadedWorkSessions(prev => [...prev, onlineSession]);
           session = onlineSession;
         } else {
             throw new Error("Failed to create Supabase work session.");
@@ -420,7 +421,6 @@ export function AssignmentsProvider({ children }: { children: React.ReactNode })
       }
     }
 
-    // After session is created, create location event and start heartbeat
     await startHeartbeatTracking(assignmentId, userCompanyId, user.id);
     
     const locationEvent = {
@@ -440,10 +440,8 @@ export function AssignmentsProvider({ children }: { children: React.ReactNode })
             created_at: new Date().toISOString(),
             synced: 0,
         });
-        console.log("Successfully created local 'enter_geofence' event.");
     } else {
         await insertLocationEvent(locationEvent);
-        console.log("Successfully created Supabase 'enter_geofence' event.");
     }
 
   }, [user, userCompanyId, isOffline]);
@@ -451,9 +449,9 @@ export function AssignmentsProvider({ children }: { children: React.ReactNode })
   const endWorkSession = useCallback(async (sessionId: string, location: { latitude: number; longitude: number }) => {
     if (!user?.id || !userCompanyId) return;
 
-    const sessionToEnd = workSessionsToday.find(s => s.id === sessionId);
+    const sessionToEnd = loadedWorkSessions.find(s => s.id === sessionId);
     if (!sessionToEnd) {
-        console.error("Session to end not found in today's sessions.");
+        console.error("Session to end not found in loaded sessions.");
         throw new Error("Session to end not found.");
     }
     
@@ -467,11 +465,9 @@ export function AssignmentsProvider({ children }: { children: React.ReactNode })
         notes: 'Checked out',
     };
 
-    // Stop the heartbeat tracking as soon as checkout is initiated
     await stopHeartbeatTracking();
 
     if (isOffline) {
-        console.log("Offline: Creating local 'exit_geofence' event.");
         await insertLocalLocationEvent({
             ...locationEvent,
             id: generateId(),
@@ -479,12 +475,11 @@ export function AssignmentsProvider({ children }: { children: React.ReactNode })
             synced: 0,
         });
 
-        console.log("Offline: Ending local work session.");
         const updatedSession = { ...sessionToEnd, end_time: new Date().toISOString(), synced: false };
         await updateLocalWorkSession(updatedSession);
         
         setActiveWorkSession(null);
-        setWorkSessionsToday(prev => prev.map(s => (s.id === sessionId ? updatedSession : s)));
+        setLoadedWorkSessions(prev => prev.map(s => (s.id === sessionId ? updatedSession : s)));
         
         const assignmentId = updatedSession.assignment_id;
         if (assignmentId) {
@@ -496,14 +491,11 @@ export function AssignmentsProvider({ children }: { children: React.ReactNode })
         }
 
     } else {
-        console.log("Online: Creating Supabase 'exit_geofence' event.");
         await insertLocationEvent(locationEvent);
-
-        console.log("Online: Ending Supabase work session.");
         const endedSession = await endWorkSessionService(sessionId);
         if (endedSession) {
             setActiveWorkSession(null);
-            setWorkSessionsToday(prev => prev.map(s => s.id === sessionId ? endedSession : s));
+            setLoadedWorkSessions(prev => prev.map(s => s.id === sessionId ? endedSession : s));
             const assignmentId = endedSession.assignment_id;
             if (assignmentId) {
                 setLastCheckoutAssignmentId(assignmentId);
@@ -514,13 +506,13 @@ export function AssignmentsProvider({ children }: { children: React.ReactNode })
             }
         }
     }
-  }, [user, userCompanyId, isOffline, workSessionsToday]);
+  }, [user, userCompanyId, isOffline, loadedWorkSessions]);
 
   const updateWorkSessionAssignment = useCallback(async (sessionId: string, newAssignmentId: string) => {
     const updatedSession = await updateWorkSessionAssignmentService(sessionId, newAssignmentId);
     if (updatedSession) {
       setActiveWorkSession(updatedSession);
-      setWorkSessionsToday(prev => prev.map(s => s.id === sessionId ? updatedSession : s));
+      setLoadedWorkSessions(prev => prev.map(s => s.id === sessionId ? updatedSession : s));
     }
   }, []);
 
@@ -588,7 +580,7 @@ export function AssignmentsProvider({ children }: { children: React.ReactNode })
     moveAssignmentBetweenWorkers,
     updateAssignmentStartTime,
     activeWorkSession,
-    workSessionsToday,
+    loadedWorkSessions,
     startWorkSession,
     endWorkSession,
     updateWorkSessionAssignment,

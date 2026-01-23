@@ -151,7 +151,11 @@ export default function ManagerAccount() {
                 <Card style={styles.card}>
                     <Text style={styles.cardTitle}>User Profile</Text>
                     <View style={styles.profileHeader}>
-                        <Image source={{ uri: profile?.public_avatar_url || 'https://i.pravatar.cc/150?u=manager' }} style={styles.avatar} />
+                        {profile?.public_avatar_url ? (
+                          <Image source={{ uri: profile.public_avatar_url }} style={styles.avatar} />
+                        ) : (
+                          <Ionicons name="person" size={80} color={theme.colors.bodyText} style={styles.avatarPlaceholder} />
+                        )}
                         <View style={{flex: 1}}>
                             <Text style={styles.name}>{profile?.full_name}</Text>
                             <Text style={styles.email}>{user?.email}</Text>
@@ -258,6 +262,13 @@ const styles = StyleSheet.create({
   cardTitle: { fontSize: 18, fontWeight: '600', color: theme.colors.headingText, marginBottom: theme.spacing(2) },
   profileHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: theme.spacing(2) },
   avatar: { width: 80, height: 80, borderRadius: 40, marginRight: theme.spacing(2) },
+  avatarPlaceholder: {
+    width: 80,
+    height: 80,
+    marginRight: theme.spacing(2),
+    textAlign: 'center',
+    lineHeight: 80,
+  },
   name: { fontSize: 22, fontWeight: 'bold', color: theme.colors.headingText },
   email: { fontSize: 14, color: theme.colors.bodyText, marginBottom: theme.spacing(1) },
   uploadButton: { flexDirection: 'row', alignItems: 'center', backgroundColor: theme.colors.pageBackground, paddingVertical: 4, paddingHorizontal: 8, borderRadius: theme.radius.md, alignSelf: 'flex-start' },

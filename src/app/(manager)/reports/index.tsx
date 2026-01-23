@@ -14,8 +14,8 @@ const reports = [
     path: 'worker-hours-report',
   },
   {
-    title: 'Payroll Report',
-    description: 'Summary of total payroll costs and individual payouts.',
+    title: 'Monthly Hours Report',
+    description: 'Overview of worker hours, breaks, and payable time for the month.',
     icon: 'cash-outline',
     path: 'payroll-report',
   },

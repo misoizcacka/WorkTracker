@@ -105,9 +105,5 @@ export interface WorkSession {
   end_time: string | null; // timestamp with time zone, nullable
   total_break_minutes?: number; // Added back from original DB schema
   synced?: boolean; // New: 0 for false, 1 for true in SQLite
-  worker_assignments?: { // Changed from 'assignment' to match the new query
-    sort_key: string;
-    ref_id: string;
-    ref_type: 'project' | 'common_location';
-  };
+  worker_assignments?: AssignmentRecord;
 }

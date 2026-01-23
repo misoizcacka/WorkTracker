@@ -33,7 +33,17 @@ interface CommonMapViewProps extends RNMapViewProps {
     longitude: number;
     latitudeDelta: number;
     longitudeDelta: number;
+    zoom?: number;
   };
+  region?: {
+    latitude: number;
+    longitude: number;
+    latitudeDelta: number;
+    longitudeDelta: number;
+    zoom?: number;
+  };
+  zoom?: number; // New prop
+  onWebZoomChange?: (zoom: number) => void; // New prop
   // Add children prop as MapView might render markers/circles as children
   children?: React.ReactNode;
 }

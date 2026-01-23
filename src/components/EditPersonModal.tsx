@@ -78,7 +78,11 @@ const EditPersonModal: React.FC<EditPersonModalProps> = ({ visible, onClose, emp
 
           <View style={styles.contentLayout}>
             <View style={styles.avatarContainer}>
-              <Image source={{ uri: employee?.avatar_url || undefined }} style={styles.avatar} />
+              {employee?.avatar_url ? (
+                <Image source={{ uri: employee.avatar_url }} style={styles.avatar} />
+              ) : (
+                <Ionicons name="person" size={100} color={theme.colors.bodyText} style={styles.avatarPlaceholder} />
+              )}
               <TouchableOpacity style={styles.avatarEditButton}>
                 <Ionicons name="pencil" size={20} color="white" />
               </TouchableOpacity>
@@ -205,6 +209,12 @@ const styles = StyleSheet.create({
     borderRadius: 50,
     borderWidth: 2,
     borderColor: theme.colors.primary,
+  },
+  avatarPlaceholder: {
+    width: 100,
+    height: 100,
+    textAlign: 'center',
+    lineHeight: 100, // To center the icon vertically
   },
   avatarEditButton: {
     position: 'absolute',

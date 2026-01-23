@@ -5,7 +5,7 @@ import { useRouter, Link } from 'expo-router';
 import { Button } from '../../components/Button';
 import { theme } from '../../theme';
 import AnimatedScreen from '../../components/AnimatedScreen';
-import Logo from '../../../assets/logowhitenavy.png';
+import Logo from '../../../assets/logokoordwhite.png';
 import { supabase } from '../../utils/supabase';
 import { useSession } from '../../context/AuthContext';
 import { useTranslation } from 'react-i18next';

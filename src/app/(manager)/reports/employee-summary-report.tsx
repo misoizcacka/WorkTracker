@@ -1,135 +1,208 @@
-import React, { useState, useMemo } from 'react';
-import { View, Text, StyleSheet, ScrollView, useWindowDimensions, TouchableOpacity, Image } from 'react-native';
+import React, { useState, useEffect, useMemo, useContext } from 'react';
+import { View, Text, StyleSheet, ScrollView, useWindowDimensions, ActivityIndicator, FlatList, TouchableOpacity, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import moment from 'moment';
+import { LineChart } from 'react-native-chart-kit';
+
 import AnimatedScreen from '../../../components/AnimatedScreen';
 import { Card } from '../../../components/Card';
 import { theme } from '../../../theme';
-import { Dropdown } from 'react-native-element-dropdown';
+import { EmployeesContext, EmployeesContextType } from '../../../context/EmployeesContext';
+import { Employee } from '../../../types';
+import CrossPlatformDatePicker from '../../../components/CrossPlatformDatePicker';
+import { supabase } from '../../../utils/supabase';
+import { useSession } from '~/context/AuthContext';
 
-// Mock Data
-const employeeSummaryData = [
-  { id: 'e1', name: 'John Worker', department: 'Field Ops', avatar: 'https://i.pravatar.cc/150?u=e1', regular: 160, overtime: 20, pay: 3800, projects: ['Alpha', 'Beta'] },
-  { id: 'e2', name: 'Maria Builder', department: 'Field Ops', avatar: 'https://i.pravatar.cc/150?u=e2', regular: 150, overtime: 10, pay: 3630, projects: ['Alpha', 'Admin'] },
-  { id: 'e3', name: 'Lars Mason', department: 'Field Ops', avatar: 'https://i.pravatar.cc/150?u=e3', regular: 160, overtime: 0, pay: 4000, projects: ['Beta'] },
-  { id: 'e4', name: 'Chen Architect', department: 'Office', avatar: 'https://i.pravatar.cc/150?u=e4', regular: 160, overtime: 15, pay: 6387.5, projects: ['Alpha'] },
-  { id: 'e5', name: 'Fatima Engineer', department: 'Office', avatar: 'https://i.pravatar.cc/150?u=e5', regular: 140, overtime: 5, pay: 4425, projects: ['Beta', 'Admin'] },
-];
 
-const departments = [
-    { label: 'All Departments', value: 'all' },
-    { label: 'Field Ops', value: 'Field Ops' },
-    { label: 'Office', value: 'Office' },
-];
-
-type Range = 'last_week' | 'this_month' | 'custom';
+interface DailyHoursReportEntry {
+    report_date: string; // YYYY-MM-DD
+    worker_id: string;
+    worker_full_name: string;
+    total_hours_worked: number;
+}
 
 const EmployeeSummaryReport = () => {
+    const { user } = useSession();
+    const { employees } = useContext(EmployeesContext) as EmployeesContextType;
     const { width } = useWindowDimensions();
     const isLargeScreen = width >= 768;
 
-    const [selectedRange, setSelectedRange] = useState<Range>('this_month');
-    const [selectedDepartment, setSelectedDepartment] = useState('all');
+    const [selectedMonth, setSelectedMonth] = useState(moment().startOf('month').toDate());
+    const [selectedWorkerIds, setSelectedWorkerIds] = useState<string[]>([]);
+    const [reportData, setReportData] = useState<DailyHoursReportEntry[]>([]);
+    const [loading, setLoading] = useState(false);
 
-    const filteredData = useMemo(() => {
-        return employeeSummaryData.filter(item => 
-            selectedDepartment === 'all' || item.department === selectedDepartment
+    // Filter out managers, guests, and the current user from the employee list
+    const availableWorkers = useMemo(() => {
+        return employees.filter(emp => 
+            emp.role === 'worker' && emp.id !== user?.id
         );
-    }, [selectedDepartment]);
+    }, [employees, user?.id]);
 
-    const totalHours = filteredData.reduce((sum, e) => sum + e.regular + e.overtime, 0);
-    const totalOt = filteredData.reduce((sum, e) => sum + e.overtime, 0);
-    const totalPayroll = filteredData.reduce((sum, e) => sum + e.pay, 0);
-    const avgHours = filteredData.length > 0 ? totalHours / filteredData.length : 0;
 
-    const rangeButtons: { label: string, value: Range }[] = [
-        { label: "Last Week", value: "last_week" },
-        { label: "This Month", value: "this_month" },
-        { label: "Custom", value: "custom" },
-    ];
+    // Effect to fetch report data
+    useEffect(() => {
+        const fetchReport = async () => {
+            if (selectedWorkerIds.length === 0) {
+                setReportData([]);
+                return;
+            }
+
+            setLoading(true);
+            const { data, error } = await supabase.rpc('get_workers_monthly_daily_summary', {
+                p_worker_ids: selectedWorkerIds,
+                p_report_year: moment(selectedMonth).year(),
+                p_report_month: moment(selectedMonth).month() + 1, // month() is 0-indexed
+            });
+
+            if (error) {
+                console.error('Error fetching monthly daily summary:', error);
+                setReportData([]);
+            } else {
+                setReportData(data || []);
+            }
+            setLoading(false);
+        };
+
+        fetchReport();
+    }, [selectedWorkerIds, selectedMonth]);
+
+
+    // Toggle worker selection
+    const handleWorkerSelect = (workerId: string) => {
+        setSelectedWorkerIds(prev =>
+            prev.includes(workerId)
+                ? prev.filter(id => id !== workerId)
+                : [...prev, workerId]
+        );
+    };
+
+    // Prepare chart data
+    const chartData = useMemo(() => {
+        const daysInMonth = moment(selectedMonth).daysInMonth();
+        const labels = Array.from({ length: daysInMonth }, (_, i) => (i + 1).toString()); // Day numbers 1 to 31
+
+        const datasets = selectedWorkerIds.map(workerId => {
+            const worker = availableWorkers.find(emp => emp.id === workerId);
+            const dataForWorker = Array(daysInMonth).fill(0); // Initialize with 0 hours for each day
+
+            reportData
+                .filter(entry => entry.worker_id === workerId)
+                .forEach(entry => {
+                    const day = moment(entry.report_date).date(); // Get day of month (1-indexed)
+                    dataForWorker[day - 1] = entry.total_hours_worked;
+                });
+            
+            return {
+                data: dataForWorker,
+                color: (opacity = 1) => { // Random color for each worker
+                    if (!worker) return `rgba(0,0,0,${opacity})`;
+                    // A simple hash function to get a consistent color for each worker
+                    let hash = 0;
+                    for (let i = 0; i < worker.id.length; i++) {
+                        hash = worker.id.charCodeAt(i) + ((hash << 5) - hash);
+                    }
+                    const color = `hsl(${hash % 360}, 70%, 50%)`; // HSL for good color distribution
+                    return color.replace(')', `,${opacity})`).replace('hsl', 'hsla');
+                },
+                name: worker?.full_name || 'Unknown',
+            };
+        });
+
+        return {
+            labels,
+            datasets,
+        };
+    }, [reportData, selectedWorkerIds, selectedMonth, availableWorkers]);
 
   return (
     <AnimatedScreen>
       <ScrollView style={styles.container} contentContainerStyle={styles.scrollContentContainer}>
-        <Text style={styles.title}>Employee Summary Report</Text>
+        <Text style={styles.title}>Employee Work Hours Report</Text>
 
-        {/* --- Filters --- */}
-        <Card style={styles.filterCard}>
-          <View style={styles.filterControls}>
-            <View style={styles.rangeSelector}>
-              {rangeButtons.map(button => (
-                <TouchableOpacity 
-                  key={button.value} 
-                  style={[styles.rangeButton, selectedRange === button.value && styles.rangeButtonActive]} 
-                  onPress={() => setSelectedRange(button.value)}
-                >
-                  <Text style={[styles.rangeButtonText, selectedRange === button.value && styles.rangeButtonTextActive]}>{button.label}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-            <Dropdown
-              style={[styles.dropdown, { flex: 1 }]}
-              placeholderStyle={styles.placeholderStyle}
-              selectedTextStyle={styles.selectedTextStyle}
-              data={departments}
-              maxHeight={300}
-              labelField="label"
-              valueField="value"
-              placeholder="Select Department"
-              value={selectedDepartment}
-              onChange={item => setSelectedDepartment(item.value)}
-            />
+        <View style={isLargeScreen ? styles.largeScreenLayout : styles.smallScreenLayout}>
+          {/* Left Column: Month Selector and Worker List */}
+          <View style={styles.leftPanel}>
+            <Card style={styles.monthPickerCard}>
+              <Text style={styles.panelTitle}>Select Month</Text>
+              <CrossPlatformDatePicker
+                date={selectedMonth}
+                onDateChange={(date) => setSelectedMonth(moment(date).startOf('month').toDate())}
+                mode="month"
+              />
+            </Card>
+
+            <Card style={styles.workerListCard}>
+              <Text style={styles.panelTitle}>Select Workers</Text>
+              <FlatList
+                data={availableWorkers}
+                keyExtractor={item => item.id}
+                renderItem={({ item }) => (
+                  <TouchableOpacity
+                    style={styles.workerListItem}
+                    onPress={() => handleWorkerSelect(item.id)}
+                  >
+                    <Ionicons
+                      name={selectedWorkerIds.includes(item.id) ? "checkbox-outline" : "square-outline"}
+                      size={24}
+                      color={theme.colors.primary}
+                    />
+                    {item.avatar_url ? (
+                      <Image source={{ uri: item.avatar_url }} style={styles.avatar} />
+                    ) : (
+                      <Ionicons name="person" size={36} color={theme.colors.bodyText} style={styles.avatarPlaceholder} />
+                    )}
+                    <Text style={styles.workerName}>{item.full_name}</Text>
+                  </TouchableOpacity>
+                )}
+              />
+            </Card>
           </View>
-        </Card>
 
-        {/* --- Summary Card --- */}
-        <Card style={styles.summaryCard}>
-            <View style={styles.summaryItem}>
-                <Text style={styles.summaryLabel}>Total Hours</Text>
-                <Text style={styles.summaryValue}>{totalHours.toFixed(0)} hrs</Text>
-            </View>
-            <View style={styles.summarySeparator} />
-            <View style={styles.summaryItem}>
-                <Text style={styles.summaryLabel}>Total Overtime</Text>
-                <Text style={[styles.summaryValue, { color: theme.colors.warning }]}>{totalOt.toFixed(0)} hrs</Text>
-            </View>
-            <View style={styles.summarySeparator} />
-            <View style={styles.summaryItem}>
-                <Text style={styles.summaryLabel}>Total Payroll</Text>
-                <Text style={[styles.summaryValue, { color: theme.colors.success }]}>€{totalPayroll.toFixed(2)}</Text>
-            </View>
-            <View style={styles.summarySeparator} />
-            <View style={styles.summaryItem}>
-                <Text style={styles.summaryLabel}>Avg. Hours/Employee</Text>
-                <Text style={styles.summaryValue}>{avgHours.toFixed(1)} hrs</Text>
-            </View>
-        </Card>
-
-        {/* --- Employee Table --- */}
-        <View style={styles.tableCard}>
-          <View style={styles.tableHeader}>
-            <Text style={[styles.tableHeaderText, styles.colEmployee]}>Employee</Text>
-            <Text style={[styles.tableHeaderText, styles.colNumeric]}>Total Hrs</Text>
-            <Text style={[styles.tableHeaderText, styles.colNumeric]}>Regular</Text>
-            <Text style={[styles.tableHeaderText, styles.colNumeric]}>Overtime</Text>
-            <Text style={[styles.tableHeaderText, styles.colNumeric]}>Avg/Day</Text>
-            <Text style={[styles.tableHeaderText, styles.colTotal]}>Total Pay</Text>
+          {/* Right Column: Work Hours Graph */}
+          <View style={styles.rightPanel}>
+            <Card style={styles.chartCard}>
+              <Text style={styles.panelTitle}>Monthly Work Hours</Text>
+              {loading ? (
+                <ActivityIndicator size="large" color={theme.colors.primary} style={styles.chartLoading} />
+              ) : selectedWorkerIds.length === 0 ? (
+                <Text style={styles.noDataText}>Select workers to view their monthly work hours.</Text>
+              ) : reportData.length === 0 ? (
+                <Text style={styles.noDataText}>No work hours data available for the selected workers and month.</Text>
+              ) : (
+                <LineChart
+                  data={chartData}
+                  width={isLargeScreen ? width * 0.6 - theme.spacing(6) : width - theme.spacing(6)} // Adjust chart width
+                  height={300}
+                  chartConfig={{
+                    backgroundColor: theme.colors.cardBackground,
+                    backgroundGradientFrom: theme.colors.cardBackground,
+                    backgroundGradientTo: theme.colors.cardBackground,
+                    decimalPlaces: 1, // optional, defaults to 2dp
+                    color: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`, // default color for labels
+                    labelColor: (opacity = 1) => theme.colors.bodyText,
+                    propsForDots: {
+                      r: '4',
+                      strokeWidth: '2',
+                      stroke: theme.colors.primary,
+                    },
+                    propsForBackgroundLines: {
+                        strokeDasharray: '0', // solid lines
+                        stroke: theme.colors.borderColor,
+                    },
+                    propsForVerticalLabels: {
+                        fontSize: theme.fontSizes.xs,
+                    },
+                    propsForHorizontalLabels: {
+                        fontSize: theme.fontSizes.xs,
+                    },
+                  }}
+                  bezier
+                  style={styles.chart}
+                />
+              )}
+            </Card>
           </View>
-          {filteredData.map(item => (
-            <View key={item.id} style={styles.tableRow}>
-              <View style={[styles.tableCell, styles.colEmployee, { flexDirection: 'row', alignItems: 'center' }]}>
-                <Image source={{ uri: item.avatar }} style={styles.avatar} />
-                <View>
-                    <Text style={styles.employeeName}>{item.name}</Text>
-                    <Text style={styles.projectText}>{item.projects.join(', ')}</Text>
-                </View>
-              </View>
-              <Text style={[styles.tableCellText, styles.colNumeric, styles.totalHoursValue]}>{(item.regular + item.overtime)}</Text>
-              <Text style={[styles.tableCellText, styles.colNumeric]}>{item.regular}</Text>
-              <Text style={[styles.tableCellText, styles.colNumeric, item.overtime > 0 && styles.otValue]}>{item.overtime}</Text>
-              <Text style={[styles.tableCellText, styles.colNumeric]}>{((item.regular + item.overtime)/22).toFixed(1)}</Text>
-              <Text style={[styles.tableCellText, styles.colTotal]}>€{item.pay.toFixed(2)}</Text>
-            </View>
-          ))}
         </View>
       </ScrollView>
     </AnimatedScreen>
@@ -140,35 +213,71 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: theme.colors.pageBackground },
   scrollContentContainer: { padding: theme.spacing(3) },
   title: { fontSize: 28, fontWeight: 'bold', color: theme.colors.headingText, marginBottom: theme.spacing(3) },
-  filterCard: { padding: theme.spacing(2), marginBottom: theme.spacing(3) },
-  filterControls: { flexDirection: 'row', alignItems: 'center' },
-  rangeSelector: { flexDirection: 'row', backgroundColor: theme.colors.pageBackground, borderRadius: theme.radius.md, borderWidth: 1, borderColor: theme.colors.borderColor, overflow: 'hidden', marginRight: theme.spacing(2) },
-  rangeButton: { paddingVertical: 12, paddingHorizontal: 16 },
-  rangeButtonActive: { backgroundColor: theme.colors.primary },
-  rangeButtonText: { fontSize: 14, fontWeight: '500', color: theme.colors.bodyText },
-  rangeButtonTextActive: { color: 'white' },
-  dropdown: { height: 48, borderColor: theme.colors.borderColor, borderWidth: 1, borderRadius: theme.radius.md, paddingHorizontal: 15, backgroundColor: theme.colors.pageBackground },
-  placeholderStyle: { fontSize: 16, color: '#999' },
-  selectedTextStyle: { fontSize: 16 },
-  summaryCard: { padding: theme.spacing(2), marginBottom: theme.spacing(3), flexDirection: 'row', justifyContent: 'space-around' },
-  summaryItem: { alignItems: 'center' },
-  summaryLabel: { fontSize: 14, color: theme.colors.bodyText, marginBottom: 4 },
-  summaryValue: { fontSize: 20, fontWeight: 'bold', color: theme.colors.headingText },
-  summarySeparator: { width: 1, backgroundColor: theme.colors.borderColor },
-  tableCard: { backgroundColor: theme.colors.cardBackground, borderRadius: theme.radius.lg, ...theme.shadow.soft },
-  tableHeader: { flexDirection: 'row', borderBottomWidth: 2, borderBottomColor: theme.colors.borderColor, paddingBottom: theme.spacing(1), paddingHorizontal: theme.spacing(2), paddingTop: theme.spacing(2) },
-  tableRow: { flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: theme.colors.borderColor, paddingVertical: theme.spacing(1.5), alignItems: 'center', paddingHorizontal: theme.spacing(2) },
-  tableHeaderText: { fontWeight: '600', fontSize: 14, color: theme.colors.headingText },
-  tableCell: { flexDirection: 'row', alignItems: 'center' },
-  tableCellText: { fontSize: 14, color: theme.colors.bodyText },
-  avatar: { width: 36, height: 36, borderRadius: 18, marginRight: theme.spacing(1.5) },
-  employeeName: { fontWeight: '600', color: theme.colors.headingText },
-  projectText: { fontSize: 12, color: theme.colors.bodyText },
-  colEmployee: { flex: 3 },
-  colNumeric: { flex: 1, textAlign: 'right' },
-  colTotal: { flex: 1.5, textAlign: 'right', fontWeight: 'bold' },
-  totalHoursValue: { fontWeight: 'bold', color: theme.colors.primary },
-  otValue: { color: theme.colors.warning, fontWeight: 'bold' },
+  
+  largeScreenLayout: { flexDirection: 'row', justifyContent: 'space-between' },
+  smallScreenLayout: { flexDirection: 'column' },
+
+  leftPanel: { flex: 1, marginRight: theme.spacing(3) },
+  rightPanel: { flex: 2 }, // Graph takes more space
+
+  panelTitle: { fontSize: 20, fontWeight: '600', color: theme.colors.headingText, marginBottom: theme.spacing(2) },
+  
+  monthPickerCard: { padding: theme.spacing(2), marginBottom: theme.spacing(3) },
+  workerListCard: { flex: 1, padding: theme.spacing(2), minHeight: 300 }, // Added minHeight for some content
+  workerListItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: theme.spacing(1),
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: theme.colors.borderColor,
+  },
+  avatar: { width: 36, height: 36, borderRadius: 18, marginRight: theme.spacing(1.5), marginLeft: theme.spacing(1) },
+  avatarPlaceholder: {
+    width: 36,
+    height: 36,
+    marginRight: theme.spacing(1.5),
+    marginLeft: theme.spacing(1),
+    textAlign: 'center',
+    lineHeight: 36,
+  },
+  workerName: { flex: 1, marginLeft: theme.spacing(1), color: theme.colors.bodyText, fontSize: theme.fontSizes.md },
+
+  chartCard: { padding: theme.spacing(2), minHeight: 400 },
+  chartLoading: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  chart: {
+    marginVertical: 8,
+    borderRadius: 16,
+    // Adjust background for chart based on theme
+    backgroundColor: theme.colors.cardBackground,
+  },
+  noDataText: {
+    textAlign: 'center',
+    marginTop: theme.spacing(4),
+    fontSize: theme.fontSizes.md,
+    color: theme.colors.bodyText,
+  },
+
+  // Removed old filter and summary styles
+  filterCard: { display: 'none' }, // Hide old filter
+  summaryCard: { display: 'none' }, // Hide old summary
+  tableCard: { display: 'none' }, // Hide old table
+
+  // Keep these for now, may remove later if not relevant
+  summaryItem: {},
+  summaryLabel: {},
+  summaryValue: {},
+  summarySeparator: {},
+  tableHeader: {},
+  tableRow: {},
+  tableHeaderText: {},
+  tableCell: {},
+  tableCellText: {},
+  employeeName: {},
+  projectText: {},
+  colEmployee: {},
+  colNumeric: {},
+  colTotal: {},
+  totalHoursValue: {},
+  otValue: {},
 });
 
-export default EmployeeSummaryReport;

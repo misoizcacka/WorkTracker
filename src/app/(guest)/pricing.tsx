@@ -4,7 +4,7 @@ import { useRouter, Link } from 'expo-router'; // Import Link for "Sign In"
 import { Button } from '../../components/Button';
 import { theme } from '../../theme';
 import AnimatedScreen from '../../components/AnimatedScreen';
-import Logo from '../../../assets/logowhitenavy.png'; // Import the logo
+import Logo from '../../../assets/logokoordwhite.png'; // Import the logo
 
 const { width } = Dimensions.get('window');
 const isLargeScreen = width > 768; // Define what constitutes a large screen for responsive design

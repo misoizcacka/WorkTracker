@@ -78,13 +78,14 @@ export default function TabsLayout() { // Renamed from ManagerLayout
               headerTintColor: theme.colors.primary,
               headerTitle: () => (
                 <Image
-                  source={require('../../../assets/logowhitenavy.png')}
+                  source={require('../../../assets/logokoordwhite.png')}
                   style={{ width: 150, height: 40, resizeMode: 'contain' }}
                 />
               ),
               drawerStyle: { backgroundColor: theme.colors.pageBackground, width: 260 },
               drawerActiveTintColor: "#2563EB",
               drawerLabelStyle: { fontSize: 16, fontWeight: "500" },
+              drawerItemStyle: { display: 'none' },
             }}
           >
             <Drawer.Screen
@@ -94,6 +95,7 @@ export default function TabsLayout() { // Renamed from ManagerLayout
                 drawerIcon: ({ color, size }: { color: string; size: number }) => (
                   <Ionicons name="home-outline" color={color} size={size} />
                 ),
+                drawerItemStyle: { display: 'flex' },
               }}
             />
             <Drawer.Screen
@@ -103,6 +105,7 @@ export default function TabsLayout() { // Renamed from ManagerLayout
                 drawerIcon: ({ color, size }: { color: string; size: number }) => (
                   <Ionicons name="map-outline" color={color} size={size} />
                 ),
+                drawerItemStyle: { display: 'flex' },
               }}
             />
             <Drawer.Screen
@@ -112,6 +115,7 @@ export default function TabsLayout() { // Renamed from ManagerLayout
                 drawerIcon: ({ color, size }: { color: string; size: number }) => (
                   <Ionicons name="people-outline" color={color} size={size} />
                 ),
+                drawerItemStyle: { display: 'flex' },
               }}
             />
             <Drawer.Screen
@@ -121,16 +125,29 @@ export default function TabsLayout() { // Renamed from ManagerLayout
                 drawerIcon: ({ color, size }: { color: string; size: number }) => (
                   <Ionicons name="folder-outline" color={color} size={size} />
                 ),
+                drawerItemStyle: { display: 'flex' },
               }}
             />
 
             <Drawer.Screen
-              name="worker-assignment"
+              name="worker-assignments"
               options={{
-                title: "Worker Assignment",
+                title: "Worker Assignments",
                 drawerIcon: ({ color, size }: { color: string; size: number }) => (
                   <Ionicons name="calendar-outline" color={color} size={size} />
                 ),
+                drawerItemStyle: { display: 'flex' },
+              }}
+            />
+
+            <Drawer.Screen
+              name="corrections"
+              options={{
+                title: "Session Corrections",
+                drawerIcon: ({ color, size }: { color: string; size: number }) => (
+                  <Ionicons name="construct-outline" color={color} size={size} />
+                ),
+                drawerItemStyle: { display: 'flex' },
               }}
             />
             <Drawer.Screen
@@ -140,6 +157,7 @@ export default function TabsLayout() { // Renamed from ManagerLayout
                 drawerIcon: ({ color, size }: { color: string; size: number }) => (
                   <Ionicons name="document-text-outline" color={color} size={size} />
                 ),
+                drawerItemStyle: { display: 'flex' },
               }}
             />
             <Drawer.Screen
@@ -149,19 +167,14 @@ export default function TabsLayout() { // Renamed from ManagerLayout
                 drawerIcon: ({ color, size }: { color: string; size: number }) => (
                   <Ionicons name="person-circle-outline" color={color} size={size} />
                 ),
+                drawerItemStyle: { display: 'flex' },
               }}
             />
             <Drawer.Screen
               name="company-setup"
-              options={{
-                drawerItemStyle: { display: 'none' },
-              }}
             />
             <Drawer.Screen
               name="setup-complete"
-              options={{
-                drawerItemStyle: { display: 'none' },
-              }}
             />
           </Drawer>
         </ManagerProviders>

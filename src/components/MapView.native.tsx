@@ -171,8 +171,8 @@ export const MapView = React.forwardRef<MapViewHandle, NativeMapViewProps>(
                         <Image source={{ uri: (marker as WorkerLocation).avatar! }} style={styles.avatar} />
                     </View>
                 ) : (
-                    <View style={styles.workerMarker}>
-                        <FontAwesome5 name="hard-hat" size={22} color="white" />
+                    <View style={styles.workerAvatarPlaceholderContainer}>
+                        <Ionicons name="person" size={40} color={theme.colors.primary} style={styles.workerAvatarPlaceholder} />
                     </View>
                 )
             ) : (
@@ -223,20 +223,23 @@ const styles = StyleSheet.create({
       shadowRadius: 3.84,
       elevation: 5,
     },
-    workerMarker: {
+    workerAvatarPlaceholderContainer: {
         width: 40,
         height: 40,
         borderRadius: 20,
-        backgroundColor: theme.colors.primary,
+        backgroundColor: theme.colors.cardBackground, // Use cardBackground for the circular background
         alignItems: 'center',
         justifyContent: 'center',
         borderWidth: 2,
-        borderColor: theme.colors.cardBackground,
-        shadowColor: '#000',
+        borderColor: theme.colors.primary, // Add a primary colored border
+        shadowColor: '#000', // Keep shadow for depth
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.25,
         shadowRadius: 3.84,
         elevation: 5,
+    },
+    workerAvatarPlaceholder: {
+        // Icon itself will be centered by its container
     },
     calloutContainer: {
       padding: 10,

@@ -10,7 +10,7 @@ import { WorkSession } from '../types';
 export async function fetchActiveWorkSession(workerId: string): Promise<WorkSession | null> {
   const { data, error } = await supabase
     .from('work_sessions')
-    .select('*')
+    .select('*, worker_assignments!inner(*)')
     .eq('worker_id', workerId)
     .is('end_time', null)
     .maybeSingle(); // Use maybeSingle to gracefully handle 0 rows

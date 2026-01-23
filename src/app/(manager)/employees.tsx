@@ -154,7 +154,11 @@ export default function ManagerEmployees() {
     return (
       <View key={item.id} style={styles.tableRow}>
         <View style={styles.tableCellAvatar}>
-          <Image source={{ uri: item.avatar_url || 'https://i.imgur.com/1nSAQlW.png' }} style={styles.avatar} />
+          {item.avatar_url ? (
+            <Image source={{ uri: item.avatar_url }} style={styles.avatar} />
+          ) : (
+            <Ionicons name="person" size={40} color={theme.colors.bodyText} style={styles.avatarPlaceholder} />
+          )}
         </View>
         <Text style={styles.tableCellText}>{item.full_name}</Text>
         <Text style={styles.tableCellText}>{item.email}</Text>
@@ -408,6 +412,12 @@ const styles = StyleSheet.create({
     padding: theme.spacing(1),
   },
   avatar: { width: 40, height: 40, borderRadius: 20 },
+  avatarPlaceholder: {
+    width: 40,
+    height: 40,
+    textAlign: 'center',
+    lineHeight: 40,
+  },
   statusBadge: {
     paddingVertical: 4,
     paddingHorizontal: 8,

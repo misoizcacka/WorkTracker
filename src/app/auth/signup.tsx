@@ -6,7 +6,7 @@ import { useSession } from '../../context/AuthContext'; // Import useSession
 import { Button } from '../../components/Button';
 import { theme } from '../../theme';
 import AnimatedScreen from '../../components/AnimatedScreen';
-import Logo from '../../../assets/logowhitenavy.png'; // Make sure this path is correct
+import Logo from '../../../assets/logokoordwhite.png'; // Make sure this path is correct
 import { supabase } from '../../utils/supabase'; // Import Supabase client
 
 const { width } = Dimensions.get('window');

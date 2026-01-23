@@ -46,7 +46,7 @@ export default function LandingPage() {
         {/* Header - Stripe-like clean header */}
         <View style={styles.header}>
           <Image
-            source={require('../../../assets/logowhitenavy.png')} // Changed logo
+            source={require('../../../assets/logokoordwhite.png')} // Changed logo
             style={styles.logo}
             resizeMode="contain"
           />

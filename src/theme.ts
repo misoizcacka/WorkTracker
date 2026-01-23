@@ -7,11 +7,12 @@ export const theme = {
     bodyText: "#3A3A3C",
     iconColor: "#5A5A5C",
     borderColor: "#E0E1E5",
+    disabledText: "#A9A9A9",
 
     // Existing brand/status colors (keeping for now, will check usage later)
     primary: "#000000", // navy
     primaryDark: "#000000", // navy
-    primaryMuted: "#E6E6FA", // light blue for muted primary
+    primaryMuted: "#E5E7EB", // light blue for muted primary
     secondary: "#FFA500", // orange
     accent: "#E0E0E0", // light gray accent for highlights
 
@@ -55,6 +56,14 @@ export const theme = {
     regular: "Poppins_400Regular",
     medium: "Poppins_600SemiBold",
     bold: "Poppins_700Bold",
+  },
+
+  fontSizes: {
+    xs: 12,
+    sm: 14,
+    md: 16,
+    lg: 20,
+    xl: 24,
   },
 
   shadow: {

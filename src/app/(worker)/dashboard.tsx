@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from "react";
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, Platform, TextInput, ActivityIndicator } from "react-native";
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator } from "react-native";
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { Card } from "../../components/Card";
 import AnimatedScreen from "../../components/AnimatedScreen";
@@ -10,68 +10,87 @@ import { useProjects } from '~/context/ProjectsContext';
 import { useAssignments } from '~/context/AssignmentsContext'; // For commonLocations
 import { fetchWorkSessionsByDateRange } from '../../services/workSessions';
 import moment from 'moment';
-import CrossPlatformDatePicker from '../../components/CrossPlatformDatePicker';
+import CustomMonthPicker from '../../components/time/CustomMonthPicker';
+import { Button } from "../../components/Button";
 
-const FILTERS = ["Last 7 Days", "This Month", "Previous Month", "Custom"] as const;
+
+const FILTERS = ["Yesterday", "Last 7 Days", "Last 30 Days", "This Month", "Custom"] as const;
+type FilterType = (typeof FILTERS)[number];
 
 interface ProcessedSession {
   id: string;
   date: string;
   projectName: string;
   projectAddress: string;
-  hours: number;
+  duration: {
+    hours: number;
+    minutes: number;
+  };
+  totalHours: number;
+}
+
+interface DailySummary {
+  date: string;
+  totalDuration: {
+    hours: number;
+    minutes: number;
+  };
+  projects: string[];
 }
 
 export default function WorkerDashboardScreen() {
   const tabBarHeight = useBottomTabBarHeight();
-  const [selectedFilter, setSelectedFilter] = useState<"Last 7 Days" | "This Month" | "Previous Month" | "Custom">("This Month");
+  const [selectedFilter, setSelectedFilter] = useState<FilterType>("Last 7 Days");
   const [workSessions, setWorkSessions] = useState<ProcessedSession[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const [customStartDate, setCustomStartDate] = useState<Date | null>(null);
-  const [customEndDate, setCustomEndDate] = useState<Date | null>(null);
+  const [customDateRange, setCustomDateRange] = useState<{ startDate: Date; endDate: Date }>({
+    startDate: moment().startOf('month').toDate(),
+    endDate: moment().endOf('month').toDate(),
+  });
+  const [isMonthPickerVisible, setIsMonthPickerVisible] = useState(false);
+
 
   const { user } = useSession()!;
   const { projects } = useProjects();
   const { commonLocations } = useAssignments();
-
-  useEffect(() => {
-    if (Platform.OS === 'web') {
-      // For web, CustomInput needs to be defined within the render scope or passed as a prop
-      // to access theme. For now, this is a placeholder.
-    }
-  }, []);
 
   const fetchData = useCallback(async () => {
     if (!user?.id) return;
 
     setLoading(true);
     setError(null);
-    let startDate: moment.Moment | null = null;
-    let endDate: moment.Moment | null = null;
+    let startDate: moment.Moment;
+    let endDate: moment.Moment;
 
     const today = moment();
 
     switch (selectedFilter) {
+      case "Yesterday":
+        startDate = today.clone().subtract(1, 'days').startOf('day');
+        endDate = today.clone().subtract(1, 'days').endOf('day');
+        break;
       case "Last 7 Days":
         startDate = today.clone().subtract(6, 'days').startOf('day');
+        endDate = today.clone().endOf('day');
+        break;
+      case "Last 30 Days":
+        startDate = today.clone().subtract(29, 'days').startOf('day');
         endDate = today.clone().endOf('day');
         break;
       case "This Month":
         startDate = today.clone().startOf('month');
         endDate = today.clone().endOf('month');
         break;
-      case "Previous Month":
-        startDate = today.clone().subtract(1, 'month').startOf('month');
-        endDate = today.clone().subtract(1, 'month').endOf('month');
-        break;
       case "Custom":
-        if (customStartDate && customEndDate) {
-          startDate = moment(customStartDate).startOf('day');
-          endDate = moment(customEndDate).endOf('day');
-        }
+        startDate = moment(customDateRange.startDate);
+        endDate = moment(customDateRange.endDate);
         break;
+      default:
+        setWorkSessions([]);
+        setLoading(false);
+        return;
     }
 
     if (startDate && endDate) {
@@ -79,13 +98,11 @@ export default function WorkerDashboardScreen() {
         const fetchedSessions = await fetchWorkSessionsByDateRange(user.id, startDate.toISOString(), endDate.toISOString());
 
         const processed = fetchedSessions.map(session => {
-          // Calculate duration in hours
           const start = moment(session.start_time);
-          const end = session.end_time ? moment(session.end_time) : moment(); // If session is active, use current time
-          const hours = moment.duration(end.diff(start)).asHours();
+          const end = session.end_time ? moment(session.end_time) : moment();
+          const duration = moment.duration(end.diff(start));
 
-          // Find associated project or location details
-          const assignmentRef = session.worker_assignments; // Access the joined data
+          const assignmentRef = session.worker_assignments;
           let projectName = "Unknown";
           let projectAddress = "N/A";
 
@@ -100,8 +117,7 @@ export default function WorkerDashboardScreen() {
               const location = commonLocations.find(l => l.id === assignmentRef.ref_id);
               if (location) {
                 projectName = location.name;
-                // No address for common locations by default, could add if needed
-                projectAddress = "";
+                projectAddress = ""; 
               }
             }
           }
@@ -111,7 +127,11 @@ export default function WorkerDashboardScreen() {
             date: moment(session.start_time).format('YYYY-MM-DD'),
             projectName,
             projectAddress,
-            hours,
+            duration: {
+              hours: Math.floor(duration.asHours()),
+              minutes: duration.minutes(),
+            },
+            totalHours: duration.asHours(),
           };
         });
         setWorkSessions(processed);
@@ -119,61 +139,88 @@ export default function WorkerDashboardScreen() {
         console.error("Error fetching work sessions:", err);
         setError("Failed to load work sessions.");
       }
-    } else {
-      setWorkSessions([]);
     }
     setLoading(false);
-  }, [selectedFilter, customStartDate, customEndDate, user?.id, projects, commonLocations]);
+  }, [selectedFilter, customDateRange, user?.id, projects, commonLocations]);
 
   useEffect(() => {
     fetchData();
   }, [fetchData]);
 
-  const totalHours = useMemo(() => {
-    return workSessions.reduce((sum, session) => sum + session.hours, 0);
+  const dailySummaries = useMemo(() => {
+    const sessionsByDate: { [date: string]: ProcessedSession[] } = workSessions.reduce((acc, session) => {
+      const date = session.date;
+      if (!acc[date]) {
+        acc[date] = [];
+      }
+      acc[date].push(session);
+      return acc;
+    }, {} as { [date: string]: ProcessedSession[] });
+
+    return Object.keys(sessionsByDate).map(date => {
+      const sessions = sessionsByDate[date];
+      const totalMilliseconds = sessions.reduce((sum, s) => sum + moment.duration({ hours: s.duration.hours, minutes: s.duration.minutes }).asMilliseconds(), 0);
+      const totalDuration = moment.duration(totalMilliseconds);
+      
+      const projects = [...new Set(sessions.map(s => s.projectName))];
+
+      return {
+        date,
+        totalDuration: {
+          hours: Math.floor(totalDuration.asHours()),
+          minutes: totalDuration.minutes()
+        },
+        projects
+      };
+    }).sort((a, b) => moment(b.date).diff(moment(a.date))); // Sort by date descending
   }, [workSessions]);
 
-  const avgDailyHours = useMemo(() => {
-    if (workSessions.length === 0) return 0;
-    const uniqueDates = new Set(workSessions.map(session => session.date)).size;
-    return totalHours / uniqueDates;
-  }, [workSessions, totalHours]);
+  const totalHours = useMemo(() => {
+    return dailySummaries.reduce((sum, day) => sum + day.totalDuration.hours + day.totalDuration.minutes / 60, 0);
+  }, [dailySummaries]);
 
-  const renderSession = ({ item }: { item: ProcessedSession }) => (
-    <Card style={styles.sessionCard}>
-      <View style={styles.sessionHeader}>
-        <Text style={styles.sessionDate}>{item.date}</Text>
+  const avgDailyHours = useMemo(() => {
+    if (dailySummaries.length === 0) return 0;
+    return totalHours / dailySummaries.length;
+  }, [dailySummaries, totalHours]);
+
+  const renderDailySummary = ({ item }: { item: DailySummary }) => (
+    <Card style={styles.dailyCard}>
+      <View style={styles.dailyHeader}>
+        <View style={styles.dailyDateContainer}>
+            <Ionicons name="calendar-outline" size={18} color={theme.colors.primary} />
+            <Text style={styles.dailyDate}>{moment(item.date).format('MMMM D, YYYY')}</Text>
+        </View>
+        <Text style={styles.dailyTotalHours}>
+          {item.totalDuration.hours}h {item.totalDuration.minutes}m
+        </Text>
       </View>
-      <Text style={styles.sessionProject}>{item.projectName}</Text>
-      <Text style={styles.sessionAddress}>{item.projectAddress}</Text>
+      <View style={styles.dailyProjectsContainer}>
+         <Ionicons name="briefcase-outline" size={16} color={theme.colors.bodyText} style={{marginRight: 5}}/>
+        <Text style={styles.dailyProjectsText} numberOfLines={1}>
+            {item.projects.join(', ')}
+        </Text>
+      </View>
     </Card>
   );
+  
+  const getSummaryPeriodText = () => {
+    if (selectedFilter === 'Custom') {
+      return moment(customDateRange.startDate).format('MMMM YYYY');
+    }
+    return selectedFilter;
+  }
 
-  const CustomDatePickerComponent = () => (
-    <View style={styles.datePickerContainer}>
-      <View style={styles.dateInputGroup}>
-        <Text style={styles.datePickerLabel}>Select Month</Text>
-        <CrossPlatformDatePicker
-          date={customStartDate || new Date()}
-          onDateChange={(newDate) => {
-            setCustomStartDate(moment(newDate).startOf('month').toDate());
-            setCustomEndDate(moment(newDate).endOf('month').toDate());
-          }}
-          mode="month"
-        />
-      </View>
-      <TouchableOpacity style={styles.datePickerButton} onPress={fetchData}>
-        <Text style={styles.datePickerButtonText}>Apply</Text>
-      </TouchableOpacity>
-    </View>
-  );
+  const handleMonthSelect = (startDate: Date, endDate: Date) => {
+    setCustomDateRange({ startDate, endDate });
+  }
 
   return (
     <AnimatedScreen>
-      <View style={[styles.container, { paddingBottom: tabBarHeight }]}>
+      <View style={[styles.container]}>
         <FlatList
-          data={workSessions}
-          keyExtractor={(item) => item.id}
+          data={dailySummaries}
+          keyExtractor={(item) => item.date}
           ListHeaderComponent={
             <>
               <View style={styles.header}>
@@ -182,7 +229,17 @@ export default function WorkerDashboardScreen() {
               </View>
               
               <Card style={styles.summaryCard}>
-                <Text style={styles.summaryPeriod}>{selectedFilter}</Text>
+                <View style={styles.summaryPeriodWrapper}>
+                  <TouchableOpacity
+                    onPress={() => selectedFilter === 'Custom' && setIsMonthPickerVisible(true)}
+                    style={styles.summaryPeriodTouchable}
+                  >
+                    <Text style={styles.summaryPeriod}>{getSummaryPeriodText()}</Text>
+                    {selectedFilter === 'Custom' && (
+                      <Ionicons name="calendar-outline" size={24} color={theme.colors.primary} style={styles.calendarIcon} />
+                    )}
+                  </TouchableOpacity>
+                </View>
                 {error ? (
                   <Text style={styles.errorText}>{error}</Text>
                 ) : (
@@ -219,13 +276,18 @@ export default function WorkerDashboardScreen() {
                 />
               </View>
 
-              {selectedFilter === 'Custom' && <CustomDatePickerComponent />}
-
               <Text style={styles.sessionsTitle}>Work History</Text>
             </>
           }
-          renderItem={renderSession}
+          renderItem={renderDailySummary}
           contentContainerStyle={styles.listContent}
+          ListEmptyComponent={!loading ? <Card style={styles.emptyCard}><Text>No work sessions found for this period.</Text></Card> : null}
+        />
+        <CustomMonthPicker 
+            isVisible={isMonthPickerVisible}
+            onClose={() => setIsMonthPickerVisible(false)}
+            initialDate={customDateRange.startDate}
+            onMonthSelect={handleMonthSelect}
         />
       </View>
     </AnimatedScreen>
@@ -238,6 +300,8 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.pageBackground,
   },
   header: {
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingHorizontal: theme.spacing(2),
     paddingTop: theme.spacing(2),
     paddingBottom: theme.spacing(1),
@@ -256,11 +320,33 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '600',
     color: theme.colors.primary,
+    textAlign: 'center',
+  },
+  summaryPeriodWrapper: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
     marginBottom: theme.spacing(2),
+  },
+  summaryPeriodTouchable: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  calendarIcon: {
+    marginLeft: theme.spacing(1),
+  },
+  listContent: {
+    paddingBottom: theme.spacing(2),
+  },
+  emptyCard: {
+    marginHorizontal: theme.spacing(2),
+    padding: theme.spacing(3),
+    alignItems: 'center',
   },
   summaryMetrics: {
     flexDirection: 'row',
     justifyContent: 'space-around',
+    marginTop: theme.spacing(2),
   },
   metric: {
     alignItems: 'center',
@@ -273,100 +359,80 @@ const styles = StyleSheet.create({
   metricLabel: {
     fontSize: 14,
     color: theme.colors.bodyText,
-    marginTop: 4,
-  },
-  errorText: {
-    color: theme.colors.danger,
-    textAlign: 'center',
-    fontSize: 16,
+    marginTop: theme.spacing(0.5),
   },
   filterContainer: {
-    paddingVertical: theme.spacing(2),
+    flexDirection: 'row',
+    paddingHorizontal: theme.spacing(2),
+    marginTop: theme.spacing(3),
+    marginBottom: theme.spacing(2),
   },
   filterButton: {
-    paddingVertical: 8,
-    paddingHorizontal: 16,
+    paddingVertical: theme.spacing(1),
+    paddingHorizontal: theme.spacing(2),
     borderRadius: 20,
-    backgroundColor: theme.colors.accent,
-    marginHorizontal: 5,
+    backgroundColor: theme.colors.cardBackground,
+    marginRight: theme.spacing(1),
   },
   filterSelected: {
     backgroundColor: theme.colors.primary,
   },
   filterText: {
     fontSize: 14,
-    fontWeight: '500',
-    color: theme.colors.headingText,
+    color: theme.colors.bodyText,
   },
   filterSelectedText: {
-    color: theme.colors.cardBackground,
-  },
-  datePickerContainer: {
-    marginHorizontal: theme.spacing(2),
-    marginBottom: theme.spacing(2),
-  },
-  dateInputGroup: {
-    marginBottom: theme.spacing(1.5),
-  },
-  datePickerLabel: {
-    fontSize: 14,
-    color: theme.colors.bodyText,
-    marginBottom: 4,
-  },
-  dateInput: {
-    backgroundColor: theme.colors.accent,
-    borderRadius: theme.radius.md,
-    padding: theme.spacing(1.5),
-    fontSize: 16,
-  },
-  datePickerButton: {
-    backgroundColor: theme.colors.primary,
-    padding: theme.spacing(1.5),
-    borderRadius: theme.radius.md,
-    alignItems: 'center',
-  },
-  datePickerButtonText: {
-    color: theme.colors.cardBackground,
+    color: 'white',
     fontWeight: 'bold',
-    fontSize: 16,
   },
   sessionsTitle: {
     fontSize: 20,
     fontWeight: 'bold',
     color: theme.colors.headingText,
-    marginHorizontal: theme.spacing(2),
+    paddingHorizontal: theme.spacing(2),
     marginBottom: theme.spacing(1),
   },
-  listContent: {
-    paddingBottom: theme.spacing(2),
+  errorText: {
+    color: 'red',
+    textAlign: 'center',
+    marginTop: theme.spacing(2),
   },
-  sessionCard: {
+  dailyCard: {
     marginHorizontal: theme.spacing(2),
     marginBottom: theme.spacing(1.5),
     padding: theme.spacing(2),
+    backgroundColor: theme.colors.cardBackground,
+    borderRadius: theme.spacing(1),
   },
-  sessionHeader: {
+  dailyHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    marginBottom: theme.spacing(1.5),
   },
-  sessionDate: {
+  dailyDateContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  dailyDate: {
     fontSize: 16,
     fontWeight: '600',
     color: theme.colors.headingText,
+    marginLeft: theme.spacing(1),
   },
-  sessionHours: {
-    fontSize: 16,
+  dailyTotalHours: {
+    fontSize: 18,
     fontWeight: 'bold',
     color: theme.colors.primary,
   },
-  sessionProject: {
-    fontSize: 15,
-    color: theme.colors.headingText,
-    marginVertical: 4,
+  dailyProjectsContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: theme.spacing(1),
   },
-  sessionAddress: {
-    fontSize: 13,
+  dailyProjectsText: {
+    fontSize: 14,
     color: theme.colors.bodyText,
+    flex: 1,
   },
 });

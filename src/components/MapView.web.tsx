@@ -1,5 +1,5 @@
 import React, { useRef, useEffect, useState, useMemo, useCallback } from 'react';
-import Map, { Marker as MapLibreMarker, NavigationControl } from 'react-map-gl/maplibre';
+import Map, { Marker as MapLibreMarker, NavigationControl, ViewStateChangeEvent, ViewState } from 'react-map-gl/maplibre';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { View, Image, StyleSheet, Text, ImageStyle } from 'react-native';
 import { theme } from '../theme';
@@ -21,6 +21,16 @@ interface MapViewProps {
     longitudeDelta: number;
     zoom?: number;
   };
+  region?: {
+    latitude: number;
+    longitude: number;
+    latitudeDelta: number;
+    longitudeDelta: number;
+    zoom?: number; // Add zoom here
+  };
+  zoom?: number; // New prop for explicit zoom control
+  onRegionChangeComplete?: (region: { latitude: number; longitude: number; latitudeDelta: number; longitudeDelta: number; zoom: number; }) => void;
+  onWebZoomChange?: (zoom: number) => void; // New callback for explicit zoom changes
   showNameTag?: boolean;
 }
 
@@ -31,7 +41,7 @@ const ModernWorkerMarker = ({ marker, showNameTag = true }: { marker: WorkerLoca
       {marker.avatar ? (
         <Image source={{ uri: marker.avatar }} style={[styles.avatar] as ImageStyle} />
       ) : (
-        <FontAwesome5 name="hard-hat" size={20} color="white" />
+        <Ionicons name="person" size={38} color={theme.colors.pageBackground} style={styles.workerAvatarPlaceholder} />
       )}
     </View>
     {showNameTag && <Text style={styles.nameTag}>{marker.name}</Text>}
@@ -185,6 +195,10 @@ export const MapView = React.forwardRef<any, MapViewProps>(({
   selectedWorkers = [],
   selectedProjects = [],
   initialRegion,
+  region,
+  zoom: zoomProp, // Renamed to avoid conflict with internal 'zoom' variable
+  onRegionChangeComplete,
+  onWebZoomChange, // New prop
   showNameTag = true,
 }, ref) => {
   const mapRef = useRef<any>(null);
@@ -212,7 +226,9 @@ export const MapView = React.forwardRef<any, MapViewProps>(({
 
   const [popupInfo, setPopupInfo] = useState<ItemInCluster | null>(null);
   const [hoverInfo, setHoverInfo] = useState<ItemInCluster | null>(null);
-  const [viewState, setViewState] = useState({
+
+  // Internal viewState for uncontrolled mode (when region prop is not provided)
+  const [internalViewState, setInternalViewState] = useState({
     latitude: initialRegion?.latitude || 52.52,
     longitude: initialRegion?.longitude || 13.405,
     zoom: initialRegion?.zoom || 10,
@@ -221,6 +237,34 @@ export const MapView = React.forwardRef<any, MapViewProps>(({
   const [isMapLoaded, setIsMapLoaded] = useState(false);
   const [spiderfiedMarkers, setSpiderfiedMarkers] = useState<any[]>([]);
   const [spiderfiedParentId, setSpiderfiedParentId] = useState<string | number | null>(null);
+
+  // Determine the effective viewState based on whether the 'region' prop is provided (controlled mode)
+  const effectiveViewState = useMemo(() => {
+    if (region) {
+      // Controlled mode: viewState is derived from the 'region' prop
+      const zoom = zoomProp ?? region.zoom ?? Math.log2(360 / Math.max(region.latitudeDelta, region.longitudeDelta));
+      return {
+        latitude: region.latitude,
+        longitude: region.longitude,
+        zoom: zoom,
+      };
+    }
+    // Uncontrolled mode: viewState is managed internally
+    return internalViewState;
+  }, [region, internalViewState, initialRegion]);
+
+  // Effect to update internalViewState when initialRegion changes (only in uncontrolled mode)
+  useEffect(() => {
+    if (!region && initialRegion) { // If uncontrolled and initialRegion is provided
+      setInternalViewState(prev => ({
+        ...prev,
+        latitude: initialRegion.latitude,
+        longitude: initialRegion.longitude,
+        zoom: initialRegion.zoom || prev.zoom, // If zoom is not in initialRegion, keep current zoom
+      }));
+    }
+  }, [initialRegion, region]);
+
 
   const features = useMemo(() => [
     ...selectedWorkers.filter(w => w.location).map(w => ({
@@ -236,7 +280,7 @@ export const MapView = React.forwardRef<any, MapViewProps>(({
   ], [selectedWorkers, selectedProjects]);
 
   useEffect(() => {
-    if (!isMapLoaded || !mapRef.current) return;
+    if (region || !isMapLoaded || !mapRef.current) return;
     const map = mapRef.current;
 
     const allLocations = features.map(f => f.geometry.coordinates as [number, number]);
@@ -252,7 +296,7 @@ export const MapView = React.forwardRef<any, MapViewProps>(({
     if(!boundsToFit.isEmpty()) {
       map.fitBounds(boundsToFit, { padding: 100, maxZoom: 15, duration: 1000 });
     }
-  }, [features, isMapLoaded]); // Removed initialRegion dependency
+  }, [features, isMapLoaded, region, initialRegion]);
 
   const supercluster = useMemo(() => {
     const sc = new Supercluster({ radius: 40, maxZoom: 16 });
@@ -262,8 +306,8 @@ export const MapView = React.forwardRef<any, MapViewProps>(({
 
   const clusters = useMemo(() => {
     if (!supercluster) return [];
-    return supercluster.getClusters(bounds, Math.floor(viewState.zoom));
-  }, [supercluster, bounds, viewState.zoom]); // Changed zoom to viewState.zoom
+    return supercluster.getClusters(bounds, Math.floor(effectiveViewState.zoom));
+  }, [supercluster, bounds, effectiveViewState.zoom]);
 
   const renderableItems = useMemo(() => {
     const items: any[] = [];
@@ -380,25 +424,50 @@ export const MapView = React.forwardRef<any, MapViewProps>(({
     setHoverInfo(null);
   };
 
+  const handleMapMove = useCallback((evt: ViewStateChangeEvent) => {
+    if (region) {
+      // Controlled mode: don't update internal state, but call parent callback
+      if (onRegionChangeComplete) {
+        const { longitude, latitude } = evt.viewState;
+        const bounds = mapRef.current.getBounds();
+        // Calculate latitudeDelta/longitudeDelta from bounds here
+        const longitudeDelta = bounds.getEast() - bounds.getWest();
+        const latitudeDelta = bounds.getNorth() - bounds.getSouth();
+        onRegionChangeComplete({
+          latitude,
+          longitude,
+          latitudeDelta,
+          longitudeDelta,
+          zoom: evt.viewState.zoom, // Pass MapLibre's actual zoom
+        });
+      }
+      if (onWebZoomChange) {
+        onWebZoomChange(evt.viewState.zoom);
+      }
+    } else {
+      // Uncontrolled mode: update internal state
+      setInternalViewState(evt.viewState);
+    }
+
+    if (mapRef.current) {
+      const map = mapRef.current;
+      const newBounds = map.getBounds();
+      setBounds([newBounds.getWest(), newBounds.getSouth(), newBounds.getEast(), newBounds.getNorth()]);
+    }
+  }, [region, onRegionChangeComplete]);
+
   return (
     <View style={styles.mapContainer}>
       <Map
         ref={mapRef}
-        {...viewState}
-        onMove={evt => {
-          setViewState(evt.viewState);
-          if (mapRef.current) {
-            const map = mapRef.current;
-            const newBounds = map.getBounds();
-            setBounds([newBounds.getWest(), newBounds.getSouth(), newBounds.getEast(), newBounds.getNorth()]);
-          }
-        }}
+        {...effectiveViewState}
+        onMove={handleMapMove}
         style={{ width: '100%', height: '100%' }}
         mapStyle={TILE_PROVIDER_STYLE as any}
         attributionControl={false}
         onLoad={onMapLoad}
         onClick={clearAll}
-        onMoveEnd={() => { // Changed from onMove to onMoveEnd to avoid too many re-renders
+        onMoveEnd={(evt) => {
           if (popupInfo) setPopupInfo(null);
           if (hoverInfo) setHoverInfo(null);
           if (spiderfiedMarkers.length > 0) clearAll();
@@ -552,6 +621,12 @@ const styles = StyleSheet.create({
     width: 38,
     height: 38,
     borderRadius: 19,
+  },
+  workerAvatarPlaceholder: {
+    width: 38,
+    height: 38,
+    textAlign: 'center',
+    lineHeight: 38,
   },
 
   nameTag: {

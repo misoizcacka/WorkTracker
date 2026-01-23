@@ -29,7 +29,7 @@ export async function startHeartbeatTracking(assignmentId: string, companyId: st
       distanceInterval: 0,
       deferredUpdatesInterval: fifteenMinutesInMs,
       deferredUpdatesDistance: 0,
-      pausesLocationUpdatesAutomatically: true,
+      pausesUpdatesAutomatically: true,
       showsBackgroundLocationIndicator: true,
     });
 
