@@ -1,6 +1,7 @@
 // frontend/src/components/CustomDropdown.tsx
 import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Animated, ScrollView, TextInput, Platform } from 'react-native';
+import { View, TouchableOpacity, StyleSheet, Animated, ScrollView, TextInput, Platform } from 'react-native';
+import { Text } from '../components/Themed';
 import { Ionicons } from '@expo/vector-icons';
 import { theme } from '../theme';
 
@@ -84,7 +85,7 @@ const CustomDropdown: React.FC<CustomDropdownProps> = ({
   return (
     <View style={[styles.container, style]}>
       <TouchableOpacity onPress={toggleDropdown} style={styles.button}>
-        <Text style={selectedOption ? styles.selectedText : styles.placeholderText}>
+        <Text style={selectedOption ? styles.selectedText : styles.placeholderText} fontType={selectedOption ? "medium" : "regular"}>
           {selectedOption ? selectedOption[labelField] : placeholder}
         </Text>
         <Ionicons
@@ -103,7 +104,7 @@ const CustomDropdown: React.FC<CustomDropdownProps> = ({
               placeholder="Search..."
               value={searchTerm}
               onChangeText={setSearchTerm}
-              placeholderTextColor="#999"
+              placeholderTextColor={theme.colors.bodyText}
               onFocus={() => {}} // Override default onFocus to prevent immediate close
               onBlur={() => {}} // Override default onBlur
             />
@@ -116,11 +117,11 @@ const CustomDropdown: React.FC<CustomDropdownProps> = ({
                   style={styles.item}
                   onPress={() => handleSelect(item)}
                 >
-                  <Text style={styles.itemText}>{item[labelField]}</Text>
+                  <Text style={styles.itemText} fontType="regular">{item[labelField]}</Text>
                 </TouchableOpacity>
               ))
             ) : (
-              <Text style={styles.noResultsText}>No results found</Text>
+              <Text style={styles.noResultsText} fontType="regular">No results found</Text>
             )}
           </ScrollView>
         </Animated.View>
@@ -133,48 +134,48 @@ const styles = StyleSheet.create({
   container: {
     width: '100%',
     position: 'relative',
-    marginBottom: theme.spacing(2),
+    // Removed marginBottom as it should be controlled by the parent
     zIndex: 10, // Ensure dropdown appears above other content
   },
   button: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    height: 50,
+    height: 40, // Adjusted height
     borderColor: theme.colors.borderColor,
-    borderWidth: 1,
-    borderRadius: theme.radius.md,
     paddingHorizontal: theme.spacing(2),
-    backgroundColor: theme.colors.pageBackground,
+    backgroundColor: theme.colors.pageBackground, // Lighter background
   },
   selectedText: {
-    fontSize: 16,
+    flex: 1, // Allow text to expand
+    fontSize: theme.fontSizes.md, // Adjusted
     color: theme.colors.headingText,
-    fontWeight: '500',
+    // Removed fontWeight: '500', fontType handles it
   },
   placeholderText: {
-    fontSize: 16,
-    color: '#999',
+    flex: 1, // Allow text to expand
+    fontSize: theme.fontSizes.md, // Adjusted
+    color: theme.colors.bodyText, // Adjusted
   },
   dropdown: {
     position: 'absolute',
     top: '100%',
     width: '100%',
     maxHeight: 200,
-    backgroundColor: theme.colors.cardBackground,
-    borderRadius: theme.radius.md,
+    backgroundColor: theme.colors.cardBackground, // Adjusted
+    borderRadius: theme.radius.md, // Adjusted
     ...theme.shadow.soft,
     borderColor: theme.colors.borderColor,
     borderWidth: 1,
     overflow: 'hidden',
-    zIndex: 100, // Ensure dropdown items are above other elements in the modal
+    zIndex: 100, // Ensure dropdown items are above other elements
   },
   searchInput: {
-    height: 40,
+    height: 40, // Adjusted
     borderColor: theme.colors.borderColor,
     borderBottomWidth: 1,
     paddingHorizontal: theme.spacing(2),
-    fontSize: 16,
+    fontSize: theme.fontSizes.md, // Adjusted
     color: theme.colors.headingText,
     backgroundColor: theme.colors.pageBackground,
   },
@@ -184,14 +185,14 @@ const styles = StyleSheet.create({
     borderBottomColor: theme.colors.borderColor,
   },
   itemText: {
-    fontSize: 16,
+    fontSize: theme.fontSizes.md, // Adjusted
     color: theme.colors.headingText,
   },
   noResultsText: {
     padding: theme.spacing(2),
     textAlign: 'center',
     color: theme.colors.bodyText,
-    fontSize: 14,
+    fontSize: theme.fontSizes.md, // Adjusted
   },
 });
 

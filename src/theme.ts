@@ -1,12 +1,12 @@
 export const theme = {
   colors: {
     // User-defined colors
-    pageBackground: "#FFFFFF",
-    cardBackground: "#F2F3F5",
+    pageBackground: "#E0E0E0",
+    cardBackground: "#E0E0E0",
     headingText: "#1A1A1C",
     bodyText: "#3A3A3C",
     iconColor: "#5A5A5C",
-    borderColor: "#E0E1E5",
+    borderColor: "#bebebeff",
     disabledText: "#A9A9A9",
 
     // Existing brand/status colors (keeping for now, will check usage later)
@@ -14,13 +14,15 @@ export const theme = {
     primaryDark: "#000000", // navy
     primaryMuted: "#E5E7EB", // light blue for muted primary
     secondary: "#FFA500", // orange
-    accent: "#E0E0E0", // light gray accent for highlights
+    accent: "#bbbbbbff", // light gray accent for highlights
 
     success: "#16A34A", // balanced green
     warning: "#F59E0B", // subtle amber
     warningMuted: "#FFF3E0", // light orange background
     danger: "#DC2626", // standard red for errors
-    background: "#F2F3F5",
+    errorBackground: "#FFEBEE", // light red for error backgrounds
+    errorText: "#D32F2F", // dark red for error text
+    background: "#E0E0E0",
   },
 
   statusColors: {
@@ -53,9 +55,9 @@ export const theme = {
   },
 
   font: {
-    regular: "Poppins_400Regular",
-    medium: "Poppins_600SemiBold",
-    bold: "Poppins_700Bold",
+    regular: "WorkSans-Regular",
+    medium: "WorkSans-Light",
+    bold: "WorkSans-Bold",
   },
 
   fontSizes: {

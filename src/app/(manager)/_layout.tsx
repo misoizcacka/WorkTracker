@@ -1,9 +1,9 @@
 import React, { useEffect } from "react";
-import { Image } from "react-native";
+import { Image, Pressable } from "react-native";
 import { Drawer } from "expo-router/drawer";
 import { Ionicons } from "@expo/vector-icons";
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { withLayoutContext, useRouter, useSegments } from 'expo-router';
+import { withLayoutContext, useRouter, useSegments, Link } from 'expo-router'; // Added Link
 import { useDebouncedWindowDimensions } from "../../hooks/useDebouncedWindowDimensions";
 import { DrawerToggleButton } from '@react-navigation/drawer';
 
@@ -13,6 +13,7 @@ import { ProjectsProvider } from "../../context/ProjectsContext";
 import { AssignmentsProvider } from "../../context/AssignmentsContext";
 import { InvitesProvider } from "../../context/InvitesContext";
 import { useSession } from "../../context/AuthContext";
+
 
 const { Navigator } = createBottomTabNavigator();
 
@@ -33,8 +34,9 @@ function ManagerProviders({ children }: { children: React.ReactNode }) {
     if (user && (userRole === 'manager' || userRole === 'owner')) {
       const companySetupComplete = user.user_metadata?.company_setup_complete || false;
       const inCompanySetup = segments.includes('company-setup');
+      const inSubscriptionFlow = segments.includes('subscription'); // Check if currently in subscription flow
 
-      if (!companySetupComplete && !inCompanySetup) {
+      if (!companySetupComplete && !inCompanySetup && !inSubscriptionFlow) {
         router.replace('/(manager)/company-setup');
       }
     }
@@ -60,32 +62,52 @@ export default function TabsLayout() { // Renamed from ManagerLayout
   const { width } = useDebouncedWindowDimensions(50);
   const isLargeScreen = width >= 900;
 
+  // Add these lines
+  const { user, userRole } = useSession();
+  const getLogoHref = () => {
+    if (!user) {
+      return '/(guest)';
+    }
+    if (userRole === 'manager' || userRole === 'owner') {
+      return '/(manager)/dashboard';
+    } else if (userRole === 'worker') {
+      return '/(worker)/home';
+    }
+    return '/(guest)'; // Default fallback
+  };
+
   return (
     <>
-      <StatusBar style="light" backgroundColor={theme.colors.primary} />
+      <StatusBar style="dark" backgroundColor={theme.colors.cardBackground} />
       {isLargeScreen ? (
         // 🖥️ Web/Desktop → Sidebar Drawer
         <ManagerProviders>
           <Drawer
             screenOptions={{
               headerShown: true,
-              headerLeft: () => <DrawerToggleButton tintColor={theme.colors.cardBackground} />, // Add DrawerToggleButton here
+              headerLeft: () => <DrawerToggleButton tintColor={theme.colors.bodyText} />, // Add DrawerToggleButton here
               headerStyle: {
-                backgroundColor: theme.colors.primary,
+                backgroundColor: theme.colors.cardBackground,
                 elevation: 0, // Remove shadow on Android
                 shadowOpacity: 0, // Remove shadow on iOS
+                borderBottomWidth: 1,
+                borderBottomColor: theme.colors.borderColor,
               },
-              headerTintColor: theme.colors.primary,
+              headerTintColor: theme.colors.bodyText,
               headerTitle: () => (
-                <Image
-                  source={require('../../../assets/logokoordwhite.png')}
-                  style={{ width: 150, height: 40, resizeMode: 'contain' }}
-                />
+                <Link href={getLogoHref()} asChild>
+                  <Pressable>
+                    <Image
+                      source={require('../../../assets/logokoordblack.png')}
+                      style={{ width: 150, height: 40, resizeMode: 'contain' }}
+                    />
+                  </Pressable>
+                </Link>
               ),
               drawerStyle: { backgroundColor: theme.colors.pageBackground, width: 260 },
               drawerActiveTintColor: "#2563EB",
               drawerLabelStyle: { fontSize: 16, fontWeight: "500" },
-              drawerItemStyle: { display: 'none' },
+              drawerItemStyle: { display: 'none' }                                                                                                                  
             }}
           >
             <Drawer.Screen
@@ -104,6 +126,16 @@ export default function TabsLayout() { // Renamed from ManagerLayout
                 title: "Map Overview",
                 drawerIcon: ({ color, size }: { color: string; size: number }) => (
                   <Ionicons name="map-outline" color={color} size={size} />
+                ),
+                drawerItemStyle: { display: 'flex' },
+              }}
+            />
+            <Drawer.Screen
+              name="location-replay"
+              options={{
+                title: "Location Replay",
+                drawerIcon: ({ color, size }: { color: string; size: number }) => (
+                  <Ionicons name="timer-outline" color={color} size={size} />
                 ),
                 drawerItemStyle: { display: 'flex' },
               }}
@@ -151,7 +183,7 @@ export default function TabsLayout() { // Renamed from ManagerLayout
               }}
             />
             <Drawer.Screen
-              name="reports/index"
+              name="reports"
               options={{
                 title: "Reports",
                 drawerIcon: ({ color, size }: { color: string; size: number }) => (
@@ -172,6 +204,7 @@ export default function TabsLayout() { // Renamed from ManagerLayout
             />
             <Drawer.Screen
               name="company-setup"
+              options={{ headerShown: false }}
             />
             <Drawer.Screen
               name="setup-complete"
@@ -209,7 +242,7 @@ export default function TabsLayout() { // Renamed from ManagerLayout
               }}
             />
             <BottomTabs.Screen
-              name="map-.tsx"
+              name="map-overview"
               options={{
                 title: "Map Overview",
                 tabBarIcon: ({ color, size }: { color: string; size: number }) => (
@@ -237,7 +270,7 @@ export default function TabsLayout() { // Renamed from ManagerLayout
             />
 
             <BottomTabs.Screen
-              name="worker-assignment"
+              name="worker-assignments"
               options={{
                 title: "Worker Assignment",
                 tabBarIcon: ({ color, size }: { color: string; size: number }) => (

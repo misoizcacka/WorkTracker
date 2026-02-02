@@ -1,5 +1,6 @@
 import React, { useState, useContext, useMemo } from "react";
-import { View, Text, StyleSheet, useWindowDimensions, TextInput, Image, TouchableOpacity, ScrollView, ActivityIndicator } from "react-native";
+import { View, StyleSheet, useWindowDimensions, TextInput, Image, TouchableOpacity, ScrollView, ActivityIndicator, Platform } from "react-native";
+import { Text } from "../../components/Themed";
 import Toast from 'react-native-toast-message';
 import moment from "moment";
 import AnimatedScreen from "../../components/AnimatedScreen";
@@ -38,12 +39,25 @@ export default function ManagerEmployees() {
   const [isCancellingInvite, setIsCancellingInvite] = useState<string | null>(null); // To track which invite is being cancelled
   const [isSavingInvite, setIsSavingInvite] = useState(false); // NEW: for EditInviteModal saving state
 
-  // Calculate total table width
-  const fixedColumnWidth = 60 + 100; // Avatar (60) + Actions (100)
-  const flexibleColumnCount = 7; // Name, Email, Phone, Status, Role, Joined, Reporting To
-  const minFlexibleColumnWidth = theme.spacing(15); // 120px
-  const calculatedMinWidth = fixedColumnWidth + (flexibleColumnCount * minFlexibleColumnWidth);
-  const totalTableWidth = Math.max(width - theme.spacing(4), calculatedMinWidth);
+  const fixedColumnWidths = {
+    avatar: 60,
+    phone: 120,
+    status: 100,
+    role: 100,
+    joined: 150, // Increased from 120
+    actions: 100,
+  };
+
+  const flexibleColumnMinLengths = {
+    name: 100, // Reduced from 150
+    email: 150, // Reduced from 200
+    reportingTo: 150,
+  };
+
+  const fixedWidthsSum = Object.values(fixedColumnWidths).reduce((sum, width) => sum + width, 0);
+  const flexibleMinWidthsSum = Object.values(flexibleColumnMinLengths).reduce((sum, width) => sum + width, 0);
+
+  const minTableContentWidth = fixedWidthsSum + flexibleMinWidthsSum; // This will be the minimum width the table content needs.
 
   if (!employeesContext || !invitesContext) {
     return <Text>Loading...</Text>; // Consider a proper loading component
@@ -106,7 +120,7 @@ export default function ManagerEmployees() {
 
   const getStatusStyle = (status: Employee['status']) => { // Changed type to Employee['status']
     switch (status) {
-      case "active": return { color: theme.colors.success, text: "Active" };
+      case "active": return { color: theme.colors.success, text: "Active", };
       case "pending": return { color: theme.colors.warning, text: "Pending" };
       case "disabled": return { color: theme.colors.danger, text: "Disabled" };
       default: return { color: theme.colors.iconColor, text: "Unknown" };
@@ -153,27 +167,27 @@ export default function ManagerEmployees() {
 
     return (
       <View key={item.id} style={styles.tableRow}>
-        <View style={styles.tableCellAvatar}>
+        <View style={[styles.tableCell, { width: fixedColumnWidths.avatar }]}>
           {item.avatar_url ? (
             <Image source={{ uri: item.avatar_url }} style={styles.avatar} />
           ) : (
             <Ionicons name="person" size={40} color={theme.colors.bodyText} style={styles.avatarPlaceholder} />
           )}
         </View>
-        <Text style={styles.tableCellText}>{item.full_name}</Text>
-        <Text style={styles.tableCellText}>{item.email}</Text>
-        <Text style={styles.tableCellText}>{item.phone_number || 'N/A'}</Text>
-        <View style={styles.tableCell}>
+        <Text style={[styles.tableCellText, { flex: 1, minWidth: flexibleColumnMinLengths.name }]} numberOfLines={1} ellipsizeMode="tail">{item.full_name}</Text>
+        <Text style={[styles.tableCellText, { flex: 1, minWidth: flexibleColumnMinLengths.email }]} numberOfLines={1} ellipsizeMode="tail">{item.email}</Text>
+        <Text style={[styles.tableCellText, { width: fixedColumnWidths.phone }]} numberOfLines={1} ellipsizeMode="tail">{item.phone_number || 'N/A'}</Text>
+        <View style={[styles.tableCell, { width: fixedColumnWidths.status }]}>
           <View style={[styles.statusBadge, { backgroundColor: statusStyle.color }]}>
-            <Text style={styles.statusText}>{statusStyle.text}</Text>
+            <Text style={styles.statusText} fontType="regular">{statusStyle.text}</Text>
           </View>
         </View>
-        <Text style={styles.tableCellText}>{item.role}</Text>
-        <Text style={styles.tableCellText}>{moment(item.created_at).format("MMM D, YYYY")}</Text>
-        <Text style={styles.tableCellText}>
+        <Text style={[styles.tableCellText, { width: fixedColumnWidths.role }]} numberOfLines={1} ellipsizeMode="tail">{item.role}</Text>
+        <Text style={[styles.tableCellText, { width: fixedColumnWidths.joined }]} numberOfLines={1} ellipsizeMode="tail">{moment(item.created_at).format("MMM D, YYYY")}</Text>
+        <Text style={[styles.tableCellText, { flex: 1, minWidth: flexibleColumnMinLengths.reportingTo }]} numberOfLines={1} ellipsizeMode="tail">
             {isPendingInvite ? 'N/A' : (item.role === 'manager' ? 'N/A' : manager?.full_name || 'N/A')}
         </Text>
-        <View style={styles.tableCellActions}>
+        <View style={[styles.tableCellActions, { width: fixedColumnWidths.actions }]}>
           {isPendingInvite ? (
             <>
               <TouchableOpacity onPress={() => handleEditInvite(item as Invite)} style={styles.actionButton}>
@@ -204,22 +218,25 @@ export default function ManagerEmployees() {
 
   const TableHeader = () => (
     <View style={styles.tableHeaderRow}>
-      <Text style={styles.tableHeaderCellAvatar}></Text>
-      <Text style={styles.tableHeaderCell}>Name</Text>
-      <Text style={styles.tableHeaderCell}>Email</Text>
-      <Text style={styles.tableHeaderCell}>Phone</Text>
-      <Text style={styles.tableHeaderCell}>Status</Text>
-      <Text style={styles.tableHeaderCell}>Role</Text>
-      <Text style={styles.tableHeaderCell}>Joined</Text>
-      <Text style={styles.tableHeaderCell}>Reporting To</Text>
-      <Text style={styles.tableHeaderCellActions}></Text>
+      <Text style={[styles.tableHeaderCell, { width: fixedColumnWidths.avatar }]}></Text> {/* Avatar column */}
+      <Text style={[styles.tableHeaderCell, { flex: 1, minWidth: flexibleColumnMinLengths.name }]} fontType="bold">Name</Text>
+      <Text style={[styles.tableHeaderCell, { flex: 1, minWidth: flexibleColumnMinLengths.email }]} fontType="bold">Email</Text>
+      <Text style={[styles.tableHeaderCell, { width: fixedColumnWidths.phone }]} fontType="bold">Phone</Text>
+      <Text style={[styles.tableHeaderCell, { width: fixedColumnWidths.status }]} fontType="bold">Status</Text>
+      <Text style={[styles.tableHeaderCell, { width: fixedColumnWidths.role }]} fontType="bold">Role</Text>
+      <Text style={[styles.tableHeaderCell, { width: fixedColumnWidths.joined }]} fontType="bold">Joined</Text>
+      <Text style={[styles.tableHeaderCell, { flex: 1, minWidth: flexibleColumnMinLengths.reportingTo }]} fontType="bold">Reporting To</Text>
+      <Text style={[styles.tableHeaderCell, { width: fixedColumnWidths.actions }]}></Text> {/* Actions column */}
     </View>
   );
 
   return (
     <AnimatedScreen>
-      <View style={styles.container}>
-        <Text style={styles.title}>Manage Team</Text>
+      <View style={styles.pageHeader}>
+        <Text style={styles.pageTitle} fontType="bold">Team</Text>
+        <Text style={styles.pageSubtitle}>Manage your workers and their roles.</Text>
+      </View>
+      <View style={styles.mainContentCard}>
         <View style={styles.headerControls}>
           <View style={styles.searchAndFilter}>
             <TextInput
@@ -227,7 +244,7 @@ export default function ManagerEmployees() {
               placeholder="Search employees..."
               value={searchTerm}
               onChangeText={setSearchTerm}
-              placeholderTextColor="#999"
+              placeholderTextColor={theme.colors.bodyText}
             />
             <Dropdown
               style={styles.filterDropdown}
@@ -243,27 +260,24 @@ export default function ManagerEmployees() {
           </View>
           <View style={styles.headerStatsAndButton}>
             <View style={styles.statItem}>
-              <Text style={styles.statValue}>{seatsUsed}/{seatLimit}</Text>
-              <Text style={styles.statLabel}>Seats Used</Text>
+              <Text style={styles.statValue} fontType="bold">{seatsUsed}/{seatLimit}</Text>
+              <Text style={styles.statLabel} fontType="regular">Seats Used</Text>
             </View>
             <View style={styles.statItem}>
-              <Text style={styles.statValue}>{managerCount}</Text>
-              <Text style={styles.statLabel}>Managers</Text>
+              <Text style={styles.statValue} fontType="bold">{managerCount}</Text>
+              <Text style={styles.statLabel} fontType="regular">Managers</Text>
             </View>
             <Button title="Invite" onPress={handleInvite} style={styles.createButton} textStyle={styles.createButtonText} />
           </View>
         </View>
-        
 
 
-        <Card style={styles.tableWrapperCard}>
-          <ScrollView horizontal showsHorizontalScrollIndicator={true}>
-            <View style={{ width: totalTableWidth }}>
-              <TableHeader />
-              {filteredItems.map(renderEmployeeRow)}
-            </View>
-          </ScrollView>
-        </Card>
+        <ScrollView horizontal showsHorizontalScrollIndicator={true} contentContainerStyle={{ flexGrow: 1, minWidth: minTableContentWidth }}>
+          <View style={{ flexGrow: 1 }}>
+            <TableHeader />
+            {filteredItems.map(renderEmployeeRow)}
+          </View>
+        </ScrollView>
       </View>
       <InvitePersonModal
         visible={inviteModalVisible}
@@ -300,53 +314,83 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.pageBackground,
     padding: theme.spacing(2),
   },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
+  pageHeader: {
+    paddingVertical: theme.spacing(4),
+    paddingHorizontal: theme.spacing(2),
+    backgroundColor: theme.colors.background,
+    alignItems: 'flex-start',
+  },
+  pageTitle: {
+    fontSize: theme.fontSizes.xl,
     color: theme.colors.headingText,
+    marginBottom: theme.spacing(0.5),
+  },
+  pageSubtitle: {
+    fontSize: theme.fontSizes.lg,
+    color: theme.colors.bodyText,
+  },
+  mainContentCard: {
+    flex: 1,
+    backgroundColor: theme.colors.cardBackground,
+    borderRadius: theme.radius.lg,
+    borderWidth: 1,
+    borderColor: theme.colors.borderColor,
+    padding: theme.spacing(3), // Add padding within the card
+    marginHorizontal: theme.spacing(2), // Match dashboard's column margin
     marginBottom: theme.spacing(2),
+    ...Platform.select({
+      web: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.05,
+        shadowRadius: 10,
+      },
+      native: {
+        elevation: 6,
+      },
+    }),
   },
   headerControls: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: theme.spacing(2),
+    marginBottom: theme.spacing(3), // Increased margin for better separation
   },
   searchAndFilter: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   searchInput: {
-    width: 350,
-    height: 45,
-    backgroundColor: theme.colors.cardBackground,
+    width: 250, // Adjusted width
+    height: 40, // Adjusted height
+    backgroundColor: theme.colors.pageBackground, // Lighter background for search input
     borderColor: theme.colors.borderColor,
     borderWidth: 1,
     borderRadius: theme.radius.md,
     paddingHorizontal: theme.spacing(2),
-    fontSize: 16,
-    marginRight: theme.spacing(1),
+    fontSize: theme.fontSizes.md,
+    marginRight: theme.spacing(1.5), // Adjusted margin
+    color: theme.colors.headingText,
   },
   filterDropdown: {
-    width: 120,
-    height: 45,
-    backgroundColor: theme.colors.cardBackground,
+    width: 130, // Adjusted width
+    height: 40, // Adjusted height
+    backgroundColor: theme.colors.pageBackground, // Lighter background for dropdown
     borderColor: theme.colors.borderColor,
     borderWidth: 1,
     borderRadius: theme.radius.md,
     paddingHorizontal: theme.spacing(1),
   },
-  placeholderStyle: { fontSize: 16, color: '#999' },
-  selectedTextStyle: { fontSize: 16 },
+  placeholderStyle: { fontSize: theme.fontSizes.md, color: theme.colors.bodyText },
+  selectedTextStyle: { fontSize: theme.fontSizes.md, color: theme.colors.headingText },
   headerStatsAndButton: { flexDirection: 'row', alignItems: 'center' },
   statItem: { alignItems: 'center', marginHorizontal: theme.spacing(1.5) },
   statValue: {
-    fontSize: 18,
-    fontWeight: 'bold',
+    fontSize: theme.fontSizes.lg,
     color: theme.colors.headingText,
   },
   statLabel: {
-    fontSize: 12,
+    fontSize: theme.fontSizes.sm,
     color: theme.colors.bodyText,
     marginTop: theme.spacing(0.5),
   },
@@ -357,13 +401,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 15,
     marginLeft: theme.spacing(2),
   },
-  createButtonText: { color: "white", fontSize: 14, fontWeight: "bold" },
-  tableWrapperCard: {
-    padding: 0,
-    borderRadius: theme.radius.lg,
-    ...theme.shadow.soft,
-    overflow: 'hidden',
-  },
+  createButtonText: { color: "white", fontSize: 18 },
+  // tableWrapperCard removed
+
   tableHeaderRow: {
     flexDirection: 'row',
     backgroundColor: theme.colors.cardBackground,
@@ -372,13 +412,11 @@ const styles = StyleSheet.create({
   },
   tableHeaderCell: {
     padding: theme.spacing(2),
-    fontWeight: 'bold',
     color: theme.colors.headingText,
     textAlign: 'center',
-    flex: 1,
   },
-  tableHeaderCellAvatar: { width: 60, padding: theme.spacing(2) },
-  tableHeaderCellActions: { width: 100, padding: theme.spacing(2) },
+  // tableHeaderCellAvatar removed
+  // tableHeaderCellActions removed
   tableRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -390,24 +428,17 @@ const styles = StyleSheet.create({
     padding: theme.spacing(2),
     justifyContent: 'center',
     alignItems: 'center',
-    flex: 1,
   },
-  tableCellAvatar: {
-    width: 60,
-    padding: theme.spacing(1),
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
+  // tableCellAvatar removed
   tableCellText: {
     padding: theme.spacing(2),
     color: theme.colors.bodyText,
-    flex: 1,
     textAlign: 'center',
+    fontSize: theme.fontSizes.md,
   },
   tableCellActions: {
-    width: 100,
-    flexDirection: 'row',
-    justifyContent: 'space-around',
+    flexDirection: 'row', // Re-added for consistency within actions
+    justifyContent: 'space-around', // Re-added for consistency within actions
     alignItems: 'center',
     padding: theme.spacing(1),
   },

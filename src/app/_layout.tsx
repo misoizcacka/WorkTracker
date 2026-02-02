@@ -1,5 +1,5 @@
 import 'react-native-gesture-handler';
-import React, { useEffect } from 'react';
+import React, { useEffect, useState, useCallback } from 'react'; // Added useState, useCallback
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { SessionProvider, useSession } from '../context/AuthContext';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
@@ -19,7 +19,47 @@ import Toast from 'react-native-toast-message';
 // Register the background task
 import '../tasks/locationHeartbeatTask';
 
+import { useFonts } from 'expo-font';
+import * as SplashScreen from 'expo-splash-screen';
+
+// Import specific font weights from @expo-google-fonts/work-sans
+import {
+  WorkSans_100Thin,
+  WorkSans_300Light,
+  WorkSans_400Regular,
+  WorkSans_700Bold, // Re-add WorkSans_700Bold
+} from '@expo-google-fonts/work-sans';
+
+// Keep the splash screen visible while we fetch resources
+SplashScreen.preventAutoHideAsync();
+
 export default function RootLayout() {
+  const [fontsLoaded, fontError] = useFonts({
+    'WorkSans-Thin': WorkSans_100Thin,
+    'WorkSans-Light': WorkSans_300Light,
+    'WorkSans-Regular': WorkSans_400Regular,
+    'WorkSans-Bold': WorkSans_700Bold, // Map 'WorkSans-Bold' to 700
+    // Add other fonts if necessary
+  });
+
+  useEffect(() => {
+    if (fontsLoaded) {
+      SplashScreen.hideAsync();
+    }
+  }, [fontsLoaded]);
+
+  useEffect(() => {
+    if (fontError) {
+      console.error('Error loading fonts:', fontError);
+      SplashScreen.hideAsync();
+    }
+  }, [fontError]);
+
+  if (!fontsLoaded && !fontError) {
+    return null;
+  }
+
+
   return (
     <SafeAreaProvider>
       <SessionProvider>
@@ -46,26 +86,17 @@ export default function RootLayout() {
     const router = useRouter();
 
     useEffect(() => {
-      if (isLoading) return; // Overall auth session is still loading
+      if (isLoading) return;
 
-      // If user is logged in, and it's a manager/owner, we need company ID to be loaded
-      // Check if user is logged in and not a worker
       if (user && (user.user_metadata?.role === 'manager' || user.user_metadata?.role === 'owner')) {
-        // If company ID is still loading, or if it's finished loading but we couldn't find a company ID,
-        // then we must wait or show an error state.
         if (isCompanyIdLoading || userCompanyId === null) {
-          // If we are already on the subscription setup page, don't redirect (to prevent a loop)
           const currentPath = segments.join('/');
           if (!currentPath.startsWith('subscription/setup')) {
-            // This should ideally redirect to a loading state or a specific error page
-            // For now, we will block routing until company ID is resolved.
-            // In a real app, you might want a specific loading component here.
             return;
           }
         }
       }
 
-      // ADDED: Block workers from web app
       if (Platform.OS === 'web' && user) {
         if (userRole === 'worker') {
           router.replace('/mobile-only');
@@ -75,27 +106,21 @@ export default function RootLayout() {
 
       const inAuthGroup = segments[0] === '(guest)' || segments[0] === 'auth';
       if (!user) {
-        // Not logged in.
         if (!inAuthGroup) {
-          router.replace('/(guest)/login');
+          router.replace('/(guest)/');
         }
         return;
       }
 
-      // User is logged in.
       const inApp = segments[0] === '(manager)' || segments[0] === '(worker)';
       const subscriptionStatus = user.app_metadata?.subscription_status;
-      // userRole is already available from useSession()
-      // This is the new check for the payment processing pages
       const inPaymentFlow = segments.includes('payment');
 
       const companySetupComplete = user.user_metadata?.company_setup_complete || false;
 
       const isOnCompanySetupPage = segments[0] === '(manager)' && segments.length > 1 && (segments as any)[1] === 'company-setup';
 
-      // If owner or manager without active subscription, redirect to subscription setup.
       if ((userRole === 'manager' || userRole === 'owner') && subscriptionStatus !== 'active') {
-        // Ensure they are not already on a subscription/onboarding/payment page
         if (segments[0] !== 'subscription' && segments[0] !== 'onboarding' && !inPaymentFlow) {
           router.replace('/subscription/setup');
         }
@@ -103,14 +128,12 @@ export default function RootLayout() {
         if (!isOnCompanySetupPage) {
           router.replace('/(manager)/company-setup');
         }
-                      } else if (user && userRole) { // ADDED: Ensure user and userRole are determined before redirecting
-            // If manager/owner has active subscription and company setup is complete OR if user is a worker,
-            // redirect them to their respective app dashboards if they are not already in app
-            if (!inApp) {
-              // Redirect owner/manager to dashboard, worker to worker home
-              router.replace(userRole === 'worker' ? '/(worker)/home' : '/(manager)/dashboard');
-            }
-          }    }, [user, segments, isLoading, userRole, userCompanyId, isCompanyIdLoading]);
+      } else if (user && userRole) {
+        if (!inApp) {
+          router.replace(userRole === 'worker' ? '/(worker)/home' : '/(manager)/dashboard');
+        }
+      }
+    }, [user, segments, isLoading, userRole, userCompanyId, isCompanyIdLoading]);
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: theme.colors.pageBackground }}>

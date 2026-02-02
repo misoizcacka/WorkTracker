@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, Platform, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { View, StyleSheet, ScrollView, Platform, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { Text } from '~/components/Themed';
 import { Droppable, Draggable, DragDropContext, DropResult } from '@hello-pangea/dnd';
 import { Ionicons } from '@expo/vector-icons';
 import Animated, { Layout } from 'react-native-reanimated';
@@ -105,14 +106,14 @@ const AssignmentBlock = React.memo(function AssignmentBlock({
       <View style={[styles.assignmentContent, { backgroundColor: hexToRgba(assignment.project.color, 0.08) }]}>
         <View style={[styles.colorIndicator, { backgroundColor: assignment.project.color }]} />    
         <View style={styles.assignmentInfo}>
-          <Text style={styles.assignmentName} numberOfLines={1}>{assignment.project.name}</Text>   
-          <Text style={styles.assignmentAddress} numberOfLines={1}>{assignment.project.address}</Text>
+          <Text style={styles.assignmentName} numberOfLines={1} fontType="medium">{assignment.project.name}</Text>   
+          <Text style={styles.assignmentAddress} numberOfLines={1} fontType="regular">{assignment.project.address}</Text>
         </View>
       </View>
     ) : (
       <View style={[styles.assignmentContent, styles.assignmentPlaceholder]}>
         <ActivityIndicator size="small" />
-        <Text style={styles.placeholderText}>Loading Project...</Text>
+        <Text style={styles.placeholderText} fontType="regular">Loading Project...</Text>
       </View>
     )
   ) : (
@@ -120,7 +121,7 @@ const AssignmentBlock = React.memo(function AssignmentBlock({
       <View style={[styles.assignmentContent, { backgroundColor: theme.colors.cardBackground }]}>  
         <View style={[styles.colorIndicator, { backgroundColor: theme.colors.secondary }]} />      
         <View style={styles.assignmentInfo}>
-          <Text style={styles.assignmentName} numberOfLines={1}>{assignment.location.name}</Text>  
+          <Text style={styles.assignmentName} numberOfLines={1} fontType="medium">{assignment.location.name}</Text>  
         </View>
       </View>
     ) : (
@@ -159,7 +160,7 @@ const AssignmentBlock = React.memo(function AssignmentBlock({
               {assignment.start_time && (
                 <View style={styles.timeInfoContainer}>
                     <Ionicons name="time-outline" size={14} color={theme.colors.bodyText} style={styles.timeIcon} />
-                    <Text style={styles.assignmentTime}>Be there at: {assignment.start_time}</Text>
+                    <Text style={styles.assignmentTime} fontType="bold">Be there at: {assignment.start_time}</Text>
                 </View>
               )}
             </View>
@@ -195,7 +196,7 @@ const WorkerColumn = React.memo(function WorkerColumn({
   return (
     <View style={styles.workerColumn}>
       <View style={styles.workerColumnHeader}>
-        <Text style={styles.workerName}>{employee.full_name}</Text>
+        <Text style={styles.workerName} fontType="medium">{employee.full_name}</Text>
       </View>
       <Droppable droppableId={`worker-${employee.id}`} type="TASK" direction="vertical" isDropDisabled={isPastDate}>
         {(provided, snapshot) => (
@@ -279,7 +280,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     flexDirection: 'row',
-    borderWidth: StyleSheet.hairlineWidth,
     borderColor: theme.colors.borderColor,
     borderRadius: theme.radius.lg,
     backgroundColor: theme.colors.cardBackground,
@@ -307,7 +307,7 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.pageBackground,
   },
   workerName: {
-    fontWeight: '500',
+    fontSize: theme.fontSizes.md,
     color: theme.colors.headingText,
   },
   timelineScrollView: {
@@ -366,17 +366,16 @@ const styles = StyleSheet.create({
   },
   placeholderText: {
     marginLeft: theme.spacing(1),
-    fontSize: 11,
+    fontSize: theme.fontSizes.xs,
     color: theme.colors.bodyText,
     fontStyle: 'italic',
   },
   assignmentName: {
-    fontWeight: '500',
-    fontSize: 11,
+    fontSize: theme.fontSizes.xs,
     color: theme.colors.headingText,
   },
   assignmentAddress: {
-    fontSize: 10,
+    fontSize: theme.fontSizes.xs,
     color: theme.colors.bodyText,
   },
   timeInfoContainer: {
@@ -388,9 +387,8 @@ const styles = StyleSheet.create({
     marginRight: 4,
   },
   assignmentTime: {
-    fontSize: 12,
+    fontSize: theme.fontSizes.xs,
     color: theme.colors.bodyText,
-    fontWeight: 'bold',
   },
   deleteButton: {
     position: 'absolute',

@@ -1,11 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, ActivityIndicator } from 'react-native';
+import { View, StyleSheet, ScrollView, ActivityIndicator, TouchableOpacity } from 'react-native';
+import { Text } from '../../../components/Themed';
 import AnimatedScreen from '../../../components/AnimatedScreen';
 import { Card } from '../../../components/Card';
 import { theme } from '../../../theme';
 import { Dropdown } from 'react-native-element-dropdown';
 import { Button } from '../../../components/Button';
 import { supabase } from '../../../utils/supabase';
+import { useRouter } from 'expo-router'; // Import useRouter
+import { Ionicons } from '@expo/vector-icons'; // Import Ionicons
 
 interface PayrollReportItem {
   worker_id: string;
@@ -37,6 +40,7 @@ const years = Array.from({ length: 5 }, (_, i) => ({
 }));
 
 const PayrollReport = () => {
+  const router = useRouter(); // Initialize useRouter
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
   const [selectedYear, setSelectedYear] = useState(currentYear);
   const [reportData, setReportData] = useState<PayrollReportItem[]>([]);
@@ -62,15 +66,22 @@ const PayrollReport = () => {
     fetchReportData();
   }, [selectedMonth, selectedYear]);
 
-  const totalWorkHours = reportData.reduce((sum, item) => sum + (item.total_work_hours || 0), 0);
-  const totalBreakMinutes = reportData.reduce((sum, item) => sum + (item.total_break_minutes || 0), 0);
-  const totalPayableHours = reportData.reduce((sum, item) => sum + (item.payable_hours || 0), 0);
+  const totalWorkHours = reportData.reduce((sum: number, item) => sum + (item.total_work_hours || 0), 0);
+  const totalBreakMinutes = reportData.reduce((sum: number, item) => sum + (item.total_break_minutes || 0), 0);
+  const totalPayableHours = reportData.reduce((sum: number, item) => sum + (item.payable_hours || 0), 0);
 
   return (
     <AnimatedScreen>
-      <ScrollView style={styles.container} contentContainerStyle={styles.scrollContentContainer}>
-        <Text style={styles.title}>Monthly Payroll Report</Text>
-
+      <View style={styles.pageHeader}>
+        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+            <Ionicons name="arrow-back" size={24} color={theme.colors.headingText} />
+        </TouchableOpacity>
+        <View>
+            <Text style={styles.pageTitle} fontType="bold">Payroll Report</Text>
+            <Text style={styles.pageSubtitle}>Generate and review detailed payroll summaries for your workers.</Text>
+        </View>
+      </View>
+      <ScrollView style={styles.containerNoPadding} contentContainerStyle={styles.scrollContentContainer}>
         {/* --- Filters --- */}
         <Card style={styles.filterCard}>
           <View style={styles.filterControls}>
@@ -104,49 +115,49 @@ const PayrollReport = () => {
         {/* --- Payroll Table --- */}
         <Card style={styles.tableCard}>
           <View style={styles.tableHeader}>
-            <Text style={[styles.tableHeaderText, styles.colEmployee]}>Employee</Text>
-            <Text style={[styles.tableHeaderText, styles.colNumeric]}>Total Hours</Text>
-            <Text style={[styles.tableHeaderText, styles.colNumeric]}>Break (mins)</Text>
-            <Text style={[styles.tableHeaderText, styles.colPayable]}>Payable Hours</Text>
+            <Text style={[styles.tableHeaderText, styles.colEmployee]} fontType="bold">Employee</Text>
+            <Text style={[styles.tableHeaderText, styles.colNumeric]} fontType="bold">Total Hours</Text>
+            <Text style={[styles.tableHeaderText, styles.colNumeric]} fontType="bold">Break (mins)</Text>
+            <Text style={[styles.tableHeaderText, styles.colPayable]} fontType="bold">Payable Hours</Text>
           </View>
           {loading ? (
             <ActivityIndicator size="large" color={theme.colors.primary} style={{ marginVertical: theme.spacing(4) }} />
           ) : reportData.length === 0 ? (
-            <Text style={styles.noDataText}>No data available for the selected period.</Text>
+            <Text style={styles.noDataText} fontType="regular">No data available for the selected period.</Text>
           ) : (
             reportData.map(item => (
               <View key={item.worker_id} style={styles.tableRow}>
-                <Text style={[styles.tableCell, styles.colEmployee]}>{item.worker_name}</Text>
-                <Text style={[styles.tableCell, styles.colNumeric]}>{item.total_work_hours.toFixed(2)}</Text>
-                <Text style={[styles.tableCell, styles.colNumeric]}>{item.total_break_minutes}</Text>
-                <Text style={[styles.tableCell, styles.colPayable]}>{item.payable_hours.toFixed(2)}</Text>
+                <Text style={[styles.tableCell, styles.colEmployee]} fontType="regular">{item.worker_name}</Text>
+                <Text style={[styles.tableCell, styles.colNumeric]} fontType="regular">{item.total_work_hours.toFixed(2)}</Text>
+                <Text style={[styles.tableCell, styles.colNumeric]} fontType="regular">{item.total_break_minutes}</Text>
+                <Text style={[styles.tableCell, styles.colPayable]} fontType="regular">{item.payable_hours.toFixed(2)}</Text>
               </View>
             ))
           )}
         </Card>
 
         {/* --- Summary Card --- */}
-        <Card style={styles.summaryCard}>
-          <Text style={styles.cardTitle}>Summary</Text>
+        <Card style={styles.tableCard}>
+          <Text style={styles.cardTitle} fontType="bold">Summary</Text>
           <View style={styles.summaryRow}>
-            <Text style={styles.summaryLabel}>Total Work Hours</Text>
-            <Text style={styles.summaryValue}>{totalWorkHours.toFixed(2)} hrs</Text>
+            <Text style={styles.summaryLabel} fontType="regular">Total Work Hours</Text>
+            <Text style={styles.summaryValue} fontType="bold">{totalWorkHours.toFixed(2)} hrs</Text>
           </View>
           <View style={styles.summaryRow}>
-            <Text style={styles.summaryLabel}>Total Break Minutes</Text>
-            <Text style={styles.summaryValue}>{totalBreakMinutes} mins</Text>
+            <Text style={styles.summaryLabel} fontType="regular">Total Break Minutes</Text>
+            <Text style={styles.summaryValue} fontType="bold">{totalBreakMinutes} mins</Text>
           </View>
           <View style={styles.summaryRow}>
-            <Text style={styles.summaryLabel}>Total Payable Hours</Text>
-            <Text style={[styles.summaryValue, styles.totalPayableValue]}>{totalPayableHours.toFixed(2)} hrs</Text>
+            <Text style={styles.summaryLabel} fontType="regular">Total Payable Hours</Text>
+            <Text style={[styles.summaryValue, styles.totalPayableValue]} fontType="bold">{totalPayableHours.toFixed(2)} hrs</Text>
           </View>
         </Card>
 
         {/* --- Export Buttons --- */}
         <View style={styles.exportContainer}>
-          <Button style={[styles.exportButton, { backgroundColor: theme.colors.success }]}><Text style={styles.exportButtonText}>Export as Excel</Text></Button>
-          <Button style={[styles.exportButton, { backgroundColor: theme.colors.danger }]}><Text style={styles.exportButtonText}>Export as PDF</Text></Button>
-          <Button style={[styles.exportButton, { backgroundColor: theme.colors.bodyText }]}><Text style={styles.exportButtonText}>Export as CSV</Text></Button>
+          <Button style={[styles.exportButton, { backgroundColor: theme.colors.success }]}><Text style={styles.exportButtonText} fontType="bold">Export as Excel</Text></Button>
+          <Button style={[styles.exportButton, { backgroundColor: theme.colors.danger }]}><Text style={styles.exportButtonText} fontType="bold">Export as PDF</Text></Button>
+          <Button style={[styles.exportButton, { backgroundColor: theme.colors.bodyText }]}><Text style={styles.exportButtonText} fontType="bold">Export as CSV</Text></Button>
         </View>
       </ScrollView>
     </AnimatedScreen>
@@ -154,6 +165,10 @@ const PayrollReport = () => {
 };
 
 const styles = StyleSheet.create({
+  containerNoPadding: {
+    flex: 1,
+    backgroundColor: theme.colors.pageBackground,
+  },
   container: {
     flex: 1,
     backgroundColor: theme.colors.pageBackground,
@@ -161,15 +176,33 @@ const styles = StyleSheet.create({
   scrollContentContainer: {
     padding: theme.spacing(3),
   },
-  title: {
+  pageHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: theme.spacing(4),
+    paddingHorizontal: theme.spacing(2),
+    backgroundColor: theme.colors.background,
+  },
+  backButton: {
+    marginRight: theme.spacing(2),
+  },
+  pageTitle: {
+    fontSize: theme.fontSizes.xl,
+    color: theme.colors.headingText,
+    marginBottom: theme.spacing(0.5),
+  },
+  pageSubtitle: {
+    fontSize: theme.fontSizes.lg,
+    color: theme.colors.bodyText,
+  },
+  title: { // This style might be unused now, but keeping it for now if other components use it
     fontSize: 28,
     fontWeight: 'bold',
     color: theme.colors.headingText,
     marginBottom: theme.spacing(3),
   },
   cardTitle: {
-    fontSize: 18,
-    fontWeight: '600',
+    fontSize: theme.fontSizes.lg,
     marginBottom: theme.spacing(2),
     color: theme.colors.headingText,
   },
@@ -190,8 +223,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 15,
     backgroundColor: theme.colors.pageBackground,
   },
-  placeholderStyle: { fontSize: 16, color: '#999' },
-  selectedTextStyle: { fontSize: 16 },
+  placeholderStyle: { fontSize: theme.fontSizes.md, color: theme.colors.bodyText },
+  selectedTextStyle: { fontSize: theme.fontSizes.md, color: theme.colors.headingText },
   tableCard: {
     padding: theme.spacing(2),
     marginBottom: theme.spacing(3),
@@ -210,18 +243,17 @@ const styles = StyleSheet.create({
     alignItems: 'center'
   },
   tableHeaderText: {
-    fontWeight: '600',
-    fontSize: 14,
+    fontSize: theme.fontSizes.sm,
     color: theme.colors.headingText,
   },
   tableCell: {
-    fontSize: 14,
+    fontSize: theme.fontSizes.sm,
     color: theme.colors.bodyText,
   },
   noDataText: {
     textAlign: 'center',
     paddingVertical: theme.spacing(4),
-    fontSize: 16,
+    fontSize: theme.fontSizes.md,
     color: theme.colors.bodyText,
   },
   colEmployee: {
@@ -236,7 +268,7 @@ const styles = StyleSheet.create({
     textAlign: 'right',
     fontWeight: 'bold',
   },
-  summaryCard: {
+  summaryCard: { // This seems to be new or duplicated. It is used as tableCard.
     padding: theme.spacing(2),
     marginBottom: theme.spacing(3),
   },
@@ -249,17 +281,16 @@ const styles = StyleSheet.create({
     borderBottomColor: theme.colors.borderColor,
   },
   summaryLabel: {
-    fontSize: 16,
+    fontSize: theme.fontSizes.md,
     color: theme.colors.bodyText,
   },
   summaryValue: {
-    fontSize: 16,
-    fontWeight: 'bold',
+    fontSize: theme.fontSizes.md,
     color: theme.colors.headingText,
   },
   totalPayableValue: {
     color: theme.colors.success,
-    fontSize: 18,
+    fontSize: theme.fontSizes.lg,
   },
   exportContainer: {
     flexDirection: 'row',
@@ -274,8 +305,5 @@ const styles = StyleSheet.create({
   },
   exportButtonText: {
     color: 'white',
-    fontWeight: 'bold'
   }
 });
-
-export default PayrollReport;

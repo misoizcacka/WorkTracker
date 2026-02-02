@@ -16,7 +16,7 @@ interface Worker {
   avatar_url: string | null;
 }
 
-const DailyDetailedReportIndex = () => {
+const DailyDetailedReportPage = () => { // Renamed component
   const router = useRouter();
   const [selectedDate, setDate] = useState(new Date());
   const [workers, setWorkers] = useState<Worker[]>([]);
@@ -44,7 +44,7 @@ const DailyDetailedReportIndex = () => {
 
   const handleWorkerPress = (worker: Worker) => {
     const dateString = moment(selectedDate).format('YYYY-MM-DD');
-    router.push(`/reports/daily-detailed-report/${worker.worker_id}?date=${dateString}`);
+    router.push(`/reports/daily-detailed-report/${worker.worker_id}?date=${dateString}`); // Updated route
   };
 
   return (
@@ -104,5 +104,4 @@ const styles = StyleSheet.create({
     employeeName: { fontSize: 16, fontWeight: '600', color: theme.colors.headingText },
 });
 
-export default DailyDetailedReportIndex;
-
+export default DailyDetailedReportPage; // Export renamed component

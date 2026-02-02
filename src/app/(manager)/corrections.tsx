@@ -1,4 +1,5 @@
-import { View, Text, StyleSheet, ScrollView, Modal, TextInput, Alert, ActivityIndicator, FlatList, Image, TouchableOpacity, useWindowDimensions } from 'react-native';
+import { View, StyleSheet, ScrollView, Modal, TextInput, Alert, ActivityIndicator, FlatList, Image, TouchableOpacity, useWindowDimensions, Platform } from 'react-native';
+import { Text } from '../../components/Themed';
 import moment from 'moment';
 
 import AnimatedScreen from '../../components/AnimatedScreen';
@@ -6,18 +7,15 @@ import { Card } from '../../components/Card';
 import { theme } from '../../theme';
 import { EmployeesContext } from '../../context/EmployeesContext';
 import { useState, useContext, useMemo, useEffect } from 'react';
-import { Dropdown } from 'react-native-element-dropdown';
-import CrossPlatformDatePicker from '../../components/CrossPlatformDatePicker'; // We will replace this with month selector
-import { Button } from '../../components/Button';
 import { supabase } from '../../utils/supabase';
 import { WorkSession, Employee } from '~/types';
 import ThemedInput from '~/components/ThemedInput';
 import { Ionicons } from '@expo/vector-icons';
+import { Button } from '~/components/Button';
+
 
 const CorrectionsPage = () => {
     const { employees } = useContext(EmployeesContext)!;
-    const { width } = useWindowDimensions();
-    const isLargeScreen = width >= 768; // Define large screen for responsiveness
 
     const [selectedWorker, setSelectedWorker] = useState<Employee | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
@@ -32,26 +30,24 @@ const CorrectionsPage = () => {
     const [editEndTime, setEditEndTime] = useState('');
     const [editBreak, setEditBreak] = useState('');
 
+    const handlePrevMonth = () => {
+        const newDate = moment({ year: selectedYear, month: selectedMonth - 1 }).subtract(1, 'month');
+        setSelectedYear(newDate.year());
+        setSelectedMonth(newDate.month() + 1);
+    };
+
+    const handleNextMonth = () => {
+        const newDate = moment({ year: selectedYear, month: selectedMonth - 1 }).add(1, 'month');
+        setSelectedYear(newDate.year());
+        setSelectedMonth(newDate.month() + 1);
+    };
+
     const filteredWorkers = useMemo(() => {
         return employees.filter((employee: Employee) =>
             employee.full_name.toLowerCase().includes(searchTerm.toLowerCase()) &&
             employee.role === 'worker' // Only show workers
         );
     }, [employees, searchTerm]);
-
-    const monthOptions = moment.months().map((month, index) => ({
-        label: month,
-        value: (index + 1).toString(), // Dropdown values should be strings
-    }));
-
-    const yearOptions = useMemo(() => {
-        const currentYear = moment().year();
-        const years = [];
-        for (let i = currentYear - 5; i <= currentYear + 5; i++) { // 5 years before and after current
-            years.push({ label: i.toString(), value: i.toString() });
-        }
-        return years;
-    }, []);
 
     const fetchSessions = async () => {
         if (!selectedWorker) {
@@ -142,8 +138,8 @@ const CorrectionsPage = () => {
                         <Ionicons name="person" size={40} color={iconColor} style={styles.avatarPlaceholder} />
                     )}
                     <View style={styles.itemInfo}>
-                        <Text style={[styles.itemName, { color: itemNameColor }]}>{item.full_name}</Text>
-                        <Text style={[styles.itemSubtitle, { color: itemSubtitleColor }]}>{item.email}</Text>
+                        <Text style={[styles.itemName, { color: itemNameColor }]} fontType="medium">{item.full_name}</Text>
+                        <Text style={[styles.itemSubtitle, { color: itemSubtitleColor }]} fontType="regular">{item.email}</Text>
                     </View>
                     {isSelected && <Ionicons name="checkmark-circle" size={20} color={checkmarkColor} />}
                 </View>
@@ -153,23 +149,26 @@ const CorrectionsPage = () => {
 
     const SessionTableHeader = () => (
         <View style={styles.tableHeaderRow}>
-            <Text style={styles.tableHeaderCell}>Date</Text>
-            <Text style={styles.tableHeaderCell}>Start</Text>
-            <Text style={styles.tableHeaderCell}>End</Text>
-            <Text style={styles.tableHeaderCell}>Break</Text>
+            <Text style={styles.tableHeaderCell} fontType="bold">Date</Text>
+            <Text style={styles.tableHeaderCell} fontType="bold">Start</Text>
+            <Text style={styles.tableHeaderCell} fontType="bold">End</Text>
+            <Text style={styles.tableHeaderCell} fontType="bold">Break</Text>
             <Text style={styles.tableHeaderCellActions}></Text> {/* Placeholder for Edit button */}
         </View>
     );
 
     return (
         <AnimatedScreen>
-            <View style={styles.container}>
-                <Text style={styles.title}>Work Session Corrections</Text>
+          <View style={styles.pageHeader}>
+            <Text style={styles.pageTitle} fontType="bold">Corrections</Text>
+            <Text style={styles.pageSubtitle}>Adjust recorded work sessions for your team.</Text>
+          </View>
+            <View style={styles.mainContentCard}>
                 
                 <View style={styles.mainLayout}>
                     {/* Left Panel: Worker List */}
                     <View style={styles.leftPanel}>
-                        <Text style={styles.panelTitle}>Workers</Text>
+                        <Text style={styles.panelTitle} fontType="medium">Workers</Text>
                         <TextInput
                             style={styles.searchInput}
                             placeholder="Search workers..."
@@ -188,43 +187,29 @@ const CorrectionsPage = () => {
                     {/* Right Panel: Work Sessions and Month Selector */}
                     <View style={styles.rightPanel}>
                         <View style={styles.sessionHeaderControls}>
-                            <Dropdown
-                                style={styles.monthDropdown}
-                                placeholderStyle={styles.placeholderStyle}
-                                selectedTextStyle={styles.selectedTextStyle}
-                                data={monthOptions}
-                                maxHeight={300}
-                                labelField="label"
-                                valueField="value"
-                                placeholder="Select Month"
-                                value={selectedMonth.toString()}
-                                onChange={item => setSelectedMonth(parseInt(item.value))}
-                            />
-                            <Dropdown
-                                style={styles.yearDropdown}
-                                placeholderStyle={styles.placeholderStyle}
-                                selectedTextStyle={styles.selectedTextStyle}
-                                data={yearOptions}
-                                maxHeight={300}
-                                labelField="label"
-                                valueField="value"
-                                placeholder="Select Year"
-                                value={selectedYear.toString()}
-                                onChange={item => setSelectedYear(parseInt(item.value))}
-                            />
-                            <Button title="Load Sessions" onPress={fetchSessions} style={styles.loadButton} textStyle={styles.loadButtonText}/>
+                            <View style={styles.monthNavigator}>
+                                <TouchableOpacity style={styles.monthNavButton} onPress={handlePrevMonth}>
+                                    <Ionicons name="chevron-back" size={24} color={theme.colors.primary} />
+                                </TouchableOpacity>
+                                <Text style={styles.monthDisplayText} fontType="bold">
+                                    {moment({ year: selectedYear, month: selectedMonth - 1 }).format('MMMM YYYY')}
+                                </Text>
+                                <TouchableOpacity style={styles.monthNavButton} onPress={handleNextMonth}>
+                                    <Ionicons name="chevron-forward" size={24} color={theme.colors.primary} />
+                                </TouchableOpacity>
+                            </View>
                         </View>
 
                         <Card style={styles.tableWrapperCard}>
                             {selectedWorker === null ? (
                                 <View style={styles.noSessionsContainer}>
-                                    <Text style={styles.noSessionsText}>Please select a worker to view sessions.</Text>
+                                    <Text style={styles.noSessionsText} fontType="regular">Please select a worker to view sessions.</Text>
                                 </View>
                             ) : loading ? (
                                 <ActivityIndicator size="large" color={theme.colors.primary} style={{ marginTop: 50 }}/>
                             ) : sessions.length === 0 ? (
                                 <View style={styles.noSessionsContainer}>
-                                    <Text style={styles.noSessionsText}>No sessions found for this month.</Text>
+                                    <Text style={styles.noSessionsText} fontType="regular">No sessions found for this month.</Text>
                                 </View>
                             ) : (
                                 <>
@@ -232,10 +217,10 @@ const CorrectionsPage = () => {
                                     <ScrollView contentContainerStyle={styles.sessionsListContent}>
                                         {sessions.map((session: WorkSession) => (
                                             <View key={session.id} style={styles.tableRow}>
-                                                <Text style={styles.tableCellText}>{moment(session.start_time).format('MMM D, YYYY')}</Text>
-                                                <Text style={styles.tableCellText}>{moment(session.start_time).format('HH:mm')}</Text>
-                                                <Text style={styles.tableCellText}>{session.end_time ? moment(session.end_time).format('HH:mm') : 'N/A'}</Text>
-                                                <Text style={styles.tableCellText}>{session.total_break_minutes} min</Text>
+                                                <Text style={styles.tableCellText} fontType="regular">{moment(session.start_time).format('MMM D, YYYY')}</Text>
+                                                <Text style={styles.tableCellText} fontType="regular">{moment(session.start_time).format('HH:mm')}</Text>
+                                                <Text style={styles.tableCellText} fontType="regular">{session.end_time ? moment(session.end_time).format('HH:mm') : 'N/A'}</Text>
+                                                <Text style={styles.tableCellText} fontType="regular">{session.total_break_minutes} min</Text>
                                                 <View style={styles.tableCellActions}>
                                                     <TouchableOpacity onPress={() => openEditModal(session)}>
                                                         <Ionicons name="pencil-outline" size={24} color={theme.colors.primary} />
@@ -262,10 +247,10 @@ const CorrectionsPage = () => {
                             <TouchableOpacity style={styles.closeButton} onPress={() => setModalVisible(false)}>
                                 <Ionicons name="close-circle-outline" size={30} color={theme.colors.bodyText} />
                             </TouchableOpacity>
-                            <Text style={styles.modalText}>Edit Session</Text>
+                            <Text style={styles.modalText} fontType="bold">Edit Session</Text>
                             
                             <View style={styles.fieldRow}>
-                                <Text style={styles.label}>Start Time</Text>
+                                <Text style={styles.label} fontType="medium">Start Time</Text>
                                 <ThemedInput
                                     style={styles.input}
                                     value={editStartTime}
@@ -275,7 +260,7 @@ const CorrectionsPage = () => {
                                 />
                             </View>
                             <View style={styles.fieldRow}>
-                                <Text style={styles.label}>End Time</Text>
+                                <Text style={styles.label} fontType="medium">End Time</Text>
                                 <ThemedInput
                                     style={styles.input}
                                     value={editEndTime}
@@ -285,7 +270,7 @@ const CorrectionsPage = () => {
                                 />
                             </View>
                             <View style={styles.fieldRow}>
-                                <Text style={styles.label}>Break minutes</Text>
+                                <Text style={styles.label} fontType="medium">Break minutes</Text>
                                 <ThemedInput
                                     style={styles.input}
                                     value={editBreak}
@@ -298,7 +283,7 @@ const CorrectionsPage = () => {
                             <View style={styles.buttonContainer}>
 
                                 <Button onPress={handleSaveChanges} style={styles.saveButton}>
-                                    <Text style={styles.buttonText}>Save Changes</Text>
+                                    <Text style={styles.buttonText} fontType="bold">Save Changes</Text>
                                 </Button>
                             </View>
                         </View>
@@ -310,24 +295,45 @@ const CorrectionsPage = () => {
 };
 
 const styles = StyleSheet.create({
-    container: {
+    mainContentCard: {
         flex: 1,
-        backgroundColor: theme.colors.pageBackground,
+        backgroundColor: theme.colors.cardBackground,
+        borderRadius: theme.radius.lg,
+        borderWidth: 1,
+        borderColor: theme.colors.borderColor,
         padding: theme.spacing(2),
-    },
-    title: {
-        fontSize: 24,
-        fontWeight: 'bold',
-        color: theme.colors.headingText,
+        marginHorizontal: theme.spacing(2),
         marginBottom: theme.spacing(2),
+        ...Platform.select({
+          web: {
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 4 },
+            shadowOpacity: 0.05,
+            shadowRadius: 10,
+          },
+          native: {
+            elevation: 6,
+          },
+        }),
+    },
+    pageHeader: {
+        paddingVertical: theme.spacing(4),
+        paddingHorizontal: theme.spacing(2),
+        backgroundColor: theme.colors.background,
+        alignItems: 'flex-start',
+    },
+    pageTitle: {
+        fontSize: theme.fontSizes.xl,
+        color: theme.colors.headingText,
+        marginBottom: theme.spacing(0.5),
+    },
+    pageSubtitle: {
+        fontSize: theme.fontSizes.lg,
+        color: theme.colors.bodyText,
     },
     mainLayout: {
         flex: 1,
         flexDirection: 'row',
-        borderRadius: theme.radius.lg,
-        overflow: 'hidden',
-        backgroundColor: theme.colors.cardBackground,
-        ...theme.shadow.soft,
     },
     leftPanel: {
         width: 280,
@@ -338,17 +344,16 @@ const styles = StyleSheet.create({
     },
     rightPanel: {
         flex: 1,
-        backgroundColor: theme.colors.pageBackground,
+        backgroundColor: theme.colors.cardBackground,
         padding: theme.spacing(2),
     },
     panelTitle: {
-        fontSize: 18,
-        fontWeight: '600',
+        fontSize: theme.fontSizes.lg,
         color: theme.colors.headingText,
         marginBottom: theme.spacing(2),
     },
     searchInput: {
-        height: 45,
+        height: theme.spacing(5),
         borderColor: theme.colors.borderColor,
         borderWidth: 1,
         borderRadius: theme.radius.md,
@@ -386,59 +391,48 @@ const styles = StyleSheet.create({
         marginRight: theme.spacing(2),
         textAlign: 'center',
         lineHeight: 40,
-        borderRadius: 20,
-        backgroundColor: theme.colors.borderColor,
-        justifyContent: 'center',
-        alignItems: 'center',
     },
     itemInfo: {
         flex: 1,
     },
     itemName: {
-        fontWeight: '500',
         color: theme.colors.headingText,
     },
     itemSubtitle: {
-        fontSize: 12,
+        fontSize: theme.fontSizes.sm,
         color: theme.colors.bodyText,
     },
     sessionHeaderControls: {
         flexDirection: 'row',
         alignItems: 'center',
+        justifyContent: 'center', // Center the new navigator
         marginBottom: theme.spacing(2),
     },
-    monthDropdown: {
-        flex: 1,
-        height: 45,
-        backgroundColor: theme.colors.cardBackground,
-        borderColor: theme.colors.borderColor,
-        borderWidth: 1,
-        borderRadius: theme.radius.md,
-        paddingHorizontal: theme.spacing(1),
-        marginRight: theme.spacing(1),
-    },
-    yearDropdown: {
-        width: 100,
-        height: 45,
-        backgroundColor: theme.colors.cardBackground,
-        borderColor: theme.colors.borderColor,
-        borderWidth: 1,
-        borderRadius: theme.radius.md,
-        paddingHorizontal: theme.spacing(1),
-        marginRight: theme.spacing(1),
-    },
-    loadButton: {
-        height: 45,
-        paddingVertical: 10,
-        paddingHorizontal: 15,
-    },
-    loadButtonText: { color: "white", fontSize: 14, fontWeight: "bold" },
-    placeholderStyle: { fontSize: 16, color: '#999' },
-    selectedTextStyle: { fontSize: 16, color: theme.colors.headingText },
-    tableWrapperCard: {
-        padding: 0,
+    monthNavigator: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: theme.colors.pageBackground,
         borderRadius: theme.radius.lg,
-        ...theme.shadow.soft,
+        paddingVertical: theme.spacing(0.5),
+        paddingHorizontal: theme.spacing(1.5),
+        borderWidth: 1,
+        borderColor: theme.colors.borderColor,
+    },
+    monthNavButton: {
+        padding: theme.spacing(1),
+    },
+    monthDisplayText: {
+        fontSize: theme.fontSizes.md,
+        color: theme.colors.headingText,
+        marginHorizontal: theme.spacing(1.5),
+        width: 160,
+        textAlign: 'center',
+    },
+    placeholderStyle: { fontSize: theme.fontSizes.md, color: theme.colors.bodyText },
+    selectedTextStyle: { fontSize: theme.fontSizes.md, color: theme.colors.headingText },
+    tableWrapperCard: {
+        flex: 1,
         overflow: 'hidden',
     },
     noSessionsContainer: {
@@ -448,7 +442,7 @@ const styles = StyleSheet.create({
         padding: theme.spacing(2),
     },
     noSessionsText: {
-        fontSize: 16,
+        fontSize: theme.fontSizes.md,
         color: theme.colors.bodyText,
         textAlign: 'center',
     },
@@ -460,7 +454,6 @@ const styles = StyleSheet.create({
     },
     tableHeaderCell: {
         padding: theme.spacing(2),
-        fontWeight: 'bold',
         color: theme.colors.headingText,
         textAlign: 'center',
         flex: 1,
@@ -481,6 +474,7 @@ const styles = StyleSheet.create({
         color: theme.colors.bodyText,
         textAlign: 'center',
         flex: 1,
+        fontSize: theme.fontSizes.md,
     },
     tableCellActions: {
         width: 100,
@@ -518,8 +512,7 @@ const styles = StyleSheet.create({
     modalText: {
         marginBottom: 25,
         textAlign: 'center',
-        fontSize: 24,
-        fontWeight: 'bold',
+        fontSize: theme.fontSizes.xl,
     },
     closeButton: {
         position: 'absolute',
@@ -534,8 +527,7 @@ const styles = StyleSheet.create({
     },
     label: {
         width: 100, // Adjusted width for labels in modal
-        fontSize: 16,
-        fontWeight: '500',
+        fontSize: theme.fontSizes.md,
         color: theme.colors.bodyText,
         marginRight: theme.spacing(1),
     },
@@ -563,8 +555,7 @@ const styles = StyleSheet.create({
     },
     buttonText: {
         color: 'white',
-        fontWeight: 'bold',
-        fontSize: 16,
+        fontSize: theme.fontSizes.md,
         textAlign: 'center',
     },
 });

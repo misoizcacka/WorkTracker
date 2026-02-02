@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
-import { Text, StyleSheet, Switch, View, ScrollView } from "react-native";
+import { StyleSheet, Switch, View, ScrollView } from "react-native";
+import { Text } from "../../components/Themed";
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import * as LocalAuthentication from "expo-local-authentication";
 import { Card } from "../../components/Card";
@@ -56,22 +57,22 @@ export default function WorkerAccountScreen() {
     <AnimatedScreen>
       <View style={[styles.container, { paddingBottom: tabBarHeight }]}>
         <View style={styles.header}>
-          <Text style={styles.title}>My Account</Text>
+          <Text style={styles.title} fontType="bold">My Account</Text>
         </View>
         <ScrollView contentContainerStyle={styles.content}>
           <Card style={styles.infoCard}>
             <View style={styles.avatar}>
               <Ionicons name="person-outline" size={50} color={theme.colors.primary} />
             </View>
-            <Text style={styles.name}>{`${firstName} ${lastName}`}</Text>
-            <Text style={styles.role}>{displayRole}</Text>
-            {userCompanyName && <Text style={styles.companyName}>{userCompanyName}</Text>}
+            <Text style={styles.name} fontType="bold">{`${firstName} ${lastName}`}</Text>
+            <Text style={styles.role} fontType="regular">{displayRole}</Text>
+            {userCompanyName && <Text style={styles.companyName} fontType="regular">{userCompanyName}</Text>}
           </Card>
 
           <Card style={styles.detailsCard}>
             <View style={styles.detailItem}>
               <Ionicons name="mail-outline" size={24} color={theme.colors.bodyText} />
-              <Text style={styles.detailText}>{email}</Text>
+              <Text style={styles.detailText} fontType="regular">{email}</Text>
             </View>
           </Card>
 
@@ -79,7 +80,7 @@ export default function WorkerAccountScreen() {
             <Card style={styles.settingsCard}>
               <View style={styles.settingItem}>
                 <Ionicons name="finger-print-outline" size={24} color={theme.colors.headingText} />
-                <Text style={styles.settingText}>Enable Biometric Login</Text>
+                <Text style={styles.settingText} fontType="regular">Enable Biometric Login</Text>
                 <Switch
                   value={isBiometricEnabled === 'true'}
                   onValueChange={handleBiometricSwitch}
@@ -114,7 +115,6 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 28,
-    fontWeight: 'bold',
     color: theme.colors.headingText,
   },
   content: {
@@ -136,7 +136,6 @@ const styles = StyleSheet.create({
   },
   name: {
     fontSize: 22,
-    fontWeight: 'bold',
     color: theme.colors.headingText,
   },
   role: {
@@ -183,6 +182,5 @@ const styles = StyleSheet.create({
   },
   logoutButtonText: {
     color: theme.colors.cardBackground,
-    fontWeight: 'bold',
   },
 });

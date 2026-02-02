@@ -71,26 +71,6 @@ export function SessionProvider(props: React.PropsWithChildren<{}>) {
       currentCompanyId = loggedInUser.user_metadata.company_id;
     }
 
-    // Fallback to employees table if company_id or role is not in user_metadata
-    if (!currentCompanyId || !currentRole) {
-      const { data: employeeData, error: employeeError } = await supabase
-        .from('employees')
-        .select('company_id, role')
-        .eq('id', loggedInUser.id)
-        .maybeSingle();
-      
-      if (employeeData) {
-          if (!currentCompanyId && employeeData.company_id) {
-              currentCompanyId = employeeData.company_id;
-          }
-          if (!currentRole && employeeData.role) {
-              currentRole = employeeData.role;
-          }
-      } else if (employeeError) {
-          console.error('Error fetching company_id and role from employee table in AuthContext:', employeeError);
-      }
-    }
-
     setUserCompanyId(currentCompanyId);
     setUserRole(currentRole); // Set the resolved user role
 
@@ -148,13 +128,21 @@ export function SessionProvider(props: React.PropsWithChildren<{}>) {
 
     if (sessionError) {
       console.error("Error refreshing session:", sessionError.message);
-      // Depending on the error, you might want to sign out the user or handle it differently
       return;
     }
 
-    setSession(refreshedSession);
-    setUser(refreshedSession?.user ?? null); // Use user from the refreshed session directly
-    fetchUserDetailsAndCompany(refreshedSession?.user ?? null); // Refresh company ID and details after user refresh
+    // After refreshing the token, explicitly get the session and user again to ensure latest metadata
+    const { data: { session: latestSession }, error: latestSessionError } = await supabase.auth.getSession();
+    const { data: { user: latestUser }, error: latestUserError } = await supabase.auth.getUser();
+
+    if (latestSessionError || latestUserError) {
+        console.error("Error fetching latest session/user after refresh:", latestSessionError?.message || latestUserError?.message);
+        return;
+    }
+
+    setSession(latestSession);
+    setUser(latestUser); // Use the latest fetched user object
+    fetchUserDetailsAndCompany(latestUser); // Refresh company ID and details after user refresh
   }, [fetchUserDetailsAndCompany]); // Add fetchUserDetailsAndCompany to dependencies for useCallback
 
 

@@ -1,5 +1,6 @@
 import React, { useState, useContext, useMemo, useEffect } from 'react';
-import { View, Text, StyleSheet, Image, TextInput, FlatList, TouchableOpacity, ScrollView, Platform } from 'react-native';
+import { View, StyleSheet, Image, TextInput, FlatList, TouchableOpacity, ScrollView, Platform } from 'react-native';
+import { Text } from '../../components/Themed';
 import { MapView } from '../../components/MapView';
 import { useSession } from '~/context/AuthContext';
 import { EmployeesContext, EmployeesContextType } from '~/context/EmployeesContext';
@@ -90,8 +91,8 @@ export default function MapOverviewScreen() {
             <Ionicons name="person" size={40} color={iconColor} style={styles.avatarPlaceholder} />
           )}
           <View style={styles.itemInfo}>
-            <Text style={[styles.itemName, { color: itemNameColor }]}>{item.full_name}</Text>
-            <Text style={[styles.itemSubtitle, { color: itemSubtitleColor }]}>{item.email}</Text>
+            <Text style={[styles.itemName, { color: itemNameColor }]} fontType="medium">{item.full_name}</Text>
+            <Text style={[styles.itemSubtitle, { color: itemSubtitleColor }]} fontType="regular">{item.email}</Text>
           </View>
           {isSelected && <Ionicons name="checkmark-circle" size={20} color={checkmarkColor} />}
         </View>
@@ -106,8 +107,8 @@ export default function MapOverviewScreen() {
         <View style={[styles.projectItemContainer, { backgroundColor: hexToRgba(item.color || theme.colors.secondary, 0.1) }, isSelected && styles.projectItemSelected]}>
           <View style={[styles.projectColorIndicator, { backgroundColor: item.color || theme.colors.secondary }]} />
           <View style={styles.itemInfo}>
-            <Text style={styles.itemName}>{item.name}</Text>
-            <Text style={styles.itemSubtitle}>{item.address}</Text>
+            <Text style={styles.itemName} fontType="medium">{item.name}</Text>
+            <Text style={styles.itemSubtitle} fontType="regular">{item.address}</Text>
           </View>
           {isSelected && <Ionicons name="checkmark-circle" size={20} color={theme.colors.primary} />}
         </View>
@@ -144,10 +145,14 @@ export default function MapOverviewScreen() {
 
   return (
     <AnimatedScreen>
-      <View style={styles.container}>
+      <View style={styles.pageHeader}>
+        <Text style={styles.pageTitle} fontType="bold">Map Overview</Text>
+        <Text style={styles.pageSubtitle}>Visualize worker and project locations.</Text>
+      </View>
+      <View style={styles.mainContentCard}>
         <View style={styles.mainLayout}>
           <View style={styles.leftPanel}>
-            <Text style={styles.panelTitle}>Workers</Text>
+            <Text style={styles.panelTitle} fontType="medium">Workers</Text>
             <TextInput
               style={styles.searchInput}
               placeholder="Search workers..."
@@ -177,7 +182,7 @@ export default function MapOverviewScreen() {
           </View>
 
           <View style={styles.rightPanel}>
-            <Text style={styles.panelTitle}>Projects</Text>
+            <Text style={styles.panelTitle} fontType="medium">Projects</Text>
             <TextInput
               style={styles.searchInput}
               placeholder="Search projects..."
@@ -199,18 +204,45 @@ export default function MapOverviewScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
+  mainContentCard: {
     flex: 1,
-    padding: theme.spacing(2), 
-    backgroundColor: theme.colors.pageBackground,
+    backgroundColor: theme.colors.cardBackground,
+    borderRadius: theme.radius.lg,
+    borderWidth: 1,
+    borderColor: theme.colors.borderColor,
+    padding: theme.spacing(2),
+    marginHorizontal: theme.spacing(2),
+    marginBottom: theme.spacing(2),
+    ...Platform.select({
+      web: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.05,
+        shadowRadius: 10,
+      },
+      native: {
+        elevation: 6,
+      },
+    }),
+  },
+  pageHeader: {
+    paddingVertical: theme.spacing(4),
+    paddingHorizontal: theme.spacing(2),
+    backgroundColor: theme.colors.background,
+    alignItems: 'flex-start',
+  },
+  pageTitle: {
+    fontSize: theme.fontSizes.xl,
+    color: theme.colors.headingText,
+    marginBottom: theme.spacing(0.5),
+  },
+  pageSubtitle: {
+    fontSize: theme.fontSizes.lg,
+    color: theme.colors.bodyText,
   },
   mainLayout: {
     flex: 1,
     flexDirection: 'row',
-    borderRadius: theme.radius.lg,
-    overflow: 'hidden',
-    backgroundColor: theme.colors.cardBackground, 
-    ...theme.shadow.soft,
   },
   leftPanel: {
     width: 280,
@@ -221,7 +253,7 @@ const styles = StyleSheet.create({
   },
   centerPanel: {
     flex: 1,
-    backgroundColor: theme.colors.pageBackground, 
+    backgroundColor: theme.colors.cardBackground, 
   },
   rightPanel: {
     width: 280,
@@ -231,8 +263,7 @@ const styles = StyleSheet.create({
     padding: theme.spacing(2),
   },
   panelTitle: {
-    fontSize: 18,
-    fontWeight: '600',
+    fontSize: theme.fontSizes.lg,
     color: theme.colors.headingText,
     marginBottom: theme.spacing(2),
   },
@@ -293,11 +324,10 @@ const styles = StyleSheet.create({
     flex: 1, 
   },
   itemName: {
-    fontWeight: '500',
     color: theme.colors.headingText,
   },
   itemSubtitle: {
-    fontSize: 12,
+    fontSize: theme.fontSizes.sm,
     color: theme.colors.bodyText,
   },
   avatarPlaceholder: {

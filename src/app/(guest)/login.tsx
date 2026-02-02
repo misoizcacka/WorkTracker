@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, StyleSheet, ActivityIndicator, Alert, ScrollView, Platform, Dimensions, Image, Pressable } from 'react-native';
+import { View, TextInput, StyleSheet, ActivityIndicator, Alert, ScrollView, Platform, Dimensions, Image, Pressable } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useRouter, Link } from 'expo-router';
 import { Button } from '../../components/Button';
+import { Text } from '../../components/Themed'; // Import Themed Text
 import { theme } from '../../theme';
 import AnimatedScreen from '../../components/AnimatedScreen';
-import Logo from '../../../assets/logokoordwhite.png';
+import Logo from '../../../assets/logokoordblack.png';
 import { supabase } from '../../utils/supabase';
 import { useSession } from '../../context/AuthContext';
 import { useTranslation } from 'react-i18next';
@@ -15,7 +16,7 @@ const { width } = Dimensions.get('window');
 const isLargeScreen = width > 768;
 
 export default function Login() {
-  const { refreshUser } = useSession()!; // Get refreshUser
+  const { refreshUser, user, userRole } = useSession()!; // Get refreshUser and user/userRole
   const router = useRouter();
   const { t } = useTranslation();
 
@@ -24,6 +25,17 @@ export default function Login() {
   const [passwordVisible, setPasswordVisible] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState<{ email?: string; password?: string; general?: string }>({});
+
+  // Redirect if user is already logged in
+  useEffect(() => {
+    if (user) {
+      if (userRole === 'manager' || userRole === 'owner') {
+        router.replace('/(manager)/dashboard');
+      } else if (userRole === 'worker') {
+        router.replace('/(worker)/home');
+      }
+    }
+  }, [user, userRole, router]);
 
   const handleLogin = async () => {
     setErrors({});
@@ -55,30 +67,48 @@ export default function Login() {
     }
   };
 
+  const getLogoHref = () => {
+    if (!user) {
+      return '/(guest)';
+    }
+    // Assuming user is logged in
+    if (userRole === 'manager' || userRole === 'owner') {
+      return '/(manager)/dashboard';
+    } else if (userRole === 'worker') {
+      return '/(worker)/home';
+    }
+    return '/(guest)'; // Default fallback
+  };
+
   return (
     <AnimatedScreen>
       <View style={styles.outerContainer}>
         {isLargeScreen && (
           <View style={styles.marketingContainer}>
-            <Image source={Logo} style={styles.marketingLogo} resizeMode="contain" />
-            <Text style={styles.marketingTitle}>{t('login.marketingTitle')}</Text>
-            <Text style={styles.marketingDescription}>{t('login.marketingDescription')}</Text>
-            <Text style={styles.marketingBullet}>✅ {t('login.marketingBullet1')}</Text>
-            <Text style={styles.marketingBullet}>✅ {t('login.marketingBullet2')}</Text>
-            <Text style={styles.marketingBullet}>✅ {t('login.marketingBullet3')}</Text>
-            <Text style={styles.marketingBullet}>✅ {t('login.marketingBullet4')}</Text>
-            <Text style={styles.marketingDescription}>{t('login.marketingDescription2')}</Text>
+            <Link href={getLogoHref()} style={styles.marketingLogo} asChild>
+              <Image source={Logo} resizeMode="contain" />
+            </Link>
+            <Text style={styles.marketingTitle} fontType="bold">{t('login.marketingTitle')}</Text>
+            <Text style={styles.marketingDescription} fontType="regular">{t('login.marketingDescription')}</Text>
+            <Text style={styles.marketingBullet} fontType="regular">✅ {t('login.marketingBullet1')}</Text>
+            <Text style={styles.marketingBullet} fontType="regular">✅ {t('login.marketingBullet2')}</Text>
+            <Text style={styles.marketingBullet} fontType="regular">✅ {t('login.marketingBullet3')}</Text>
+            <Text style={styles.marketingBullet} fontType="regular">✅ {t('login.marketingBullet4')}</Text>
+            <Text style={styles.marketingDescription} fontType="regular">{t('login.marketingDescription2')}</Text>
           </View>
         )}
+        {isLargeScreen && <View style={styles.separatorVertical} />} {/* Vertical separator line */}
         {!isLargeScreen && (
-            <Image source={Logo} style={styles.smallScreenLogo} resizeMode="contain" />
+            <Link href={getLogoHref()} style={styles.smallScreenLogo} asChild>
+              <Image source={Logo} resizeMode="contain" />
+            </Link>
         )}
         <ScrollView contentContainerStyle={styles.scrollContent}>
           <View style={styles.content}>
-            <Text style={styles.title}>{t('login.loginHeading')}</Text>
-            <Text style={styles.description}>{t('login.loginDescription')}</Text>
+            <Text style={styles.title} fontType="bold">{t('login.loginHeading')}</Text>
+            <Text style={styles.description} fontType="regular">{t('login.loginDescription')}</Text>
 
-            {errors.general && <View style={styles.errorContainer}><Text style={styles.errorText}>{errors.general}</Text></View>}
+            {errors.general && <View style={styles.errorContainer}><Text style={styles.errorText} fontType="regular">{errors.general}</Text></View>}
             
             <TextInput
               style={styles.input}
@@ -87,9 +117,9 @@ export default function Login() {
               onChangeText={setEmail}
               keyboardType="email-address"
               autoCapitalize="none"
-              placeholderTextColor="#999"
+              placeholderTextColor={theme.colors.bodyText}
             />
-            {errors.email && <View style={styles.errorContainer}><Text style={styles.errorText}>{errors.email}</Text></View>}
+            {errors.email && <View style={styles.errorContainer}><Text style={styles.errorText} fontType="regular">{errors.email}</Text></View>}
 
             <View style={styles.passwordInputContainer}>
               <TextInput
@@ -98,7 +128,7 @@ export default function Login() {
                 value={password}
                 onChangeText={setPassword}
                 secureTextEntry={!passwordVisible}
-                placeholderTextColor="#999"
+                placeholderTextColor={theme.colors.bodyText}
               />
               <Pressable onPress={() => setPasswordVisible(!passwordVisible)} style={styles.passwordToggle}>
                 <Feather
@@ -108,27 +138,26 @@ export default function Login() {
                 />
               </Pressable>
             </View>
-            {errors.password && <View style={styles.errorContainer}><Text style={styles.errorText}>{errors.password}</Text></View>}
+            {errors.password && <View style={styles.errorContainer}><Text style={styles.errorText} fontType="regular">{errors.password}</Text></View>}
 
             <Button
               onPress={handleLogin}
               disabled={isSubmitting}
               style={styles.primaryButton}
-              textStyle={styles.primaryButtonText}
             >
-              {isSubmitting ? <ActivityIndicator color="#fff" /> : <Text style={styles.primaryButtonText}>{t('login.loginButton')}</Text>}
+              {isSubmitting ? <ActivityIndicator color="#fff" /> : <Text style={styles.primaryButtonText} fontType="regular">{t('login.loginButton')}</Text>}
             </Button>
 
             <View style={styles.linkContainer}>
-                <Link href="/(guest)/forgot-password" style={styles.forgotPasswordLink}>
-                    {t('login.forgotPassword')}
+                <Link href="/(guest)/forgot-password" asChild>
+                    <Text style={styles.forgotPasswordLink} fontType="regular">{t('login.forgotPassword')}</Text>
                 </Link>
             </View>
 
 
             <View style={styles.separatorContainer}>
               <View style={styles.separatorLine} />
-              <Text style={styles.separatorText}>{t('login.or')}</Text>
+              <Text style={styles.separatorText} fontType="regular">{t('login.or')}</Text>
               <View style={styles.separatorLine} />
             </View>
 
@@ -136,7 +165,6 @@ export default function Login() {
               title={t('login.signUpButton')}
               onPress={() => router.push('/auth/signup')}
               style={styles.secondaryButton}
-              textStyle={styles.secondaryButtonText}
             />
           </View>
         </ScrollView>
@@ -155,7 +183,7 @@ const styles = StyleSheet.create({
   },
   marketingContainer: {
     flex: 1,
-    backgroundColor: theme.colors.primary,
+    backgroundColor: theme.colors.background, // Changed to consistent background
     justifyContent: 'center',
     padding: theme.spacing(8),
     paddingTop: theme.spacing(8),
@@ -166,7 +194,6 @@ const styles = StyleSheet.create({
     left: theme.spacing(4),
     width: 100,
     height: 30,
-    resizeMode: 'contain',
   },
   smallScreenLogo: {
     position: 'absolute',
@@ -174,37 +201,81 @@ const styles = StyleSheet.create({
     left: theme.spacing(4),
     width: 100,
     height: 30,
-    resizeMode: 'contain',
     zIndex: 10,
   },
   marketingTitle: {
     fontSize: 40,
-    fontWeight: 'bold',
-    color: 'white',
+    color: theme.colors.headingText, // Changed to dark text color
     marginBottom: theme.spacing(4),
     lineHeight: 48,
   },
   marketingDescription: {
     fontSize: 18,
-    color: 'white',
+    color: theme.colors.bodyText, // Changed to dark text color
     marginBottom: theme.spacing(4),
     lineHeight: 28,
   },
   marketingBullet: {
     fontSize: 16,
-    color: 'white',
+    color: theme.colors.bodyText, // Changed to dark text color
     marginBottom: theme.spacing(1),
-    fontWeight: 'bold',
+  },
+  separatorVertical: {
+    width: 1,
+    backgroundColor: theme.colors.borderColor,
+    // Adjust height if needed, flex: 1 should make it fill parent height
   },
   scrollContent: {
     flexGrow: 1,
     justifyContent: 'center',
     padding: theme.spacing(2),
   },
-  content: {
+  container: { // Renamed from content to container for the main login form wrapper
+    flex: 1,
+    backgroundColor: theme.colors.background, // Consistent background
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: theme.spacing(3),
+    backgroundColor: theme.colors.cardBackground,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.borderColor,
+    ...Platform.select({
+      web: {
+        width: '100%',
+        maxWidth: 1400,
+        alignSelf: 'center',
+      },
+    }),
+  },
+  logo: {
+    width: 100,
+    height: 30,
+  },
+  navLinks: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing(3),
+  },
+  navLinkText: {
+    fontSize: 16,
+    color: theme.colors.bodyText,
+  },
+  signInButton: {
+    backgroundColor: theme.colors.primary,
+    paddingHorizontal: theme.spacing(3),
+    paddingVertical: theme.spacing(1.5),
+    borderRadius: theme.radius.md,
+  },
+  signInButtonText: {
+    color: 'white',
+  },
+  content: { // This is the actual login form content
     justifyContent: 'center',
     padding: theme.spacing(4),
-    backgroundColor: 'white',
+    backgroundColor: theme.colors.cardBackground, // Consistent with card backgrounds
     marginHorizontal: 'auto',
     maxWidth: 500,
     width: '100%',
@@ -223,7 +294,6 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 28,
-    fontWeight: 'bold',
     color: theme.colors.headingText,
     textAlign: 'center',
     marginBottom: theme.spacing(1),
@@ -235,14 +305,13 @@ const styles = StyleSheet.create({
     marginBottom: theme.spacing(4),
   },
   errorContainer: {
-    backgroundColor: '#FFEBEE',
+    backgroundColor: theme.colors.errorBackground, // Use theme color
     borderRadius: theme.radius.md,
     padding: theme.spacing(2),
     marginBottom: theme.spacing(2),
   },
   errorText: {
-    color: '#D32F2F',
-    fontWeight: 'bold',
+    color: theme.colors.errorText, // Use theme color
     textAlign: 'center',
   },
   input: {
@@ -254,7 +323,7 @@ const styles = StyleSheet.create({
     marginBottom: theme.spacing(2),
     fontSize: 16,
     color: theme.colors.headingText,
-    backgroundColor: 'white',
+    backgroundColor: theme.colors.background, // Use theme color for input background
   },
   passwordInputContainer: {
     flexDirection: 'row',
@@ -263,6 +332,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderRadius: theme.radius.md,
     marginBottom: theme.spacing(2),
+    backgroundColor: theme.colors.background, // Use theme color for input background
   },
   passwordInput: {
     flex: 1,
@@ -270,7 +340,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: theme.spacing(2),
     fontSize: 16,
     color: theme.colors.headingText,
-    backgroundColor: 'white',
+    backgroundColor: theme.colors.background, // Use theme color for input background
   },
   passwordToggle: {
     padding: theme.spacing(2),
@@ -285,21 +355,13 @@ const styles = StyleSheet.create({
   primaryButtonText: {
     color: 'white',
     fontSize: 16,
-    fontWeight: 'bold',
-    textAlign: 'center',
   },
   secondaryButton: {
-    backgroundColor: theme.colors.secondary,
+    backgroundColor: theme.colors.secondary, // Assuming secondary is defined in theme
     borderRadius: theme.radius.md,
     marginTop: theme.spacing(1),
     height: 50,
     justifyContent: 'center',
-  },
-  secondaryButtonText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: 'bold',
-    textAlign: 'center',
   },
   linkContainer: {
       alignItems: 'flex-end',
@@ -308,7 +370,6 @@ const styles = StyleSheet.create({
   forgotPasswordLink: {
       color: theme.colors.primary,
       fontSize: 14,
-      fontWeight: 'bold',
   },
   separatorContainer: {
     flexDirection: "row",

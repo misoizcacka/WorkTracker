@@ -1,5 +1,6 @@
 import React, { useState, useCallback, useContext, useRef, useEffect, useMemo } from 'react';
-import { View, Text, StyleSheet, Platform, TouchableOpacity, Image, TextInput, FlatList, ScrollView, ActivityIndicator } from 'react-native';
+import { View, StyleSheet, Platform, TouchableOpacity, Image, TextInput, FlatList, ScrollView, ActivityIndicator } from 'react-native';
+import { Text } from '~/components/Themed';
 import moment from 'moment';
 import { DragDropContext, DropResult, Droppable } from '@hello-pangea/dnd';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -148,8 +149,8 @@ export default function ProjectAssignmentScreen() {
             <Ionicons name="person" size={40} color={iconColor} style={styles.avatarPlaceholder} />
           )}
           <View style={styles.workerInfo}>
-            <Text style={[styles.itemName, { color: itemNameColor }]}>{item.full_name}</Text>
-            <Text style={[styles.itemSubtitle, { color: itemSubtitleColor }]}>{item.email}</Text>
+            <Text style={[styles.itemName, { color: itemNameColor }]} fontType="medium">{item.full_name}</Text>
+            <Text style={[styles.itemSubtitle, { color: itemSubtitleColor }]} fontType="regular">{item.email}</Text>
           </View>
           {isSelected && <Ionicons name="checkmark-circle" size={20} color={checkmarkColor} />}
         </View>
@@ -303,6 +304,10 @@ export default function ProjectAssignmentScreen() {
     <SafeAreaProvider>
       <DragDropContext onDragEnd={onDragEnd}>
         <View style={styles.container}>
+          <View style={styles.pageHeader}>
+            <Text style={styles.pageTitle} fontType="bold">Assignments</Text>
+            <Text style={styles.pageSubtitle}>Assign projects and locations to your workers.</Text>
+          </View>
           <View style={styles.topControls}>
             <View style={styles.dateNavigation}>
               <TouchableOpacity style={styles.dateNavButton} onPress={() => setSelectedDate(moment(selectedDate).subtract(1, 'day').toDate())}>
@@ -320,7 +325,7 @@ export default function ProjectAssignmentScreen() {
           <View style={styles.mainLayout}>
             {/* Left Panel: Worker List */}
             <View style={styles.leftPanel}>
-              <Text style={styles.panelTitle}>Workers</Text>
+              <Text style={styles.panelTitle} fontType="medium">Workers</Text>
               <TextInput
                 style={styles.searchInput}
                 placeholder="Search workers..."
@@ -339,7 +344,7 @@ export default function ProjectAssignmentScreen() {
             <View style={styles.centerPanel}>
               {selectedWorkers.length === 0 ? (
                 <View style={styles.noWorkerSelectedContainer}>
-                  <Text style={styles.noWorkerSelectedText}>Please select a worker to view their schedule.</Text>
+                  <Text style={styles.noWorkerSelectedText} fontType="regular">Please select a worker to view their schedule.</Text>
                 </View>
               ) : (
                 <ScheduleGrid
@@ -361,13 +366,13 @@ export default function ProjectAssignmentScreen() {
                         style={[styles.tabButton, activeTab === 'projects' && styles.activeTabButton]}
                         onPress={() => setActiveTab('projects')}
                     >
-                        <Text style={[styles.tabButtonText, activeTab === 'projects' && styles.activeTabButtonText]}>Projects</Text>
+                        <Text style={[styles.tabButtonText, activeTab === 'projects' && styles.activeTabButtonText]} fontType="bold">Projects</Text>
                     </TouchableOpacity>
                     <TouchableOpacity
                         style={[styles.tabButton, activeTab === 'locations' && styles.activeTabButton]}
                         onPress={() => setActiveTab('locations')}
                     >
-                        <Text style={[styles.tabButtonText, activeTab === 'locations' && styles.activeTabButtonText]}>Locations</Text>
+                        <Text style={[styles.tabButtonText, activeTab === 'locations' && styles.activeTabButtonText]} fontType="bold">Locations</Text>
                     </TouchableOpacity>
                 </View>
 
@@ -463,6 +468,21 @@ const styles = StyleSheet.create({
     padding: theme.spacing(2),
     backgroundColor: theme.colors.pageBackground,
   },
+  pageHeader: {
+    paddingVertical: theme.spacing(4),
+    paddingHorizontal: theme.spacing(2),
+    backgroundColor: theme.colors.background,
+    alignItems: 'flex-start',
+  },
+  pageTitle: {
+    fontSize: theme.fontSizes.xl,
+    color: theme.colors.headingText,
+    marginBottom: theme.spacing(0.5),
+  },
+  pageSubtitle: {
+    fontSize: theme.fontSizes.lg,
+    color: theme.colors.bodyText,
+  },
   title: {
     fontSize: 24,
     fontWeight: '600',
@@ -478,7 +498,8 @@ const styles = StyleSheet.create({
     padding: theme.spacing(1),
     backgroundColor: theme.colors.cardBackground,
     borderRadius: theme.radius.lg,
-    ...theme.shadow.soft,
+    borderWidth: 1,
+    borderColor: theme.colors.borderColor,
   },
   modeToggle: {
     flexDirection: 'row',
@@ -507,9 +528,10 @@ const styles = StyleSheet.create({
     flex: 1,
     flexDirection: 'row',
     borderRadius: theme.radius.lg,
-    overflow: 'hidden', // Re-added overflow:hidden from old file (project-assignment.tsx)
+    overflow: 'hidden',
     backgroundColor: theme.colors.cardBackground,
-    ...theme.shadow.soft,
+    borderWidth: 1,
+    borderColor: theme.colors.borderColor,
   },
   leftPanel: {
     width: 280,
@@ -530,8 +552,7 @@ const styles = StyleSheet.create({
     padding: theme.spacing(2),
   },
   panelTitle: {
-    fontSize: 18,
-    fontWeight: '600',
+    fontSize: theme.fontSizes.lg,
     color: theme.colors.headingText,
     marginBottom: theme.spacing(2),
   },
@@ -574,11 +595,10 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   itemName: {
-    fontWeight: '500',
     color: theme.colors.headingText,
   },
   itemSubtitle: {
-    fontSize: 12,
+    fontSize: theme.fontSizes.xs,
     color: theme.colors.bodyText,
   },
   avatarPlaceholder: {
@@ -594,7 +614,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   noWorkerSelectedText: {
-    fontSize: 18,
+    fontSize: theme.fontSizes.lg,
     color: theme.colors.bodyText,
     textAlign: 'center',
   },
@@ -617,8 +637,7 @@ const styles = StyleSheet.create({
     borderBottomColor: theme.colors.primary,
   },
   tabButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: theme.fontSizes.md,
     color: theme.colors.bodyText,
   },
   activeTabButtonText: {
@@ -636,7 +655,7 @@ const styles = StyleSheet.create({
   },
   addAssignmentButtonText: { // From old file (project-assignment.tsx)
     color: 'white',
-    fontWeight: 'bold',
+    // fontWeight: 'bold', // This will be handled by fontType
   },
   dragOverlay: { // From old file (project-assignment.tsx)
     padding: theme.spacing(1.5),
@@ -646,7 +665,6 @@ const styles = StyleSheet.create({
   },
   dragOverlayText: { // From old file (project-assignment.tsx)
     color: '#fff',
-    fontWeight: '500',
     textAlign: 'center',
   },
   assignmentDragOverlay: { // From old file (project-assignment.tsx)

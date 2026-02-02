@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
-import { View, Text, StyleSheet, Switch, useWindowDimensions, Image, TouchableOpacity, TextInput, ScrollView, Alert, ActivityIndicator } from "react-native";
+import { View, StyleSheet, Switch, useWindowDimensions, Image, TouchableOpacity, TextInput, ScrollView, Alert, ActivityIndicator } from 'react-native';
+import { Text } from "../../components/Themed";
 import * as LocalAuthentication from "expo-local-authentication";
 import * as ImagePicker from 'expo-image-picker';
 import { MediaType } from 'expo-image-picker';
@@ -135,7 +136,7 @@ export default function ManagerAccount() {
       <AnimatedScreen>
         <View style={styles.centered}>
           <ActivityIndicator size="large" color={theme.colors.primary} />
-          <Text style={{color: theme.colors.bodyText, marginTop: theme.spacing(2)}}>Loading profile...</Text>
+          <Text style={styles.loadingText} fontType="regular">Loading profile...</Text>
         </View>
       </AnimatedScreen>
     );
@@ -143,13 +144,16 @@ export default function ManagerAccount() {
 
   return (
     <AnimatedScreen>
-      <ScrollView style={styles.container} contentContainerStyle={styles.scrollContentContainer}>
-        <Text style={styles.title}>My Account</Text>
+      <View style={styles.pageHeader}>
+        <Text style={styles.pageTitle} fontType="bold">My Account</Text>
+        <Text style={styles.pageSubtitle}>Manage your profile, settings, and subscription.</Text>
+      </View>
+      <ScrollView style={styles.containerNoPadding} contentContainerStyle={styles.scrollContentContainer}>
         
         <View style={layoutStyle}>
             <View style={styles.column}>
                 <Card style={styles.card}>
-                    <Text style={styles.cardTitle}>User Profile</Text>
+                    <Text style={styles.cardTitle} fontType="bold">User Profile</Text>
                     <View style={styles.profileHeader}>
                         {profile?.public_avatar_url ? (
                           <Image source={{ uri: profile.public_avatar_url }} style={styles.avatar} />
@@ -157,22 +161,22 @@ export default function ManagerAccount() {
                           <Ionicons name="person" size={80} color={theme.colors.bodyText} style={styles.avatarPlaceholder} />
                         )}
                         <View style={{flex: 1}}>
-                            <Text style={styles.name}>{profile?.full_name}</Text>
-                            <Text style={styles.email}>{user?.email}</Text>
+                            <Text style={styles.name} fontType="bold">{profile?.full_name}</Text>
+                            <Text style={styles.email} fontType="regular">{user?.email}</Text>
                             <TouchableOpacity style={styles.uploadButton} onPress={handleImagePickAndUpload} disabled={isUploadingAvatar}>
                                 {isUploadingAvatar ? (
                                     <ActivityIndicator color={theme.colors.primary} />
                                 ) : (
                                     <>
                                         <Ionicons name="camera-outline" size={16} color={theme.colors.primary} />
-                                        <Text style={styles.uploadButtonText}>Upload Picture</Text>
+                                        <Text style={styles.uploadButtonText} fontType="medium">Upload Picture</Text>
                                     </>
                                 )}
                             </TouchableOpacity>
                         </View>
                     </View>
                     <View style={styles.inputGroup}>
-                        <Text style={styles.label}>Full Name</Text>
+                        <Text style={styles.label} fontType="regular">Full Name</Text>
                         <TextInput 
                             style={styles.input} 
                             value={name} 
@@ -181,7 +185,7 @@ export default function ManagerAccount() {
                         />
                     </View>
                     <View style={styles.inputGroup}>
-                        <Text style={styles.label}>Phone Number</Text>
+                        <Text style={styles.label} fontType="regular">Phone Number</Text>
                         <TextInput 
                             style={styles.input} 
                             value={phone} 
@@ -197,23 +201,23 @@ export default function ManagerAccount() {
                         style={styles.saveButton}
                         textStyle={styles.saveButtonText}
                     >
-                        {isSavingProfile ? <ActivityIndicator color="white" /> : <Text style={styles.saveButtonText}>Save Changes</Text>}
+                        {isSavingProfile ? <ActivityIndicator color="white" /> : <Text style={styles.saveButtonText} fontType="bold">Save Changes</Text>}
                     </Button>
                 </Card>
 
                 <Card style={styles.card}>
-                    <Text style={styles.cardTitle}>Security</Text>
+                    <Text style={styles.cardTitle} fontType="bold">Security</Text>
                     {isBiometricSupported && (
                         <View style={styles.settingRow}>
                             <Ionicons name="finger-print-outline" size={24} color={theme.colors.bodyText} />
-                            <Text style={styles.settingLabel}>Enable Biometric Login</Text>
+                            <Text style={styles.settingLabel} fontType="regular">Enable Biometric Login</Text>
                             <Switch value={isBiometricEnabled === 'true'} onValueChange={handleBiometricSwitch} trackColor={{false: theme.colors.borderColor, true: theme.colors.primary}}/>
                         </View>
                     )}
                     <View style={styles.settingRow}>
                          <Ionicons name="lock-closed-outline" size={24} color={theme.colors.bodyText} />
-                        <Text style={styles.settingLabel}>Change Password</Text>
-                        <Button title="Change" style={styles.inlineButton} textStyle={styles.inlineButtonText} />
+                        <Text style={styles.settingLabel} fontType="regular">Change Password</Text>
+                        <Button title="Change" style={styles.inlineButton} textStyle={styles.inlineButtonText} fontType="regular"/>
                     </View>
                 </Card>
 
@@ -221,20 +225,20 @@ export default function ManagerAccount() {
 
             <View style={styles.column}>
                 <Card style={styles.card}>
-                    <Text style={styles.cardTitle}>Subscription Details</Text>
+                    <Text style={styles.cardTitle} fontType="bold">Subscription Details</Text>
                     <View style={styles.settingRow}>
                         <Ionicons name="ribbon-outline" size={24} color={theme.colors.bodyText} />
-                        <Text style={styles.settingLabel}>Current Plan</Text>
-                        <Text style={styles.planText}>Pro Plan</Text>
+                        <Text style={styles.settingLabel} fontType="regular">Current Plan</Text>
+                        <Text style={styles.planText} fontType="bold">Pro Plan</Text>
                     </View>
                      <View style={styles.settingRow}>
                         <Ionicons name="people-outline" size={24} color={theme.colors.bodyText} />
-                        <Text style={styles.planText}>7 / 10</Text>
+                        <Text style={styles.planText} fontType="bold">7 / 10</Text>
                     </View>
                     <Button title="Manage Subscription" onPress={() => router.push('/(manager)/subscription/manage-subscription')} style={{marginTop: theme.spacing(2)}} />
                 </Card>
                 <Card style={styles.card}>
-                    <Text style={styles.cardTitle}>Language</Text>
+                    <Text style={styles.cardTitle} fontType="bold">Language</Text>
                     <LanguageSelector />
                 </Card>
                 <Button title="Log Out" onPress={() => signOut()} style={styles.logoutButton} textStyle={{fontWeight: 'bold'}}/>
@@ -252,14 +256,33 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: theme.colors.pageBackground,
   },
-  container: { flex: 1, backgroundColor: theme.colors.pageBackground },
+  containerNoPadding: { flex: 1, backgroundColor: theme.colors.pageBackground },
   scrollContentContainer: { padding: theme.spacing(3) },
-  title: { fontSize: 28, fontWeight: 'bold', color: theme.colors.headingText, marginBottom: theme.spacing(3) },
+  pageHeader: {
+    paddingVertical: theme.spacing(4),
+    paddingHorizontal: theme.spacing(2),
+    backgroundColor: theme.colors.background,
+    alignItems: 'flex-start',
+  },
+  pageTitle: {
+    fontSize: theme.fontSizes.xl,
+    color: theme.colors.headingText,
+    marginBottom: theme.spacing(0.5),
+  },
+  pageSubtitle: {
+    fontSize: theme.fontSizes.lg,
+    color: theme.colors.bodyText,
+  },
+  loadingText: {
+    marginTop: theme.spacing(2),
+    fontSize: theme.fontSizes.md,
+    color: theme.colors.bodyText,
+  },
   desktopLayout: { flexDirection: 'row' },
   mobileLayout: { flexDirection: 'column' },
   column: { flex: 1, marginHorizontal: theme.spacing(1) },
   card: { marginBottom: theme.spacing(2) },
-  cardTitle: { fontSize: 18, fontWeight: '600', color: theme.colors.headingText, marginBottom: theme.spacing(2) },
+  cardTitle: { fontSize: theme.fontSizes.lg, color: theme.colors.headingText, marginBottom: theme.spacing(2) },
   profileHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: theme.spacing(2) },
   avatar: { width: 80, height: 80, borderRadius: 40, marginRight: theme.spacing(2) },
   avatarPlaceholder: {
@@ -269,19 +292,19 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 80,
   },
-  name: { fontSize: 22, fontWeight: 'bold', color: theme.colors.headingText },
-  email: { fontSize: 14, color: theme.colors.bodyText, marginBottom: theme.spacing(1) },
+  name: { fontSize: theme.fontSizes.xl, color: theme.colors.headingText },
+  email: { fontSize: theme.fontSizes.sm, color: theme.colors.bodyText, marginBottom: theme.spacing(1) },
   uploadButton: { flexDirection: 'row', alignItems: 'center', backgroundColor: theme.colors.pageBackground, paddingVertical: 4, paddingHorizontal: 8, borderRadius: theme.radius.md, alignSelf: 'flex-start' },
-  uploadButtonText: { color: theme.colors.primary, marginLeft: 4, fontWeight: '500' },
+  uploadButtonText: { color: theme.colors.primary, marginLeft: 4 },
   inputGroup: { marginBottom: theme.spacing(1.5) },
-  label: { fontSize: 14, color: theme.colors.bodyText, marginBottom: 4 },
+  label: { fontSize: theme.fontSizes.sm, color: theme.colors.bodyText, marginBottom: 4 },
   input: { height: 45, borderColor: theme.colors.borderColor, borderWidth: 1, borderRadius: theme.radius.md, paddingHorizontal: 10, backgroundColor: theme.colors.pageBackground, fontSize: 16 },
   settingRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: theme.spacing(1) },
-  settingLabel: { flex: 1, fontSize: 16, marginLeft: theme.spacing(1.5) },
+  settingLabel: { flex: 1, fontSize: theme.fontSizes.md, marginLeft: theme.spacing(1.5) },
   inlineButton: { paddingHorizontal: 16, paddingVertical: 8, height: 'auto' },
-  inlineButtonText: { fontSize: 14 },
-  planText: { fontSize: 16, fontWeight: '600' },
+  inlineButtonText: { fontSize: theme.fontSizes.sm },
+  planText: { fontSize: theme.fontSizes.md },
   logoutButton: { backgroundColor: theme.colors.danger, marginTop: theme.spacing(1) },
   saveButton: { backgroundColor: theme.colors.primary, marginTop: theme.spacing(2) },
-  saveButtonText: { color: 'white', fontWeight: 'bold' }
+  saveButtonText: { color: 'white' }
 });

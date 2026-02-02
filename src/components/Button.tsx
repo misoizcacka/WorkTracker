@@ -1,12 +1,12 @@
-import * as React from "react";
 import {
   TouchableOpacity,
-  Text,
   StyleSheet,
   GestureResponderEvent,
   ViewStyle,
   TextStyle,
+  Text as DefaultText, // Renamed native Text
 } from "react-native";
+import { Text } from "../components/Themed"; // Import custom Text
 import { theme } from "../theme";
 
 interface ButtonProps {
@@ -17,6 +17,7 @@ interface ButtonProps {
   style?: ViewStyle | ViewStyle[];
   textStyle?: TextStyle;
   children?: React.ReactNode;
+  fontType?: keyof typeof theme.font;
 }
 
 export const Button: React.FC<ButtonProps> = ({
@@ -27,6 +28,7 @@ export const Button: React.FC<ButtonProps> = ({
   style,
   textStyle,
   children,
+  fontType = "regular", // Default to regular fontType for buttons
 }) => {
   const backgroundColor =
     type === "primary"
@@ -57,6 +59,7 @@ export const Button: React.FC<ButtonProps> = ({
         children
       ) : (
         <Text
+          fontType={fontType} // Use the prop, which defaults to 'regular'
           style={[
             styles.text,
             { color: disabled ? theme.colors.bodyText : textColor },
@@ -91,7 +94,7 @@ const styles = StyleSheet.create({
     borderRadius: theme.radius.md,
   },
   text: {
-    fontWeight: "700",
+    // fontWeight removed, fontType handled by Themed.Text
     fontSize: 18,
   },
 });

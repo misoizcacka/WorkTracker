@@ -1,269 +1,406 @@
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView, Platform, Dimensions, Image } from 'react-native';
-import { useRouter, Link } from 'expo-router'; // Import Link for "Sign In"
+import React, { useState } from 'react';
+import { View, StyleSheet, ScrollView, Platform, Dimensions, Image, TextInput, TouchableOpacity } from 'react-native';
+import { Text } from '../../components/Themed';
+import { useRouter, Link } from 'expo-router';
 import { Button } from '../../components/Button';
 import { theme } from '../../theme';
-import AnimatedScreen from '../../components/AnimatedScreen';
-import Logo from '../../../assets/logokoordwhite.png'; // Import the logo
+import { useTranslation } from 'react-i18next'; // Re-adding i18n
 
 const { width } = Dimensions.get('window');
-const isLargeScreen = width > 768; // Define what constitutes a large screen for responsive design
+const isLargeScreen = width > 768;
 
-export default function PricingExplanationPage() {
+// Define pricing constants
+const BASE_MONTHLY_FEE = 10; // EUR - User specified
+const PRICE_PER_WORKER = 6; // EUR - User specified
+
+export default function PricingPage() {
+  const { t } = useTranslation(); // Re-adding useTranslation
   const router = useRouter();
+  const [numWorkers, setNumWorkers] = useState('1'); // Default to 1 worker
+
+  const estimatedCost = BASE_MONTHLY_FEE + (parseInt(numWorkers || '0') * PRICE_PER_WORKER);
+
+  const handleDecrementWorkers = () => {
+    setNumWorkers(prev => {
+      const current = parseInt(prev || '0');
+      return Math.max(1, current - 1).toString();
+    });
+  };
+
+  const handleIncrementWorkers = () => {
+    setNumWorkers(prev => (parseInt(prev || '0') + 1).toString());
+  };
 
   return (
-    <AnimatedScreen>
-      <View style={styles.outerContainer}>
-        {isLargeScreen && (
-          <View style={styles.marketingContainer}>
-            <Image source={Logo} style={styles.marketingLogo} resizeMode="contain" />
-            <Text style={styles.marketingTitle}>Flexible Pricing to Fit Your Needs</Text>
-            <Text style={styles.marketingDescription}>
-              WorkHoursTracker offers transparent, scalable pricing designed to grow with your team. Get started today with no hidden fees and full access to our powerful features.
-            </Text>
-            <Text style={styles.marketingBullet}>✅ Simple Pay-Per-Worker Model</Text>
-            <Text style={styles.marketingBullet}>✅ No Hidden Fees</Text>
-            <Text style={styles.marketingBullet}>✅ Automatic Scaling</Text>
-            <Text style={styles.marketingDescription}>
-              Join businesses worldwide optimizing their workforce management with WorkHoursTracker.
-            </Text>
+    <View style={styles.container}>
+      <ScrollView contentContainerStyle={styles.scrollContent}>
+        {/* Header */}
+        <View style={styles.header}>
+          <Link href="/(guest)" asChild>
+            <Image
+              source={require('../../../assets/logokoordblack.png')}
+              style={styles.logo}
+              resizeMode="contain"
+            />
+          </Link>
+          <View style={styles.navLinks}>
+            <Link href="/(guest)/pricing" asChild>
+              <Text style={styles.navLinkText} fontType="medium">{t('common.pricing')}</Text>
+            </Link>
+            <Link href="/(guest)/login" asChild>
+              <Button title={t('common.signIn')} style={styles.signInButton} textStyle={styles.signInButtonText} />
+            </Link>
           </View>
-        )}
-        {!isLargeScreen && (
-            <Image source={Logo} style={styles.smallScreenLogo} resizeMode="contain" />
-        )}
-        <ScrollView contentContainerStyle={styles.scrollContent}>
-          <View style={styles.content}>
-            <Text style={styles.title}>Simple & Transparent Pricing</Text>
-            <Text style={styles.description}>
-              WorkHoursTracker is designed to grow with your business. Our flexible plans ensure you only pay for what you need, with clear, predictable costs.
-            </Text>
+        </View>
 
-            <View style={styles.pricingCardsContainer}>
-              <View style={styles.pricingCard}>
-                <Text style={styles.pricingCardTitle}>Starter</Text>
-                <Text style={styles.pricingCardPrice}>Free</Text>
-                <Text style={styles.pricingCardPeriod}>for 1 user</Text>
-                <Text style={styles.pricingCardFeature}>✅ Basic Time Tracking</Text>
-                <Text style={styles.pricingCardFeature}>✅ Project Management</Text>
-                <Button
-                  title="Get Started Free"
-                  onPress={() => router.push('/(guest)/register')}
-                  style={styles.pricingCardButton}
-                  textStyle={styles.pricingCardButtonText}
-                />
-              </View>
+        {/* Pricing Section */}
+        <View style={styles.pricingSection}>
+          <Text style={styles.title} fontType="bold">{t('pricing.simpleTransparentPricingTitle')}</Text>
+          <Text style={styles.description} fontType="regular">
+            {t('pricing.simpleTransparentPricingDescription')}
+          </Text>
 
-              <View style={styles.pricingCard}>
-                <Text style={styles.pricingCardTitle}>Pro</Text>
-                <Text style={styles.pricingCardPrice}>$5</Text>
-                <Text style={styles.pricingCardPeriod}>per user/month</Text>
-                <Text style={styles.pricingCardFeature}>✅ All Starter Features</Text>
-                <Text style={styles.pricingCardFeature}>✅ Advanced Reporting</Text>
-                <Text style={styles.pricingCardFeature}>✅ Unlimited Projects</Text>
-                <Button
-                  title="Choose Pro"
-                  onPress={() => router.push('/(guest)/register')}
-                  style={styles.pricingCardButton}
-                  textStyle={styles.pricingCardButtonText}
+          <View style={styles.pricingCardContainer}>
+            <View style={styles.pricingCard}>
+              <Text style={styles.pricingCardTitle} fontType="bold">{t('pricing.singlePlanTitle')}</Text>
+              <Text style={styles.pricingCardBaseFee} fontType="bold">{BASE_MONTHLY_FEE} {t('common.currency')} / {t('common.month')}</Text>
+              <Text style={styles.pricingCardPerWorker} fontType="regular">+ {PRICE_PER_WORKER} {t('common.currency')} / {t('pricing.workerPerMonth')}</Text>
+              
+              <Text style={styles.calculatorLabel} fontType="regular">{t('pricing.howManyWorkers')}</Text>
+              <View style={styles.workerInputGroup}>
+                <TouchableOpacity onPress={handleDecrementWorkers} style={styles.workerButton}>
+                  <Text style={styles.workerButtonText}>-</Text>
+                </TouchableOpacity>
+                <TextInput
+                  style={styles.calculatorInput}
+                  keyboardType="numeric"
+                  value={numWorkers}
+                  onChangeText={(text) => setNumWorkers(text.replace(/[^0-9]/g, ''))}
+                  placeholder="e.g., 10"
+                  placeholderTextColor={theme.colors.bodyText}
                 />
+                <TouchableOpacity onPress={handleIncrementWorkers} style={styles.workerButton}>
+                  <Text style={styles.workerButtonText}>+</Text>
+                </TouchableOpacity>
               </View>
+              <Text style={styles.estimatedCostText} fontType="regular">{t('pricing.estimatedMonthlyCost')}: <Text style={styles.estimatedCostValue} fontType="bold">{estimatedCost} {t('common.currency')}</Text></Text>
 
-              <View style={styles.pricingCard}>
-                <Text style={styles.pricingCardTitle}>Enterprise</Text>
-                <Text style={styles.pricingCardPrice}>Custom</Text>
-                <Text style={styles.pricingCardPeriod}>for large teams</Text>
-                <Text style={styles.pricingCardFeature}>✅ All Pro Features</Text>
-                <Text style={styles.pricingCardFeature}>✅ Dedicated Support</Text>
-                <Text style={styles.pricingCardFeature}>✅ Custom Integrations</Text>
-                <Button
-                  title="Contact Sales"
-                  onPress={() => router.push('/(guest)/register')} // Or a contact form
-                  style={styles.pricingCardButton}
-                  textStyle={styles.pricingCardButtonText}
-                />
-              </View>
+              <Button
+                title={t('pricing.getStarted')}
+                onPress={() => router.push('/(guest)/register')}
+                style={styles.ctaButton}
+                textStyle={styles.ctaButtonText}
+              />
             </View>
-            
-            <View style={styles.signInLinkContainer}>
-              <Text style={styles.signInText}>Already have an account? </Text>
-              <Link href="/(guest)/login" style={styles.signInLink}>
-                Sign In
-              </Link>
-            </View>
-
           </View>
-        </ScrollView>
-      </View>
-    </AnimatedScreen>
+          
+          {/* FAQ Section */}
+          <View style={styles.faqSection}>
+            <Text style={styles.faqHeading} fontType="bold">{t('pricing.faqHeading')}</Text>
+            <FAQItem
+              question={t('pricing.faq1Q')}
+              answer={t('pricing.faq1A', { baseFee: BASE_MONTHLY_FEE, perWorkerFee: PRICE_PER_WORKER })}
+            />
+            <FAQItem
+              question={t('pricing.faq2Q')}
+              answer={t('pricing.faq2A')}
+            />
+            <FAQItem
+              question={t('pricing.faq3Q')}
+              answer={t('pricing.faq3A')}
+            />
+            <FAQItem
+              question={t('pricing.faq4Q')}
+              answer={t('pricing.faq4A')}
+            />
+            <FAQItem
+              question={t('pricing.faq5Q')}
+              answer={t('pricing.faq5A')}
+            />
+            <FAQItem
+              question={t('pricing.faq6Q')}
+              answer={t('pricing.faq6A')}
+            />
+          </View>
+        </View>
+
+        {/* Footer */}
+        <View style={styles.footer}>
+          <Text style={styles.footerText} fontType="regular">© {new Date().getFullYear()} WorkHoursTracker. {t('common.allRightsReserved')}</Text>
+        </View>
+      </ScrollView>
+    </View>
   );
 }
 
+// FAQ Item Component
+interface FAQItemProps {
+  question: string;
+  answer: string;
+}
+
+const FAQItem: React.FC<FAQItemProps> = ({ question, answer }) => {
+  const [isExpanded, setIsExpanded] = useState(false);
+
+  return (
+    <View style={styles.faqItem}>
+      <TouchableOpacity onPress={() => setIsExpanded(!isExpanded)} style={styles.faqQuestionButton}>
+        <Text style={styles.faqQuestionText} fontType="medium">{question}</Text>
+        <Text style={styles.faqExpandIcon}>{isExpanded ? '-' : '+'}</Text>
+      </TouchableOpacity>
+      {isExpanded && (
+        <View style={styles.faqAnswerContainer}>
+          <Text style={styles.faqAnswerText} fontType="regular">{answer}</Text>
+        </View>
+      )}
+    </View>
+  );
+};
+
 const styles = StyleSheet.create({
-  outerContainer: {
+  container: {
     flex: 1,
-    flexDirection: isLargeScreen ? 'row' : 'column',
-  },
-  marketingContainer: {
-    flex: 1,
-    backgroundColor: theme.colors.primary,
-    justifyContent: 'center',
-    padding: theme.spacing(8),
-    paddingTop: theme.spacing(8),
-  },
-  marketingLogo: {
-    position: 'absolute',
-    top: theme.spacing(4),
-    left: theme.spacing(4),
-    width: 100,
-    height: 30,
-    resizeMode: 'contain',
-  },
-  smallScreenLogo: {
-    position: 'absolute',
-    top: theme.spacing(4),
-    left: theme.spacing(4),
-    width: 100,
-    height: 30,
-    resizeMode: 'contain',
-    zIndex: 10,
-  },
-  marketingTitle: {
-    fontSize: 40,
-    fontWeight: 'bold',
-    color: 'white',
-    marginBottom: theme.spacing(4),
-    lineHeight: 48,
-  },
-  marketingDescription: {
-    fontSize: 18,
-    color: 'white',
-    marginBottom: theme.spacing(4),
-    lineHeight: 28,
-  },
-  marketingBullet: {
-    fontSize: 16,
-    color: 'white',
-    marginBottom: theme.spacing(1),
-    fontWeight: 'bold',
+    backgroundColor: theme.colors.background,
   },
   scrollContent: {
     flexGrow: 1,
-    justifyContent: 'center',
-    padding: theme.spacing(2),
   },
-  content: {
-    justifyContent: 'center',
-    padding: theme.spacing(4),
-    backgroundColor: 'white',
-    marginHorizontal: 'auto',
-    maxWidth: isLargeScreen ? 1200 : 500, // Adjusted to match register page
-    width: '100%',
-    borderRadius: theme.radius.lg,
+  // Header (from index.tsx)
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: theme.spacing(3),
+    backgroundColor: theme.colors.cardBackground,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.borderColor,
     ...Platform.select({
       web: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.1,
-        shadowRadius: 12,
+        width: '100%',
+        maxWidth: 1400,
+        alignSelf: 'center',
       },
-      native: {
-        elevation: 8,
+    }),
+  },
+  logo: {
+    width: 100,
+    height: 30,
+  },
+  navLinks: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing(3),
+  },
+  navLinkText: {
+    fontSize: 16,
+    color: theme.colors.bodyText,
+  },
+  signInButton: {
+    backgroundColor: theme.colors.primary,
+    paddingHorizontal: theme.spacing(3),
+    paddingVertical: theme.spacing(1.5),
+    borderRadius: theme.radius.md,
+  },
+  signInButtonText: {
+    color: 'white',
+  },
+
+  // Pricing Section
+  pricingSection: {
+    padding: theme.spacing(8),
+    alignItems: 'center',
+    ...Platform.select({
+      web: {
+        width: '100%',
+        maxWidth: 1400,
+        alignSelf: 'center',
       },
     }),
   },
   title: {
-    fontSize: 28,
-    fontWeight: 'bold',
+    fontSize: isLargeScreen ? 48 : 32,
     color: theme.colors.headingText,
     textAlign: 'center',
-    marginBottom: theme.spacing(1),
+    marginBottom: theme.spacing(2),
   },
   description: {
-    fontSize: 16,
+    fontSize: isLargeScreen ? 18 : 16,
     color: theme.colors.bodyText,
     textAlign: 'center',
-    marginBottom: theme.spacing(4),
+    marginBottom: theme.spacing(6),
+    maxWidth: 600,
   },
-  // Pricing Card Styles
-  pricingCardsContainer: {
-    flexDirection: isLargeScreen ? 'row' : 'column', // Stack vertically on small screens
-    gap: theme.spacing(4),
-    marginBottom: theme.spacing(4),
-    justifyContent: 'space-around',
-    flexWrap: 'wrap',
+  
+  // Single Pricing Card Styles
+  pricingCardContainer: {
+    width: '100%',
+    maxWidth: 500, // Limit width of single card
+    marginBottom: theme.spacing(6),
   },
   pricingCard: {
-    padding: theme.spacing(4),
+    padding: theme.spacing(5),
     backgroundColor: theme.colors.cardBackground,
-    borderRadius: theme.radius.lg,
-    alignItems: 'center',
+    borderRadius: theme.radius.xl,
     borderWidth: 1,
     borderColor: theme.colors.borderColor,
-    width: isLargeScreen ? '30%' : '100%',
-    minWidth: 280,
+    alignItems: 'center',
+    textAlign: 'center',
     ...Platform.select({
       web: {
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
+        shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.05,
-        shadowRadius: 8,
+        shadowRadius: 10,
       },
       native: {
-        elevation: 4,
+        elevation: 6,
       },
     }),
   },
   pricingCardTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: theme.colors.headingText,
-    marginBottom: theme.spacing(1),
-  },
-  pricingCardPrice: {
-    fontSize: 48,
-    fontWeight: 'bold',
+    fontSize: 32,
     color: theme.colors.primary,
+    marginBottom: theme.spacing(2),
+  },
+  pricingCardBaseFee: {
+    fontSize: 48,
+    color: theme.colors.headingText,
     marginBottom: theme.spacing(0.5),
   },
-  pricingCardPeriod: {
-    fontSize: 16,
+  pricingCardPerWorker: {
+    fontSize: 20,
     color: theme.colors.bodyText,
+    marginBottom: theme.spacing(4),
+  },
+  calculatorLabel: {
+    fontSize: 18,
+    color: theme.colors.headingText,
+    marginBottom: theme.spacing(2),
+  },
+  workerInputGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    width: '80%',
     marginBottom: theme.spacing(3),
-  },
-  pricingCardFeature: {
-    fontSize: 16,
-    color: theme.colors.bodyText,
-    marginBottom: theme.spacing(1),
-  },
-  pricingCardButton: {
-    backgroundColor: theme.colors.primary, // Primary color for CTA
-    borderRadius: theme.radius.md,
-    marginTop: theme.spacing(3),
-    height: 50,
     justifyContent: 'center',
+  },
+  workerButton: {
+    backgroundColor: theme.colors.background,
+    borderColor: theme.colors.borderColor,
+    borderWidth: 1,
+    borderRadius: theme.radius.md,
+    width: 45,
+    height: 45,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  workerButtonText: {
+    color: theme.colors.headingText,
+    fontSize: 24,
+    fontWeight: 'bold',
+  },
+  calculatorInput: {
+    flex: 1,
+    height: 45,
+    borderColor: theme.colors.borderColor,
+    borderWidth: 1,
+    borderRadius: theme.radius.md,
+    paddingHorizontal: theme.spacing(2),
+    fontSize: 18,
+    color: theme.colors.headingText,
+    textAlign: 'center',
+    marginHorizontal: theme.spacing(2),
+  },
+  estimatedCostText: {
+    fontSize: 20,
+    color: theme.colors.bodyText,
+    marginBottom: theme.spacing(4),
+  },
+  estimatedCostValue: {
+    fontSize: 32,
+    color: theme.colors.primary,
+  },
+  ctaButton: {
+    backgroundColor: theme.colors.primary,
+    paddingHorizontal: theme.spacing(5),
+    paddingVertical: theme.spacing(2.5),
+    borderRadius: theme.radius.lg,
     width: '100%',
   },
-  pricingCardButtonText: {
+  ctaButtonText: {
     color: 'white',
-    fontSize: 16,
-    fontWeight: 'bold',
+    fontSize: 18,
+  },
+
+  // FAQ Section
+  faqSection: {
+    width: '100%',
+    maxWidth: 900,
+    alignItems: 'center',
+    paddingVertical: theme.spacing(6),
+  },
+  faqHeading: {
+    fontSize: isLargeScreen ? 36 : 28,
+    color: theme.colors.headingText,
     textAlign: 'center',
+    marginBottom: theme.spacing(5),
   },
-  // Sign In Link (copied from register.tsx)
-  signInLinkContainer: {
+  faqItem: {
+    width: '100%',
+    backgroundColor: theme.colors.cardBackground,
+    borderRadius: theme.radius.md,
+    borderWidth: 1,
+    borderColor: theme.colors.borderColor,
+    marginBottom: theme.spacing(2),
+    overflow: 'hidden', // Ensures content respects border radius
+  },
+  faqQuestionButton: {
     flexDirection: 'row',
-    justifyContent: 'center',
-    marginTop: theme.spacing(3),
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: theme.spacing(3),
+    backgroundColor: theme.colors.cardBackground,
   },
-  signInText: {
+  faqQuestionText: {
+    fontSize: 18,
+    color: theme.colors.headingText,
+    flexShrink: 1, // Allows text to wrap
+  },
+  faqExpandIcon: {
+    fontSize: 24,
+    color: theme.colors.primary,
+    marginLeft: theme.spacing(2),
+  },
+  faqAnswerContainer: {
+    paddingHorizontal: theme.spacing(3),
+    paddingBottom: theme.spacing(3),
+    paddingTop: theme.spacing(1),
+    borderTopWidth: 1,
+    borderTopColor: theme.colors.borderColor,
+  },
+  faqAnswerText: {
+    fontSize: 16,
+    color: theme.colors.bodyText,
+    lineHeight: 22,
+  },
+
+  // Footer (from index.tsx)
+  footer: {
+    padding: theme.spacing(5),
+    backgroundColor: theme.colors.cardBackground,
+    borderTopWidth: 1,
+    borderTopColor: theme.colors.borderColor,
+    alignItems: 'center',
+    ...Platform.select({
+      web: {
+        width: '100%',
+        maxWidth: 1400,
+        alignSelf: 'center',
+      },
+    }),
+  },
+  footerText: {
     fontSize: 14,
     color: theme.colors.bodyText,
-  },
-  signInLink: {
-    fontSize: 14,
-    color: theme.colors.primary,
-    fontWeight: 'bold',
   },
 });

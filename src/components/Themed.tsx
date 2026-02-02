@@ -6,7 +6,9 @@ type ThemeProps = {
   darkColor?: string;
 };
 
-export type TextProps = ThemeProps & DefaultText['props'];
+export type TextProps = ThemeProps & DefaultText['props'] & {
+  fontType?: keyof typeof theme.font;
+};
 export type ViewProps = ThemeProps & DefaultView['props'];
 
 export function useThemeColor(
@@ -22,10 +24,11 @@ export function useThemeColor(
 }
 
 export function Text(props: TextProps) {
-  const { style, lightColor, darkColor, ...otherProps } = props;
-  const color = useThemeColor({ light: lightColor, dark: darkColor }, 'headingText');
+  const { style, lightColor, darkColor, fontType = 'regular', ...otherProps } = props;
+  const color = useThemeColor({ light: lightColor, dark: darkColor }, 'bodyText');
+  const fontFamily = theme.font[fontType];
 
-  return <DefaultText style={[{ color }, style]} {...otherProps} />;
+  return <DefaultText style={[{ color, fontFamily }, style]} {...otherProps} />;
 }
 
 export function View(props: ViewProps) {

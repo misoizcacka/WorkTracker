@@ -98,7 +98,7 @@ const styles = StyleSheet.create({
   },
   mainImageContainer: {
     width: '100%',
-    height: 200,
+    height: 400,
     borderRadius: theme.radius.md,
     overflow: 'hidden',
     backgroundColor: theme.colors.borderColor,

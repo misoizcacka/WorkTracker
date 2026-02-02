@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, Image, Dimensions, Platform, ScrollView, TouchableWithoutFeedback } from 'react-native';
+import { View, StyleSheet, Image, Dimensions, Platform, ScrollView, TouchableWithoutFeedback } from 'react-native';
+import { Text } from '../../components/Themed';
 import { Link, useRouter } from 'expo-router';
 import { Button } from '../../components/Button';
 import { theme } from '../../theme';
@@ -45,15 +46,17 @@ export default function LandingPage() {
       <ScrollView contentContainerStyle={styles.scrollContent}>
         {/* Header - Stripe-like clean header */}
         <View style={styles.header}>
-          <Image
-            source={require('../../../assets/logokoordwhite.png')} // Changed logo
-            style={styles.logo}
-            resizeMode="contain"
-          />
+          <Link href="/(guest)" asChild>
+            <Image
+              source={require('../../../assets/logokoordblack.png')} // Changed logo
+              style={styles.logo}
+              resizeMode="contain"
+            />
+          </Link>
           <View style={styles.navLinks}>
             {/* Optionally add more navigation links here */}
-            <Link href="/(guest)/pricing" style={styles.navLinkText}>
-              Pricing
+            <Link href="/(guest)/pricing" asChild>
+              <Text style={styles.navLinkText} fontType="medium">Pricing</Text>
             </Link>
             <Link href="/(guest)/login" asChild>
               <Button title="Sign In" style={styles.signInButton} textStyle={styles.signInButtonText} />
@@ -64,11 +67,11 @@ export default function LandingPage() {
         {/* Hero Section - Prominent, clean, value proposition */}
         <View style={styles.heroSection}>
           <View style={styles.heroContent}>
-            <Text style={styles.heroTitle}>
+            <Text style={styles.heroTitle} fontType="bold">
               Effortless Workforce Management for Modern Businesses
             </Text>
-            <Text style={styles.heroSubtitle}>
-              Streamline time tracking, project assignments, and reporting with WorkHoursTracker. Built for efficiency, designed for growth.
+            <Text style={styles.heroSubtitle} fontType="regular">
+              Streamline time tracking, project assignments, and reporting with Koord. Built for efficiency, designed for growth.
             </Text>
             <Button
               title="Get Started"
@@ -76,7 +79,7 @@ export default function LandingPage() {
               style={styles.heroButton}
               textStyle={styles.heroButtonText}
             />
-            <Text style={styles.heroFinePrint}>
+            <Text style={styles.heroFinePrint} fontType="regular">
               No credit card required. Cancel anytime.
             </Text>
           </View>
@@ -98,35 +101,35 @@ export default function LandingPage() {
 
         {/* Features Grid - Clean, icon-driven, concise descriptions */}
         <View style={styles.featuresGridSection}>
-          <Text style={styles.sectionTitle}>Built for the way you work</Text>
+          <Text style={styles.sectionTitle} fontType="bold">Built for the way you work</Text>
           <View style={styles.featuresGrid}>
             <View style={styles.featureItem}>
               {/* Placeholder for Icon */}
-              <Text style={styles.featureIcon}>⏱️</Text>
-              <Text style={styles.featureTitle}>Precise Time Tracking</Text>
-              <Text style={styles.featureDescription}>Capture every minute accurately across projects and tasks.</Text>
+              <Text style={styles.featureIcon} fontType="regular">⏱️</Text>
+              <Text style={styles.featureTitle} fontType="bold">Precise Time Tracking</Text>
+              <Text style={styles.featureDescription} fontType="regular">Capture every minute accurately across projects and tasks.</Text>
             </View>
             <View style={styles.featureItem}>
-              <Text style={styles.featureIcon}>✅</Text>
-              <Text style={styles.featureTitle}>Intuitive Project Assignment</Text>
-              <Text style={styles.featureDescription}>Easily assign, track, and manage all your team's projects.</Text>
+              <Text style={styles.featureIcon} fontType="regular">✅</Text>
+              <Text style={styles.featureTitle} fontType="bold">Intuitive Project Assignment</Text>
+              <Text style={styles.featureDescription} fontType="regular">Easily assign, track, and manage all your team's projects.</Text>
             </View>
             <View style={styles.featureItem}>
-              <Text style={styles.featureIcon}>📊</Text>
-              <Text style={styles.featureTitle}>Comprehensive Reporting</Text>
-              <Text style={styles.featureDescription}>Generate detailed insights to optimize productivity and costs.</Text>
+              <Text style={styles.featureIcon} fontType="regular">📊</Text>
+              <Text style={styles.featureTitle} fontType="bold">Comprehensive Reporting</Text>
+              <Text style={styles.featureDescription} fontType="regular">Generate detailed insights to optimize productivity and costs.</Text>
             </View>
             <View style={styles.featureItem}>
-              <Text style={styles.featureIcon}>📱</Text>
-              <Text style={styles.featureTitle}>Mobile-First Experience</Text>
-              <Text style={styles.featureDescription}>Manage your workforce on the go, from any device.</Text>
+              <Text style={styles.featureIcon} fontType="regular">📱</Text>
+              <Text style={styles.featureTitle} fontType="bold">Mobile-First Experience</Text>
+              <Text style={styles.featureDescription} fontType="regular">Manage your workforce on the go, from any device.</Text>
             </View>
           </View>
         </View>
 
         {/* Call to Action - Repetitive but reinforcing */}
         <View style={styles.ctaSection}>
-          <Text style={styles.ctaTitle}>Ready to transform your workflow?</Text>
+          <Text style={styles.ctaTitle} fontType="bold">Ready to transform your workflow?</Text>
           <Button
             title="Get Started"
             onPress={() => router.push('/auth/signup')}
@@ -137,7 +140,7 @@ export default function LandingPage() {
 
         {/* Footer - Simple and informative */}
         <View style={styles.footer}>
-          <Text style={styles.footerText}>© {new Date().getFullYear()} WorkHoursTracker. All rights reserved.</Text>
+          <Text style={styles.footerText} fontType="regular">© {new Date().getFullYear()} Koord. All rights reserved.</Text>
         </View>
       </ScrollView>
     </View>
@@ -181,7 +184,7 @@ const styles = StyleSheet.create({
   navLinkText: {
     fontSize: 16,
     color: theme.colors.bodyText,
-    fontWeight: '500',
+
     ...Platform.select({
       web: {
         ':hover': {
@@ -198,7 +201,6 @@ const styles = StyleSheet.create({
   },
   signInButtonText: {
     color: 'white',
-    fontWeight: '600',
   },
 
   // Hero Section
@@ -224,7 +226,6 @@ const styles = StyleSheet.create({
   },
   heroTitle: {
     fontSize: isLargeScreen ? 56 : 40,
-    fontWeight: '800',
     color: theme.colors.headingText,
     marginBottom: theme.spacing(3),
     lineHeight: isLargeScreen ? 64 : 48,
@@ -244,9 +245,8 @@ const styles = StyleSheet.create({
   },
   heroButtonText: {
     color: 'white',
-    fontWeight: '700',
     fontSize: 18,
-  },
+  },  
   heroFinePrint: {
     fontSize: 14,
     color: theme.colors.bodyText,
@@ -273,14 +273,12 @@ const styles = StyleSheet.create({
       },
     }),
   },
-  sectionTitle: {
-    fontSize: isLargeScreen ? 40 : 32,
-    fontWeight: '800',
-    color: theme.colors.headingText,
-    textAlign: 'center',
-    marginBottom: theme.spacing(6),
-  },
-  featuresGrid: {
+            sectionTitle: {
+              fontSize: isLargeScreen ? 40 : 32,
+              color: theme.colors.headingText,
+              textAlign: 'center',
+              marginBottom: theme.spacing(6),
+            },  featuresGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'center',
@@ -299,13 +297,11 @@ const styles = StyleSheet.create({
     fontSize: 48, // Larger icons
     marginBottom: theme.spacing(2),
   },
-  featureTitle: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: theme.colors.headingText,
-    marginBottom: theme.spacing(1),
-  },
-  featureDescription: {
+            featureTitle: {
+              fontSize: 24,
+              color: theme.colors.headingText,
+              marginBottom: theme.spacing(1),
+            },  featureDescription: {
     fontSize: 16,
     color: theme.colors.bodyText,
     lineHeight: 24,
@@ -324,26 +320,22 @@ const styles = StyleSheet.create({
       },
     }),
   },
-  ctaTitle: {
-    fontSize: isLargeScreen ? 48 : 32,
-    fontWeight: '800',
-    color: theme.colors.headingText,
-    marginBottom: theme.spacing(4),
-    textAlign: 'center',
-    lineHeight: isLargeScreen ? 56 : 40,
-  },
-  ctaButton: {
+            ctaTitle: {
+              fontSize: isLargeScreen ? 48 : 32,
+              color: theme.colors.headingText,
+              marginBottom: theme.spacing(4),
+              textAlign: 'center',
+              lineHeight: isLargeScreen ? 56 : 40,
+            },  ctaButton: {
     backgroundColor: theme.colors.primary,
     paddingHorizontal: theme.spacing(6),
     paddingVertical: theme.spacing(2.5),
     borderRadius: theme.radius.lg,
   },
-  ctaButtonText: {
-    color: 'white',
-    fontWeight: '700',
-    fontSize: 18,
-  },
-
+            ctaButtonText: {
+              color: 'white',
+              fontSize: 18,
+            },
   // Footer
   footer: {
     padding: theme.spacing(5),

@@ -1,5 +1,6 @@
 import React, { useState, useContext, useMemo, useEffect } from "react";
-import { View, Text, StyleSheet, ScrollView, useWindowDimensions, TextInput, TouchableOpacity, Image, Platform, ActivityIndicator, Animated } from "react-native";
+import { View, StyleSheet, ScrollView, useWindowDimensions, TextInput, TouchableOpacity, Image, Platform, ActivityIndicator, Animated } from "react-native";
+import { Text } from "~/components/Themed";
 import { Card } from "~/components/Card";
 import AnimatedScreen from "~/components/AnimatedScreen";
 import { theme } from "~/theme";
@@ -123,16 +124,16 @@ export default function ManagerProjects() {
                 <Ionicons name="image-outline" size={50} color={theme.colors.borderColor} />
               </View>
             )}
-            <View style={[styles.cardContent, { backgroundColor: hexToRgba(item.color || theme.colors.primary, 0.05) }]}>
+            <View style={[styles.cardContent, { backgroundColor: theme.colors.cardBackground }]}>
               <View style={[styles.colorAccent, { backgroundColor: item.color || theme.colors.primary }]} />
-              <Text style={styles.projectName} numberOfLines={2}>{item.name}</Text>
-              <Text style={styles.projectAddress} numberOfLines={1}>{item.address}</Text>        
+              <Text style={styles.projectName} numberOfLines={2} fontType="regular">{item.name}</Text>
+              <Text style={styles.projectAddress} numberOfLines={1} fontType="regular">{item.address}</Text>        
               <View style={styles.cardFooter}>
                 <View style={styles.footerStat}>
                   <Ionicons name="people-outline" size={16} color={theme.colors.bodyText} />     
-                  <Text style={styles.footerStatText}>{workerCount} {workerCount === 1 ? 'worker' : 'workers'}</Text>
+                  <Text style={styles.footerStatText} fontType="medium">{workerCount} {workerCount === 1 ? 'worker' : 'workers'}</Text>
                 </View>
-                <Text style={styles.lastModified}>{new Date(item.lastModified).toLocaleDateString()}</Text>
+                <Text style={styles.lastModified} fontType="medium">{new Date(item.lastModified).toLocaleDateString()}</Text>
               </View>
             </View>
           </Animated.View>
@@ -143,13 +144,11 @@ export default function ManagerProjects() {
 
   return (
     <AnimatedScreen>
-      <ScrollView 
-        style={styles.container} 
-        contentContainerStyle={styles.scrollContentContainer}
-        scrollEventThrottle={400}
-      >
-        <Text style={styles.title}>Projects</Text>
-        
+      <View style={styles.pageHeader}>
+        <Text style={styles.pageTitle} fontType="bold">Projects</Text>
+        <Text style={styles.pageSubtitle} fontType="regular">Manage your ongoing projects and assign workers.</Text>
+      </View>
+      <View style={styles.mainContentCard}>
         <View style={styles.headerControls}>
           <View style={styles.filterSortRow}>
             <TextInput
@@ -157,7 +156,7 @@ export default function ManagerProjects() {
               placeholder="Search projects..."
               value={searchTerm}
               onChangeText={setSearchTerm}
-              placeholderTextColor="#999"
+              placeholderTextColor={theme.colors.bodyText}
             />
             <CustomDropdown
               data={sortOptions}
@@ -167,79 +166,116 @@ export default function ManagerProjects() {
               style={styles.dropdownSort}
             />
           </View>
-          <Button title="Create Project" onPress={handleCreateProject} style={styles.createButton} />
+          <Button title="Create Project" onPress={handleCreateProject} style={styles.createButton} textStyle={styles.createButtonText} />
         </View>
 
         {projectsLoading && projects.length === 0 ? (
           <ActivityIndicator size="large" color={theme.colors.primary} style={{ marginTop: theme.spacing(4) }} />
         ) : sortedAndFilteredProjects.length === 0 ? (
-          <Text style={styles.noProjectsText}>No projects found matching your criteria.</Text>
+          <Text style={styles.noProjectsText} fontType="regular">No projects found matching your criteria.</Text>
         ) : (
-          <View style={styles.grid}>
+          <View style={[styles.grid, { marginHorizontal: -theme.spacing(1) }]}>
             {sortedAndFilteredProjects.map((item) => (
               <ProjectCardItem key={item.id} item={item} />
             ))}
           </View>
         )}
-      </ScrollView>
+      </View>
       <CreateProjectModal visible={isModalVisible} onClose={() => setModalVisible(false)} />     
     </AnimatedScreen>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: theme.colors.pageBackground,
+  // Removed container, scrollContentContainer, title styles
+  pageHeader: {
+    paddingVertical: theme.spacing(4),
+    paddingHorizontal: theme.spacing(2),
+    backgroundColor: theme.colors.background,
+    alignItems: 'flex-start',
   },
-  scrollContentContainer: {
-    padding: theme.spacing(3),
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: 'bold',
+  pageTitle: {
+    fontSize: theme.fontSizes.xl,
     color: theme.colors.headingText,
-    marginBottom: theme.spacing(3),
+    marginBottom: theme.spacing(0.5),
+  },
+  pageSubtitle: {
+    fontSize: theme.fontSizes.lg,
+    color: theme.colors.bodyText,
+  },
+  mainContentCard: {
+    flex: 1,
+    backgroundColor: theme.colors.cardBackground,
+    borderRadius: theme.radius.lg,
+    borderWidth: 1,
+    borderColor: theme.colors.borderColor,
+    padding: theme.spacing(3), // Add padding within the card
+    marginHorizontal: theme.spacing(2), // Match dashboard's column margin
+    marginBottom: theme.spacing(2),
+    ...Platform.select({
+      web: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.05,
+        shadowRadius: 10,
+      },
+      native: {
+
+      },
+    }),
   },
   headerControls: {
-    marginBottom: theme.spacing(3),
+    marginBottom: theme.spacing(3), // Increased margin for better separation
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
+    justifyContent: 'space-between', // Aligned with employees.tsx
     alignItems: 'center',
+    flexWrap: 'wrap', // Keep for responsiveness of controls
   },
   filterSortRow: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    marginBottom: theme.spacing(2),
-    flex: 1,
+    alignItems: 'center', // Aligned with employees.tsx
+    flexWrap: 'wrap', // Keep for responsiveness of controls
+    // Removed flex: 1 and marginBottom: theme.spacing(2) as it's handled by main headerControls
   },
   searchInput: {
-    flex: 1,
-    minWidth: 180,
-    height: 45,
-    backgroundColor: theme.colors.cardBackground,
+    width: 250, // Adjusted width
+    height: 40, // Adjusted height
+    backgroundColor: theme.colors.pageBackground, // Lighter background
     borderColor: theme.colors.borderColor,
     borderWidth: 1,
     borderRadius: theme.radius.md,
     paddingHorizontal: theme.spacing(2),
-    fontSize: 16,
-    marginRight: theme.spacing(2),
+    fontSize: theme.fontSizes.md, // Aligned with theme
+    marginRight: theme.spacing(1.5), // Adjusted margin
     color: theme.colors.headingText,
+    // Removed flex: 1 and minWidth: 180
   },
   dropdownSort: {
-    width: 180,
+    width: 200, // Adjusted width from 130 to 200
+    height: 40, // Adjusted height
     zIndex: 10,
+    backgroundColor: theme.colors.pageBackground, // Lighter background
+    borderColor: theme.colors.borderColor,
+    borderWidth: 1,
+    borderRadius: theme.radius.md,
+    paddingHorizontal: theme.spacing(1), // Added for consistency
   },
   createButton: {
-    height: 45,
-    paddingHorizontal: theme.spacing(3),
-    marginBottom: theme.spacing(2),
+    // Removed height: 45, Button component handles its own height
+    paddingVertical: 10,
+    paddingHorizontal: 15,
+    borderRadius: theme.radius.md,
+    backgroundColor: theme.colors.primary,
+    // Removed marginBottom: theme.spacing(2) as it's handled by main headerControls
+  },
+  createButtonText: {
+    color: 'white',
+    fontSize: 18,
   },
   grid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    marginHorizontal: -theme.spacing(1),
+    // Removed marginHorizontal: -theme.spacing(1), mainContentCard handles padding
   },
   cardContainer: {
     paddingHorizontal: theme.spacing(1),
@@ -247,8 +283,9 @@ const styles = StyleSheet.create({
   },
   projectCardWrapper: {
     borderRadius: theme.radius.lg,
-    ...theme.shadow.soft,
     backgroundColor: theme.colors.cardBackground, // Ensure a background color for shadow
+    borderWidth: 1, // Added border
+    borderColor: theme.colors.borderColor, // Added border color
     ...Platform.select({
       web: {
         transition: 'transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out',
@@ -278,7 +315,7 @@ const styles = StyleSheet.create({
     padding: theme.spacing(2),
     flex: 1,
     position: 'relative',
-    paddingLeft: theme.spacing(3),
+    paddingLeft: theme.spacing(3), // Adjusted for symmetry with colorAccent
   },
   colorAccent: {
     position: 'absolute',
@@ -288,13 +325,12 @@ const styles = StyleSheet.create({
     width: theme.spacing(1),
   },
   projectName: {
-    fontSize: 16,
-    fontWeight: "600",
+    fontSize: theme.fontSizes.lg, // Adjusted
     color: theme.colors.headingText,
     marginBottom: theme.spacing(0.5),
   },
   projectAddress: {
-    fontSize: 13,
+    fontSize: theme.fontSizes.sm, // Adjusted
     color: theme.colors.bodyText,
     marginBottom: theme.spacing(1.5),
   },
@@ -314,17 +350,15 @@ const styles = StyleSheet.create({
   footerStatText: {
     marginLeft: theme.spacing(1),
     color: theme.colors.bodyText,
-    fontSize: 14,
-    fontWeight: '500',
+    fontSize: theme.fontSizes.sm, // Adjusted
   },
   lastModified: {
-    fontSize: 12,
+    fontSize: theme.fontSizes.sm, // Adjusted
     color: theme.colors.bodyText,
-    fontWeight: '500',
   },
   noProjectsText: {
     textAlign: 'center',
-    fontSize: 16,
+    fontSize: theme.fontSizes.md, // Adjusted
     color: theme.colors.bodyText,
     marginTop: theme.spacing(4),
   },

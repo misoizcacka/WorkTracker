@@ -40,7 +40,7 @@ export function useEmployeeProfile() {
         .from('employees')
         .select('*')
         .eq('id', user.id)
-        .single();
+        .maybeSingle(); // Changed from single() to maybeSingle()
 
       if (fetchError) {
         throw fetchError;
@@ -52,6 +52,10 @@ export function useEmployeeProfile() {
             ...data,
             public_avatar_url: publicUrl
         });
+      } else {
+        // Handle case where no data is returned (e.g., due to RLS or record not found)
+        setProfile(null);
+        setError('Employee profile not found or accessible.');
       }
     } catch (err: any) {
       console.error('Error fetching employee profile:', err.message);

@@ -1,5 +1,6 @@
 import React, { useState, useContext } from 'react';
-import { Modal, View, Text, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { Modal, View, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { Text } from '~/components/Themed';
 import { AssignmentStep, AssignmentRecord } from '~/types';
 import { theme } from '~/theme';
 import { useAssignments } from '~/context/AssignmentsContext';
@@ -90,7 +91,7 @@ const AddAssignmentModal: React.FC<AddAssignmentModalProps> = ({
     >
       <View style={styles.centeredView}>
         <View style={styles.modalView}>
-          <Text style={styles.modalTitle}>Add Assignment</Text>
+          <Text style={styles.modalTitle} fontType="bold">Add Assignment</Text>
           
           <View style={styles.toggleContainer}>
             <TouchableOpacity 
@@ -100,7 +101,7 @@ const AddAssignmentModal: React.FC<AddAssignmentModalProps> = ({
                 setSelectedItem(null);
               }}
             >
-              <Text style={[styles.toggleButtonText, assignmentType === 'project' && styles.toggleButtonTextActive]}>Project</Text>
+              <Text style={[styles.toggleButtonText, assignmentType === 'project' && styles.toggleButtonTextActive]} fontType="medium">Project</Text>
             </TouchableOpacity>
             <TouchableOpacity 
               style={[styles.toggleButton, assignmentType === 'common_location' && styles.toggleButtonActive]} 
@@ -109,7 +110,7 @@ const AddAssignmentModal: React.FC<AddAssignmentModalProps> = ({
                 setSelectedItem(null);
               }}
             >
-              <Text style={[styles.toggleButtonText, assignmentType === 'common_location' && styles.toggleButtonTextActive]}>Location</Text>
+              <Text style={[styles.toggleButtonText, assignmentType === 'common_location' && styles.toggleButtonTextActive]} fontType="medium">Location</Text>
             </TouchableOpacity>
           </View>
 
@@ -125,10 +126,10 @@ const AddAssignmentModal: React.FC<AddAssignmentModalProps> = ({
 
           <View style={styles.buttonContainer}>
             <TouchableOpacity style={[styles.actionButton, styles.cancelButton]} onPress={onClose} disabled={isLoading}>
-              <Text style={styles.actionButtonText}>Cancel</Text>
+              <Text style={styles.actionButtonText} fontType="bold">Cancel</Text>
             </TouchableOpacity>
             <TouchableOpacity style={[styles.actionButton, styles.saveButton]} onPress={handleSave} disabled={!selectedItem || isLoading}>
-              {isLoading ? <ActivityIndicator color="#fff" /> : <Text style={styles.actionButtonText}>Save</Text>}
+              {isLoading ? <ActivityIndicator color="#fff" /> : <Text style={styles.actionButtonText} fontType="bold">Save</Text>}
             </TouchableOpacity>
           </View>
         </View>
@@ -161,8 +162,7 @@ const styles = StyleSheet.create({
   modalTitle: {
     marginBottom: 20,
     textAlign: 'center',
-    fontSize: 22,
-    fontWeight: '600',
+    fontSize: theme.fontSizes.xl,
     color: theme.colors.headingText,
   },
   toggleContainer: {
@@ -182,8 +182,7 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.primary,
   },
   toggleButtonText: {
-    fontSize: 16,
-    fontWeight: '500',
+    fontSize: theme.fontSizes.md,
     color: theme.colors.bodyText,
   },
   toggleButtonTextActive: {
@@ -216,8 +215,7 @@ const styles = StyleSheet.create({
   },
   actionButtonText: {
     color: theme.colors.headingText,
-    fontSize: 16,
-    fontWeight: 'bold',
+    fontSize: theme.fontSizes.md,
   },
 });
 

@@ -7,12 +7,12 @@ import {
   KeyboardAvoidingView,
   Platform,
   Image,
-  Text,
   ScrollView,
   useWindowDimensions,
   Linking,
   ActivityIndicator,
 } from 'react-native';
+import { Text } from '~/components/Themed';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Card } from '../../../components/Card';
 import { theme } from '../../../theme';
@@ -150,7 +150,7 @@ export default function ProjectDetailsScreen() {
     return (
       <AnimatedScreen>
         <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
-          <Text style={styles.title}>Project not found.</Text>
+          <Text style={styles.title} fontType="bold">Project not found.</Text>
           <TouchableOpacity onPress={() => router.back()}>
             <Text style={{ color: theme.colors.primary, marginTop: 10 }}>Go Back</Text>
           </TouchableOpacity>
@@ -167,11 +167,11 @@ export default function ProjectDetailsScreen() {
         <View style={styles.headerTextContainer}>
             <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: theme.spacing(1) }}>
                 <View style={[styles.colorIndicator, { backgroundColor: project.color }]} />
-                <Text style={styles.headerTitle}>{project.name}</Text>
+                <Text style={styles.headerTitle} fontType="bold">{project.name}</Text>
             </View>
             <TouchableOpacity onPress={handleMapPress} style={styles.addressContainer}>
                 <Ionicons name="location-outline" size={18} color={theme.colors.headingText} />
-                <Text style={styles.headerAddress}>{project.address}</Text>
+                <Text style={styles.headerAddress} fontType="regular">{project.address}</Text>
             </TouchableOpacity>
         </View>
     </View>
@@ -185,8 +185,8 @@ export default function ProjectDetailsScreen() {
     return (
       <View style={[styles.messageWrapper, isMyMessage ? styles.myMessageContainer : styles.otherMessageContainer]}>
         <View style={[styles.messageBubble, messageBubbleStyle]}>
-          {!isMyMessage && <Text style={styles.senderName}>{item.employees?.full_name || 'Unknown User'}</Text>}
-          {item.type === 'text' && <Text style={messageTextStyle}>{item.text}</Text>}
+          {!isMyMessage && <Text style={styles.senderName} fontType="bold">{item.employees?.full_name || 'Unknown User'}</Text>}
+          {item.type === 'text' && <Text style={messageTextStyle} fontType="regular">{item.text}</Text>}
           {item.type === 'image' && item.image_url && (
             <TouchableOpacity onPress={() => openImageModal([item.image_url!], 0)}>
               <Image source={{ uri: item.image_url }} style={styles.messageImage} />
@@ -201,19 +201,19 @@ export default function ProjectDetailsScreen() {
   const ProjectDetails = () => (
     <ScrollView style={styles.detailsColumn}>
       <Card style={styles.card}>
-        <Text style={styles.cardTitle}>Project Overview</Text>
-        <Text style={styles.explanationText}>{project.explanation}</Text>
+        <Text style={styles.cardTitle} fontType="bold">Project Overview</Text>
+        <Text style={styles.explanationText} fontType="regular">{project.explanation}</Text>
       </Card>
 
       {project.photos && project.photos.length > 0 && (
               <Card style={styles.card}>
-                <Text style={styles.cardTitle}>Project Images</Text>
+                <Text style={styles.cardTitle} fontType="bold">Project Images</Text>
 
                 <ProjectGallery images={project.photos} onImagePress={openImageModal} />
               </Card>      )}
 
       <Card style={styles.card}>
-        <Text style={styles.cardTitle}>Location</Text>
+        <Text style={styles.cardTitle} fontType="bold">Location</Text>
         <TouchableOpacity onPress={handleMapPress}>
             <View style={styles.mapWrapper}>
                 {Platform.OS === 'web' ? (
@@ -227,7 +227,7 @@ export default function ProjectDetailsScreen() {
         </TouchableOpacity>
       </Card>
 
-      {!isLargeScreen && <Text style={styles.discussionSectionTitle}>Discussion</Text>}
+      {!isLargeScreen && <Text style={styles.discussionSectionTitle} fontType="bold">Discussion</Text>}
     </ScrollView>
   );
 
@@ -325,8 +325,7 @@ const styles = StyleSheet.create({
         borderRightColor: theme.colors.borderColor,
     },
     discussionSectionTitle: {
-        fontSize: 22,
-        fontWeight: 'bold',
+        fontSize: theme.fontSizes.lg,
         color: theme.colors.headingText,
         marginTop: theme.spacing(3),
         marginBottom: theme.spacing(2),
@@ -347,8 +346,7 @@ const styles = StyleSheet.create({
         // You can add max-width and margin auto for centered content on very wide screens
     },
     headerTitle: {
-        fontSize: 28,
-        fontWeight: 'bold',
+        fontSize: theme.fontSizes.xl,
         color: theme.colors.headingText,
     },
     colorIndicator: {
@@ -360,7 +358,7 @@ const styles = StyleSheet.create({
     headerAddress: {
         color: theme.colors.headingText,
         marginLeft: theme.spacing(1),
-        fontSize: 14,
+        fontSize: theme.fontSizes.sm,
         opacity: 0.8,
     },
     addressContainer: { // Re-adding the addressContainer style
@@ -371,12 +369,11 @@ const styles = StyleSheet.create({
     addressText: { // Re-adding the addressText style
         color: theme.colors.headingText,
         marginLeft: theme.spacing(1),
-        fontSize: 16,
+        fontSize: theme.fontSizes.md,
         opacity: 0.8,
     },
     title: {
-        fontSize: 28,
-        fontWeight: 'bold',
+        fontSize: theme.fontSizes.xl,
         color: theme.colors.headingText,
         marginBottom: theme.spacing(0.5),
     },
@@ -384,13 +381,12 @@ const styles = StyleSheet.create({
         marginBottom: theme.spacing(2),
     },
     cardTitle: {
-        fontSize: 18,
-        fontWeight: '600',
+        fontSize: theme.fontSizes.lg,
         color: theme.colors.headingText,
         marginBottom: theme.spacing(2),
     },
     explanationText: {
-        fontSize: 16,
+        fontSize: theme.fontSizes.md,
         color: theme.colors.bodyText,
         lineHeight: 24,
     },
@@ -424,7 +420,7 @@ const styles = StyleSheet.create({
     emptyDiscussionText: {
         textAlign: 'center',
         color: theme.colors.bodyText,
-        fontSize: 16,
+        fontSize: theme.fontSizes.md,
     },
     messageWrapper: {
         marginVertical: 4,
@@ -454,20 +450,19 @@ const styles = StyleSheet.create({
     },
     myMessageText: {
         color: 'white',
-        fontSize: 16,
+        fontSize: theme.fontSizes.md,
     },
     otherMessageText: {
         color: theme.colors.headingText,
-        fontSize: 16,
+        fontSize: theme.fontSizes.md,
     },
     senderName: {
-        fontSize: 14,
-        fontWeight: 'bold',
+        fontSize: theme.fontSizes.sm,
         color: theme.colors.headingText,
         marginBottom: 6,
     },
     timestamp: {
-        fontSize: 11,
+        fontSize: theme.fontSizes.xs,
         opacity: 0.7,
         marginTop: 6,
     },

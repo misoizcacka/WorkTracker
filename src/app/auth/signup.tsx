@@ -1,43 +1,57 @@
-import React, { useState } from 'react';
-import { View, Text, TextInput, StyleSheet, ActivityIndicator, Alert, ScrollView, Platform, Dimensions, Image, Pressable } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, TextInput, StyleSheet, ActivityIndicator, Alert, ScrollView, Platform, Dimensions, Image, Pressable } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useRouter, Link } from 'expo-router';
-import { useSession } from '../../context/AuthContext'; // Import useSession
+import { useSession } from '../../context/AuthContext';
 import { Button } from '../../components/Button';
+import { Text } from '../../components/Themed';
 import { theme } from '../../theme';
 import AnimatedScreen from '../../components/AnimatedScreen';
-import Logo from '../../../assets/logokoordwhite.png'; // Make sure this path is correct
-import { supabase } from '../../utils/supabase'; // Import Supabase client
+import Logo from '../../../assets/logokoordblack.png'; // Corrected path
+import { supabase } from '../../utils/supabase';
+import { useTranslation } from 'react-i18next';
+import { LanguageSelector } from '../../components/LanguageSelector';
 
 const { width } = Dimensions.get('window');
-const isLargeScreen = width > 768; // Define what constitutes a large screen
+const isLargeScreen = width > 768;
 
 export default function Signup() {
   const router = useRouter();
-  const { refreshUser } = useSession(); // Get refreshUser from useSession
+  const { refreshUser, user, userRole } = useSession();
+  const { t } = useTranslation();
 
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  // const [companyName, setCompanyName] = useState(''); // Removed state for company name
-  const [passwordVisible, setPasswordVisible] = useState(false); // New state for password visibility
+  const [passwordVisible, setPasswordVisible] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [errors, setErrors] = useState<{ fullName?: string; email?: string; password?: string; general?: string }>({}); // Removed companyName from errors type
+  const [errors, setErrors] = useState<{ fullName?: string; email?: string; password?: string; general?: string }>({});
+
+  const getLogoHref = () => {
+    if (!user) {
+      return '/(guest)';
+    }
+    if (userRole === 'manager' || userRole === 'owner') {
+      return '/(manager)/dashboard';
+    } else if (userRole === 'worker') {
+      return '/(worker)/home';
+    }
+    return '/(guest)';
+  };
 
   const handleSignup = async () => {
     console.log("Analytics: Signup initiated.");
-    const newErrors: { fullName?: string; email?: string; password?: string } = {}; // Removed companyName from newErrors type
-    // if (!companyName) newErrors.companyName = 'Company name is required.'; // Removed validation
-    if (!fullName) newErrors.fullName = 'Full name is required.';
+    const newErrors: { fullName?: string; email?: string; password?: string; } = {};
+    if (!fullName) newErrors.fullName = t('signup.errors.fullNameRequired');
     if (!email) {
-      newErrors.email = 'Email is required.';
+      newErrors.email = t('signup.errors.emailRequired');
     } else if (!/\S+@\S+\.\S+/.test(email)) {
-      newErrors.email = 'Email address is invalid.';
+      newErrors.email = t('signup.errors.emailInvalid');
     }
     if (!password) {
-      newErrors.password = 'Password is required.';
+      newErrors.password = t('signup.errors.passwordRequired');
     } else if (password.length < 6) {
-      newErrors.password = 'Password must be at least 6 characters long.';
+      newErrors.password = t('signup.errors.passwordLength');
     }
 
     if (Object.keys(newErrors).length > 0) {
@@ -51,14 +65,13 @@ export default function Signup() {
     console.log("Analytics: Attempting Supabase signup.");
 
     try {
-      // First, sign up the user in Supabase Auth
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
           data: {
-            full_name: fullName, // Put fullName back
-            role: 'owner',   // Put default role back to satisfy internal auth triggers/policies
+            full_name: fullName,
+            role: 'owner',
           },
         },
       });
@@ -72,43 +85,33 @@ export default function Signup() {
       if (data.user) {
         console.log("Analytics: Supabase signup successful, user created. User ID:", data.user.id);
 
-        // Invoke the Edge Function to create company and owner employee
         const { data: edgeFunctionData, error: edgeFunctionError } = await supabase.functions.invoke('create-owner-and-company', {
           body: {
             userId: data.user.id,
             fullName: fullName,
             email: email,
-            companyName: `New Company - ${email}`, // Pass a placeholder company name
+            companyName: "New Company",
           }
         });
 
         if (edgeFunctionError) {
           console.error('Error invoking create-owner-and-company Edge Function:', edgeFunctionError);
-          setErrors({ general: 'Signup successful, but failed to setup company and owner employee.' });
-          // Optionally, you might want to delete the auth user here if the company setup fails
-          // await supabase.auth.admin.deleteUser(data.user.id);
+          setErrors({ general: t('signup.failedToFinalizeSetup') });
           return;
         }
         
-        // Edge function should return the company and employee data
         const { company, employee } = edgeFunctionData;
         console.log('Company and owner employee created:', company, employee);
 
-        // --- NEW: Refresh user session after successful company/owner creation ---
-        await refreshUser(); // Refresh user data to get updated user_metadata including company_id
-
-        localStorage.setItem('user', JSON.stringify({ id: data.user.id, email: data.user.email, fullName }));
-        // If successful, redirect to subscription setup
-        router.push('/subscription/setup');
+        await refreshUser();
+        router.push({ pathname: '/subscription/setup', params: { companyId: company.id } });
       } else {
-        // This case might happen if email confirmation is required and no user data is returned immediately
         console.log("Analytics: Supabase signup successful, but user object is null. Likely awaiting email confirmation.");
-        setErrors({ general: "Sign up successful! Please check your email to confirm your account." });
-        // Optionally redirect to a confirmation required page
+        setErrors({ general: t('signup.checkEmailConfirmation') }); // New i18n key needed
       }
     } catch (error: any) {
       console.error("Analytics: Supabase signup encountered an unexpected error.", error.message);
-      setErrors({ general: error.message });
+      setErrors({ general: error.message || t('signup.unexpectedError') });
     } finally {
       setIsSubmitting(false);
       console.log("Analytics: Signup request finished.");
@@ -120,95 +123,93 @@ export default function Signup() {
       <View style={styles.outerContainer}>
         {isLargeScreen && (
           <View style={styles.marketingContainer}>
-            <Image source={Logo} style={styles.marketingLogo} resizeMode="contain" />
-            <Text style={styles.marketingTitle}>Track Smarter, Work Happier.</Text>
-            <Text style={styles.marketingDescription}>
-              WorkHoursTracker simplifies time management for teams of all sizes. Gain clear insights into projects, optimize workforce allocation, and streamline payroll with ease.
-            </Text>
-            <Text style={styles.marketingBullet}>✅ Effortless Time Tracking</Text>
-            <Text style={styles.marketingBullet}>✅ Seamless Project Assignments</Text>
-            <Text style={styles.marketingBullet}>✅ Accurate Payroll Preparation</Text>
-            <Text style={styles.marketingBullet}>✅ Boost Productivity & Efficiency</Text>
-            <Text style={styles.marketingDescription}>
-              Join thousands of businesses who trust WorkHoursTracker for precise time data and robust workforce analytics. Focus on what matters most, we'll handle the rest.
-            </Text>
+            <Link href={getLogoHref()} style={styles.marketingLogo} asChild>
+              <Image source={Logo} resizeMode="contain" />
+            </Link>
+            <Text style={styles.marketingTitle} fontType="bold">{t('signup.marketingTitle')}</Text>
+            <Text style={styles.marketingDescription} fontType="regular">{t('signup.marketingDescription')}</Text>
+            <Text style={styles.marketingBullet} fontType="regular">✅ {t('signup.marketingBullet1')}</Text>
+            <Text style={styles.marketingBullet} fontType="regular">✅ {t('signup.marketingBullet2')}</Text>
+            <Text style={styles.marketingBullet} fontType="regular">✅ {t('signup.marketingBullet3')}</Text>
+            <Text style={styles.marketingBullet} fontType="regular">✅ {t('signup.marketingBullet4')}</Text>
+            <Text style={styles.marketingDescription} fontType="regular">{t('signup.marketingDescription2')}</Text>
           </View>
         )}
+        {isLargeScreen && <View style={styles.separatorVertical} />}
         {!isLargeScreen && (
-            <Image source={Logo} style={styles.smallScreenLogo} resizeMode="contain" />
+            <Link href={getLogoHref()} style={styles.smallScreenLogo} asChild>
+              <Image source={Logo} resizeMode="contain" />
+            </Link>
         )}
         <ScrollView contentContainerStyle={styles.scrollContent}>
           <View style={styles.content}>
-            <Text style={styles.title}>Create Your Account</Text>
-            <Text style={styles.description}>
-              Register your manager account to get started with WorkHoursTracker.
-            </Text>
+            <Text style={styles.title} fontType="bold">{t('signup.createYourAccount')}</Text>
+            <Text style={styles.description} fontType="regular">{t('signup.registerManagerAccount')}</Text>
 
-            {errors.general && <View style={styles.errorContainer}><Text style={styles.errorText}>{errors.general}</Text></View>}
+            {errors.general && <View style={styles.errorContainer}><Text style={styles.errorText} fontType="regular">{errors.general}</Text></View>}
 
             <TextInput
               style={styles.input}
-              placeholder="Your Full Name *"
+              placeholder={t('signup.fullNamePlaceholder')}
               value={fullName}
               onChangeText={setFullName}
               autoCapitalize="words"
-              placeholderTextColor="#999"
+              placeholderTextColor={theme.colors.bodyText}
             />
-            {errors.fullName && <View style={styles.errorContainer}><Text style={styles.errorText}>{errors.fullName}</Text></View>}
+            {errors.fullName && <View style={styles.errorContainer}><Text style={styles.errorText} fontType="regular">{errors.fullName}</Text></View>}
+
             <TextInput
               style={styles.input}
-              placeholder="Email Address *"
+              placeholder={t('signup.emailAddressPlaceholder')}
               value={email}
               onChangeText={setEmail}
               keyboardType="email-address"
               autoCapitalize="none"
-              placeholderTextColor="#999"
+              placeholderTextColor={theme.colors.bodyText}
             />
-            {errors.email && <View style={styles.errorContainer}><Text style={styles.errorText}>{errors.email}</Text></View>}
+            {errors.email && <View style={styles.errorContainer}><Text style={styles.errorText} fontType="regular">{errors.email}</Text></View>}
+
             <View style={styles.passwordInputContainer}>
               <TextInput
                 style={styles.passwordInput}
-                placeholder="Password *"
+                placeholder={t('signup.passwordPlaceholder')}
                 value={password}
                 onChangeText={setPassword}
-                secureTextEntry={!passwordVisible} // Dynamically set secureTextEntry
-                placeholderTextColor="#999"
+                secureTextEntry={!passwordVisible}
+                placeholderTextColor={theme.colors.bodyText}
               />
               <Pressable onPress={() => setPasswordVisible(!passwordVisible)} style={styles.passwordToggle}>
                 <Feather
-                  name={passwordVisible ? 'eye' : 'eye-off'} // Icon changes based on visibility
+                  name={passwordVisible ? 'eye' : 'eye-off'}
                   size={20}
                   color={theme.colors.iconColor}
                 />
               </Pressable>
             </View>
-            {errors.password && <View style={styles.errorContainer}><Text style={styles.errorText}>{errors.password}</Text></View>}
+            {errors.password && <View style={styles.errorContainer}><Text style={styles.errorText} fontType="regular">{errors.password}</Text></View>}
             
             <Button
               onPress={handleSignup}
               disabled={isSubmitting}
               style={styles.primaryButton}
-              textStyle={styles.primaryButtonText}
             >
-              {isSubmitting ? <ActivityIndicator color="#fff" /> : <Text style={styles.primaryButtonText}>Continue</Text>}
-            </Button>
-
-            {/* Placeholder for Google Sign-up */}
-            <Button
-              title="Sign up with Google"
-              onPress={() => Alert.alert('Google Sign-up', 'Google sign-up coming soon!')}
+              {isSubmitting ? <ActivityIndicator color="#fff" /> : <Text style={styles.primaryButtonText} fontType="regular">{t('signup.continueButton')}</Text>}
+            </Button><Button
+              title={t('signup.signUpWithGoogle')}
+              onPress={() => Alert.alert(t('signup.signUpWithGoogle'), t('signup.googleSignupComingSoon'))}
               style={styles.googleButton}
-              textStyle={styles.googleButtonText}
             />
 
             <View style={styles.signInLinkContainer}>
-              <Text style={styles.signInText}>Already have an account? </Text>
-              <Link href="/(guest)/login" style={styles.signInLink}>
-                Sign In
+              <Text style={styles.signInText} fontType="regular">{t('signup.alreadyHaveAccount')}</Text><Link href="/(guest)/login" asChild>
+                <Text style={styles.signInLink} fontType="regular">{t('signup.signInLink')}</Text>
               </Link>
             </View>
           </View>
         </ScrollView>
+      </View>
+      <View style={styles.languageSelectorContainer}>
+        <LanguageSelector />
       </View>
     </AnimatedScreen>
   );
@@ -221,10 +222,10 @@ const styles = StyleSheet.create({
   },
   marketingContainer: {
     flex: 1,
-    backgroundColor: theme.colors.primary,
+    backgroundColor: theme.colors.background,
     justifyContent: 'center',
     padding: theme.spacing(8),
-    paddingTop: theme.spacing(8), // Add padding for the logo at the top
+    paddingTop: theme.spacing(8),
   },
   marketingLogo: {
     position: 'absolute',
@@ -232,7 +233,6 @@ const styles = StyleSheet.create({
     left: theme.spacing(4),
     width: 100,
     height: 30,
-    resizeMode: 'contain',
   },
   smallScreenLogo: {
     position: 'absolute',
@@ -240,27 +240,29 @@ const styles = StyleSheet.create({
     left: theme.spacing(4),
     width: 100,
     height: 30,
-    resizeMode: 'contain',
-    zIndex: 10, // Ensure it's above other content
+    zIndex: 10,
   },
   marketingTitle: {
     fontSize: 40,
-    fontWeight: 'bold',
-    color: 'white',
+    color: theme.colors.headingText,
     marginBottom: theme.spacing(4),
     lineHeight: 48,
   },
   marketingDescription: {
     fontSize: 18,
-    color: 'white',
+    color: theme.colors.bodyText,
     marginBottom: theme.spacing(4),
     lineHeight: 28,
   },
   marketingBullet: {
     fontSize: 16,
-    color: 'white',
+    color: theme.colors.bodyText,
     marginBottom: theme.spacing(1),
-    fontWeight: 'bold',
+  },
+  separatorVertical: {
+    width: 1,
+    backgroundColor: theme.colors.borderColor,
+    height: '100%',
   },
   scrollContent: {
     flexGrow: 1,
@@ -270,7 +272,7 @@ const styles = StyleSheet.create({
   content: {
     justifyContent: 'center',
     padding: theme.spacing(4),
-    backgroundColor: 'white',
+    backgroundColor: theme.colors.cardBackground,
     marginHorizontal: 'auto',
     maxWidth: 500,
     width: '100%',
@@ -289,7 +291,6 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 28,
-    fontWeight: 'bold',
     color: theme.colors.headingText,
     textAlign: 'center',
     marginBottom: theme.spacing(1),
@@ -301,14 +302,13 @@ const styles = StyleSheet.create({
     marginBottom: theme.spacing(4),
   },
   errorContainer: {
-    backgroundColor: '#FFEBEE',
+    backgroundColor: theme.colors.errorBackground,
     borderRadius: theme.radius.md,
     padding: theme.spacing(2),
     marginBottom: theme.spacing(2),
   },
   errorText: {
-    color: '#D32F2F',
-    fontWeight: 'bold',
+    color: theme.colors.errorText,
     textAlign: 'center',
   },
   input: {
@@ -320,7 +320,27 @@ const styles = StyleSheet.create({
     marginBottom: theme.spacing(2),
     fontSize: 16,
     color: theme.colors.headingText,
-    backgroundColor: 'white',
+    backgroundColor: theme.colors.background,
+  },
+  passwordInputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderColor: theme.colors.borderColor,
+    borderWidth: 1,
+    borderRadius: theme.radius.md,
+    marginBottom: theme.spacing(2),
+    backgroundColor: theme.colors.background,
+  },
+  passwordInput: {
+    flex: 1,
+    height: 50,
+    paddingHorizontal: theme.spacing(2),
+    fontSize: 16,
+    color: theme.colors.headingText,
+    backgroundColor: theme.colors.background,
+  },
+  passwordToggle: {
+    padding: theme.spacing(2),
   },
   primaryButton: {
     backgroundColor: theme.colors.primary,
@@ -332,24 +352,15 @@ const styles = StyleSheet.create({
   primaryButtonText: {
     color: 'white',
     fontSize: 16,
-    fontWeight: 'bold',
-    textAlign: 'center',
-
   },
   googleButton: {
-    backgroundColor: '#DB4437',
+    backgroundColor: theme.colors.accent, // Using accent color for Google button
     borderRadius: theme.radius.md,
     marginTop: theme.spacing(1),
     height: 50,
     justifyContent: 'center',
   },
-  googleButtonText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: 'bold',
-    textAlign: 'center',
-
-  },
+  // googleButtonText is not used, as Button component's default text style is used
   signInLinkContainer: {
     flexDirection: 'row',
     justifyContent: 'center',
@@ -358,31 +369,15 @@ const styles = StyleSheet.create({
   signInText: {
     fontSize: 14,
     color: theme.colors.bodyText,
-
   },
   signInLink: {
     fontSize: 14,
     color: theme.colors.primary,
-    fontWeight: 'bold',
-
   },
-  passwordInputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderColor: theme.colors.borderColor,
-    borderWidth: 1,
-    borderRadius: theme.radius.md,
-    marginBottom: theme.spacing(2),
-  },
-  passwordInput: {
-    flex: 1,
-    height: 50,
-    paddingHorizontal: theme.spacing(2),
-    fontSize: 16,
-    color: theme.colors.headingText,
-    backgroundColor: 'white',
-  },
-  passwordToggle: {
-    padding: theme.spacing(2),
+  languageSelectorContainer: {
+    position: 'absolute',
+    top: Platform.OS === 'web' ? theme.spacing(4) : theme.spacing(6),
+    right: theme.spacing(4),
+    zIndex: 100,
   },
 });

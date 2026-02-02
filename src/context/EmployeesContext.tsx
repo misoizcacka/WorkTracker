@@ -1,6 +1,7 @@
 import React, { createContext, useState, useMemo, useCallback, useEffect } from 'react';
 import { supabase } from '../utils/supabase';
 import { Employee } from '../types';
+import { useSession } from './AuthContext'; // Import useSession
 
 export interface EmployeesContextType {
   employees: Employee[];
@@ -9,57 +10,26 @@ export interface EmployeesContextType {
   updateEmployee: (employee: Employee) => Promise<void>;
   deleteEmployee: (employeeId: string) => Promise<void>;
   getEmployeeById: (employeeId: string) => Employee | undefined;
-  userCompanyId: string | null; // New: Add userCompanyId
 }
 
 export const EmployeesContext = createContext<EmployeesContextType | null>(null);
 
 export function EmployeesProvider({ children }: { children: React.ReactNode }) {
+  const { userCompanyId, isCompanyIdLoading } = useSession(); // Get company ID from AuthContext
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [loading, setLoading] = useState(true);
-  const [userCompanyId, setUserCompanyId] = useState<string | null>(null); // New state for company ID
   const seatLimit = 10; // This could be dynamic based on subscription
 
   useEffect(() => {
-    const getCompanyId = async () => {
-      const { data: { session }, error } = await supabase.auth.getSession();
-      
-      // If no session or no user, then no company_id can be determined yet.
-      // This is expected on pages like signup or login.
-      if (!session || !session.user || !session.user.id) {
-        setUserCompanyId(null); // Explicitly set to null if no user
-        setLoading(false); // Stop loading if no user is found
-        return;
-      }
-
-      if (session.user.user_metadata?.company_id) {
-        setUserCompanyId(session.user.user_metadata.company_id);
-      } else {
-        // If company_id is not in session, try fetching from employee table
-        // This might happen if user metadata is not immediately updated or on first login
-        const { data: employeeData, error: employeeError } = await supabase
-          .from('employees')
-          .select('company_id')
-          .eq('id', session.user.id) // Use session.user.id directly
-          .single();
-        
-        if (employeeData?.company_id) {
-            setUserCompanyId(employeeData.company_id);
-            // Optionally update user_metadata in auth.users if it's missing
-            // This would require supabase.auth.admin.updateUserById, which is admin privileged
-            // For now, just setting client-side state is sufficient
-        } else if (employeeError) {
-            console.error('Error fetching company_id from employee table:', employeeError);
-        }
-      }
-      setLoading(false); // Move setLoading(false) here to cover all branches
-    };
-
-    getCompanyId();
-  }, []); // Run once on mount to get company ID
-
-  useEffect(() => {
-    if (!userCompanyId) return; // Don't fetch employees until company ID is available
+    if (isCompanyIdLoading) {
+      setLoading(true); // Still loading if company ID is loading from AuthContext
+      return;
+    }
+    if (!userCompanyId) {
+      setEmployees([]); // Clear employees if no company ID
+      setLoading(false);
+      return;
+    }
 
     const fetchEmployees = async () => {
       setLoading(true);
@@ -105,7 +75,7 @@ export function EmployeesProvider({ children }: { children: React.ReactNode }) {
     return () => {
       supabase.removeChannel(employeeSubscription);
     };
-  }, [userCompanyId]); // Re-run effect when company ID changes
+  }, [userCompanyId, isCompanyIdLoading]); // Re-run effect when company ID or its loading state changes
 
   const seatsUsed = useMemo(() => employees.filter(e => e.role === 'worker').length, [employees]);
 

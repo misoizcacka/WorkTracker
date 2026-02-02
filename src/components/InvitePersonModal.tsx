@@ -93,7 +93,7 @@ const InvitePersonModal: React.FC<InvitePersonModalProps> = ({ visible, onClose 
             placeholder="Full Name *"
             value={fullName}
             onChangeText={setFullName}
-            placeholderTextColor="#999"
+            placeholderTextColor={theme.colors.bodyText}
           />
           <TextInput
             style={styles.input}
@@ -102,7 +102,7 @@ const InvitePersonModal: React.FC<InvitePersonModalProps> = ({ visible, onClose 
             onChangeText={setEmail}
             keyboardType="email-address"
             autoCapitalize="none"
-            placeholderTextColor="#999"
+            placeholderTextColor={theme.colors.bodyText}
           />
 
           <Dropdown
@@ -141,8 +141,8 @@ const styles = StyleSheet.create({
   },
   modalView: {
     margin: 20,
-    backgroundColor: 'white',
-    borderRadius: 20,
+    backgroundColor: theme.colors.cardBackground, // Changed from 'white'
+    borderRadius: theme.radius.lg, // Changed from 20
     padding: 35,
     alignItems: 'center',
     shadowColor: '#000',
@@ -155,12 +155,15 @@ const styles = StyleSheet.create({
     elevation: 5,
     width: '90%',
     maxWidth: 400,
+    borderColor: theme.colors.borderColor, // Added
+    borderWidth: 1, // Added
   },
   modalText: {
-    marginBottom: 25,
+    marginBottom: theme.spacing(3), // Changed from 25
     textAlign: 'center',
-    fontSize: 24,
-    fontWeight: 'bold',
+    fontSize: theme.fontSizes.xl, // Changed from 24
+    fontWeight: 'bold', // Kept as fontWeight for now
+    color: theme.colors.headingText, // Added
   },
   closeButton: {
     position: 'absolute',
@@ -171,46 +174,48 @@ const styles = StyleSheet.create({
   },
   input: {
     width: '100%',
-    height: 50,
-    borderColor: '#ddd',
+    height: theme.spacing(6), // Changed from 50
+    borderColor: theme.colors.borderColor, // Changed from '#ddd'
     borderWidth: 1,
-    borderRadius: 10,
-    paddingHorizontal: 15,
-    marginBottom: 15,
-    fontSize: 16,
+    borderRadius: theme.radius.md, // Changed from 10
+    paddingHorizontal: theme.spacing(3), // Changed from 15
+    marginBottom: theme.spacing(2), // Changed from 15
+    fontSize: theme.fontSizes.md, // Changed from 16
+    color: theme.colors.bodyText, // Ensure text color is readable
   },
   buttonContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     width: '100%',
-    marginTop: 10,
+    marginTop: theme.spacing(2), // Changed from 10
   },
   buttonText: {
     color: 'white',
     fontWeight: 'bold',
-    fontSize: 16,
+    fontSize: theme.fontSizes.md, // Changed from 16
   },
   errorText: {
     color: 'red',
-    marginBottom: 10,
+    marginBottom: theme.spacing(2), // Changed from 10
     textAlign: 'center',
   },
   dropdown: {
     width: '100%',
-    height: 50,
-    borderColor: '#ddd',
+    height: theme.spacing(6), // Changed from 50
+    borderColor: theme.colors.borderColor, // Changed from '#ddd'
     borderWidth: 1,
-    borderRadius: 10,
-    paddingHorizontal: 15,
-    marginBottom: 15,
-    backgroundColor: 'white',
+    borderRadius: theme.radius.md, // Changed from 10
+    paddingHorizontal: theme.spacing(3), // Changed from 15
+    marginBottom: theme.spacing(2), // Changed from 15
+    backgroundColor: theme.colors.pageBackground, // Changed from 'white'
   },
   placeholderStyle: {
-    fontSize: 16,
-    color: '#999',
+    fontSize: theme.fontSizes.md, // Changed from 16
+    color: theme.colors.bodyText, // Ensure placeholder color is readable
   },
   selectedTextStyle: {
-    fontSize: 16,
+    fontSize: theme.fontSizes.md, // Changed from 16
+    color: theme.colors.headingText, // Ensure selected text color is readable
   },
   iconStyle: {
     width: 20,

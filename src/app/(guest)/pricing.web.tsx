@@ -1,28 +1,24 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Platform, Dimensions, Image, TextInput, TouchableOpacity } from 'react-native';
+import { View, StyleSheet, ScrollView, Platform, Dimensions, Image, TextInput, TouchableOpacity } from 'react-native';
+import { Text } from '../../components/Themed';
 import { useRouter, Link } from 'expo-router';
 import { Button } from '../../components/Button';
 import { theme } from '../../theme';
-import AnimatedScreen from '../../components/AnimatedScreen';
-import Logo from '../../../assets/logokoordwhite.png'; // Import the logo
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from 'react-i18next'; // Re-adding i18n
 
 const { width } = Dimensions.get('window');
-const isLargeScreen = width > 768; // Define what constitutes a large screen for responsive design
+const isLargeScreen = width > 768;
 
-const BASE_MONTHLY_FEE = 19; // EUR - Updated
-const PRICE_PER_WORKER = 5; // EUR - Updated
+// Define pricing constants
+const BASE_MONTHLY_FEE = 10; // EUR - User specified
+const PRICE_PER_WORKER = 6; // EUR - User specified
 
-export default function Pricing() {
-  const { t } = useTranslation();
+export default function PricingPage() {
+  const { t } = useTranslation(); // Re-adding useTranslation
   const router = useRouter();
   const [numWorkers, setNumWorkers] = useState('1'); // Default to 1 worker
 
   const estimatedCost = BASE_MONTHLY_FEE + (parseInt(numWorkers || '0') * PRICE_PER_WORKER);
-
-  const handleStartFreeTrial = () => {
-    router.push('/(guest)/register');
-  };
 
   const handleDecrementWorkers = () => {
     setNumWorkers(prev => {
@@ -36,311 +32,219 @@ export default function Pricing() {
   };
 
   return (
-    <AnimatedScreen>
-      <View style={styles.outerContainer}>
-        {isLargeScreen && (
-          <View style={styles.marketingContainer}>
-            <Image source={Logo} style={styles.marketingLogo} resizeMode="contain" />
-            <Text style={styles.marketingTitle}>{t('pricing.marketingTitle')}</Text>
-            <Text style={styles.marketingDescription}>{t('pricing.marketingDescription1')}</Text>
-            <Text style={styles.marketingBullet}>✅ {t('pricing.marketingBullet1')}</Text>
-            <Text style={styles.marketingBullet}>✅ {t('pricing.marketingBullet2')}</Text>
-            <Text style={styles.marketingBullet}>✅ {t('pricing.marketingBullet3')}</Text>
-            <Text style={styles.marketingDescription}>{t('pricing.marketingDescription2')}</Text>
+    <View style={styles.container}>
+      <ScrollView contentContainerStyle={styles.scrollContent}>
+        {/* Header */}
+        <View style={styles.header}>
+          <Link href="/(guest)" asChild>
+            <Image
+              source={require('../../../assets/logokoordblack.png')}
+              style={styles.logo}
+              resizeMode="contain"
+            />
+          </Link>
+          <View style={styles.navLinks}>
+            <Link href="/(guest)/pricing" asChild>
+              <Text style={styles.navLinkText} fontType="medium">{t('common.pricing')}</Text>
+            </Link>
+            <Link href="/(guest)/login" asChild>
+              <Button title={t('common.signIn')} style={styles.signInButton} textStyle={styles.signInButtonText} />
+            </Link>
           </View>
-        )}
-        {!isLargeScreen && (
-            <Image source={Logo} style={styles.smallScreenLogo} resizeMode="contain" />
-        )}
-        <ScrollView contentContainerStyle={styles.scrollContent}>
-          <View style={styles.content}>
-            {/* 1. Hero Section */}
-            <View style={styles.heroSection}>
-              <Text style={styles.heroTitle}>{t('pricing.heroTitle')}</Text>
-              <Text style={styles.heroSubtitle}>{t('pricing.heroSubtitle')}</Text>
-              <Button
-                title={t('pricing.startFreeTrial')}
-                onPress={handleStartFreeTrial}
-                style={styles.heroButton}
-                textStyle={styles.heroButtonText}
-              />
-              {/* Visual element placeholder */}
-              <View style={styles.heroImagePlaceholder}>
-                <Image source={require('../../../assets/appscreenshot.png')} style={styles.heroImage} resizeMode="contain" />
-              </View>
-            </View>
+        </View>
 
-            {/* 2. Pricing Breakdown Card */}
-            <View style={styles.section}>
-              <Text style={styles.sectionHeading}>{t('pricing.pricingBreakdownHeading')}</Text>
-              <View style={styles.pricingCard}>
-                <Text style={styles.pricingCardTitle}>{t('pricing.standardPlanTitle')}</Text>
-                <Text style={styles.pricingCardBaseFee}>{BASE_MONTHLY_FEE} € / {t('pricing.month')}</Text>
-                <Text style={styles.pricingCardPerWorker}>+ {PRICE_PER_WORKER} € / {t('pricing.workerPerMonth')}</Text>
-                <Text style={styles.pricingCardExplanation}>{t('pricing.proratingExplanation')}</Text>
+        {/* Pricing Section */}
+        <View style={styles.pricingSection}>
+          <Text style={styles.title} fontType="bold">{t('pricing.simpleTransparentPricingTitle')}</Text>
+          <Text style={styles.description} fontType="regular">
+            {t('pricing.simpleTransparentPricingDescription')}
+          </Text>
 
-                <View style={styles.calculatorContainer}>
-                  <Text style={styles.calculatorLabel}>{t('pricing.howManyWorkers')}</Text>
-                  <View style={styles.workerInputGroup}>
-                    <TouchableOpacity onPress={handleDecrementWorkers} style={styles.workerButton}>
-                      <Text style={styles.workerButtonText}>-</Text>
-                    </TouchableOpacity>
-                    <TextInput
-                      style={styles.calculatorInput}
-                      keyboardType="numeric"
-                      value={numWorkers}
-                      onChangeText={(text) => setNumWorkers(text.replace(/[^0-9]/g, ''))}
-                      placeholder="e.g., 10"
-                      placeholderTextColor="#999"
-                    />
-                    <TouchableOpacity onPress={handleIncrementWorkers} style={styles.workerButton}>
-                      <Text style={styles.workerButtonText}>+</Text>
-                    </TouchableOpacity>
-                  </View>
-                  <Text style={styles.estimatedCostText}>{t('pricing.estimatedMonthlyCost')}: <Text style={styles.estimatedCostValue}>{estimatedCost} €</Text></Text>
-                </View>
-
-                <Button
-                  title={t('pricing.startFreeTrial')}
-                  onPress={handleStartFreeTrial}
-                  style={styles.primaryButton}
-                  textStyle={styles.primaryButtonText}
-                />
-              </View>
-            </View>
-
-            {/* 3. Why This Price Is Worth It */}
-            <View style={styles.section}>
-              <Text style={styles.sectionHeading}>{t('pricing.whyWorthItHeading')}</Text>
-              <View style={styles.featureGrid}>
-                <View style={styles.featureItem}>
-                  <Text style={styles.featureIcon}>🗓️</Text>
-                  <Text style={styles.featureText}>{t('pricing.feature1')}</Text>
-                </View>
-                <View style={styles.featureItem}>
-                  <Text style={styles.featureIcon}>📍</Text>
-                  <Text style={styles.featureText}>{t('pricing.feature2')}</Text>
-                </View>
-                <View style={styles.featureItem}>
-                  <Text style={styles.featureIcon}>📱</Text>
-                  <Text style={styles.featureText}>{t('pricing.feature3')}</Text>
-                </View>
-                <View style={styles.featureItem}>
-                  <Text style={styles.featureIcon}>💬</Text>
-                  <Text style={styles.featureText}>{t('pricing.feature4')}</Text>
-                </View>
-                <View style={styles.featureItem}>
-                  <Text style={styles.featureIcon}>⏰</Text>
-                  <Text style={styles.featureText}>{t('pricing.feature5')}</Text>
-                </View>
-                <View style={styles.featureItem}>
-                  <Text style={styles.featureIcon}>🗺️</Text>
-                  <Text style={styles.featureText}>{t('pricing.feature6')}</Text>
-                </View>
-              </View>
-            </View>
-            
-            {/* 6. FAQ Section */}
-            <View style={styles.section}>
-              <Text style={styles.sectionHeading}>{t('pricing.faqHeading')}</Text>
-              <View style={styles.faqItem}>
-                <Text style={styles.faqQuestion}>{t('pricing.faq1Q')}</Text>
-                <Text style={styles.faqAnswer}>{t('pricing.faq1A')}</Text>
-              </View>
-              <View style={styles.faqItem}>
-                <Text style={styles.faqQuestion}>{t('pricing.faq2Q')}</Text>
-                <Text style={styles.faqAnswer}>{t('pricing.faq2A')}</Text>
-              </View>
-              <View style={styles.faqItem}>
-                <Text style={styles.faqQuestion}>{t('pricing.faq3Q')}</Text>
-                <Text style={styles.faqAnswer}>{t('pricing.faq3A')}</Text>
-              </View>
-              <View style={styles.faqItem}>
-                <Text style={styles.faqQuestion}>{t('pricing.faq4Q')}</Text>
-                <Text style={styles.faqAnswer}>{t('pricing.faq4A')}</Text>
-              </View>
-              <View style={styles.faqItem}>
-                <Text style={styles.faqQuestion}>{t('pricing.faq5Q')}</Text>
-                <Text style={styles.faqAnswer}>{t('pricing.faq5A')}</Text>
-              </View>
-              <View style={styles.faqItem}>
-                <Text style={styles.faqQuestion}>{t('pricing.faq6Q')}</Text>
-                <Text style={styles.faqAnswer}>{t('pricing.faq6A')}</Text>
-              </View>
-            </View>
-
-            {/* 7. Bottom CTA */}
-            <View style={[styles.section, styles.bottomCtaSection]}>
-              <Text style={styles.bottomCtaHeading}>{t('pricing.bottomCtaHeading')}</Text>
-              <Button
-                title={t('pricing.startFreeTrial')}
-                onPress={handleStartFreeTrial}
-                style={styles.heroButton}
-                textStyle={styles.heroButtonText}
-              />
-              <Link href="/contact" asChild>
-                <TouchableOpacity>
-                  <Text style={styles.talkToUsLink}>{t('pricing.talkToUs')}</Text>
+          <View style={styles.pricingCardContainer}>
+            <View style={styles.pricingCard}>
+              <Text style={styles.pricingCardTitle} fontType="bold">{t('pricing.singlePlanTitle')}</Text>
+              <Text style={styles.pricingCardBaseFee} fontType="bold">{BASE_MONTHLY_FEE} {t('common.currency')} / {t('common.month')}</Text>
+              <Text style={styles.pricingCardPerWorker} fontType="regular">+ {PRICE_PER_WORKER} {t('common.currency')} / {t('pricing.workerPerMonth')}</Text>
+              
+              <Text style={styles.calculatorLabel} fontType="regular">{t('pricing.howManyWorkers')}</Text>
+              <View style={styles.workerInputGroup}>
+                <TouchableOpacity onPress={handleDecrementWorkers} style={styles.workerButton}>
+                  <Text style={styles.workerButtonText}>-</Text>
                 </TouchableOpacity>
-              </Link>
-            </View>
+                <TextInput
+                  style={styles.calculatorInput}
+                  keyboardType="numeric"
+                  value={numWorkers}
+                  onChangeText={(text) => setNumWorkers(text.replace(/[^0-9]/g, ''))}
+                  placeholder="e.g., 10"
+                  placeholderTextColor={theme.colors.bodyText}
+                />
+                <TouchableOpacity onPress={handleIncrementWorkers} style={styles.workerButton}>
+                  <Text style={styles.workerButtonText}>+</Text>
+                </TouchableOpacity>
+              </View>
+              <Text style={styles.estimatedCostText} fontType="regular">{t('pricing.estimatedMonthlyCost')}: <Text style={styles.estimatedCostValue} fontType="bold">{estimatedCost} {t('common.currency')}</Text></Text>
 
+              <Button
+                title={t('pricing.getStarted')}
+                onPress={() => router.push('/(guest)/register')}
+                style={styles.ctaButton}
+                textStyle={styles.ctaButtonText}
+              />
+            </View>
           </View>
-        </ScrollView>
-      </View>
-    </AnimatedScreen>
+          
+          {/* FAQ Section */}
+          <View style={styles.faqSection}>
+            <Text style={styles.faqHeading} fontType="bold">{t('pricing.faqHeading')}</Text>
+            <FAQItem
+              question={t('pricing.faq1Q')}
+              answer={t('pricing.faq1A', { baseFee: BASE_MONTHLY_FEE, perWorkerFee: PRICE_PER_WORKER })}
+            />
+            <FAQItem
+              question={t('pricing.faq2Q')}
+              answer={t('pricing.faq2A')}
+            />
+            <FAQItem
+              question={t('pricing.faq3Q')}
+              answer={t('pricing.faq3A')}
+            />
+            <FAQItem
+              question={t('pricing.faq4Q')}
+              answer={t('pricing.faq4A')}
+            />
+            <FAQItem
+              question={t('pricing.faq5Q')}
+              answer={t('pricing.faq5A')}
+            />
+            <FAQItem
+              question={t('pricing.faq6Q')}
+              answer={t('pricing.faq6A')}
+            />
+          </View>
+        </View>
+
+        {/* Footer */}
+        <View style={styles.footer}>
+          <Text style={styles.footerText} fontType="regular">© {new Date().getFullYear()} WorkHoursTracker. {t('common.allRightsReserved')}</Text>
+        </View>
+      </ScrollView>
+    </View>
   );
 }
 
+// FAQ Item Component
+interface FAQItemProps {
+  question: string;
+  answer: string;
+}
+
+const FAQItem: React.FC<FAQItemProps> = ({ question, answer }) => {
+  const [isExpanded, setIsExpanded] = useState(false);
+
+  return (
+    <View style={styles.faqItem}>
+      <TouchableOpacity onPress={() => setIsExpanded(!isExpanded)} style={styles.faqQuestionButton}>
+        <Text style={styles.faqQuestionText} fontType="medium">{question}</Text>
+        <Text style={styles.faqExpandIcon}>{isExpanded ? '-' : '+'}</Text>
+      </TouchableOpacity>
+      {isExpanded && (
+        <View style={styles.faqAnswerContainer}>
+          <Text style={styles.faqAnswerText} fontType="regular">{answer}</Text>
+        </View>
+      )}
+    </View>
+  );
+};
+
 const styles = StyleSheet.create({
-  outerContainer: {
+  container: {
     flex: 1,
-    flexDirection: isLargeScreen ? 'row' : 'column',
-  },
-  marketingContainer: {
-    flex: 1,
-    backgroundColor: theme.colors.primary,
-    justifyContent: 'center',
-    padding: theme.spacing(8),
-    paddingTop: theme.spacing(8),
-  },
-  marketingLogo: {
-    position: 'absolute',
-    top: theme.spacing(4),
-    left: theme.spacing(4),
-    width: 100,
-    height: 30,
-    resizeMode: 'contain',
-  },
-  smallScreenLogo: {
-    position: 'absolute',
-    top: theme.spacing(4),
-    left: theme.spacing(4),
-    width: 100,
-    height: 30,
-    resizeMode: 'contain',
-    zIndex: 10,
-  },
-  marketingTitle: {
-    fontSize: 40,
-    fontWeight: 'bold',
-    color: 'white',
-    marginBottom: theme.spacing(4),
-    lineHeight: 48,
-  },
-  marketingDescription: {
-    fontSize: 18,
-    color: 'white',
-    marginBottom: theme.spacing(4),
-    lineHeight: 28,
-  },
-  marketingBullet: {
-    fontSize: 16,
-    color: 'white',
-    marginBottom: theme.spacing(1),
-    fontWeight: 'bold',
+    backgroundColor: theme.colors.background,
   },
   scrollContent: {
     flexGrow: 1,
-    justifyContent: 'center',
-    padding: theme.spacing(2),
   },
-  content: {
-    justifyContent: 'center',
-    padding: theme.spacing(4),
-    backgroundColor: 'white',
-    marginHorizontal: 'auto',
-    maxWidth: 800, // Adjusted for wider content on pricing page
-    width: '100%',
-    borderRadius: theme.radius.lg,
+  // Header (from index.tsx)
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: theme.spacing(3),
+    backgroundColor: theme.colors.cardBackground,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.borderColor,
     ...Platform.select({
       web: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.1,
-        shadowRadius: 12,
-      },
-      native: {
-        elevation: 8,
+        width: '100%',
+        maxWidth: 1400,
+        alignSelf: 'center',
       },
     }),
   },
-  section: {
-    marginBottom: theme.spacing(6),
+  logo: {
+    width: 100,
+    height: 30,
+  },
+  navLinks: {
+    flexDirection: 'row',
     alignItems: 'center',
+    gap: theme.spacing(3),
   },
-  sectionHeading: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    color: theme.colors.headingText,
-    textAlign: 'center',
-    marginBottom: theme.spacing(3),
-  },
-  sectionDescription: {
+  navLinkText: {
     fontSize: 16,
     color: theme.colors.bodyText,
-    textAlign: 'center',
-    marginBottom: theme.spacing(4),
-    maxWidth: 600,
   },
-  // Hero Section Styles
-  heroSection: {
+  signInButton: {
+    backgroundColor: theme.colors.primary,
+    paddingHorizontal: theme.spacing(3),
+    paddingVertical: theme.spacing(1.5),
+    borderRadius: theme.radius.md,
+  },
+  signInButtonText: {
+    color: 'white',
+  },
+
+  // Pricing Section
+  pricingSection: {
+    padding: theme.spacing(8),
     alignItems: 'center',
-    marginBottom: theme.spacing(8),
-    padding: theme.spacing(4),
+    ...Platform.select({
+      web: {
+        width: '100%',
+        maxWidth: 1400,
+        alignSelf: 'center',
+      },
+    }),
   },
-  heroTitle: {
-    fontSize: 48,
-    fontWeight: 'bold',
+  title: {
+    fontSize: isLargeScreen ? 48 : 32,
     color: theme.colors.headingText,
     textAlign: 'center',
     marginBottom: theme.spacing(2),
-    lineHeight: 56,
   },
-  heroSubtitle: {
-    fontSize: 20,
+  description: {
+    fontSize: isLargeScreen ? 18 : 16,
     color: theme.colors.bodyText,
     textAlign: 'center',
-    marginBottom: theme.spacing(4),
-    maxWidth: 700,
+    marginBottom: theme.spacing(6),
+    maxWidth: 600,
   },
-  heroButton: {
-    backgroundColor: theme.colors.primary,
-    borderRadius: theme.radius.md,
-    height: 50,
-    justifyContent: 'center',
-    paddingHorizontal: theme.spacing(4),
-    minWidth: 200,
-  },
-  heroButtonText: {
-    color: 'white',
-    fontSize: 18,
-    fontWeight: 'bold',
-    textAlign: 'center',
-  },
-  heroImagePlaceholder: {
-    marginTop: theme.spacing(6),
+  
+  // Single Pricing Card Styles
+  pricingCardContainer: {
     width: '100%',
-    height: 300,
-    backgroundColor: theme.colors.borderColor, // Placeholder background
-    borderRadius: theme.radius.lg,
-    justifyContent: 'center',
-    alignItems: 'center',
-    overflow: 'hidden',
+    maxWidth: 500, // Limit width of single card
+    marginBottom: theme.spacing(6),
   },
-  heroImage: {
-    width: '100%',
-    height: '100%',
-  },
-
-  // Pricing Breakdown Card
   pricingCard: {
     padding: theme.spacing(5),
     backgroundColor: theme.colors.cardBackground,
-    borderRadius: theme.radius.lg,
-    alignItems: 'center',
+    borderRadius: theme.radius.xl,
     borderWidth: 1,
     borderColor: theme.colors.borderColor,
+    alignItems: 'center',
+    textAlign: 'center',
     ...Platform.select({
       web: {
         shadowColor: '#000',
@@ -352,173 +256,151 @@ const styles = StyleSheet.create({
         elevation: 6,
       },
     }),
-    maxWidth: 450,
-    width: '100%',
-    marginVertical: theme.spacing(4),
   },
   pricingCardTitle: {
-    fontSize: 28,
-    fontWeight: 'bold',
+    fontSize: 32,
     color: theme.colors.primary,
     marginBottom: theme.spacing(2),
   },
   pricingCardBaseFee: {
-    fontSize: 24,
-    fontWeight: 'bold',
+    fontSize: 48,
     color: theme.colors.headingText,
     marginBottom: theme.spacing(0.5),
   },
   pricingCardPerWorker: {
+    fontSize: 20,
+    color: theme.colors.bodyText,
+    marginBottom: theme.spacing(4),
+  },
+  calculatorLabel: {
     fontSize: 18,
-    color: theme.colors.bodyText,
-    marginBottom: theme.spacing(3),
+    color: theme.colors.headingText,
+    marginBottom: theme.spacing(2),
   },
-  pricingCardExplanation: {
-    fontSize: 14,
-    color: theme.colors.bodyText,
-    textAlign: 'center',
-    marginBottom: theme.spacing(4),
-    lineHeight: 20,
-  },
-  calculatorContainer: {
-    width: '100%',
-    padding: theme.spacing(3),
-    backgroundColor: theme.colors.background,
-    borderRadius: theme.radius.md,
-    marginBottom: theme.spacing(4),
-    alignItems: 'center',
-  },
-  workerInputGroup: { // New style for the input group
+  workerInputGroup: {
     flexDirection: 'row',
     alignItems: 'center',
-    width: '80%', // Make it less wide
-    marginBottom: theme.spacing(2),
-    alignSelf: 'center', // Center the input group
-    justifyContent: 'center', // Explicitly center content within the group
+    width: '80%',
+    marginBottom: theme.spacing(3),
+    justifyContent: 'center',
   },
-  workerButton: { // New style for +/- buttons
-    backgroundColor: 'white', // Changed to white
-    borderColor: theme.colors.borderColor, // Subtle border
-    borderWidth: 1, // Add border
+  workerButton: {
+    backgroundColor: theme.colors.background,
+    borderColor: theme.colors.borderColor,
+    borderWidth: 1,
     borderRadius: theme.radius.md,
-    width: 40,
-    height: 40,
+    width: 45,
+    height: 45,
     justifyContent: 'center',
     alignItems: 'center',
-    // Removed shadow for consistency with border, can add back if desired.
   },
-  workerButtonText: { // New style for +/- button text
-    color: theme.colors.headingText, // Changed to dark text color
+  workerButtonText: {
+    color: theme.colors.headingText,
     fontSize: 24,
     fontWeight: 'bold',
   },
-  calculatorLabel: {
-    fontSize: 16,
-    color: theme.colors.headingText,
-    marginBottom: theme.spacing(1),
-  },
   calculatorInput: {
-    flex: 1, // Take remaining space
+    flex: 1,
     height: 45,
     borderColor: theme.colors.borderColor,
     borderWidth: 1,
     borderRadius: theme.radius.md,
     paddingHorizontal: theme.spacing(2),
-    fontSize: 16,
-    color: theme.colors.headingText,
-    textAlign: 'center',
-    marginHorizontal: theme.spacing(1), // Space between button and input
-  },
-  estimatedCostText: {
     fontSize: 18,
     color: theme.colors.headingText,
-    fontWeight: '500',
+    textAlign: 'center',
+    marginHorizontal: theme.spacing(2),
+  },
+  estimatedCostText: {
+    fontSize: 20,
+    color: theme.colors.bodyText,
+    marginBottom: theme.spacing(4),
   },
   estimatedCostValue: {
-    fontSize: 24,
-    fontWeight: 'bold',
+    fontSize: 32,
     color: theme.colors.primary,
   },
-
-  // Why This Price Is Worth It (Features)
-  featureGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'center',
-    gap: theme.spacing(4),
-    maxWidth: 800,
+  ctaButton: {
+    backgroundColor: theme.colors.primary,
+    paddingHorizontal: theme.spacing(5),
+    paddingVertical: theme.spacing(2.5),
+    borderRadius: theme.radius.lg,
+    width: '100%',
   },
-  featureItem: {
-    width: isLargeScreen ? '30%' : '45%', // 3 per row on large, 2 per row on small
-    alignItems: 'center',
-    marginBottom: theme.spacing(2),
-  },
-  featureIcon: {
-    fontSize: 36,
-    marginBottom: theme.spacing(1),
-  },
-  featureText: {
-    fontSize: 16,
-    color: theme.colors.bodyText,
-    textAlign: 'center',
-    lineHeight: 22,
+  ctaButtonText: {
+    color: 'white',
+    fontSize: 18,
   },
 
   // FAQ Section
+  faqSection: {
+    width: '100%',
+    maxWidth: 900,
+    alignItems: 'center',
+    paddingVertical: theme.spacing(6),
+  },
+  faqHeading: {
+    fontSize: isLargeScreen ? 36 : 28,
+    color: theme.colors.headingText,
+    textAlign: 'center',
+    marginBottom: theme.spacing(5),
+  },
   faqItem: {
     width: '100%',
-    maxWidth: 700,
-    marginBottom: theme.spacing(3),
-    padding: theme.spacing(3),
     backgroundColor: theme.colors.cardBackground,
     borderRadius: theme.radius.md,
     borderWidth: 1,
     borderColor: theme.colors.borderColor,
+    marginBottom: theme.spacing(2),
+    overflow: 'hidden', // Ensures content respects border radius
   },
-  faqQuestion: {
+  faqQuestionButton: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: theme.spacing(3),
+    backgroundColor: theme.colors.cardBackground,
+  },
+  faqQuestionText: {
     fontSize: 18,
-    fontWeight: 'bold',
     color: theme.colors.headingText,
-    marginBottom: theme.spacing(1),
+    flexShrink: 1, // Allows text to wrap
   },
-  faqAnswer: {
+  faqExpandIcon: {
+    fontSize: 24,
+    color: theme.colors.primary,
+    marginLeft: theme.spacing(2),
+  },
+  faqAnswerContainer: {
+    paddingHorizontal: theme.spacing(3),
+    paddingBottom: theme.spacing(3),
+    paddingTop: theme.spacing(1),
+    borderTopWidth: 1,
+    borderTopColor: theme.colors.borderColor,
+  },
+  faqAnswerText: {
     fontSize: 16,
     color: theme.colors.bodyText,
-    lineHeight: 24,
+    lineHeight: 22,
   },
 
-  // Bottom CTA
-  bottomCtaSection: {
-    backgroundColor: theme.colors.background,
-    paddingVertical: theme.spacing(6),
-    marginBottom: 0,
+  // Footer (from index.tsx)
+  footer: {
+    padding: theme.spacing(5),
+    backgroundColor: theme.colors.cardBackground,
+    borderTopWidth: 1,
+    borderTopColor: theme.colors.borderColor,
+    alignItems: 'center',
+    ...Platform.select({
+      web: {
+        width: '100%',
+        maxWidth: 1400,
+        alignSelf: 'center',
+      },
+    }),
   },
-  bottomCtaHeading: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    color: theme.colors.headingText,
-    textAlign: 'center',
-    marginBottom: theme.spacing(4),
-  },
-  talkToUsLink: {
-    marginTop: theme.spacing(3),
-    fontSize: 16,
-    color: theme.colors.primary,
-    fontWeight: 'bold',
-    textDecorationLine: 'underline',
-  },
-  primaryButton: {
-    backgroundColor: theme.colors.primary,
-    borderRadius: theme.radius.md,
-    height: 50,
-    justifyContent: 'center',
-    paddingHorizontal: theme.spacing(4),
-    minWidth: 200,
-  },
-  primaryButtonText: {
-    color: 'white',
-    fontSize: 18,
-    fontWeight: 'bold',
-    textAlign: 'center',
+  footerText: {
+    fontSize: 14,
+    color: theme.colors.bodyText,
   },
 });
