@@ -38,7 +38,7 @@ export const CircularTimer: React.FC<CircularTimerProps> = ({ elapsedTime, size,
     progressValue.addListener((progress) => {
       if (circleRef.current) {
         const strokeDashoffset = circumference - (circumference * progress.value * 0.25);
-        circleRef.current.setNativeProps({ strokeDashoffset: strokeDashoffset.toString() });
+        circleRef.current.setNativeProps({ strokeDashoffset });
       }
     });
 

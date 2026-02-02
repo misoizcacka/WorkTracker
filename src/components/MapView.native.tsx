@@ -95,31 +95,7 @@ export const MapView = React.forwardRef<MapViewHandle, NativeMapViewProps>(
     return renderableMarkers;
   }, [supercluster, zoom, bounds]);
 
-  useEffect(() => {
-    if (!mapViewRef.current) return;
 
-    const allMarkerLocations = features.map(f => ({
-      longitude: f.geometry.coordinates[0],
-      latitude: f.geometry.coordinates[1],
-    }));
-
-    if (allMarkerLocations.length === 0) {
-      return;
-    }
-
-    if (allMarkerLocations.length === 1) {
-        mapViewRef.current.animateToRegion({
-            ...allMarkerLocations[0],
-            latitudeDelta: 0.0922,
-            longitudeDelta: 0.0421,
-        });
-    } else {
-        mapViewRef.current.fitToCoordinates(allMarkerLocations, {
-            edgePadding: { top: 50, right: 50, bottom: 50, left: 50 },
-            animated: true,
-        });
-    }
-  }, [features]);
 
   return (
     <RNMapView

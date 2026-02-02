@@ -86,7 +86,8 @@
     "react-native-web-maps": "^0.1.0",
     "react-native-worklets": "0.5.1",
     "supercluster": "^8.0.1",
-    "uuid": "^13.0.0"
+    "uuid": "^13.0.0",
+    "background-location-module": "file:./modules/BackgroundLocation"
   },
   "devDependencies": {
     "@babel/plugin-transform-export-namespace-from": "^7.27.1",

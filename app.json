@@ -39,7 +39,12 @@
             "android.permission.ACCESS_FINE_LOCATION",
             "android.permission.ACCESS_BACKGROUND_LOCATION"
           ],
-          "package": "com.anonymous.workhourstracker"
+          "package": "com.anonymous.workhourstracker",
+          "config": {
+            "googleMaps": {
+              "apiKey": "AIzaSyDE81zzchDXalQuGapH-E8tBBjnN9fT304"
+            }
+          }
         },
     "web": {
       "favicon": "./assets/favicon.png",
@@ -49,7 +54,8 @@
       "expo-router",
       "expo-audio",
       "expo-font",
-      "expo-asset"
+      "expo-asset",
+      "./plugins/with-background-location.js"
     ]
   }
 }

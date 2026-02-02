@@ -42,6 +42,7 @@ export default function WorkerHomeScreen() {
   const [isAssignmentSelectionModalVisible, setIsAssignmentSelectionModalVisible] = useState(false);
   const [selectedNextAssignmentId, setSelectedNextAssignmentId] = useState<string | null>(null);
   const [currentDate, setCurrentDate] = useState(moment().format('YYYY-MM-DD'));
+  const [mapRegion, setMapRegion] = useState<any>(null);
 
 
   const { user } = useSession()!;
@@ -153,23 +154,35 @@ export default function WorkerHomeScreen() {
   }, [checkedIn, lastCheckoutAssignmentId, selectedNextAssignmentId, currentActiveAssignment, nextAssignableAssignment, currentWorkersAssignments]);
 
   // The project location for geofencing is always the *relevant* one
-  const targetAssignmentForGeofence = relevantAssignment;
+  const projectLocation = useMemo(() => {
+    const targetAssignmentForGeofence = relevantAssignment;
+    if (targetAssignmentForGeofence?.type === 'project' && targetAssignmentForGeofence.project) {
+      return { lat: targetAssignmentForGeofence.project.location.latitude, lon: targetAssignmentForGeofence.project.location.longitude };
+    }
+    if (targetAssignmentForGeofence?.type === 'common_location' && targetAssignmentForGeofence.location) {
+      return { lat: targetAssignmentForGeofence.location.latitude ?? 0, lon: targetAssignmentForGeofence.location.longitude ?? 0 };
+    }
+    return null;
+  }, [relevantAssignment]);
 
-  const projectLocation = targetAssignmentForGeofence?.type === 'project' && targetAssignmentForGeofence.project
-    ? { lat: targetAssignmentForGeofence.project.location.latitude, lon: targetAssignmentForGeofence.project.location.longitude }
-    : targetAssignmentForGeofence?.type === 'common_location' && targetAssignmentForGeofence.location
-    ? { lat: targetAssignmentForGeofence.location.latitude ?? 0, lon: targetAssignmentForGeofence.location.longitude ?? 0 }
-    : null;
+  const projectLocationName = useMemo(() => {
+    const targetAssignmentForGeofence = relevantAssignment;
+    if (targetAssignmentForGeofence?.type === 'project' && targetAssignmentForGeofence.project) {
+      return targetAssignmentForGeofence.project.name;
+    }
+    if (targetAssignmentForGeofence?.type === 'common_location' && targetAssignmentForGeofence.location) {
+      return targetAssignmentForGeofence.location.name;
+    }
+    return "Project Site";
+  }, [relevantAssignment]);
 
-  const projectLocationName = targetAssignmentForGeofence?.type === 'project' && targetAssignmentForGeofence.project
-    ? targetAssignmentForGeofence.project.name
-    : targetAssignmentForGeofence?.type === 'common_location' && targetAssignmentForGeofence.location
-    ? targetAssignmentForGeofence.location.name
-    : "Project Site";
-
-  const projectLocationAddress = targetAssignmentForGeofence?.type === 'project' && targetAssignmentForGeofence.project
-    ? targetAssignmentForGeofence.project.address
-    : "";
+  const projectLocationAddress = useMemo(() => {
+    const targetAssignmentForGeofence = relevantAssignment;
+    if (targetAssignmentForGeofence?.type === 'project' && targetAssignmentForGeofence.project) {
+      return targetAssignmentForGeofence.project.address;
+    }
+    return "";
+  }, [relevantAssignment]);
 
   // Fetch assignments and work sessions based on the user's check-in status
   useEffect(() => {
@@ -428,31 +441,42 @@ export default function WorkerHomeScreen() {
 
 
   useEffect(() => {
-    if (mapRef.current && workerMapLocation && projectLocation) {
-      const coordinates = [];
-      coordinates.push(workerMapLocation);
-      coordinates.push({ latitude: projectLocation.lat, longitude: projectLocation.lon });
+    if (workerMapLocation && projectLocation) {
+      const { latitude: userLat, longitude: userLon } = workerMapLocation;
+      const { lat: projLat, lon: projLon } = projectLocation;
 
-      mapRef.current.fitToCoordinates(coordinates, {
-        edgePadding: { top: 150, right: 150, bottom: 150, left: 150 }, // Increased padding
-        animated: false, // Temporarily disable animation to check performance
+      // Calculate the center point
+      const centerLat = (userLat + projLat) / 2;
+      const centerLon = (userLon + projLon) / 2;
+
+      // Calculate the deltas to encompass both points
+      const latDelta = Math.abs(userLat - projLat) * 1.5; // Use 1.5 for a bit of padding
+      const lonDelta = Math.abs(userLon - projLon) * 1.5;
+
+      const region = {
+        latitude: centerLat,
+        longitude: centerLon,
+        latitudeDelta: Math.max(latDelta, 0.005), // Use an even smaller minimum delta for closer zoom
+        longitudeDelta: Math.max(lonDelta, 0.005),
+      };
+      setMapRegion(region);
+
+    } else if (workerMapLocation) {
+      // If only worker location is available, center on worker
+      setMapRegion({
+        latitude: workerMapLocation.latitude,
+        longitude: workerMapLocation.longitude,
+        latitudeDelta: 0.005,
+        longitudeDelta: 0.005,
       });
-    } else if (mapRef.current && workerMapLocation) {
-        // If only worker location is available, center on worker
-        mapRef.current.animateToRegion({
-            latitude: workerMapLocation.latitude,
-            longitude: workerMapLocation.longitude,
-            latitudeDelta: 0.005,
-            longitudeDelta: 0.005,
-        }, 300);
-    } else if (mapRef.current && projectLocation) {
-        // If only project location is available (e.g., location permission not granted yet for worker)
-        mapRef.current.animateToRegion({
-            latitude: projectLocation.lat,
-            longitude: projectLocation.lon,
-            latitudeDelta: 0.005,
-            longitudeDelta: 0.005,
-        }, 300);
+    } else if (projectLocation) {
+      // If only project location is available
+      setMapRegion({
+        latitude: projectLocation.lat,
+        longitude: projectLocation.lon,
+        latitudeDelta: 0.005,
+        longitudeDelta: 0.005,
+      });
     }
   }, [workerMapLocation, projectLocation]);
 
@@ -609,11 +633,14 @@ export default function WorkerHomeScreen() {
                       pitchEnabled={false}
                       rotateEnabled={false}
                       showsUserLocation={true}
+                      showsMyLocationButton={false}
+                      region={mapRegion} // Controlled region
+                      onRegionChangeComplete={setMapRegion} // Update region on user interaction
                     >
                       <Marker
                         coordinate={{ latitude: projectLocation.lat, longitude: projectLocation.lon }}
                         title={projectLocationName}
-                        pinColor={theme.colors.primary}
+                        pinColor="black"
                       />
                       <Circle
                         center={{ latitude: projectLocation.lat, longitude: projectLocation.lon }}
