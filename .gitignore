@@ -39,3 +39,39 @@ yarn-error.*
 # generated native folders
 /ios
 /android
+
+# Android build outputs
+/build
+/.gradle
+/.idea
+/intermediates
+/generated
+/captures
+/.cxx
+/.externalNativeBuild
+
+# Ignore Android build of our custom Expo module
+/modules/background-location/android/build
+modules/background-location/android/build/
+
+# Any Android build folders anywhere
+**/android/build
+**/android/.gradle
+**/android/intermediates
+**/android/.idea
+**/.idea/
+
+# Generated from Expo modules
+**/generated
+**/.cxx
+**/.externalNativeBuild
+
+# Compiled
+*.dex
+*.class
+*.apk
+*.aab
+*.so
+
+# Local properties
+local.properties

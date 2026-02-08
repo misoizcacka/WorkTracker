@@ -1,3 +1,4 @@
+import { randomUUID } from 'expo-crypto';
 import { insertLocalLocationEvent } from '~/db/database';
 
 export type TransitionEventType = 'enter_geofence' | 'exit_geofence' | 'periodic_update';
@@ -13,8 +14,10 @@ interface TransitionEvent {
 
 export async function saveLocalTransitionEvent(event: TransitionEvent) {
   try {
+    const id = randomUUID(); // Generate UUID
     console.log(`[SAVING LOCAL EVENT - ${event.type.toUpperCase()}]`, event);
     await insertLocalLocationEvent({
+      id: id, // Pass the generated UUID
       timestamp: event.timestamp,
       type: event.type,
       assignment_id: event.assignmentId,
@@ -28,3 +31,4 @@ export async function saveLocalTransitionEvent(event: TransitionEvent) {
     console.error("Failed to save local transition event:", err);
   }
 }
+

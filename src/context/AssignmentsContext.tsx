@@ -25,10 +25,7 @@ import {
 import { insertLocationEvent } from '../services/locationEvents';
 import { useSession } from '~/context/AuthContext';
 import { useProjects } from '~/context/ProjectsContext';
-import {
-  startHeartbeatTracking,
-  stopHeartbeatTracking,
-} from '../services/heartbeatTracking';
+
 import {
   getDb,
   insertLocalAssignment, getLocalAssignments,
@@ -42,7 +39,7 @@ import NetInfo, { NetInfoState } from '@react-native-community/netinfo';
 import * as SQLite from 'expo-sqlite'; // Import SQLite for typing (though no longer SQLiteTransaction)
 import AsyncStorage from '@react-native-async-storage/async-storage'; // Import AsyncStorage
 import moment from 'moment';
-import { generateId } from '~/utils/generateId';
+import { randomUUID } from 'expo-crypto';
 
 export type AssignmentStatus = 'active' | 'completed' | 'next' | 'pending';
 
@@ -333,7 +330,7 @@ export function AssignmentsProvider({ children }: { children: React.ReactNode })
     if (!userCompanyId || !user?.id) return;
     const newRecord = {
       ...record,
-      id: generateId(),
+      id: randomUUID(),
       company_id: userCompanyId,
       created_by: user.id,
     };
@@ -382,7 +379,7 @@ export function AssignmentsProvider({ children }: { children: React.ReactNode })
       console.log("Offline: Creating local work session.");
       const now = new Date().toISOString();
       const localSession: WorkSession = {
-        id: generateId(),
+        id: randomUUID(),
         created_at: now,
         company_id: userCompanyId,
         worker_id: user.id,
@@ -421,7 +418,7 @@ export function AssignmentsProvider({ children }: { children: React.ReactNode })
       }
     }
 
-    await startHeartbeatTracking(assignmentId, userCompanyId, user.id);
+
     
     const locationEvent = {
         company_id: userCompanyId,
@@ -436,7 +433,7 @@ export function AssignmentsProvider({ children }: { children: React.ReactNode })
     if (isOffline) {
         await insertLocalLocationEvent({
             ...locationEvent,
-            id: generateId(),
+            id: randomUUID(),
             created_at: new Date().toISOString(),
             synced: 0,
         });
@@ -465,20 +462,23 @@ export function AssignmentsProvider({ children }: { children: React.ReactNode })
         notes: 'Checked out',
     };
 
-    await stopHeartbeatTracking();
+    // Optimistically update UI first for immediate feedback
+    setActiveWorkSession(null);
+    const updatedSessionOptimistic = { ...sessionToEnd, end_time: new Date().toISOString(), synced: isOffline ? false : true };
+    setLoadedWorkSessions(prev => prev.map(s => (s.id === sessionId ? updatedSessionOptimistic : s)));
 
     if (isOffline) {
         await insertLocalLocationEvent({
             ...locationEvent,
-            id: generateId(),
+            id: randomUUID(),
             created_at: new Date().toISOString(),
             synced: 0,
         });
 
-        const updatedSession = { ...sessionToEnd, end_time: new Date().toISOString(), synced: false };
+        const updatedSession = { ...sessionToEnd, end_time: new Date().toISOString(), synced: false }; // Offline sessions are not synced
         await updateLocalWorkSession(updatedSession);
         
-        setActiveWorkSession(null);
+        // UI already optimistically updated, ensure consistent state
         setLoadedWorkSessions(prev => prev.map(s => (s.id === sessionId ? updatedSession : s)));
         
         const assignmentId = updatedSession.assignment_id;
@@ -490,20 +490,37 @@ export function AssignmentsProvider({ children }: { children: React.ReactNode })
             await AsyncStorage.setItem('lastCheckoutDate', today);
         }
 
-    } else {
-        await insertLocationEvent(locationEvent);
-        const endedSession = await endWorkSessionService(sessionId);
-        if (endedSession) {
-            setActiveWorkSession(null);
-            setLoadedWorkSessions(prev => prev.map(s => s.id === sessionId ? endedSession : s));
-            const assignmentId = endedSession.assignment_id;
-            if (assignmentId) {
-                setLastCheckoutAssignmentId(assignmentId);
-                const today = moment().format('YYYY-MM-DD');
-                setLastCheckoutDate(today);
-                await AsyncStorage.setItem('lastCheckoutAssignmentId', assignmentId);
-                await AsyncStorage.setItem('lastCheckoutDate', today);
+    } else { // Online path
+        try {
+            // Run network requests in parallel
+            const [locationEventResult, endedSession] = await Promise.all([
+                insertLocationEvent(locationEvent),
+                endWorkSessionService(sessionId)
+            ]);
+
+            // If everything successful, update AsyncStorage and ensure final UI state reflects synced data
+            if (endedSession) {
+                setLoadedWorkSessions(prev => prev.map(s => (s.id === sessionId ? endedSession : s))); // Update with actual ended session from service
+                const assignmentId = endedSession.assignment_id;
+                if (assignmentId) {
+                    setLastCheckoutAssignmentId(assignmentId);
+                    const today = moment().format('YYYY-MM-DD');
+                    setLastCheckoutDate(today);
+                    await AsyncStorage.setItem('lastCheckoutAssignmentId', assignmentId);
+                    await AsyncStorage.setItem('lastCheckoutDate', today);
+                }
+            } else {
+                // Handle case where endedSession from service is null/undefined
+                console.error("endWorkSessionService did not return an ended session.");
+                throw new Error("Failed to end work session online.");
             }
+        } catch (err) {
+            console.error("Error during online checkout:", err);
+            // Revert optimistic UI updates if needed, or simply re-throw for parent to handle
+            // For now, re-throw to propagate error to handleCheckOut
+            setActiveWorkSession(sessionToEnd); // Revert active state
+            setLoadedWorkSessions(prev => prev.map(s => (s.id === sessionId ? sessionToEnd : s))); // Revert list
+            throw err; 
         }
     }
   }, [user, userCompanyId, isOffline, loadedWorkSessions]);

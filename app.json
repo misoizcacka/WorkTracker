@@ -1,8 +1,8 @@
 {
   "expo": {
-    "name": "workhourstracker",
-    "slug": "workhourstracker",
-    "scheme": "workhourstracker",
+    "name": "koord",
+    "slug": "koord",
+    "scheme": "koord",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -39,7 +39,13 @@
             "android.permission.ACCESS_FINE_LOCATION",
             "android.permission.ACCESS_BACKGROUND_LOCATION"
           ],
-          "package": "com.anonymous.workhourstracker",
+          "foregroundServices": [
+            {
+              "taskName": "LocationTracking",
+              "serviceType": "location"
+            }
+          ],
+          "package": "app.koord",
           "config": {
             "googleMaps": {
               "apiKey": "AIzaSyDE81zzchDXalQuGapH-E8tBBjnN9fT304"

@@ -13,8 +13,10 @@ export const Card: React.FC<CardProps> = ({ children, style }) => {
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: theme.colors.cardBackground, // Transparent white for a modern look
-    borderRadius: theme.radius.md,
-    padding: theme.spacing(2),
+    backgroundColor: theme.colors.cardBackground,
+    borderRadius: theme.radius.xl, // Updated to xl
+    padding: theme.spacing(4),     // Updated to spacing(4)
+    borderWidth: 1,                  // Added border
+    borderColor: theme.colors.borderColor, // Added border color
   },
 });

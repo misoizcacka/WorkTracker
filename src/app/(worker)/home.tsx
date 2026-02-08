@@ -1,9 +1,10 @@
-import React, { useState, useEffect, useRef, useMemo } from "react";
-import { View, Text, StyleSheet, Alert, ScrollView, ActivityIndicator, Linking, TouchableOpacity } from "react-native";
+import React, { useState, useEffect, useRef, useMemo, useCallback } from "react";
+import { StyleSheet, Alert, ScrollView, ActivityIndicator, Linking, TouchableOpacity, RefreshControl } from "react-native";
 import { Ionicons } from '@expo/vector-icons';
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import * as Location from "expo-location";
 import * as Notifications from "expo-notifications";
+import * as BackgroundLocation from 'background-location';
 import { getDistance } from "geolib";
 import { Button } from "../../components/Button";
 import { Card } from "../../components/Card";
@@ -18,37 +19,57 @@ import moment from 'moment';
 import Toast from 'react-native-toast-message';
 import { saveLocalTransitionEvent, TransitionEventType } from '~/utils/localTransitionEvents'; // Import local event utility
 import AssignmentSelectionModal from '../../components/AssignmentSelectionModal'; // Import AssignmentSelectionModal
+import { View, Text } from '../../components/Themed'; // Custom Text component for consistent fonts
 
-// ✅ Configure notifications (no deprecated fields)
-Notifications.setNotificationHandler({
-  handleNotification: async (): Promise<Notifications.NotificationBehavior> => ({
-    shouldPlaySound: true,
-    shouldSetBadge: false,
-    shouldShowBanner: true,
-    shouldShowList: true,
-  }),
-});
-
-export default function WorkerHomeScreen() {
-  const tabBarHeight = useBottomTabBarHeight();
-  const [elapsedTime, setElapsedTime] = useState(0);
+export default function Home() {
+  const { user } = useSession();
+  const [currentDate, setCurrentDate] = useState(moment().format('YYYY-MM-DD'));
+  const [locationPermission, setLocationPermission] = useState<Location.PermissionStatus | null>(null);
+  const [workerMapLocation, setWorkerMapLocation] = useState<{ latitude: number; longitude: number } | null>(null);
+  const [mapRegion, setMapRegion] = useState({
+    latitude: 37.78825,
+    longitude: -122.4324,
+    latitudeDelta: 0.0922,
+    longitudeDelta: 0.0421,
+  });
+  const mapRef = useRef<any>(null);
   const [distance, setDistance] = useState<number | null>(null);
   const [locationReady, setLocationReady] = useState(false);
+  const [elapsedTime, setElapsedTime] = useState(0);
+  const notificationSentRef = useRef(false);
   const [outOfRange, setOutOfRange] = useState(false);
-  const notificationSentRef = useRef(false); // ✅ prevent duplicate notifications
-  const [workerMapLocation, setWorkerMapLocation] = useState<{ latitude: number; longitude: number } | null>(null);
-  const mapRef = useRef<React.ElementRef<typeof MapView>>(null);
-  const [locationPermission, setLocationPermission] = useState<Location.PermissionStatus | null>(null);
   const [isAssignmentSelectionModalVisible, setIsAssignmentSelectionModalVisible] = useState(false);
   const [selectedNextAssignmentId, setSelectedNextAssignmentId] = useState<string | null>(null);
-  const [currentDate, setCurrentDate] = useState(moment().format('YYYY-MM-DD'));
-  const [mapRegion, setMapRegion] = useState<any>(null);
+  const [isRefreshing, setIsRefreshing] = useState(false); // New state for pull-to-refresh
 
-
-  const { user } = useSession()!;
   const { processedAssignments, loadAssignmentsForDate, loadWorkSessionsForDate, isLoading: assignmentsLoading, activeWorkSession, startWorkSession, endWorkSession, updateWorkSessionAssignment, lastCheckoutAssignmentId } = useAssignments();
 
   const ACCEPTABLE_DISTANCE = 150; // meters
+
+  // Function to load home screen data, including assignments and work sessions
+  const fetchHomeData = useCallback(async (forceFetchFromSupabase = false) => {
+    if (user?.id) {
+      // If there is an active session, load data for THAT session's date.
+      if (activeWorkSession && activeWorkSession.worker_assignments) {
+        const dateToLoad = activeWorkSession.worker_assignments.assigned_date;
+        await loadAssignmentsForDate(dateToLoad, [user.id], forceFetchFromSupabase);
+        await loadWorkSessionsForDate(dateToLoad, user.id);
+      }
+      // If there is no active session (and we have finished loading it), load data for TODAY.
+      else if (activeWorkSession === null) {
+        await loadAssignmentsForDate(currentDate, [user.id], forceFetchFromSupabase);
+        await loadWorkSessionsForDate(currentDate, user.id);
+      }
+      // If activeWorkSession is undefined, we are still loading it, so do nothing.
+    }
+  }, [user?.id, activeWorkSession, loadAssignmentsForDate, loadWorkSessionsForDate, currentDate]); // Dependencies for useCallback
+
+  // Handle pull-to-refresh action
+  const onRefresh = useCallback(async () => {
+    setIsRefreshing(true); // Start refreshing indicator
+    await fetchHomeData(true); // Force fetch new data from Supabase
+    setIsRefreshing(false); // Stop refreshing indicator
+  }, [fetchHomeData]); // Dependency for useCallback
 
   // Update date state if the day changes
   useEffect(() => {
@@ -154,7 +175,7 @@ export default function WorkerHomeScreen() {
   }, [checkedIn, lastCheckoutAssignmentId, selectedNextAssignmentId, currentActiveAssignment, nextAssignableAssignment, currentWorkersAssignments]);
 
   // The project location for geofencing is always the *relevant* one
-  const projectLocation = useMemo(() => {
+  const targetProjectLocation = useMemo(() => { // Renamed from projectLocation to avoid re-declaration
     const targetAssignmentForGeofence = relevantAssignment;
     if (targetAssignmentForGeofence?.type === 'project' && targetAssignmentForGeofence.project) {
       return { lat: targetAssignmentForGeofence.project.location.latitude, lon: targetAssignmentForGeofence.project.location.longitude };
@@ -184,24 +205,31 @@ export default function WorkerHomeScreen() {
     return "";
   }, [relevantAssignment]);
 
-  // Fetch assignments and work sessions based on the user's check-in status
-  useEffect(() => {
-    if (user?.id) {
-      // If there is an active session, load data for THAT session's date.
-      if (activeWorkSession && activeWorkSession.worker_assignments) {
-        const dateToLoad = activeWorkSession.worker_assignments.assigned_date;
-        loadAssignmentsForDate(dateToLoad, [user.id]);
-        loadWorkSessionsForDate(dateToLoad, user.id);
-      } 
-      // If there is no active session (and we have finished loading it), load data for TODAY.
-      else if (activeWorkSession === null) { 
-        loadAssignmentsForDate(currentDate, [user.id]);
-        loadWorkSessionsForDate(currentDate, user.id);
-      }
-      // If activeWorkSession is undefined, we are still loading it, so do nothing.
-    }
-  }, [user?.id, activeWorkSession, loadAssignmentsForDate, loadWorkSessionsForDate, currentDate]);
+  const isNearby = distance !== null && distance < ACCEPTABLE_DISTANCE;
 
+  // Location status text for the bottom of the map
+  const locationStatusText = useMemo(() => {
+    if (!relevantAssignment) {
+      return "No assignment with location to track.";
+    }
+    if (!locationReady) {
+      return "Fetching location...";
+    }
+    if (!targetProjectLocation) {
+        return "No valid location for assignment.";
+    }
+
+    if (isNearby) {
+      return `At the work site: ${relevantAssignment?.type === 'project' ? relevantAssignment?.project?.name : relevantAssignment?.location?.name}`;
+    } else {
+      return `📏 ${Math.round(distance ?? 0)}m away from ${relevantAssignment?.type === 'project' ? relevantAssignment?.project?.name : relevantAssignment?.location?.name}`;
+    }
+  }, [relevantAssignment, locationReady, targetProjectLocation, isNearby, distance]);
+
+    // Fetch assignments and work sessions based on the user's check-in status
+    useEffect(() => {
+      fetchHomeData(); // Use the encapsulated fetch function
+    }, [fetchHomeData]); // Dependency for useEffect
   // ⏱ Track elapsed time
   useEffect(() => {
     let timer: number;
@@ -213,161 +241,75 @@ export default function WorkerHomeScreen() {
     return () => clearInterval(timer);
   }, [checkedIn, sessionStartTime]);
 
-  // 📍 Periodic location updates while checked in
+  // 📍 Fetch foreground location for map display when not checked in
   useEffect(() => {
-    let intervalId: number;
+    let intervalId: NodeJS.Timeout | undefined; // Use NodeJS.Timeout for clarity
+    let isMounted = true; // To prevent state updates on unmounted component
 
-    if (checkedIn && user?.id && currentActiveAssignment) {
-      const fifteenMinutes = 15 * 60 * 1000;
-      intervalId = setInterval(async () => {
-        try {
-          console.log("Emitting periodic location update...");
-          const location = await Location.getCurrentPositionAsync({
-            accuracy: Location.Accuracy.Balanced, // Use balanced for better battery life
-          });
-          
-          const { latitude, longitude } = location.coords;
+    const fetchAndSetLocation = async () => {
+      if (!isMounted) return; // Don't proceed if component is unmounted
 
-          saveLocalTransitionEvent({
-            timestamp: new Date().toISOString(),
-            type: 'periodic_update',
-            assignmentId: currentActiveAssignment.id,
-            workerId: user.id,
-            location: { latitude, longitude },
-            notes: 'Periodic 15-minute location update.',
-          });
+      try {
+        const location = await Location.getCurrentPositionAsync({
+          accuracy: Location.Accuracy.High,
+        });
+        const { latitude, longitude } = location.coords;
+        const newWorkerLocation = { latitude, longitude };
 
-        } catch (error) {
-          console.error("Failed to get periodic location update:", error);
+        if (isMounted) {
+          setWorkerMapLocation(newWorkerLocation);
+          if (!locationReady) {
+            setLocationReady(true);
+          }
+
+          // Calculate distance here for debugging
+          let d: number | null = null;
+          if (targetProjectLocation) {
+            d = getDistance(
+              newWorkerLocation,
+              { latitude: targetProjectLocation.lat, longitude: targetProjectLocation.lon }
+            );
+            setDistance(d); // Update distance state for map display
+          } else {
+            setDistance(null);
+          }
+          console.log("Foreground Location Update:");
+          console.log("  Worker Location:", newWorkerLocation);
+          console.log("  Target Project Location:", targetProjectLocation);
+          console.log("  Calculated Distance:", d, "meters");
         }
-      }, fifteenMinutes);
+      } catch (error) {
+        console.error("Failed to get foreground location for map:", error);
+        if (isMounted) {
+          setLocationReady(false);
+          setDistance(null); // Reset distance on error
+        }
+      }
+    };
+
+    if (!checkedIn && locationPermission === 'granted') {
+      fetchAndSetLocation(); // Fetch immediately on mount/check-out
+      intervalId = setInterval(fetchAndSetLocation, 10000); // Update every 10 seconds
+    } else {
+      // If checked in, or permissions not granted, ensure we clean up any existing interval
+      if (intervalId) {
+        clearInterval(intervalId);
+      }
+      // Optionally, reset workerMapLocation and locationReady when checked in,
+      // but let's keep them as is for now to avoid flickering if checkedIn state changes rapidly.
     }
 
     return () => {
+      isMounted = false; // Mark component as unmounted
       if (intervalId) {
         clearInterval(intervalId);
       }
     };
-  }, [checkedIn, user?.id, currentActiveAssignment]);
+  }, [checkedIn, locationPermission, relevantAssignment, targetProjectLocation]); // Added relevantAssignment, targetProjectLocation to dependencies
 
-  // 📍 Watch location & trigger notifications and transitions
-  useEffect(() => {
-    if (locationPermission !== 'granted') {
-      return; // Do not proceed if permission is not granted
-    }
 
-    let isMounted = true;
-    let subscription: Location.LocationSubscription | null = null;
 
-    const startWatching = async () => {
-      subscription = await Location.watchPositionAsync(
-        {
-          accuracy: Location.Accuracy.Highest,
-          timeInterval: 3000,
-          distanceInterval: 1,
-        },
-        async (pos) => {
-          if (!isMounted) return;
 
-          const { latitude, longitude } = pos.coords;
-          setWorkerMapLocation({ latitude, longitude });
-
-          let d: number | null = null;
-          if (projectLocation) {
-            d = getDistance(
-              { latitude, longitude },
-              { latitude: projectLocation.lat, longitude: projectLocation.lon }
-            );
-          }
-          setDistance(d);
-          setLocationReady(true);
-
-          if (!projectLocation || !user?.id) return; // Cannot check geofence if no project location or user
-
-          // --- Automatic Transition Logic (if checked in) ---
-          if (checkedIn && activeWorkSession && currentActiveAssignment && workerMapLocation) {
-            // 1. Check if worker exited current geofence
-            if (d !== null && d > ACCEPTABLE_DISTANCE) {
-              if (!outOfRange) { // Prevent duplicate exit events
-                setOutOfRange(true);
-                saveLocalTransitionEvent({
-                  timestamp: new Date().toISOString(),
-                  type: 'exit_geofence',
-                  assignmentId: currentActiveAssignment.id,
-                  workerId: user.id,
-                  location: workerMapLocation,
-                  notes: `Exited geofence for ${currentActiveAssignment.type === 'project' ? currentActiveAssignment.project?.name : currentActiveAssignment.location?.name}`,
-                });
-              }
-              if (!notificationSentRef.current) { // Prevent duplicate notifications
-                notificationSentRef.current = true;
-                await Notifications.scheduleNotificationAsync({
-                  content: {
-                    title: "⚠️ You left the work site!",
-                    body: `Please return to ${projectLocationName} or proceed to your next assignment.`,
-                    sound: true,
-                  },
-                  trigger: null,
-                });
-              }
-            } else { // Worker is back in range for current assignment
-              if (outOfRange) { // Reset if was out of range
-                setOutOfRange(false);
-                notificationSentRef.current = false;
-              }
-            }
-
-            // 2. Check if worker entered next project's geofence
-            // Find the *first* 'next' assignment in the sequence after the current active one
-            const nextTransitionTarget = currentWorkersAssignments.find(
-              (assign: ProcessedAssignmentStepWithStatus, index: number) => index > currentAssignmentIndex && assign.status === 'next'
-            );
-
-            if (nextTransitionTarget) {
-                const nextAssignmentLocation = nextTransitionTarget.type === 'project' && nextTransitionTarget.project
-                  ? { lat: nextTransitionTarget.project.location.latitude, lon: nextTransitionTarget.project.location.longitude }
-                  : nextTransitionTarget.type === 'common_location' && nextTransitionTarget.location
-                  ? { lat: nextTransitionTarget.location.latitude ?? 0, lon: nextTransitionTarget.location.longitude ?? 0 }
-                  : null;
-
-                if (nextAssignmentLocation) {
-                  const distToNext = getDistance(
-                    { latitude, longitude },
-                    { latitude: nextAssignmentLocation.lat, longitude: nextAssignmentLocation.lon }
-                  );
-
-                  if (distToNext <= ACCEPTABLE_DISTANCE) {
-                    // Trigger automatic transition
-                    try {
-                      await updateWorkSessionAssignment(activeWorkSession.id, nextTransitionTarget.id);
-                      saveLocalTransitionEvent({
-                        timestamp: new Date().toISOString(),
-                        type: 'enter_geofence',
-                        assignmentId: nextTransitionTarget.id,
-                        workerId: user.id,
-                        location: workerMapLocation,
-                        notes: `Entered geofence for ${nextTransitionTarget.type === 'project' ? nextTransitionTarget.project?.name : nextTransitionTarget.location?.name}`,
-                      });
-                      Alert.alert("Assignment Transitioned", `Automatically moved to ${nextTransitionTarget.type === 'project' ? nextTransitionTarget.project?.name : nextTransitionTarget.location?.name}.`);
-                    } catch (transitionError: any) {
-                      console.error("Failed to transition assignment:", transitionError);
-                      Alert.alert("Transition Failed", transitionError.message || "Could not transition to the next assignment.");
-                    }
-                  }
-                }
-            }
-          }
-        }
-      );
-    };
-
-    startWatching();
-
-    return () => {
-      isMounted = false;
-      subscription?.remove();
-    };
-  }, [locationPermission, checkedIn, outOfRange, projectLocation, projectLocationName, user?.id, activeWorkSession, currentActiveAssignment, currentWorkersAssignments, currentAssignmentIndex, updateWorkSessionAssignment]);
 
 
 
@@ -380,21 +322,41 @@ export default function WorkerHomeScreen() {
       Alert.alert("No Assignment", "No assignments available for check-in today.");
       return;
     }
-    if (!projectLocation) {
+    if (!targetProjectLocation) {
       Alert.alert("Location Missing", `Assignment ${projectLocationName} has no valid location. Cannot check in.`);
       return;
     }
-    if (distance === null || distance > ACCEPTABLE_DISTANCE) {
-      Alert.alert("Too far", `You must be at ${projectLocationName} to check in.`);
+
+    // Fetch current location right before check-in to ensure accuracy
+    let currentLocation;
+    try {
+      const locationResult = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.High,
+      });
+      currentLocation = { latitude: locationResult.coords.latitude, longitude: locationResult.coords.longitude };
+    } catch (err) {
+      console.error("Failed to get current location for check-in:", err);
+      Alert.alert("Location Error", "Could not get your current location. Please ensure location services are enabled and permissions are granted.");
       return;
     }
-    if (!workerMapLocation) {
-      Alert.alert("Location not available", "Could not get your current location. Please try again.");
+
+    // Recalculate distance with the fresh location
+    let d: number | null = null;
+    if (targetProjectLocation) {
+      d = getDistance(
+        { latitude: currentLocation.latitude, longitude: currentLocation.longitude },
+        { latitude: targetProjectLocation.lat, longitude: targetProjectLocation.lon }
+      );
+    }
+
+    if (d === null || d > ACCEPTABLE_DISTANCE) {
+      Alert.alert("Too far", `You must be at ${projectLocationName} to check in. You are ${Math.round(d ?? 0)}m away.`);
       return;
     }
 
     try {
-      await startWorkSession(relevantAssignment.id, workerMapLocation);
+      await startWorkSession(relevantAssignment.id, currentLocation);
+      BackgroundLocation.start();
       Toast.show({
         type: 'success',
         text1: 'Checked In',
@@ -411,12 +373,23 @@ export default function WorkerHomeScreen() {
       Alert.alert("Not Checked In", "You are not currently checked in.");
       return;
     }
-    if (!workerMapLocation) {
-      Alert.alert("Location not available", "Could not get your current location. Please try again.");
+
+    // Fetch current location right before check-out to ensure accuracy
+    let currentLocation;
+    try {
+      const locationResult = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.High,
+      });
+      currentLocation = { latitude: locationResult.coords.latitude, longitude: locationResult.coords.longitude };
+    } catch (err) {
+      console.error("Failed to get current location for check-out:", err);
+      Alert.alert("Location Error", "Could not get your current location. Please ensure location services are enabled and permissions are granted.");
       return;
     }
+
     try {
-      await endWorkSession(activeWorkSession.id, workerMapLocation);
+      await endWorkSession(activeWorkSession.id, currentLocation);
+      BackgroundLocation.stop(); // Stop background location tracking
       Toast.show({
         type: 'info',
         text1: 'Checked Out',
@@ -431,19 +404,19 @@ export default function WorkerHomeScreen() {
     }
   };
 
-  const isNearby = distance !== null && distance < ACCEPTABLE_DISTANCE;
+
 
   // Determine button state and text
-  const buttonDisabled = assignmentsLoading || (checkedIn ? false : (!isNearby || !relevantAssignment || !projectLocation));
+  const buttonDisabled = assignmentsLoading || (checkedIn ? false : (!isNearby || !relevantAssignment || !targetProjectLocation)); // Changed to targetProjectLocation
   const buttonTitle = checkedIn ? "Check Out" : (relevantAssignment ? "Check In" : "No Next Assignment");
 
 
 
 
   useEffect(() => {
-    if (workerMapLocation && projectLocation) {
+    if (workerMapLocation && targetProjectLocation) { // Changed to targetProjectLocation
       const { latitude: userLat, longitude: userLon } = workerMapLocation;
-      const { lat: projLat, lon: projLon } = projectLocation;
+      const { lat: projLat, lon: projLon } = targetProjectLocation; // Changed to targetProjectLocation
 
       // Calculate the center point
       const centerLat = (userLat + projLat) / 2;
@@ -469,16 +442,16 @@ export default function WorkerHomeScreen() {
         latitudeDelta: 0.005,
         longitudeDelta: 0.005,
       });
-    } else if (projectLocation) {
+    } else if (targetProjectLocation) { // Changed to targetProjectLocation
       // If only project location is available
       setMapRegion({
-        latitude: projectLocation.lat,
-        longitude: projectLocation.lon,
+        latitude: targetProjectLocation.lat, // Changed to targetProjectLocation
+        longitude: targetProjectLocation.lon, // Changed to targetProjectLocation
         latitudeDelta: 0.005,
         longitudeDelta: 0.005,
       });
     }
-  }, [workerMapLocation, projectLocation]);
+  }, [workerMapLocation, targetProjectLocation]); // Changed to targetProjectLocation
 
   const handleSelectAssignment = (assignmentId: string) => {
     setSelectedNextAssignmentId(assignmentId);
@@ -506,7 +479,7 @@ export default function WorkerHomeScreen() {
     return (
       <View style={[styles.container, styles.centered]}>
         <ActivityIndicator size="large" color={theme.colors.primary} />
-        <Text style={styles.permissionText}>Checking location permissions...</Text>
+        <Text style={styles.permissionText} fontType="regular">Checking location permissions...</Text>
       </View>
     );
   }
@@ -514,8 +487,8 @@ export default function WorkerHomeScreen() {
   if (locationPermission !== 'granted') {
     return (
       <View style={[styles.container, styles.centered]}>
-        <Text style={styles.permissionTitle}>Location Access Required</Text>
-        <Text style={styles.permissionText}>
+        <Text style={styles.permissionTitle} fontType="bold">Location Access Required</Text>
+        <Text style={styles.permissionText} fontType="regular">
           This app needs your location to verify your position for check-in and to track your work session.
         </Text>
         <Button title="Grant Permission" onPress={requestPermissionAgain} style={styles.permissionButton} />
@@ -526,52 +499,69 @@ export default function WorkerHomeScreen() {
   return (
     <AnimatedScreen>
       <View style={styles.container}>
-        <ScrollView contentContainerStyle={styles.scrollViewContent}>
+        <ScrollView
+          contentContainerStyle={styles.scrollViewContent}
+          refreshControl={
+            <RefreshControl
+              refreshing={isRefreshing}
+              onRefresh={onRefresh}
+              tintColor={theme.colors.primary} // iOS
+              progressBackgroundColor={theme.colors.cardBackground} // Android
+              colors={[theme.colors.primary]} // Android
+            />
+          }
+        >
           {/* Card 1: Worker Status Card */}
           <Card style={styles.workerStatusCard}>
-            <Text style={styles.workerStatusTitle}>
+            <Text style={styles.workerStatusTitle} fontType="bold">
               {checkedIn ? "Work Session Active" : "Ready to Work?"}
             </Text>
             {checkedIn && sessionStartTime && (
-              <Text style={styles.workerStatusSubtitle}>
+              <Text style={styles.workerStatusSubtitle} fontType="regular">
                 Checked in at: {new Date(sessionStartTime).toLocaleTimeString()}
               </Text>
             )}
             {/* Status Chip */}
             <View style={[styles.statusChipContainer, {
-                backgroundColor: !locationReady || !relevantAssignment || assignmentsLoading
+                backgroundColor: assignmentsLoading || !locationReady || !relevantAssignment
                     ? theme.statusColors.neutralBackground
+                    : checkedIn
+                    ? theme.statusColors.activeBackground // Active when checked in
                     : isNearby
-                    ? theme.statusColors.successBackground
-                    : theme.statusColors.warningBackground,
+                    ? theme.statusColors.successBackground // Success when ready to check in
+                    : theme.statusColors.warningBackground, // Warning when away
             }]}>
                 <Text style={[styles.statusChipText, {
-                    color: !locationReady || !relevantAssignment || assignmentsLoading
+                    color: assignmentsLoading || !locationReady || !relevantAssignment
                         ? theme.statusColors.neutralText
+                        : checkedIn
+                        ? theme.statusColors.activeText // Active when checked in
                         : isNearby
-                        ? theme.statusColors.successText
-                        : theme.statusColors.warningText,
-                }]}>
+                        ? theme.statusColors.successText // Success when ready to check in
+                        : theme.statusColors.warningText, // Warning when away
+                }]} fontType="medium">
                     {assignmentsLoading
                     ? "Loading assignments..."
                     : !locationReady
                     ? "Fetching location..."
                     : !relevantAssignment
                     ? "No relevant assignment with location"
+                    : checkedIn
+                    ? "On Assignment"
                     : isNearby
-                    ? `At the work site: ${relevantAssignment?.type === 'project' ? relevantAssignment?.project?.name : relevantAssignment?.location?.name}`
-                    : `📏 ${Math.round(distance ?? 0)}m away from ${relevantAssignment?.type === 'project' ? relevantAssignment?.project?.name : relevantAssignment?.location?.name}`}
+                    ? "Ready to Check In"
+                    : "Away from Assignment"}
                 </Text>
             </View>
           </Card>
 
           {/* Single Assignment Card (Relevant Assignment) */}
           {assignmentsLoading ? (
-            <ActivityIndicator size="large" color={theme.colors.primary} style={styles.loadingIndicator} />
+            <ActivityIndicator size="large" color={theme.colors.primary} />
           ) : !relevantAssignment ? (
             <Card style={styles.projectInfoCard}>
-              <Text style={styles.projectInfoTitle}>No assignments for today.</Text>
-              <Text style={styles.projectInfoAddress}>Check back later or contact your manager.</Text>
+              <Text style={styles.projectInfoTitle} fontType="bold">No assignments for today.</Text>
+              <Text style={styles.projectInfoAddress} fontType="regular">Check back later or contact your manager.</Text>
             </Card>
           ) : (
             <TouchableOpacity 
@@ -588,18 +578,18 @@ export default function WorkerHomeScreen() {
               >
                 <View style={styles.assignmentHeader}>
                   <View style={[styles.assignmentColorIndicator, { backgroundColor: relevantAssignment.type === 'project' && relevantAssignment.project ? relevantAssignment.project.color : theme.colors.secondary }]} />
-                  <Text style={styles.assignmentTitle}>
+                  <Text style={styles.assignmentTitle} fontType="medium">
                     {relevantAssignment.type === 'project' ? (relevantAssignment.project?.name || 'Loading Project...') : (relevantAssignment.location?.name || 'Loading Location...')}
                   </Text>
                 </View>
                 {relevantAssignment.type === 'project' && relevantAssignment.project && (
-                  <Text style={styles.assignmentSubtitle}>{relevantAssignment.project.address || ''}</Text>
+                  <Text style={styles.assignmentSubtitle} fontType="regular">{relevantAssignment.project.address || ''}</Text>
                 )}
                 {relevantAssignment.start_time && (
-                  <Text style={styles.assignmentTime}>Scheduled: {relevantAssignment.start_time}</Text>
+                  <Text style={styles.assignmentTime} fontType="medium">Scheduled: {relevantAssignment.start_time}</Text>
                 )}
                 <View style={[styles.assignmentStatusChip, { backgroundColor: relevantAssignmentChipStyle.backgroundColor }]}>
-                  <Text style={[styles.assignmentStatusText, { color: relevantAssignmentChipStyle.textColor }]}>{relevantAssignment.status.toUpperCase()}</Text>
+                  <Text style={[styles.assignmentStatusText, { color: relevantAssignmentChipStyle.textColor }]} fontType="bold">{relevantAssignment.status.toUpperCase()}</Text>
                 </View>
                 {!isSelectionLocked && (
                     <View style={styles.selectAssignmentIcon}>
@@ -612,7 +602,7 @@ export default function WorkerHomeScreen() {
           
           {/* Card 3: Circle Timer / Map Card */}
           <Card style={styles.circleCard}>
-            <Text style={styles.circleCardTitle}>
+            <Text style={styles.circleCardTitle} fontType="bold">
               {checkedIn ? "Timer Running" : relevantAssignment ? "Your Current Assignment Location" : "No Assignment Location"}
             </Text>
             <View style={styles.timerContainer}>
@@ -620,7 +610,7 @@ export default function WorkerHomeScreen() {
                 <CircularTimer elapsedTime={elapsedTime} size={220} strokeWidth={15} />
               ) : (
                 <View style={styles.mapCircleWrapper}>
-                  {locationReady && workerMapLocation && relevantAssignment && projectLocation ? (
+                  {locationReady && workerMapLocation && targetProjectLocation ? ( // Changed to targetProjectLocation
                     <MapView
                       ref={mapRef}
                       style={styles.mapStyle}
@@ -638,12 +628,12 @@ export default function WorkerHomeScreen() {
                       onRegionChangeComplete={setMapRegion} // Update region on user interaction
                     >
                       <Marker
-                        coordinate={{ latitude: projectLocation.lat, longitude: projectLocation.lon }}
+                        coordinate={{ latitude: targetProjectLocation.lat, longitude: targetProjectLocation.lon }} // Changed to targetProjectLocation
                         title={projectLocationName}
                         pinColor="black"
                       />
                       <Circle
-                        center={{ latitude: projectLocation.lat, longitude: projectLocation.lon }}
+                        center={{ latitude: targetProjectLocation.lat, longitude: targetProjectLocation.lon }} // Changed to targetProjectLocation
                         radius={ACCEPTABLE_DISTANCE}
                         strokeWidth={2}
                         strokeColor={theme.colors.primary}
@@ -653,7 +643,7 @@ export default function WorkerHomeScreen() {
                   ) : (
                     <View style={styles.mapOverlayTextContainer}>
                       <ActivityIndicator size="large" color={theme.colors.primary} />
-                      <Text style={styles.mapOverlayText}>
+                      <Text style={styles.mapOverlayText} fontType="regular">
                         {relevantAssignment === null ? "No assignment with location for map" : "Fetching location and map..."}
                       </Text>
                     </View>
@@ -661,8 +651,8 @@ export default function WorkerHomeScreen() {
                 </View>
               )}
             </View>
-            <Text style={styles.circleCardCaption}>
-              {checkedIn ? "Tracking your work session." : relevantAssignment ? `Geofence for ${relevantAssignment?.type === 'project' ? relevantAssignment?.project?.name : relevantAssignment?.location?.name}.` : "No assignment with location to track."}
+            <Text style={styles.circleCardCaption} fontType="regular">
+              {checkedIn ? "Tracking your work session." : locationStatusText}
             </Text>
           </Card>
         </ScrollView>

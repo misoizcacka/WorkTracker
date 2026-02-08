@@ -37,7 +37,7 @@ CREATE TABLE IF NOT EXISTS local_work_sessions (
 
 const CREATE_LOCAL_LOCATION_EVENTS_TABLE_SQL = `
 CREATE TABLE IF NOT EXISTS local_location_events (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    id TEXT PRIMARY KEY NOT NULL,
     timestamp TEXT NOT NULL,
     type TEXT NOT NULL,
     assignment_id TEXT NOT NULL,
@@ -171,8 +171,8 @@ export async function getLocalWorkSessions(workerId: string, assignedDate: strin
 export async function insertLocalLocationEvent(event: any) {
   const db = await getDb();
   return db.runAsync(
-    `INSERT INTO local_location_events (timestamp, type, assignment_id, worker_id, latitude, longitude, notes, synced) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-    event.timestamp, event.type, event.assignmentId, event.workerId, event.latitude, event.longitude, event.notes, event.synced ? 1 : 0
+    `INSERT INTO local_location_events (id, timestamp, type, assignment_id, worker_id, latitude, longitude, notes, synced) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    event.id, event.timestamp, event.type, event.assignmentId, event.workerId, event.latitude, event.longitude, event.notes, event.synced ? 1 : 0
   );
 }
 
