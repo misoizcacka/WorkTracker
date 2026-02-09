@@ -126,7 +126,7 @@ export default function PricingPage() {
 
         {/* Footer */}
         <View style={styles.footer}>
-          <Text style={styles.footerText} fontType="regular">© {new Date().getFullYear()} WorkHoursTracker. {t('common.allRightsReserved')}</Text>
+          <Text style={styles.footerText} fontType="regular">© {new Date().getFullYear()} Koord. {t('common.allRightsReserved')}</Text>
         </View>
       </ScrollView>
     </View>

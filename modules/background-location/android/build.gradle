@@ -41,4 +41,31 @@ android {
   lintOptions {
     abortOnError false
   }
+  kotlinOptions {
+    jvmTarget = "17"
+  }
+  compileOptions {
+    sourceCompatibility JavaVersion.VERSION_17
+    targetCompatibility JavaVersion.VERSION_17
+  }
 }
+
+dependencies {
+    // WorkManager
+    implementation "androidx.work:work-runtime-ktx:2.9.0"
+
+    // Google Play Services Location
+    implementation "com.google.android.gms:play-services-location:21.0.1"
+
+    // Coroutines for Play Services tasks
+    implementation "org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.7.3"
+
+    // Kotlin standard library for Android
+    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:${rootProject.ext.get("kotlinVersion") ?: "1.8.0"}"
+
+    // OkHttp for SupabaseService
+    implementation("com.squareup.okhttp3:okhttp:4.11.0")
+    implementation("com.squareup.okhttp3:logging-interceptor:4.11.0")
+}
+
+

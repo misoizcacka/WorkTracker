@@ -4,6 +4,7 @@ import android.content.ContentValues
 import android.content.Context
 import android.database.sqlite.SQLiteDatabase
 import android.util.Log
+import java.io.File
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -23,12 +24,30 @@ class LocationDbHelper(private val context: Context) {
     private val COLUMN_NOTES = "notes"
     private val COLUMN_SYNCED = "synced"
 
-    private fun getDatabasePath(): String {
-        // The database is stored in the files directory of the application's internal storage.
-        // For Expo-SQLite, the path is typically /data/data/<package_name>/files/SQLite/<db_name>
-        val packageName = context.packageName // Should be "app.koord"
-        val basePath = context.filesDir.parentFile?.absolutePath
-        return "$basePath/SQLite/$DATABASE_NAME"
+    private fun getDatabaseFile(): File {
+        return context.getDatabasePath(DATABASE_NAME)
+    }
+
+    private fun openOrCreateAndPrepareDatabase(): SQLiteDatabase {
+        val databaseFile = getDatabaseFile()
+        val parentDir = databaseFile.parentFile
+        if (parentDir != null && !parentDir.exists()) {
+            val created = parentDir.mkdirs()
+            if (created) {
+                Log.d("LocationDbHelper", "Created database directory: ${parentDir.absolutePath}")
+            } else {
+                Log.e("LocationDbHelper", "Failed to create database directory: ${parentDir.absolutePath}")
+            }
+        }
+
+        val db = SQLiteDatabase.openOrCreateDatabase(databaseFile.absolutePath, null)
+        
+        // Ensure table exists
+        if (!tableExists(db, TABLE_NAME)) {
+            db.execSQL(CREATE_LOCAL_LOCATION_EVENTS_TABLE_SQL)
+            Log.d("LocationDbHelper", "Table $TABLE_NAME created.")
+        }
+        return db
     }
 
     fun insertLocationEvent(
@@ -44,7 +63,8 @@ class LocationDbHelper(private val context: Context) {
     ) {
         var db: SQLiteDatabase? = null
         try {
-            db = SQLiteDatabase.openDatabase(getDatabasePath(), null, SQLiteDatabase.OPEN_READWRITE)
+            db = openOrCreateAndPrepareDatabase()
+            
             val values = ContentValues().apply {
                 put(COLUMN_ID, id)
                 put(COLUMN_TIMESTAMP, SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US).format(Date(timestamp))) // ISO 8601 string
@@ -68,4 +88,47 @@ class LocationDbHelper(private val context: Context) {
             db?.close()
         }
     }
+
+    fun updateLocationEventSyncedStatus(id: String, syncedStatus: Int) {
+        var db: SQLiteDatabase? = null
+        try {
+            db = openOrCreateAndPrepareDatabase()
+            
+            val values = ContentValues().apply {
+                put(COLUMN_SYNCED, syncedStatus)
+            }
+            val rowsAffected = db.update(TABLE_NAME, values, "$COLUMN_ID = ?", arrayOf(id))
+            if (rowsAffected > 0) {
+                Log.d("LocationDbHelper", "Location event $id synced status updated to $syncedStatus")
+            } else {
+                Log.w("LocationDbHelper", "Failed to update synced status for location event $id. Event not found or no change.")
+            }
+        } catch (e: Exception) {
+            Log.e("LocationDbHelper", "Error updating synced status for location event $id: ${e.message}", e)
+        } finally {
+            db?.close()
+        }
+    }
+
+    private fun tableExists(db: SQLiteDatabase, tableName: String): Boolean {
+        val cursor = db.rawQuery("SELECT DISTINCT tbl_name FROM sqlite_master WHERE tbl_name = '$tableName'", null)
+        val exists = cursor.count > 0
+        cursor.close()
+        return exists
+    }
+
+    // Re-using the SQL statement for local_location_events table creation from database.ts
+    private val CREATE_LOCAL_LOCATION_EVENTS_TABLE_SQL = """
+        CREATE TABLE IF NOT EXISTS local_location_events (
+            id TEXT PRIMARY KEY NOT NULL,
+            timestamp TEXT NOT NULL,
+            type TEXT NOT NULL,
+            assignment_id TEXT NOT NULL,
+            worker_id TEXT NOT NULL,
+            latitude REAL NOT NULL,
+            longitude REAL NOT NULL,
+            notes TEXT,
+            synced INTEGER DEFAULT 0 NOT NULL
+        );
+    """.trimIndent()
 }

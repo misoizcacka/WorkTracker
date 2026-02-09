@@ -22,7 +22,7 @@ import AssignmentSelectionModal from '../../components/AssignmentSelectionModal'
 import { View, Text } from '../../components/Themed'; // Custom Text component for consistent fonts
 
 export default function Home() {
-  const { user } = useSession();
+  const { user, userCompanyId, isCompanyIdLoading, session } = useSession();
   const [currentDate, setCurrentDate] = useState(moment().format('YYYY-MM-DD'));
   const [locationPermission, setLocationPermission] = useState<Location.PermissionStatus | null>(null);
   const [workerMapLocation, setWorkerMapLocation] = useState<{ latitude: number; longitude: number } | null>(null);
@@ -356,7 +356,37 @@ export default function Home() {
 
     try {
       await startWorkSession(relevantAssignment.id, currentLocation);
-      BackgroundLocation.start();
+      
+      const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL as string | undefined;
+      const supabasePublishableKey = process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY as string | undefined;
+
+      let errorMessage = '';
+      if (!user?.id) errorMessage = 'User ID is missing.';
+      else if (isCompanyIdLoading) errorMessage = 'Company ID is still loading.';
+      else if (!userCompanyId) errorMessage = 'Company ID is missing for user.';
+      else if (!relevantAssignment?.id) errorMessage = 'Relevant assignment ID is missing.';
+      else if (!supabaseUrl) errorMessage = 'Supabase URL is missing from configuration.';
+      else if (!supabasePublishableKey) errorMessage = 'Supabase Publishable Key is missing from configuration.';
+      else if (!session?.access_token) errorMessage = 'User access token is missing for authentication.';
+
+      if (errorMessage) {
+        console.error("BackgroundLocation Configuration Error:", errorMessage);
+        Toast.show({
+          type: 'error',
+          text1: 'Configuration Error',
+          text2: 'An application configuration error occurred. Please try again.',
+        });
+        return;
+      }
+
+      BackgroundLocation.start(
+        user.id,
+        relevantAssignment.id,
+        userCompanyId,
+        supabaseUrl,
+        supabasePublishableKey,
+        session.access_token
+      );
       Toast.show({
         type: 'success',
         text1: 'Checked In',
@@ -526,19 +556,19 @@ export default function Home() {
                 backgroundColor: assignmentsLoading || !locationReady || !relevantAssignment
                     ? theme.statusColors.neutralBackground
                     : checkedIn
-                    ? theme.statusColors.activeBackground // Active when checked in
+                    ? theme.statusColors.activeBackground
                     : isNearby
-                    ? theme.statusColors.successBackground // Success when ready to check in
-                    : theme.statusColors.warningBackground, // Warning when away
+                    ? theme.statusColors.successBackground
+                    : theme.statusColors.warningBackground,
             }]}>
                 <Text style={[styles.statusChipText, {
                     color: assignmentsLoading || !locationReady || !relevantAssignment
                         ? theme.statusColors.neutralText
                         : checkedIn
-                        ? theme.statusColors.activeText // Active when checked in
+                        ? theme.statusColors.activeText
                         : isNearby
-                        ? theme.statusColors.successText // Success when ready to check in
-                        : theme.statusColors.warningText, // Warning when away
+                        ? theme.statusColors.successText
+                        : theme.statusColors.warningText,
                 }]} fontType="medium">
                     {assignmentsLoading
                     ? "Loading assignments..."
@@ -567,7 +597,7 @@ export default function Home() {
             <TouchableOpacity 
               onPress={() => setIsAssignmentSelectionModalVisible(true)} 
               disabled={isSelectionLocked}
-              style={{ width: '100%' }} // Ensure TouchableOpacity takes full width
+              style={{ width: '100%' }}
             >
               <Card 
                 style={[
@@ -593,7 +623,7 @@ export default function Home() {
                 </View>
                 {!isSelectionLocked && (
                     <View style={styles.selectAssignmentIcon}>
-                        <Ionicons name="chevron-forward" size={24} color={theme.colors.bodyText} />
+                        <Ionicons name="chevron-forward" size={theme.fontSizes.lg} color={theme.colors.bodyText} />
                     </View>
                 )}
               </Card>
@@ -610,7 +640,7 @@ export default function Home() {
                 <CircularTimer elapsedTime={elapsedTime} size={220} strokeWidth={15} />
               ) : (
                 <View style={styles.mapCircleWrapper}>
-                  {locationReady && workerMapLocation && targetProjectLocation ? ( // Changed to targetProjectLocation
+                  {locationReady && workerMapLocation && targetProjectLocation ? (
                     <MapView
                       ref={mapRef}
                       style={styles.mapStyle}
@@ -624,16 +654,16 @@ export default function Home() {
                       rotateEnabled={false}
                       showsUserLocation={true}
                       showsMyLocationButton={false}
-                      region={mapRegion} // Controlled region
-                      onRegionChangeComplete={setMapRegion} // Update region on user interaction
+                      region={mapRegion}
+                      onRegionChangeComplete={setMapRegion}
                     >
                       <Marker
-                        coordinate={{ latitude: targetProjectLocation.lat, longitude: targetProjectLocation.lon }} // Changed to targetProjectLocation
+                        coordinate={{ latitude: targetProjectLocation.lat, longitude: targetProjectLocation.lon }}
                         title={projectLocationName}
                         pinColor="black"
                       />
                       <Circle
-                        center={{ latitude: targetProjectLocation.lat, longitude: targetProjectLocation.lon }} // Changed to targetProjectLocation
+                        center={{ latitude: targetProjectLocation.lat, longitude: targetProjectLocation.lon }}
                         radius={ACCEPTABLE_DISTANCE}
                         strokeWidth={2}
                         strokeColor={theme.colors.primary}
@@ -656,7 +686,7 @@ export default function Home() {
             </Text>
           </Card>
         </ScrollView>
-        <View style={[styles.footer, { paddingBottom: theme.spacing(2) }]}>
+        <View style={[styles.footer, { paddingBottom: useBottomTabBarHeight() || theme.spacing(2) }]}>
           <Button
             title={buttonTitle}
             onPress={checkedIn ? handleCheckOut : handleCheckIn}
@@ -680,22 +710,24 @@ export default function Home() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: theme.colors.pageBackground,
+    backgroundColor: theme.colors.background, // Use background color from theme
+    paddingHorizontal: theme.spacing(2), // Consistent horizontal padding
   },
   centered: {
+    flex: 1, // Take full space
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: theme.colors.background,
     padding: theme.spacing(3),
   },
   permissionTitle: {
-      fontSize: 22,
-      fontWeight: 'bold',
+      fontSize: theme.fontSizes.xl, // Use theme font size
       color: theme.colors.headingText,
       textAlign: 'center',
       marginBottom: theme.spacing(2),
   },
   permissionText: {
-      fontSize: 16,
+      fontSize: theme.fontSizes.md, // Use theme font size
       color: theme.colors.bodyText,
       textAlign: 'center',
       marginBottom: theme.spacing(3),
@@ -706,25 +738,38 @@ const styles = StyleSheet.create({
   },
   scrollViewContent: {
     flexGrow: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    padding: theme.spacing(2),
+    paddingVertical: theme.spacing(2), // Consistent vertical padding
     width: '100%',
   },
   workerStatusCard: {
     width: "100%",
     alignItems: "center",
     marginBottom: theme.spacing(2),
-    paddingVertical: theme.spacing(3),
+    borderRadius: theme.radius.xl, // Consistent border radius
+    backgroundColor: theme.colors.cardBackground,
+    paddingVertical: theme.spacing(4), // More vertical padding
+    borderWidth: 1, // Add border
+    borderColor: theme.colors.borderColor, // Consistent border color
+    // Remove shadows/elevation for flat design
+    ...Platform.select({
+      web: {
+        shadowColor: 'transparent',
+        shadowOffset: { width: 0, height: 0 },
+        shadowOpacity: 0,
+        shadowRadius: 0,
+      },
+      native: {
+        elevation: 0,
+      },
+    }),
   },
   workerStatusTitle: {
-    fontSize: 26,
-    fontWeight: "bold",
+    fontSize: theme.fontSizes.xl, // Use theme font size
     color: theme.colors.headingText,
-    marginBottom: theme.spacing(0.5),
+    marginBottom: theme.spacing(1),
   },
   workerStatusSubtitle: {
-    fontSize: 16,
+    fontSize: theme.fontSizes.md, // Use theme font size
     color: theme.colors.bodyText,
     marginBottom: theme.spacing(2),
   },
@@ -738,23 +783,38 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   statusChipText: {
-    fontSize: 15,
+    fontSize: theme.fontSizes.sm, // Use theme font size
     fontWeight: '600',
   },
   projectInfoCard: {
     width: "100%",
     alignItems: "center",
     marginBottom: theme.spacing(2),
-    paddingVertical: theme.spacing(3),
+    borderRadius: theme.radius.xl, // Consistent border radius
+    backgroundColor: theme.colors.cardBackground,
+    paddingVertical: theme.spacing(4), // More vertical padding
+    borderWidth: 1, // Add border
+    borderColor: theme.colors.borderColor, // Consistent border color
+    // Remove shadows/elevation for flat design
+    ...Platform.select({
+      web: {
+        shadowColor: 'transparent',
+        shadowOffset: { width: 0, height: 0 },
+        shadowOpacity: 0,
+        shadowRadius: 0,
+      },
+      native: {
+        elevation: 0,
+      },
+    }),
   },
   projectInfoTitle: {
-    fontSize: 20,
-    fontWeight: "bold",
+    fontSize: theme.fontSizes.lg, // Use theme font size
     color: theme.colors.headingText,
     marginBottom: theme.spacing(1),
   },
   projectInfoAddress: {
-    fontSize: 16,
+    fontSize: theme.fontSizes.md, // Use theme font size
     color: theme.colors.bodyText,
     textAlign: 'center',
   },
@@ -762,17 +822,32 @@ const styles = StyleSheet.create({
     width: "100%",
     alignItems: "center",
     marginBottom: theme.spacing(3),
-    paddingTop: theme.spacing(3),
-    paddingBottom: theme.spacing(3),
+    borderRadius: theme.radius.xl, // Consistent border radius
+    backgroundColor: theme.colors.cardBackground,
+    paddingTop: theme.spacing(4), // More vertical padding
+    paddingBottom: theme.spacing(4), // More vertical padding
+    borderWidth: 1, // Add border
+    borderColor: theme.colors.borderColor, // Consistent border color
+    // Remove shadows/elevation for flat design
+    ...Platform.select({
+      web: {
+        shadowColor: 'transparent',
+        shadowOffset: { width: 0, height: 0 },
+        shadowOpacity: 0,
+        shadowRadius: 0,
+      },
+      native: {
+        elevation: 0,
+      },
+    }),
   },
   circleCardTitle: {
-    fontSize: 20,
-    fontWeight: "bold",
+    fontSize: theme.fontSizes.lg, // Use theme font size
     color: theme.colors.headingText,
     marginBottom: theme.spacing(2),
   },
   circleCardCaption: {
-    fontSize: 15,
+    fontSize: theme.fontSizes.md, // Use theme font size
     color: theme.colors.bodyText,
     marginTop: theme.spacing(2),
     textAlign: 'center',
@@ -805,30 +880,30 @@ const styles = StyleSheet.create({
     borderRadius: 110,
   },
   mapOverlayText: {
-    fontSize: 16,
+    fontSize: theme.fontSizes.md, // Use theme font size
     color: theme.colors.bodyText,
     marginTop: theme.spacing(1),
     textAlign: 'center',
   },
   footer: {
-    paddingHorizontal: theme.spacing(3),
+    paddingHorizontal: theme.spacing(2), // Consistent horizontal padding
     paddingVertical: theme.spacing(2),
-    backgroundColor: theme.colors.pageBackground,
+    backgroundColor: theme.colors.background, // Use background color from theme
     borderTopWidth: 1,
     borderTopColor: theme.colors.borderColor,
     width: '100%',
   },
   checkInButton: {
     backgroundColor: theme.colors.primary,
-    paddingVertical: 15,
+    paddingVertical: theme.spacing(2), // Use theme spacing
   },
   checkOutButton: {
-    backgroundColor: "#F59E0B",
-    paddingVertical: 15,
+    backgroundColor: theme.colors.warning, // Use theme color for warning
+    paddingVertical: theme.spacing(2), // Use theme spacing
   },
   buttonText: {
     color: "white",
-    fontSize: 18,
+    fontSize: theme.fontSizes.lg, // Use theme font size
     fontWeight: "bold",
   },
   loadingIndicator: {
@@ -837,11 +912,27 @@ const styles = StyleSheet.create({
   assignmentCard: {
     width: "100%",
     marginBottom: theme.spacing(2),
-    padding: theme.spacing(2),
+    borderRadius: theme.radius.xl, // Consistent border radius
+    backgroundColor: theme.colors.cardBackground,
+    padding: theme.spacing(3), // Consistent padding
+    borderWidth: 1, // Add border
+    borderColor: theme.colors.borderColor, // Consistent border color
+    // Remove shadows/elevation for flat design
+    ...Platform.select({
+      web: {
+        shadowColor: 'transparent',
+        shadowOffset: { width: 0, height: 0 },
+        shadowOpacity: 0,
+        shadowRadius: 0,
+      },
+      native: {
+        elevation: 0,
+      },
+    }),
   },
   activeAssignmentCard: {
     borderColor: theme.statusColors.activeText,
-    borderWidth: 2,
+    borderWidth: 2, // Keep a stronger border for active state
   },
   completedAssignmentCard: {
     opacity: 0.6,
@@ -849,7 +940,7 @@ const styles = StyleSheet.create({
   },
   nextAssignmentCard: {
     borderColor: theme.statusColors.successText,
-    borderWidth: 2,
+    borderWidth: 2, // Keep a stronger border for next state
   },
   assignmentHeader: {
     flexDirection: 'row',
@@ -863,17 +954,17 @@ const styles = StyleSheet.create({
     marginRight: theme.spacing(1),
   },
   assignmentTitle: {
-    fontSize: 18,
+    fontSize: theme.fontSizes.lg, // Use theme font size
     fontWeight: "600",
     color: theme.colors.headingText,
   },
   assignmentSubtitle: {
-    fontSize: 14,
+    fontSize: theme.fontSizes.md, // Use theme font size
     color: theme.colors.bodyText,
     marginBottom: theme.spacing(0.5),
   },
   assignmentTime: {
-    fontSize: 14,
+    fontSize: theme.fontSizes.md, // Use theme font size
     fontWeight: '500',
     color: theme.colors.primary,
   },
@@ -886,7 +977,7 @@ const styles = StyleSheet.create({
     paddingVertical: theme.spacing(0.5),
   },
   assignmentStatusText: {
-    fontSize: 12,
+    fontSize: theme.fontSizes.sm, // Use theme font size
     fontWeight: 'bold',
   },
   selectAssignmentIcon: {

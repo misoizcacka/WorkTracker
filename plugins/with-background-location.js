@@ -7,6 +7,7 @@ const LOCATION_PERMISSIONS = [
     'android.permission.ACCESS_FINE_LOCATION',
     'android.permission.FOREGROUND_SERVICE',
     'android.permission.ACCESS_BACKGROUND_LOCATION',
+    'android.permission.FOREGROUND_SERVICE_LOCATION', // Required for Android 14+ location foreground services
 ];
 
 const withBackgroundLocation = (config) => {

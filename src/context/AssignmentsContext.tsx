@@ -330,7 +330,6 @@ export function AssignmentsProvider({ children }: { children: React.ReactNode })
     if (!userCompanyId || !user?.id) return;
     const newRecord = {
       ...record,
-      id: randomUUID(),
       company_id: userCompanyId,
       created_by: user.id,
     };

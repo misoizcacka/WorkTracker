@@ -1,3 +1,4 @@
+import 'react-native-get-random-values';
 import 'react-native-gesture-handler';
 import React, { useEffect, useState, useCallback } from 'react'; // Added useState, useCallback
 import { Stack, useRouter, useSegments } from 'expo-router';
