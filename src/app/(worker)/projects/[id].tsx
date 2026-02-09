@@ -9,11 +9,11 @@ import {
   KeyboardAvoidingView,
   Platform,
   Image,
-  Text,
-  ScrollView,
+  // ScrollView, // Removed ScrollView import
   Linking,
   ActivityIndicator,
 } from 'react-native';
+import { Text } from '../../../components/Themed'; // Import custom Themed Text
 import { useLocalSearchParams, useRouter } from 'expo-router'; // Added useRouter
 import { Card } from '../../../components/Card';
 import { theme } from '../../../theme';
@@ -167,13 +167,26 @@ export default function ProjectDetailsScreen() {
     );
   }
 
+  const PageHeader = () => (
+    <View style={styles.pageHeader}>
+        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+            <Ionicons name="arrow-back" size={24} color={theme.colors.headingText} />
+        </TouchableOpacity>
+        <View style={[styles.colorIndicator, { backgroundColor: project.color || theme.colors.primary }]} />
+        <View style={styles.headerTextContainer}>
+            <Text style={styles.headerTitle} numberOfLines={1} fontType='bold'>{project.name || ''}</Text>
+            <Text style={styles.headerAddress} numberOfLines={1} fontType='regular'>{project.address || ''}</Text>
+        </View>
+    </View>
+  );
+
   const renderMessage = ({ item }: { item: ProjectMessage }) => (
     <Card style={styles.messageCard}>
       <View style={styles.messageHeader}>
         <Text style={styles.senderText}>{item.employees?.full_name || 'Unknown User'}</Text>
         <Text style={styles.timestampText}>{new Date(item.created_at).toLocaleTimeString()}</Text>
       </View>
-      {item.type === 'text' && <Text>{item.text}</Text>}
+      {item.type === 'text' && <Text fontType='regular'>{item.text}</Text>}
       {item.type === 'image' && item.image_url && (
         <TouchableOpacity onPress={() => openImageModal([item.image_url!], 0)}>
           <Image source={{ uri: item.image_url }} style={styles.messageImage} />
@@ -197,94 +210,81 @@ export default function ProjectDetailsScreen() {
     </View>
   );
 
-  const PageHeader = () => (
-    <View style={styles.pageHeader}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-            <Ionicons name="arrow-back" size={24} color={theme.colors.headingText} />
-        </TouchableOpacity>
-        <View style={[styles.colorIndicator, { backgroundColor: project.color || theme.colors.primary }]} />
-        <View style={styles.headerTextContainer}>
-            <Text style={styles.headerTitle} numberOfLines={1}>{project.name}</Text>
-            <Text style={styles.headerAddress} numberOfLines={1}>{project.address}</Text>
-        </View>
-    </View>
-  );
-
   return (
     <AnimatedScreen>
-      <PageHeader /> {/* New Header */}
+      <PageHeader />
       <KeyboardAvoidingView
         style={styles.container}
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         keyboardVerticalOffset={Platform.OS === "ios" ? 50 : 0}
       >
-        <ScrollView style={{ flex: 1 }}>
-          {/* Original headerCard content removed */}
+        <FlatList
+          ListHeaderComponent={
+            <>
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle} fontType='bold'>Project Overview</Text>
+                <Text style={styles.explanationText} fontType='regular'>{project.explanation || ''}</Text>
+              </View>
 
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Project Overview</Text>
-            <Text style={styles.explanationText}>{project.explanation}</Text>
-          </View>
-
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Project Images</Text>
-            <FlatList
-              data={project.photos}
-              renderItem={renderProjectImage}
-              keyExtractor={(item, index) => index.toString()}
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.projectImageList}
-            />
-          </View>
-
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Location</Text>
-            <TouchableOpacity onPress={handleMapPress}>
-              <MapView
-                style={styles.map}
-                initialRegion={{
-                  latitude: project.location.latitude,
-                  longitude: project.location.longitude,
-                  latitudeDelta: 0.02,
-                  longitudeDelta: 0.02,
-                }}
-                scrollEnabled={false}
-                pitchEnabled={false}
-                rotateEnabled={false}
-              >
-                <Marker
-                  coordinate={project.location}
-                  title={project.name}
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle} fontType='bold'>Project Images</Text>
+                <FlatList
+                  data={project.photos}
+                  renderItem={renderProjectImage}
+                  keyExtractor={(item, index) => index.toString()}
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={styles.projectImageList}
                 />
-              </MapView>
-            </TouchableOpacity>
-          </View>
+              </View>
 
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Discussion</Text>
-            {initialMessagesLoading ? (
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle} fontType='bold'>Location</Text>
+                <TouchableOpacity onPress={handleMapPress}>
+                  <MapView
+                    style={styles.map}
+                    initialRegion={{
+                      latitude: project.location.latitude,
+                      longitude: project.location.longitude,
+                      latitudeDelta: 0.02,
+                      longitudeDelta: 0.02,
+                    }}
+                    scrollEnabled={false}
+                    pitchEnabled={false}
+                    rotateEnabled={false}
+                  >
+                    <Marker
+                      coordinate={project.location}
+                      title={project.name}
+                    />
+                  </MapView>
+                </TouchableOpacity>
+              </View>
+
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle} fontType='bold'>Discussion</Text>
+              </View>
+            </>
+          }
+          data={allMessages}
+          renderItem={renderMessage}
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={styles.listContainer}
+          onEndReached={loadMoreMessages}
+          onEndReachedThreshold={0.5} // When 50% from the end, load more
+          ListFooterComponent={() => ( // This will appear at the top of an inverted list
+              isFetchingMoreMessages ? (
+                  <ActivityIndicator size="small" color={theme.colors.primary} style={{ marginVertical: 10 }} />
+              ) : null
+          )}
+          ListEmptyComponent={() => (
+            initialMessagesLoading ? (
               <ActivityIndicator style={{ marginVertical: 20 }} size="large" color={theme.colors.primary} />
-            ) : allMessages.length === 0 ? (
-              <Text style={styles.emptyDiscussionText}>No messages yet.</Text>
             ) : (
-              <FlatList
-                data={allMessages}
-                renderItem={renderMessage}
-                keyExtractor={(item) => item.id}
-                contentContainerStyle={styles.listContainer}
-                inverted={true}
-                onEndReached={loadMoreMessages}
-                onEndReachedThreshold={0.5} // When 50% from the end, load more
-                ListFooterComponent={() => ( // This will appear at the top of an inverted list
-                    isFetchingMoreMessages ? (
-                        <ActivityIndicator size="small" color={theme.colors.primary} style={{ marginVertical: 10 }} />
-                    ) : null
-                )}
-              />
-            )}
-          </View>
-        </ScrollView>
+              <Text style={styles.emptyDiscussionText} fontType='regular'>No messages yet.</Text>
+            )
+          )}
+        />
 
         <View style={styles.inputContainer}>
           {selectedImages.length > 0 && (
@@ -299,7 +299,7 @@ export default function ProjectDetailsScreen() {
           )}
           <View style={styles.textInputRow}>
             <TextInput
-              style={styles.input}
+              style={[styles.input, { fontSize: theme.fontSizes.md, fontFamily: theme.font.regular }]}
               value={newMessage}
               onChangeText={setNewMessage}
               placeholder="Type a message or add an image..."
@@ -336,7 +336,19 @@ const styles = StyleSheet.create({
     paddingHorizontal: theme.spacing(2),
     borderBottomWidth: 1,
     borderBottomColor: theme.colors.borderColor,
-    backgroundColor: 'white', // White background as requested
+    backgroundColor: theme.colors.cardBackground, // Consistent background color
+    // Remove shadows/elevation for flat design
+    ...Platform.select({
+      web: {
+        shadowColor: 'transparent',
+        shadowOffset: { width: 0, height: 0 },
+        shadowOpacity: 0,
+        shadowRadius: 0,
+      },
+      native: {
+        elevation: 0,
+      },
+    }),
   },
   backButton: {
     marginRight: theme.spacing(2),
@@ -352,22 +364,22 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   headerTitle: {
-    fontSize: 22, // Matching manager's header title
-    fontWeight: 'bold',
+    fontSize: theme.fontSizes.lg, // Matching manager's header title
+    fontType: 'bold',
     color: theme.colors.headingText,
   },
   headerAddress: {
     color: theme.colors.bodyText,
     marginTop: 2,
     fontSize: 16, // Matching manager's header address
-  },
+    fontType: 'regular',  },
   section: {
     marginTop: theme.spacing(2),
     paddingHorizontal: theme.spacing(2),
   },
   sectionTitle: {
     fontSize: 20,
-    fontWeight: 'bold',
+    fontType: 'bold',
     color: theme.colors.headingText,
     marginBottom: theme.spacing(1),
   },
@@ -375,7 +387,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: theme.colors.headingText,
     lineHeight: 24,
-  },
+    fontType: 'regular',  },
   projectImageList: {
     paddingVertical: theme.spacing(1),
   },
@@ -396,6 +408,22 @@ const styles = StyleSheet.create({
   messageCard: {
     marginBottom: theme.spacing(2),
     padding: theme.spacing(2),
+    borderRadius: theme.radius.xl, // Consistent border radius
+    borderWidth: 1, // Add border
+    borderColor: theme.colors.borderColor, // Consistent border color
+    backgroundColor: theme.colors.cardBackground, // Consistent background color
+    // Remove shadows/elevation for flat design
+    ...Platform.select({
+      web: {
+        shadowColor: 'transparent',
+        shadowOffset: { width: 0, height: 0 },
+        shadowOpacity: 0,
+        shadowRadius: 0,
+      },
+      native: {
+        elevation: 0,
+      },
+    }),
   },
   messageHeader: {
     flexDirection: 'row',
@@ -403,13 +431,13 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   senderText: {
-    fontWeight: 'bold',
-    color: theme.colors.headingText,
-  },
+    fontType: 'bold',
+    fontSize: theme.fontSizes.md,
+    color: theme.colors.headingText,  },
   timestampText: {
     color: theme.colors.bodyText,
-    fontSize: 12,
-  },
+    fontSize: theme.fontSizes.xs,
+    fontType: 'regular',  },
   messageImage: {
     width: '100%',
     height: 200,
@@ -420,7 +448,7 @@ const styles = StyleSheet.create({
     padding: theme.spacing(2),
     borderTopWidth: 1,
     borderTopColor: theme.colors.borderColor,
-    backgroundColor: 'white',
+    backgroundColor: theme.colors.cardBackground,
   },
   textInputRow: {
     flexDirection: 'row',

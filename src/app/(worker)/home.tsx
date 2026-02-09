@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from "react";
-import { StyleSheet, Alert, ScrollView, ActivityIndicator, Linking, TouchableOpacity, RefreshControl } from "react-native";
+import { StyleSheet, Alert, ScrollView, ActivityIndicator, Linking, TouchableOpacity, RefreshControl, Platform } from "react-native";
 import { Ionicons } from '@expo/vector-icons';
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import * as Location from "expo-location";
@@ -222,7 +222,11 @@ export default function Home() {
     if (isNearby) {
       return `At the work site: ${relevantAssignment?.type === 'project' ? relevantAssignment?.project?.name : relevantAssignment?.location?.name}`;
     } else {
-      return `📏 ${Math.round(distance ?? 0)}m away from ${relevantAssignment?.type === 'project' ? relevantAssignment?.project?.name : relevantAssignment?.location?.name}`;
+      const displayDistance = distance ?? 0;
+      const formattedDistance = displayDistance > 1000
+        ? `${(displayDistance / 1000).toFixed(1)}km`
+        : `${Math.round(displayDistance)}m`;
+      return `📏 ${formattedDistance} away from ${relevantAssignment?.type === 'project' ? relevantAssignment?.project?.name : relevantAssignment?.location?.name}`;
     }
   }, [relevantAssignment, locationReady, targetProjectLocation, isNearby, distance]);
 
@@ -618,9 +622,6 @@ export default function Home() {
                 {relevantAssignment.start_time && (
                   <Text style={styles.assignmentTime} fontType="medium">Scheduled: {relevantAssignment.start_time}</Text>
                 )}
-                <View style={[styles.assignmentStatusChip, { backgroundColor: relevantAssignmentChipStyle.backgroundColor }]}>
-                  <Text style={[styles.assignmentStatusText, { color: relevantAssignmentChipStyle.textColor }]} fontType="bold">{relevantAssignment.status.toUpperCase()}</Text>
-                </View>
                 {!isSelectionLocked && (
                     <View style={styles.selectAssignmentIcon}>
                         <Ionicons name="chevron-forward" size={theme.fontSizes.lg} color={theme.colors.bodyText} />
@@ -686,7 +687,7 @@ export default function Home() {
             </Text>
           </Card>
         </ScrollView>
-        <View style={[styles.footer, { paddingBottom: useBottomTabBarHeight() || theme.spacing(2) }]}>
+        <View style={[styles.footer, { paddingBottom: theme.spacing(2) }]}>
           <Button
             title={buttonTitle}
             onPress={checkedIn ? handleCheckOut : handleCheckIn}
@@ -764,7 +765,7 @@ const styles = StyleSheet.create({
     }),
   },
   workerStatusTitle: {
-    fontSize: theme.fontSizes.xl, // Use theme font size
+    fontSize: theme.fontSizes.lg, // Changed from xl to lg
     color: theme.colors.headingText,
     marginBottom: theme.spacing(1),
   },
@@ -809,7 +810,7 @@ const styles = StyleSheet.create({
     }),
   },
   projectInfoTitle: {
-    fontSize: theme.fontSizes.lg, // Use theme font size
+    fontSize: theme.fontSizes.md, // Changed from lg to md
     color: theme.colors.headingText,
     marginBottom: theme.spacing(1),
   },
@@ -842,7 +843,7 @@ const styles = StyleSheet.create({
     }),
   },
   circleCardTitle: {
-    fontSize: theme.fontSizes.lg, // Use theme font size
+    fontSize: theme.fontSizes.md, // Changed from lg to md
     color: theme.colors.headingText,
     marginBottom: theme.spacing(2),
   },
@@ -903,8 +904,7 @@ const styles = StyleSheet.create({
   },
   buttonText: {
     color: "white",
-    fontSize: theme.fontSizes.lg, // Use theme font size
-    fontWeight: "bold",
+    fontSize: theme.fontSizes.md, // Changed from lg to md
   },
   loadingIndicator: {
     marginVertical: theme.spacing(4),
@@ -954,7 +954,7 @@ const styles = StyleSheet.create({
     marginRight: theme.spacing(1),
   },
   assignmentTitle: {
-    fontSize: theme.fontSizes.lg, // Use theme font size
+    fontSize: theme.fontSizes.md, // Changed from lg to md
     fontWeight: "600",
     color: theme.colors.headingText,
   },

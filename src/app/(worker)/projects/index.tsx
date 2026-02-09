@@ -1,5 +1,6 @@
 import React, { useMemo, useState, useRef, useEffect, useCallback } from 'react';
-import { StyleSheet, ScrollView, View, Text, TouchableOpacity, LayoutChangeEvent, ActivityIndicator, RefreshControl } from 'react-native';
+import { StyleSheet, ScrollView, View, TouchableOpacity, LayoutChangeEvent, ActivityIndicator, RefreshControl, Platform } from 'react-native';
+import { Text } from '../../../components/Themed'; // Import custom Themed Text
 import { useRouter } from 'expo-router';
 import { Card } from '../../../components/Card';
 import { theme } from '../../../theme';
@@ -56,7 +57,7 @@ const TimelineCard = ({ item, onPress, onLayout }: { item: TimelineItem; onPress
         {item.startTime ? (
           <>
             <FontAwesome5 name="clock" size={14} color={theme.colors.primary} />
-            <Text style={styles.itemTimeText}>Arrival: {item.startTime}</Text>
+            <Text style={styles.itemTimeText} fontType='bold'>Arrival: {item.startTime}</Text>
           </>
         ) : (
           <Text style={styles.itemTimeText}>No specific time</Text>
@@ -64,11 +65,11 @@ const TimelineCard = ({ item, onPress, onLayout }: { item: TimelineItem; onPress
       </View>
       <TouchableOpacity onPress={() => onPress(item.ref_id)} disabled={item.type === 'common_location'}>
         <Card style={[styles.itemCard, { borderColor: statusStyle.dotColor, borderWidth: item.status !== 'Not Started' ? 1 : 0 }]}>
-          <Text style={styles.subtitle}>{item.name}</Text>
-          {item.address ? <Text style={styles.addressText}>{item.address}</Text> : null}
+          <Text style={styles.subtitle} fontType='medium'>{item.name}</Text>
+          {item.address ? <Text style={styles.addressText} fontType='regular'>{item.address}</Text> : null}
           <View style={styles.statusContainer}>
             <FontAwesome5 name={statusStyle.icon} size={14} color={statusStyle.color} solid={item.status !== 'Not Started'} />
-            <Text style={[styles.statusText, { color: statusStyle.color }]}>
+            <Text style={[styles.statusText, { color: statusStyle.color }]} fontType='bold'>
               {item.status}
             </Text>
           </View>
@@ -196,8 +197,8 @@ export default function ProjectsScreen() {
           <ActivityIndicator size="large" color={theme.colors.primary} style={styles.loadingIndicator} />
         ) : todaysPlan.length === 0 ? (
           <View style={styles.emptyStateContainer}>
-            <Text style={styles.emptyStateText}>No assignments scheduled for today.</Text>
-            <Text style={styles.emptyStateSubText}>Check back later or contact your manager.</Text>
+            <Text style={styles.emptyStateText} fontType='regular'>No assignments scheduled for today.</Text>
+            <Text style={styles.emptyStateSubText} fontType='regular'>Check back later or contact your manager.</Text>
           </View>
         ) : (
           <View style={styles.timelineContainer}>
@@ -233,8 +234,8 @@ const styles = StyleSheet.create({
     paddingBottom: theme.spacing(2),
   },
   title: {
-    fontSize: 28,
-    fontWeight: 'bold',
+    fontSize: theme.fontSizes.xl,
+    fontType: 'bold',
     color: theme.colors.headingText,
     paddingTop: theme.spacing(2),
     paddingBottom: theme.spacing(3),
@@ -279,20 +280,36 @@ const styles = StyleSheet.create({
   itemTimeText: {
     color: theme.colors.primary,
     marginLeft: theme.spacing(1),
-    fontWeight: 'bold',
+    fontSize: theme.fontSizes.sm,
   },
   itemCard: {
     padding: theme.spacing(2),
     width: '100%',
+    borderRadius: theme.radius.xl, // Consistent border radius
+    borderWidth: 1, // Add border
+    borderColor: theme.colors.borderColor, // Consistent border color
+    backgroundColor: theme.colors.cardBackground, // Consistent background color
+    // Remove shadows/elevation for flat design
+    ...Platform.select({
+      web: {
+        shadowColor: 'transparent',
+        shadowOffset: { width: 0, height: 0 },
+        shadowOpacity: 0,
+        shadowRadius: 0,
+      },
+      native: {
+        elevation: 0,
+      },
+    }),
   },
   subtitle: {
-    fontSize: 18,
-    fontWeight: '600',
+    fontSize: theme.fontSizes.md,
     color: theme.colors.headingText,
   },
   addressText: {
     color: theme.colors.bodyText,
-    marginTop: 4,
+    marginTop: theme.spacing(0.5),
+    fontSize: theme.fontSizes.sm,
   },
   statusContainer: {
     flexDirection: 'row',
@@ -301,7 +318,7 @@ const styles = StyleSheet.create({
   },
   statusText: {
     marginLeft: theme.spacing(1),
-    fontWeight: 'bold',
+    fontSize: theme.fontSizes.sm,
   },
   loadingIndicator: {
     marginTop: theme.spacing(4),
@@ -314,13 +331,13 @@ const styles = StyleSheet.create({
     minHeight: 150,
   },
   emptyStateText: {
-    fontSize: 18,
+    fontSize: theme.fontSizes.md,
     color: theme.colors.bodyText,
     textAlign: 'center',
     marginBottom: theme.spacing(1),
   },
   emptyStateSubText: {
-    fontSize: 14,
+    fontSize: theme.fontSizes.sm,
     color: theme.colors.bodyText,
     textAlign: 'center',
   },
