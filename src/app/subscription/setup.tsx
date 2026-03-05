@@ -129,7 +129,7 @@ export default function SubscriptionSetupPage() {
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.header}>
             <Image
-              source={require('../../../assets/logokoordblack.png')}
+              source={require('../../../assets/koordlogoblack1.svg')}
               style={styles.logo}
               resizeMode="contain"
             />

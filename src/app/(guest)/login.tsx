@@ -6,7 +6,7 @@ import { Button } from '../../components/Button';
 import { Text } from '../../components/Themed'; // Import Themed Text
 import { theme } from '../../theme';
 import AnimatedScreen from '../../components/AnimatedScreen';
-import Logo from '../../../assets/logokoordblack.png';
+import Logo from '../../../assets/koordlogoblack1.svg';
 import { supabase } from '../../utils/supabase';
 import { useSession } from '../../context/AuthContext';
 import { useTranslation } from 'react-i18next';
@@ -97,7 +97,7 @@ export default function Login() {
             <Text style={styles.marketingDescription} fontType="regular">{t('login.marketingDescription2')}</Text>
           </View>
         )}
-        {isLargeScreen && <View style={styles.separatorVertical} />} {/* Vertical separator line */}
+        {isLargeScreen && <View style={styles.separatorVertical} />}
         {!isLargeScreen && (
             <Link href={getLogoHref()} style={styles.smallScreenLogo} asChild>
               <Image source={Logo} resizeMode="contain" />

@@ -33,7 +33,14 @@ interface MapViewHandle {
 
 export const MapView = React.forwardRef<MapViewHandle, NativeMapViewProps>(
   ({ selectedWorkers = [], selectedProjects = [], initialRegion, children, ...props }, ref) => {
+    const { region, ...restProps } = props;
     const mapViewRef = useRef<RNMapView>(null);
+
+    useEffect(() => {
+      if (region && mapViewRef.current) {
+        mapViewRef.current.animateToRegion(region as Region, 750);
+      }
+    }, [region]);
 
     // Expose specific methods to the parent component via the ref
     React.useImperativeHandle(ref, () => ({
@@ -99,9 +106,9 @@ export const MapView = React.forwardRef<MapViewHandle, NativeMapViewProps>(
 
   return (
     <RNMapView
-      {...props}
+      {...restProps}
       ref={mapViewRef}
-      initialRegion={initialRegion}
+      initialRegion={initialRegion || (region as Region)}
       onRegionChangeComplete={(region) => {
         const newZoom = Math.log2(360 * ((Dimensions.get('window').width / 256) / region.longitudeDelta));
         setZoom(Math.floor(newZoom));

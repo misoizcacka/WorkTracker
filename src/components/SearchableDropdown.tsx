@@ -12,6 +12,7 @@ interface SearchableDropdownProps<T> {
   selectedValue?: T | null;
   renderItem?: (item: T) => React.ReactNode;
   itemStyle?: object;
+  style?: object;
 }
 
 export function SearchableDropdown<T>({
@@ -23,6 +24,7 @@ export function SearchableDropdown<T>({
   selectedValue,
   renderItem,
   itemStyle,
+  style,
 }: SearchableDropdownProps<T>) {
   const [searchText, setSearchText] = useState('');
   const [modalVisible, setModalVisible] = useState(false);
@@ -43,13 +45,14 @@ export function SearchableDropdown<T>({
 
   return (
     <View style={styles.container}>
-      <TouchableOpacity style={styles.inputContainer} onPress={() => setModalVisible(true)}>
+      <TouchableOpacity style={[styles.inputContainer, style]} onPress={() => setModalVisible(true)}>
         <TextInput
           style={styles.textInput}
           placeholder={placeholder}
           placeholderTextColor={theme.colors.bodyText}
           value={selectedValue && labelExtractor ? labelExtractor(selectedValue) : searchText}
           editable={false}
+          pointerEvents="none"
         />
         <Ionicons name="chevron-down" size={20} color={theme.colors.iconColor} />
       </TouchableOpacity>
@@ -108,7 +111,7 @@ export function SearchableDropdown<T>({
 
 const styles = StyleSheet.create({
   container: {
-    marginBottom: theme.spacing(1),
+    // Removed marginBottom to allow parent control
   },
   inputContainer: {
     flexDirection: 'row',

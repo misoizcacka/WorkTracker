@@ -18,6 +18,7 @@ export interface LatestLocation {
   latitude: number;
   longitude: number;
   timestamp: string;
+  full_name: string;
 }
 
 /**

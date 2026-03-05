@@ -1,19 +1,16 @@
 import React, { useState, useEffect, useMemo, useContext } from 'react';
-import { View, StyleSheet, ScrollView, useWindowDimensions, ActivityIndicator, FlatList, TouchableOpacity, Image } from 'react-native';
+import { View, StyleSheet, ScrollView, ActivityIndicator, FlatList, TouchableOpacity, Image, TextInput, Platform } from 'react-native';
 import { Text } from '../../../components/Themed';
 import { Ionicons } from '@expo/vector-icons';
 import moment from 'moment';
 import { useRouter } from 'expo-router';
 
 import AnimatedScreen from '../../../components/AnimatedScreen';
-import { Card } from '../../../components/Card';
 import { theme } from '../../../theme';
 import { EmployeesContext, EmployeesContextType } from '../../../context/EmployeesContext';
-import { Employee } from '../../../types';
 import CrossPlatformDatePicker from '../../../components/CrossPlatformDatePicker';
 import { supabase } from '../../../utils/supabase';
 import { useSession } from '~/context/AuthContext';
-
 
 interface MonthlyPayrollReportEntry {
     worker_id: string;
@@ -27,21 +24,23 @@ const EmployeeHoursReport = () => {
     const router = useRouter();
     const { user } = useSession();
     const { employees } = useContext(EmployeesContext) as EmployeesContextType;
-    const { width } = useWindowDimensions();
-    const isLargeScreen = width >= 768;
 
     const [startDate, setStartDate] = useState(moment().startOf('month').toDate());
     const [endDate, setEndDate] = useState(moment().endOf('month').toDate());
     const [selectedWorkerIds, setSelectedWorkerIds] = useState<string[]>([]);
     const [reportData, setReportData] = useState<MonthlyPayrollReportEntry[]>([]);
     const [loading, setLoading] = useState(false);
+    const [searchTerm, setSearchTerm] = useState('');
 
     // Filter out managers, guests, and the current user from the employee list
     const availableWorkers = useMemo(() => {
         return employees.filter(emp => 
-            emp.role === 'worker' && emp.id !== user?.id
+            emp.role === 'worker' && 
+            emp.id !== user?.id &&
+            emp.full_name.toLowerCase().includes(searchTerm.toLowerCase())
         );
-    }, [employees, user?.id]);
+    }, [employees, user?.id, searchTerm]);
+
     // Effect to fetch report data
     useEffect(() => {
         const fetchReport = async () => {
@@ -69,7 +68,6 @@ const EmployeeHoursReport = () => {
         fetchReport();
     }, [selectedWorkerIds, startDate, endDate]);
 
-
     // Toggle worker selection
     const handleWorkerSelect = (workerId: string) => {
         setSelectedWorkerIds(prev =>
@@ -79,195 +77,394 @@ const EmployeeHoursReport = () => {
         );
     };
 
+    const totalHoursAllWorkers = reportData.reduce((sum, entry) => sum + entry.total_work_hours, 0);
 
-
-  return (
-    <AnimatedScreen>
-      <View style={styles.pageHeader}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-            <Ionicons name="arrow-back" size={24} color={theme.colors.headingText} />
-        </TouchableOpacity>
-        <View>
-            <Text style={styles.pageTitle} fontType="bold">Employee Hours Report</Text>
-            <Text style={styles.pageSubtitle}>View and analyze employee work hours for a selected period.</Text>
-        </View>
-      </View>
-      <ScrollView style={styles.containerNoPadding} contentContainerStyle={styles.scrollContentContainer}>
-        <View style={isLargeScreen ? styles.largeScreenLayout : styles.smallScreenLayout}>
-          {/* Left Column: Month Selector and Worker List */}
-          <View style={styles.leftPanel}>
-            <Card style={styles.monthPickerCard}>
-              <Text style={styles.panelTitle} fontType="bold">Select Date Range</Text>
-              <View style={styles.datePickerRow}>
-                <CrossPlatformDatePicker
-                  date={startDate}
-                  onDateChange={setStartDate}
-                  mode="date"
+    const renderWorkerItem = ({ item }: { item: any }) => {
+        const isSelected = selectedWorkerIds.includes(item.id);
+        return (
+            <TouchableOpacity
+                style={[styles.workerItem, isSelected && styles.selectedWorkerItem]}
+                onPress={() => handleWorkerSelect(item.id)}
+            >
+                <Ionicons
+                    name={isSelected ? "checkbox" : "square-outline"}
+                    size={20}
+                    color={isSelected ? theme.colors.primary : theme.colors.bodyText}
+                    style={styles.workerIcon}
                 />
-                <Text style={styles.dateRangeSeparator} fontType="regular">-</Text>
-                <CrossPlatformDatePicker
-                  date={endDate}
-                  onDateChange={setEndDate}
-                  mode="date"
-                />
-              </View>
-            </Card>
-
-            <Card style={styles.workerListCard}>
-              <Text style={styles.panelTitle} fontType="bold">Select Workers</Text>
-              <FlatList
-                data={availableWorkers}
-                keyExtractor={item => item.id}
-                renderItem={({ item }) => (
-                  <TouchableOpacity
-                    style={styles.workerListItem}
-                    onPress={() => handleWorkerSelect(item.id)}
-                  >
-                    <Ionicons
-                      name={selectedWorkerIds.includes(item.id) ? "checkbox-outline" : "square-outline"}
-                      size={24}
-                      color={theme.colors.primary}
-                    />
-                    {item.avatar_url ? (
-                      <Image source={{ uri: item.avatar_url }} style={styles.avatar} />
-                    ) : (
-                      <Ionicons name="person" size={36} color={theme.colors.bodyText} style={styles.avatarPlaceholder} />
-                    )}
-                    <Text style={styles.workerName} fontType="regular">{item.full_name}</Text>
-                  </TouchableOpacity>
-                )}
-              />
-            </Card>
-          </View>
-
-          {/* Right Column: Work Hours Graph */}
-          <View style={styles.rightPanel}>
-            <Card style={styles.chartCard}>
-              <Text style={styles.panelTitle} fontType="bold">Employee Work Summaries</Text>
-              {loading ? (
-                <ActivityIndicator size="large" color={theme.colors.primary} style={styles.chartLoading} />
-              ) : selectedWorkerIds.length === 0 ? (
-                <Text style={styles.noDataText} fontType="regular">Select workers to view their work summaries.</Text>
-              ) : reportData.length === 0 ? (
-                <Text style={styles.noDataText} fontType="regular">No work hours data available for the selected workers and date range.</Text>
-              ) : (
-                <View>
-                  {reportData.map((entry) => (
-                    <TouchableOpacity
-                      key={entry.worker_id}
-                      style={styles.summaryItem}
-                      onPress={() => router.push({
-                        pathname: `/reports/daily-detailed-report/${entry.worker_id}`,
-                        params: { startDate: startDate.toISOString(), endDate: endDate.toISOString() }
-                      })}
-                    >
-                      <Text style={styles.summaryItemTitle} fontType="bold">{entry.worker_full_name}</Text>
-                      <Text style={styles.summaryItemText} fontType="regular">Total Worked Hours: {entry.total_work_hours.toFixed(2)}</Text>
-                      <Text style={styles.summaryItemText} fontType="regular">Total Break Minutes: {entry.total_break_minutes}</Text>
-                      <Text style={styles.summaryItemText} fontType="regular">Average Hours/Day: TODO</Text>
-                      <Text style={styles.summaryItemText} fontType="regular">Projects Worked On: TODO</Text>
-                    </TouchableOpacity>
-                  ))}
+                <View style={styles.workerInfo}>
+                    <Text style={[styles.workerName, isSelected && styles.selectedWorkerText]} fontType="medium" numberOfLines={1}>
+                        {item.full_name}
+                    </Text>
                 </View>
-              )}
-            </Card>
-          </View>
-        </View>
-      </ScrollView>
-    </AnimatedScreen>
-  );
+                {isSelected && <Ionicons name="chevron-forward" size={16} color={theme.colors.primary} />}
+            </TouchableOpacity>
+        );
+    };
+
+    return (
+        <AnimatedScreen>
+            <View style={styles.pageHeader}>
+                <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+                    <Ionicons name="arrow-back" size={24} color={theme.colors.headingText} />
+                </TouchableOpacity>
+                <View>
+                    <Text style={styles.pageTitle} fontType="bold">Employee Hours Report</Text>
+                    <Text style={styles.pageSubtitle}>View and analyze employee work hours for a selected period.</Text>
+                </View>
+            </View>
+
+            <View style={styles.mainContentCard}>
+                <View style={styles.mainLayout}>
+                    {/* --- Left Panel: Worker Selection --- */}
+                    <View style={styles.leftPanel}>
+                        <Text style={styles.panelTitle} fontType="bold">Date Range</Text>
+                        <View style={styles.datePickerContainer}>
+                            <CrossPlatformDatePicker
+                                date={startDate}
+                                onDateChange={setStartDate}
+                                mode="date"
+                            />
+                            <View style={styles.dateSeparator}>
+                                <Text style={styles.dateSeparatorText} fontType="regular">to</Text>
+                            </View>
+                            <CrossPlatformDatePicker
+                                date={endDate}
+                                onDateChange={setEndDate}
+                                mode="date"
+                            />
+                        </View>
+
+                        <Text style={[styles.panelTitle, { marginTop: theme.spacing(3) }]} fontType="bold">Workers</Text>
+                        <View style={styles.searchContainer}>
+                            <Ionicons name="search-outline" size={18} color={theme.colors.bodyText} style={styles.searchIcon} />
+                            <TextInput
+                                style={styles.searchInput}
+                                placeholder="Search workers..."
+                                value={searchTerm}
+                                onChangeText={setSearchTerm}
+                                placeholderTextColor={theme.colors.bodyText}
+                            />
+                        </View>
+
+                        <FlatList
+                            data={availableWorkers}
+                            renderItem={renderWorkerItem}
+                            keyExtractor={item => item.id}
+                            contentContainerStyle={styles.workerListContent}
+                            showsVerticalScrollIndicator={false}
+                        />
+                    </View>
+
+                    {/* --- Right Panel: Report Details --- */}
+                    <View style={styles.rightPanel}>
+                        {selectedWorkerIds.length > 0 ? (
+                            <ScrollView contentContainerStyle={styles.detailsContent} showsVerticalScrollIndicator={false}>
+                                {/* --- Report Header Stats --- */}
+                                <View style={styles.statsRow}>
+                                    <View style={styles.reportHeaderInfo}>
+                                        <Text style={styles.reportTitle} fontType="bold">Period Summary</Text>
+                                        <Text style={styles.reportPeriod} fontType="regular">
+                                            {moment(startDate).format('MMM D, YYYY')} - {moment(endDate).format('MMM D, YYYY')}
+                                        </Text>
+                                    </View>
+                                    <View style={styles.statDivider} />
+                                    <View style={styles.statBox}>
+                                        <Text style={styles.statLabel} fontType="bold">Total Hours</Text>
+                                        <Text style={styles.statValue} fontType="bold">{totalHoursAllWorkers.toFixed(2)}h</Text>
+                                    </View>
+                                </View>
+
+                                {/* --- Hours Table --- */}
+                                <View style={styles.tableContainer}>
+                                    <View style={styles.tableHeader}>
+                                        <Text style={[styles.tableHeaderText, styles.colWorker]} fontType="bold">Worker Name</Text>
+                                        <Text style={[styles.tableHeaderText, styles.colHours]} fontType="bold">Worked Hours</Text>
+                                        <Text style={[styles.tableHeaderText, styles.colBreaks]} fontType="bold">Breaks (min)</Text>
+                                    </View>
+
+                                    {loading ? (
+                                        <ActivityIndicator size="large" color={theme.colors.primary} style={{ marginVertical: theme.spacing(4) }} />
+                                    ) : reportData.length === 0 ? (
+                                        <Text style={styles.noDataText} fontType="regular">No work data found for the selected criteria.</Text>
+                                    ) : (
+                                        reportData.map((row) => (
+                                            <TouchableOpacity 
+                                                key={row.worker_id} 
+                                                style={styles.tableRow}
+                                                onPress={() => router.push({
+                                                    pathname: `/reports/daily-detailed-report/${row.worker_id}`,
+                                                    params: { startDate: startDate.toISOString(), endDate: endDate.toISOString() }
+                                                })}
+                                            >
+                                                <Text style={[styles.tableCell, styles.colWorker]} fontType="medium">{row.worker_full_name}</Text>
+                                                <View style={[styles.tableCell, styles.colHours]}>
+                                                    <View style={styles.hoursBadge}>
+                                                        <Text style={styles.hoursBadgeText} fontType="bold">{row.total_work_hours.toFixed(2)}</Text>
+                                                    </View>
+                                                </View>
+                                                <Text style={[styles.tableCell, styles.colBreaks]} fontType="regular">{row.total_break_minutes}</Text>
+                                            </TouchableOpacity>
+                                        ))
+                                    )}
+                                </View>
+                            </ScrollView>
+                        ) : (
+                            <View style={styles.emptyState}>
+                                <Ionicons name="people-outline" size={64} color={theme.colors.borderColor} />
+                                <Text style={styles.emptyStateText} fontType="regular">Select one or more workers from the list to view their work hours summary.</Text>
+                            </View>
+                        )}
+                    </View>
+                </View>
+            </View>
+        </AnimatedScreen>
+    );
 };
 
 const styles = StyleSheet.create({
-  containerNoPadding: { flex: 1, backgroundColor: theme.colors.pageBackground },
-  container: { flex: 1, backgroundColor: theme.colors.pageBackground },
-  scrollContentContainer: { padding: theme.spacing(3) },
-  pageHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: theme.spacing(4),
-    paddingHorizontal: theme.spacing(2),
-    backgroundColor: theme.colors.background,
-  },
-  backButton: {
-    marginRight: theme.spacing(2),
-  },
-  pageTitle: {
-    fontSize: theme.fontSizes.xl,
-    color: theme.colors.headingText,
-    marginBottom: theme.spacing(0.5),
-  },
-  pageSubtitle: {
-    fontSize: theme.fontSizes.lg,
-    color: theme.colors.bodyText,
-  },
-  title: { fontSize: 28, fontWeight: 'bold', color: theme.colors.headingText, marginBottom: theme.spacing(3) },
-  
-  largeScreenLayout: { flexDirection: 'row', justifyContent: 'space-between' },
-  smallScreenLayout: { flexDirection: 'column' },
-
-  leftPanel: { flex: 1, marginRight: theme.spacing(3) },
-  rightPanel: { flex: 2 }, // Graph takes more space
-
-  panelTitle: { fontSize: theme.fontSizes.lg, color: theme.colors.headingText, marginBottom: theme.spacing(2) },
-  
-  monthPickerCard: { padding: theme.spacing(2), marginBottom: theme.spacing(3) },
-  datePickerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: theme.spacing(1),
-  },
-  dateRangeSeparator: {
-    color: theme.colors.bodyText,
-    marginHorizontal: theme.spacing(1),
-    fontSize: theme.fontSizes.md,
-  },
-  workerListCard: { flex: 1, padding: theme.spacing(2), minHeight: 300 }, // Added minHeight for some content
-  workerListItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: theme.spacing(1),
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: theme.colors.borderColor,
-  },
-  avatar: { width: 36, height: 36, borderRadius: 18, marginRight: theme.spacing(1.5), marginLeft: theme.spacing(1) },
-  avatarPlaceholder: {
-    width: 36,
-    height: 36,
-    marginRight: theme.spacing(1.5),
-    marginLeft: theme.spacing(1),
-    textAlign: 'center',
-    lineHeight: 36,
-  },
-  workerName: { flex: 1, marginLeft: theme.spacing(1), color: theme.colors.bodyText, fontSize: theme.fontSizes.md },
-
-  chartCard: { padding: theme.spacing(2), minHeight: 400 },
-  chartLoading: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  noDataText: {
-    textAlign: 'center',
-    marginTop: theme.spacing(4),
-    fontSize: theme.fontSizes.md,
-    color: theme.colors.bodyText,
-  },
-  summaryItem: {
-    backgroundColor: theme.colors.cardBackground,
-    padding: theme.spacing(2),
-    borderRadius: theme.radius.md,
-    marginBottom: theme.spacing(2),
-    borderWidth: 1,
-    borderColor: theme.colors.borderColor,
-  },
-  summaryItemTitle: {
-    fontSize: theme.fontSizes.lg,
-    color: theme.colors.headingText,
-    marginBottom: theme.spacing(1),
-  },
-  summaryItemText: {
-    fontSize: theme.fontSizes.md,
-    color: theme.colors.bodyText,
-    marginBottom: theme.spacing(0.5),
-  },
+    pageHeader: {
+        paddingVertical: theme.spacing(4),
+        paddingHorizontal: theme.spacing(2),
+        backgroundColor: theme.colors.background,
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    backButton: {
+        marginRight: theme.spacing(2),
+    },
+    pageTitle: {
+        fontSize: theme.fontSizes.xl,
+        color: theme.colors.headingText,
+        marginBottom: theme.spacing(0.5),
+    },
+    pageSubtitle: {
+        fontSize: theme.fontSizes.lg,
+        color: theme.colors.bodyText,
+    },
+    mainContentCard: {
+        flex: 1,
+        backgroundColor: theme.colors.cardBackground,
+        borderRadius: theme.radius.lg,
+        borderWidth: 1,
+        borderColor: theme.colors.borderColor,
+        marginHorizontal: theme.spacing(2),
+        marginBottom: theme.spacing(2),
+        overflow: 'hidden',
+        ...Platform.select({
+            web: {
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: 4 },
+                shadowOpacity: 0.05,
+                shadowRadius: 10,
+            },
+            native: {
+                elevation: 6,
+            },
+        }),
+    },
+    mainLayout: {
+        flex: 1,
+        flexDirection: 'row',
+    },
+    leftPanel: {
+        width: 300,
+        borderRightWidth: 1,
+        borderColor: theme.colors.borderColor,
+        backgroundColor: theme.colors.background,
+        padding: theme.spacing(2),
+    },
+    panelTitle: {
+        fontSize: theme.fontSizes.md,
+        color: theme.colors.headingText,
+        marginBottom: theme.spacing(1.5),
+        textTransform: 'uppercase',
+        letterSpacing: 0.5,
+    },
+    datePickerContainer: {
+        backgroundColor: theme.colors.pageBackground,
+        borderRadius: theme.radius.md,
+        padding: theme.spacing(1.5),
+        borderWidth: 1,
+        borderColor: theme.colors.borderColor,
+    },
+    dateSeparator: {
+        alignItems: 'center',
+        marginVertical: theme.spacing(0.5),
+    },
+    dateSeparatorText: {
+        fontSize: theme.fontSizes.xs,
+        color: theme.colors.bodyText,
+    },
+    searchContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: theme.colors.pageBackground,
+        borderRadius: theme.radius.md,
+        borderWidth: 1,
+        borderColor: theme.colors.borderColor,
+        paddingHorizontal: theme.spacing(1),
+        marginBottom: theme.spacing(2),
+    },
+    searchIcon: {
+        marginRight: theme.spacing(0.5),
+    },
+    searchInput: {
+        flex: 1,
+        height: 40,
+        color: theme.colors.headingText,
+        fontSize: theme.fontSizes.sm,
+    },
+    workerListContent: {
+        paddingBottom: theme.spacing(2),
+    },
+    workerItem: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        padding: theme.spacing(1.5),
+        borderRadius: theme.radius.md,
+        marginBottom: theme.spacing(1),
+        backgroundColor: theme.colors.pageBackground,
+    },
+    selectedWorkerItem: {
+        backgroundColor: theme.colors.primaryMuted,
+        borderColor: theme.colors.primary,
+        borderWidth: 1,
+    },
+    workerIcon: {
+        marginRight: theme.spacing(1.5),
+    },
+    workerInfo: {
+        flex: 1,
+    },
+    workerName: {
+        fontSize: theme.fontSizes.md,
+        color: theme.colors.headingText,
+    },
+    selectedWorkerText: {
+        color: theme.colors.primary,
+    },
+    rightPanel: {
+        flex: 1,
+        backgroundColor: theme.colors.cardBackground,
+    },
+    detailsContent: {
+        padding: theme.spacing(3),
+    },
+    statsRow: {
+        flexDirection: 'row',
+        backgroundColor: theme.colors.pageBackground,
+        borderRadius: theme.radius.lg,
+        padding: theme.spacing(2.5),
+        marginBottom: theme.spacing(3),
+        borderWidth: 1,
+        borderColor: theme.colors.borderColor,
+        alignItems: 'center',
+    },
+    reportHeaderInfo: {
+        flex: 2,
+    },
+    reportTitle: {
+        fontSize: 22,
+        color: theme.colors.headingText,
+        marginBottom: theme.spacing(0.5),
+    },
+    reportPeriod: {
+        fontSize: theme.fontSizes.md,
+        color: theme.colors.bodyText,
+    },
+    statDivider: {
+        width: 1,
+        height: '70%',
+        backgroundColor: theme.colors.borderColor,
+        marginHorizontal: theme.spacing(3),
+    },
+    statBox: {
+        flex: 1,
+        alignItems: 'center',
+    },
+    statLabel: {
+        fontSize: theme.fontSizes.xs,
+        color: theme.colors.bodyText,
+        textTransform: 'uppercase',
+        letterSpacing: 1,
+        marginBottom: theme.spacing(0.5),
+    },
+    statValue: {
+        fontSize: 24,
+        color: theme.colors.primary,
+    },
+    tableContainer: {
+        flex: 1,
+    },
+    tableHeader: {
+        flexDirection: 'row',
+        backgroundColor: theme.colors.pageBackground,
+        borderBottomWidth: 1,
+        borderBottomColor: theme.colors.borderColor,
+        paddingVertical: theme.spacing(2),
+        borderTopLeftRadius: theme.radius.md,
+        borderTopRightRadius: theme.radius.md,
+    },
+    tableHeaderText: {
+        fontSize: theme.fontSizes.sm,
+        color: theme.colors.headingText,
+        paddingHorizontal: theme.spacing(2),
+    },
+    tableRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        borderBottomWidth: 1,
+        borderBottomColor: theme.colors.borderColor,
+        paddingVertical: theme.spacing(2),
+    },
+    tableCell: {
+        fontSize: theme.fontSizes.md,
+        color: theme.colors.bodyText,
+        paddingHorizontal: theme.spacing(2),
+    },
+    colWorker: {
+        flex: 3,
+    },
+    colHours: {
+        flex: 1.5,
+        alignItems: 'flex-end',
+        textAlign: 'right',
+    },
+    colBreaks: {
+        flex: 1.5,
+        textAlign: 'right',
+        paddingRight: theme.spacing(4),
+    },
+    hoursBadge: {
+        backgroundColor: theme.colors.primaryMuted,
+        paddingVertical: 4,
+        paddingHorizontal: 12,
+        borderRadius: theme.radius.pill,
+    },
+    hoursBadgeText: {
+        color: theme.colors.primary,
+        fontSize: theme.fontSizes.md,
+    },
+    noDataText: {
+        textAlign: 'center',
+        paddingVertical: theme.spacing(6),
+        fontSize: theme.fontSizes.md,
+        color: theme.colors.bodyText,
+    },
+    emptyState: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        paddingVertical: theme.spacing(10),
+    },
+    emptyStateText: {
+        marginTop: theme.spacing(2),
+        fontSize: theme.fontSizes.md,
+        color: theme.colors.bodyText,
+        textAlign: 'center',
+        maxWidth: 300,
+    },
 });
 
 export default EmployeeHoursReport;

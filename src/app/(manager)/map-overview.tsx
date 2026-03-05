@@ -11,7 +11,7 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { Employee } from '../../types';
 import { fetchLatestLocationForWorkers, LatestLocation } from '~/services/locationEvents';
-
+import { supabase } from '~/utils/supabase';
 
 function hexToRgba(hex: string, alpha: number) {
   if (!/^#([A-Fa-f0-9]{3}){1,2}$/.test(hex)) return `rgba(0,0,0,${alpha})`;
@@ -27,7 +27,7 @@ function hexToRgba(hex: string, alpha: number) {
 export default function MapOverviewScreen() { 
   const { user } = useSession();
   const { employees } = useContext(EmployeesContext) as EmployeesContextType;
-  const { projects } = useContext(ProjectsContext) as ProjectsContextType; // Explicitly typed
+  const { projects } = useContext(ProjectsContext) as ProjectsContextType;
 
   const [selectedWorkers, setSelectedWorkers] = useState<Employee[]>([]);
   const [selectedProjects, setSelectedProjects] = useState<Project[]>([]);
@@ -35,15 +35,89 @@ export default function MapOverviewScreen() {
   const [searchTermProject, setSearchTermProject] = useState('');
   const [workerLocations, setWorkerLocations] = useState<LatestLocation[]>([]);
 
+  // Initial fetch of locations
   useEffect(() => {
     if (selectedWorkers.length > 0) {
       const workerIds = selectedWorkers.map(w => w.id);
       fetchLatestLocationForWorkers(workerIds).then(locations => {
-        setWorkerLocations(locations);
+        setWorkerLocations(current => {
+          // Merge initial fetch with existing (real-time) locations, 
+          // keeping the most recent one for each worker.
+          const merged = [...current];
+          locations.forEach(newLoc => {
+            const existingIdx = merged.findIndex(l => l.worker_id === newLoc.worker_id);
+            if (existingIdx === -1) {
+              merged.push(newLoc);
+            } else {
+              const existing = merged[existingIdx];
+              if (new Date(newLoc.timestamp) > new Date(existing.timestamp)) {
+                merged[existingIdx] = newLoc;
+              }
+            }
+          });
+          return merged;
+        });
       });
     } else {
       setWorkerLocations([]);
     }
+  }, [selectedWorkers]);
+
+  // Real-time subscription for location updates
+  useEffect(() => {
+    if (selectedWorkers.length === 0) return;
+
+    const workerIds = selectedWorkers.map(w => w.id);
+    
+    // Use a unique channel name to avoid conflicts during rapid toggling
+    const channelId = `map-overview-${Math.random().toString(36).substring(7)}`;
+    const channel = supabase
+      .channel(channelId)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'location_events',
+        },
+        (payload) => {
+          const newEvent = payload.new;
+          if (workerIds.includes(newEvent.worker_id)) {
+            const updatedLocation: LatestLocation = {
+              worker_id: newEvent.worker_id,
+              latitude: newEvent.latitude,
+              longitude: newEvent.longitude,
+              timestamp: newEvent.created_at,
+              full_name: '', 
+            };
+
+            setWorkerLocations(current => {
+              const existingIdx = current.findIndex(l => l.worker_id === updatedLocation.worker_id);
+              if (existingIdx === -1) {
+                return [...current, updatedLocation];
+              }
+              
+              const existing = current[existingIdx];
+              // Only update if the new event is actually newer
+              if (new Date(updatedLocation.timestamp) > new Date(existing.timestamp)) {
+                const newLocations = [...current];
+                newLocations[existingIdx] = updatedLocation;
+                return newLocations;
+              }
+              return current;
+            });
+          }
+        }
+      )
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') {
+          console.log('Real-time subscription active for workers:', workerIds);
+        }
+      });
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [selectedWorkers]);
 
   const handleWorkerPress = (employee: Employee) => {

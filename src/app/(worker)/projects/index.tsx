@@ -57,7 +57,7 @@ const TimelineCard = ({ item, onPress, onLayout }: { item: TimelineItem; onPress
         {item.startTime ? (
           <>
             <FontAwesome5 name="clock" size={14} color={theme.colors.primary} />
-            <Text style={styles.itemTimeText} fontType='bold'>Arrival: {item.startTime}</Text>
+            <Text style={styles.itemTimeText}>Arrival: {item.startTime}</Text>
           </>
         ) : (
           <Text style={styles.itemTimeText}>No specific time</Text>
@@ -69,7 +69,7 @@ const TimelineCard = ({ item, onPress, onLayout }: { item: TimelineItem; onPress
           {item.address ? <Text style={styles.addressText} fontType='regular'>{item.address}</Text> : null}
           <View style={styles.statusContainer}>
             <FontAwesome5 name={statusStyle.icon} size={14} color={statusStyle.color} solid={item.status !== 'Not Started'} />
-            <Text style={[styles.statusText, { color: statusStyle.color }]} fontType='bold'>
+            <Text style={[styles.statusText, { color: statusStyle.color }]}>
               {item.status}
             </Text>
           </View>
@@ -197,8 +197,8 @@ export default function ProjectsScreen() {
           <ActivityIndicator size="large" color={theme.colors.primary} style={styles.loadingIndicator} />
         ) : todaysPlan.length === 0 ? (
           <View style={styles.emptyStateContainer}>
-            <Text style={styles.emptyStateText} fontType='regular'>No assignments scheduled for today.</Text>
-            <Text style={styles.emptyStateSubText} fontType='regular'>Check back later or contact your manager.</Text>
+            <Text style={styles.emptyStateText}>No assignments scheduled for today.</Text>
+            <Text style={styles.emptyStateSubText}>Check back later or contact your manager.</Text>
           </View>
         ) : (
           <View style={styles.timelineContainer}>
@@ -235,7 +235,6 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: theme.fontSizes.xl,
-    fontType: 'bold',
     color: theme.colors.headingText,
     paddingTop: theme.spacing(2),
     paddingBottom: theme.spacing(3),

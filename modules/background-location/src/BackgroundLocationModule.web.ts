@@ -5,11 +5,12 @@ class BackgroundLocationModule extends NativeModule {
     workerId: string,
     assignmentId: string,
     companyId: string,
-    supabaseUrl: string,
-    supabasePublishableKey: string,
-    accessToken: string
+    supabaseConfig: string,
+    deviceToken: string,
+    deviceSecret: string,
+    geofenceAssignments: string
   ): Promise<void> {
-    console.warn("BackgroundLocation.start() is not available on web. Arguments received but will do nothing.", { workerId, assignmentId, companyId, supabaseUrl, supabasePublishableKey, accessToken });
+    console.warn("BackgroundLocation.start() is not available on web. Arguments received but will do nothing.", { workerId, assignmentId, companyId, supabaseConfig, deviceToken, deviceSecret, geofenceAssignments });
     return Promise.resolve();
   }
   stop(): Promise<void> {

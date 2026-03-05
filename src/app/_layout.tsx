@@ -17,9 +17,6 @@ import { theme } from '../theme';
 
 import Toast from 'react-native-toast-message';
 
-// Register the background task
-import '../tasks/locationHeartbeatTask';
-
 import { useFonts } from 'expo-font';
 import * as SplashScreen from 'expo-splash-screen';
 
@@ -138,7 +135,7 @@ export default function RootLayout() {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: theme.colors.pageBackground }}>
-      <StatusBar style="light" translucent backgroundColor="transparent" />
+      <StatusBar style="dark" translucent backgroundColor="transparent" />
       <Stack screenOptions={{
         headerShown: false,
       }}>

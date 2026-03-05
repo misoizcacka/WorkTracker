@@ -8,7 +8,7 @@ public class BackgroundLocationModule: Module {
 
     Name("BackgroundLocation")
 
-    Function("start") {
+    Function("start") { (workerId: String, assignmentId: String, companyId: String, supabaseConfig: String, deviceToken: String, deviceSecret: String, geofenceAssignments: String) in
       return "BackgroundLocation.start invoked"
     }
 

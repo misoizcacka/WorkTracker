@@ -48,7 +48,7 @@ export default function LandingPage() {
         <View style={styles.header}>
           <Link href="/(guest)" asChild>
             <Image
-              source={require('../../../assets/logokoordblack.png')} // Changed logo
+              source={require('../../../assets/koordlogoblack1.svg')}
               style={styles.logo}
               resizeMode="contain"
             />
@@ -173,7 +173,7 @@ const styles = StyleSheet.create({
     }),
   },
   logo: {
-    width: 100, // Updated size
+    width: 70, // Updated size
     height: 30, // Updated size
   },
   navLinks: {

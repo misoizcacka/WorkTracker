@@ -7,7 +7,7 @@ import { Button } from '../../components/Button';
 import { Text } from '../../components/Themed';
 import { theme } from '../../theme';
 import AnimatedScreen from '../../components/AnimatedScreen';
-import Logo from '../../../assets/logokoordblack.png'; // Corrected path
+import Logo from '../../../assets/koordlogoblack1.svg'; // Corrected path
 import { supabase } from '../../utils/supabase';
 import { useTranslation } from 'react-i18next';
 import { LanguageSelector } from '../../components/LanguageSelector';

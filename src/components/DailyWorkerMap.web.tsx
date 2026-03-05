@@ -1,69 +1,68 @@
 import React, { useRef, useEffect, useState, useMemo, useCallback } from 'react';
-import Map, { Source, Layer, NavigationControl, ViewStateChangeEvent, MapRef, ViewState } from 'react-map-gl/maplibre';
-import 'maplibre-gl/dist/maplibre-gl.css'; // Re-introducing the essential CSS import
-import maplibregl, { LngLatBounds } from 'maplibre-gl'; // Keep for LngLatBounds for fitBounds
-import { View, StyleSheet } from 'react-native'; // Import View and StyleSheet
-import { theme } from '../theme'; // Import theme
+import Map, { Source, Layer, NavigationControl, ViewStateChangeEvent, MapRef, ViewState, Popup } from 'react-map-gl/maplibre';
+import 'maplibre-gl/dist/maplibre-gl.css';
+import maplibregl from 'maplibre-gl';
+import { View, StyleSheet } from 'react-native';
+import { theme } from '../theme';
+import { Text } from './Themed';
+import moment from 'moment';
 
 import { FeatureCollection, Point, LineString } from 'geojson';
-import { DailyWorkerMapProps } from './DailyWorkerMap.native'; // Import from the native type file
-import { LineLayerSpecification, CircleLayerSpecification, SymbolLayerSpecification } from '@maplibre/maplibre-gl-style-spec'; // Import specific layer types
+import { DailyWorkerMapProps } from './DailyWorkerMap.native';
+import { LineLayerSpecification, CircleLayerSpecification, SymbolLayerSpecification } from '@maplibre/maplibre-gl-style-spec';
 
 // Define layer styles for consistency and reusability
 const fullTrailLayerStyle: LineLayerSpecification = {
   id: 'full-trail-layer',
   type: 'line',
-  source: 'full-trail-source', // Added source property
+  source: 'full-trail-source',
   paint: {
-    'line-color': '#888888', // Dark gray
+    'line-color': '#888888',
     'line-width': 2,
-    'line-opacity': 0.5, // Semi-transparent
+    'line-opacity': 0.5,
   },
 };
 
 const assignmentSegmentsLayerStyle: LineLayerSpecification = {
   id: 'assignment-segments-layer',
   type: 'line',
-  source: 'assignment-segments-source', // Added source property
+  source: 'assignment-segments-source',
   paint: {
-    'line-color': '#007bff', // Blue
+    'line-color': theme.colors.primary,
     'line-width': 4,
-    'line-opacity': 0.8, // Slightly darker
+    'line-opacity': 0.8,
   },
 };
 
 const pointsCircleLayerStyle: CircleLayerSpecification = {
   id: 'assignment-points-circle-layer',
   type: 'circle',
-  source: 'assignment-points-source', // Added source property
+  source: 'assignment-points-source',
   paint: {
-    'circle-radius': 8,
-    'circle-color': '#000000', // Black
+    'circle-radius': 12,
+    'circle-color': theme.colors.success,
     'circle-stroke-width': 2,
-    'circle-stroke-color': '#ffffff', // White stroke
+    'circle-stroke-color': '#ffffff',
   },
 };
 
 const pointsNumberLayerStyle: SymbolLayerSpecification = {
   id: 'assignment-points-number-layer',
   type: 'symbol',
-  source: 'assignment-points-source', // Added source property
+  source: 'assignment-points-source',
   layout: {
-    'text-field': 'X', // Temporarily display a static 'X' for debugging
-    'text-font': ['Roboto Medium', 'Arial Unicode MS Regular'], // Simpler, more common fonts
+    'text-field': ['get', 'assignmentOrder'],
+    'text-font': ['Roboto Medium', 'Arial Unicode MS Regular'],
     'text-size': 12,
-    'text-offset': [0, 0], // Center number over icon
     'text-anchor': 'center',
-    'text-allow-overlap': true, // Allow numbers to overlap
+    'text-allow-overlap': true,
   },
   paint: {
-    'text-color': '#FFFF00', // Bright Yellow
-    // 'text-halo-color': '#000000', // Black halo for readability
-    // 'text-halo-width': 1,
+    'text-color': '#ffffff',
   },
 };
 
-const TILE_PROVIDER_STYLE = 'https://tiles.stadiamaps.com/styles/osm_bright.json'; // Placeholder, use the same as MapView.web.tsx if possible
+const TILE_PROVIDER_STYLE = 'https://tiles.stadiamaps.com/styles/osm_bright.json';
 
 const DailyWorkerMapWeb: React.FC<DailyWorkerMapProps & {
   assignmentPointsGeoJSON: FeatureCollection<Point>;
@@ -77,24 +76,20 @@ const DailyWorkerMapWeb: React.FC<DailyWorkerMapProps & {
   region,
   zoom,
   onWebZoomChange,
-  workerId, // This prop is not used in the map rendering logic for now.
+  workerId,
   style,
 }) => {
   const mapRef = useRef<MapRef | null>(null);
   const [viewState, setViewState] = useState<ViewState>({
-    longitude: region?.longitude || initialRegion?.longitude || -0.1278, // London default
+    longitude: region?.longitude || initialRegion?.longitude || -0.1278,
     latitude: region?.latitude || initialRegion?.latitude || 51.5074,
     zoom: zoom || region?.zoom || initialRegion?.zoom || 12,
     bearing: 0,
     pitch: 0,
-    padding: {
-      top: 0,
-      bottom: 0,
-      left: 0,
-      right: 0,
-    }
+    padding: { top: 0, bottom: 0, left: 0, right: 0 }
   });
   const [mapLoaded, setMapLoaded] = useState(false);
+  const [selectedAssignment, setSelectedAssignment] = useState<any | null>(null);
 
   // Update viewState when region or zoom props change
   useEffect(() => {
@@ -173,15 +168,51 @@ const DailyWorkerMapWeb: React.FC<DailyWorkerMapProps & {
     }
   }, [onWebZoomChange]);
 
+  const onMapClick = useCallback((event: any) => {
+    const feature = event.features && event.features[0];
+    if (feature && feature.layer.id === 'assignment-points-circle-layer') {
+      setSelectedAssignment({
+        longitude: feature.geometry.coordinates[0],
+        latitude: feature.geometry.coordinates[1],
+        ...feature.properties
+      });
+    } else {
+      setSelectedAssignment(null);
+    }
+  }, []);
+
+  const assignmentMarkers = useMemo(() => {
+    if (!assignmentPointsGeoJSON || assignmentPointsGeoJSON.features.length === 0) return [];
+    return assignmentPointsGeoJSON.features.map(feature => {
+      const props = feature.properties;
+      const start = moment(props?.startTime);
+      const end = moment(props?.endTime);
+      const duration = moment.duration(end.diff(start));
+      const hours = Math.floor(duration.asHours());
+      const minutes = duration.minutes();
+
+      return {
+        longitude: feature.geometry.coordinates[0],
+        latitude: feature.geometry.coordinates[1],
+        title: props?.name || '',
+        address: props?.address || '',
+        startTime: start.format('HH:mm'),
+        endTime: end.format('HH:mm'),
+        duration: `${hours}h ${minutes}m`,
+        assignmentOrder: props?.assignmentOrder || 0,
+      };
+    });
+  }, [assignmentPointsGeoJSON]);
+
   return (
-    <View // Changed from div to View
-      style={[styles.mapContainer, style]} // Apply StyleSheet styles
-    >
+    <View style={[styles.mapContainer, style]}>
       <Map
         ref={mapRef}
         {...viewState}
         onMove={onMove}
         onLoad={onMapLoad}
+        onClick={onMapClick}
+        interactiveLayerIds={['assignment-points-circle-layer']}
         style={{ width: '100%', height: '100%' }}
         mapStyle={TILE_PROVIDER_STYLE}
         attributionControl={false}
@@ -198,16 +229,52 @@ const DailyWorkerMapWeb: React.FC<DailyWorkerMapProps & {
         {/* Assignment Segments Source and Layer */}
         {assignmentSegmentsGeoJSON && (
           <Source id="assignment-segments-source" type="geojson" data={assignmentSegmentsGeoJSON}>
-            <Layer {...assignmentSegmentsLayerStyle} beforeId={fullTrailLayerStyle.id} />
+            <Layer {...assignmentSegmentsLayerStyle} />
           </Source>
         )}
 
         {/* Assignment Points Source and Layers */}
         {assignmentPointsGeoJSON && (
           <Source id="assignment-points-source" type="geojson" data={assignmentPointsGeoJSON}>
-            <Layer {...pointsCircleLayerStyle} beforeId={assignmentSegmentsLayerStyle.id} />
-            <Layer {...pointsNumberLayerStyle} beforeId={pointsCircleLayerStyle.id} />
+            <Layer {...pointsCircleLayerStyle} />
+            <Layer {...pointsNumberLayerStyle} />
           </Source>
+        )}
+
+        {selectedAssignment && (
+          <Popup
+            longitude={selectedAssignment.longitude}
+            latitude={selectedAssignment.latitude}
+            anchor="bottom"
+            onClose={() => setSelectedAssignment(null)}
+            closeButton={false}
+            className="assignment-popup"
+          >
+            <View style={styles.calloutContainer}>
+                <Text style={styles.calloutTitle} fontType="bold">{selectedAssignment.name}</Text>
+                {selectedAssignment.address ? <Text style={styles.calloutAddress} fontType="regular">{selectedAssignment.address}</Text> : null}
+                <View style={styles.calloutDivider} />
+                <View style={styles.calloutRow}>
+                  <Text style={styles.calloutLabel} fontType="medium">Entered: </Text>
+                  <Text style={styles.calloutValue} fontType="regular">{moment(selectedAssignment.startTime).format('HH:mm')}</Text>
+                </View>
+                <View style={styles.calloutRow}>
+                  <Text style={styles.calloutLabel} fontType="medium">Exited: </Text>
+                  <Text style={styles.calloutValue} fontType="regular">{moment(selectedAssignment.endTime).format('HH:mm')}</Text>
+                </View>
+                <View style={[styles.calloutRow, {marginTop: 4}]}>
+                  <Text style={styles.calloutLabel} fontType="medium">Total Time: </Text>
+                  <Text style={[styles.calloutValue, {color: theme.colors.primary}]} fontType="bold">
+                    {(() => {
+                        const start = moment(selectedAssignment.startTime);
+                        const end = moment(selectedAssignment.endTime);
+                        const duration = moment.duration(end.diff(start));
+                        return `${Math.floor(duration.asHours())}h ${duration.minutes()}m`;
+                    })()}
+                  </Text>
+                </View>
+              </View>
+          </Popup>
         )}
       </Map>
     </View>
@@ -225,5 +292,41 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: theme.colors.borderColor,
     margin: theme.spacing(2),
+  },
+  calloutContainer: {
+    backgroundColor: theme.colors.cardBackground,
+    borderRadius: 8,
+    padding: 12,
+    width: 200,
+  },
+  calloutTitle: {
+    fontSize: 14,
+    color: theme.colors.headingText,
+    marginBottom: 2,
+  },
+  calloutAddress: {
+    fontSize: 11,
+    color: theme.colors.bodyText,
+    marginBottom: 8,
+  },
+  calloutDivider: {
+    height: 1,
+    backgroundColor: theme.colors.borderColor,
+    marginBottom: 8,
+    width: '100%',
+  },
+  calloutRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 2,
+    width: '100%',
+  },
+  calloutLabel: {
+    fontSize: 11,
+    color: theme.colors.bodyText,
+  },
+  calloutValue: {
+    fontSize: 11,
+    color: theme.colors.headingText,
   },
 });

@@ -117,7 +117,7 @@ export default function PaymentSuccess() {
         <View style={styles.header}>
             <Link href="/(guest)" asChild>
                 <Image
-                source={require('../../../../assets/logokoordblack.png')}
+                source={require('../../../../assets/koordlogoblack1.svg')}
                 style={styles.logo}
                 resizeMode="contain"
                 />

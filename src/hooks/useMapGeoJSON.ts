@@ -11,6 +11,7 @@ export interface Assignment {
   endTime: string; // ISO string
   sortKey: number;
   name: string; // Assuming name is needed for point properties
+  address?: string;
 }
 
 export interface LocationEvent {
@@ -38,6 +39,9 @@ export const useMapGeoJSON = ({ assignments, locationEvents, reportDate }: UseMa
       properties: {
         id: assignment.id,
         name: assignment.name,
+        address: assignment.address || '',
+        startTime: assignment.startTime,
+        endTime: assignment.endTime,
         assignmentOrder: index + 1, // 1-based index
       },
       geometry: {

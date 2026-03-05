@@ -365,21 +365,19 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: theme.fontSizes.lg, // Matching manager's header title
-    fontType: 'bold',
     color: theme.colors.headingText,
   },
   headerAddress: {
     color: theme.colors.bodyText,
     marginTop: 2,
     fontSize: 16, // Matching manager's header address
-    fontType: 'regular',  },
+  },
   section: {
     marginTop: theme.spacing(2),
     paddingHorizontal: theme.spacing(2),
   },
   sectionTitle: {
     fontSize: 20,
-    fontType: 'bold',
     color: theme.colors.headingText,
     marginBottom: theme.spacing(1),
   },
@@ -387,7 +385,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: theme.colors.headingText,
     lineHeight: 24,
-    fontType: 'regular',  },
+  },
   projectImageList: {
     paddingVertical: theme.spacing(1),
   },
@@ -431,13 +429,13 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   senderText: {
-    fontType: 'bold',
     fontSize: theme.fontSizes.md,
-    color: theme.colors.headingText,  },
+    color: theme.colors.headingText,
+  },
   timestampText: {
     color: theme.colors.bodyText,
     fontSize: theme.fontSizes.xs,
-    fontType: 'regular',  },
+  },
   messageImage: {
     width: '100%',
     height: 200,

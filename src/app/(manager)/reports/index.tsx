@@ -27,12 +27,6 @@ const reports = [
     path: 'project-labor-report',
   },
   {
-    title: 'Daily Activity',
-    description: 'A quick look at who worked today and what they did.',
-    icon: 'speedometer-outline',
-    path: 'daily-activity-report',
-  },
-  {
     title: 'Daily Detailed Report',
     description: "Get a detailed, chronological breakdown of each worker's day.",
     icon: 'analytics-outline',
@@ -56,7 +50,7 @@ export default function ReportsHub() {
         <Text style={styles.pageSubtitle}>View and export summaries of company data.</Text>
       </View>
       <View style={styles.mainContentCard}>
-        <ScrollView>
+        <ScrollView showsVerticalScrollIndicator={false}>
             <View style={styles.grid}>
             {reports.map((report) => (
                 <View key={report.title} style={[styles.cardContainer, isLargeScreen ? styles.cardContainerLarge : styles.cardContainerSmall]}>

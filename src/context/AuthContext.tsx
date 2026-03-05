@@ -2,6 +2,10 @@ import React, { useState, useEffect, createContext, useContext, useCallback } fr
 import { setStorageItemAsync } from '../hooks/useStorageState';
 import { supabase } from '../utils/supabase'; // Make sure this path is correct
 import { Session, User } from '@supabase/supabase-js';
+import * as SecureStore from 'expo-secure-store'; // NEW: Import SecureStore
+import 'react-native-get-random-values'; // NEW: Polyfill for UUID
+import { v4 as uuidv4 } from 'uuid'; // NEW: Import UUID v4
+import { Platform } from 'react-native';
 
 // Define the shape of the context value
 interface AuthContextType {
@@ -17,7 +21,9 @@ interface AuthContextType {
   isCompanyDetailsComplete: boolean; // NEW: Flag if company name is not placeholder
   userRole: string | null; // NEW: The role of the logged-in user
   refreshUser: () => Promise<void>;
-}
+  deviceToken: string | null; // NEW: Expose device token
+  deviceSecret: string | null; // NEW: Expose device secret
+} // NEW: Missing closing brace for AuthContextType
 
 // Create the context with a default null value
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -42,6 +48,8 @@ export function SessionProvider(props: React.PropsWithChildren<{}>) {
   const [userCompanyCountry, setUserCompanyCountry] = useState<string | null>(null); // NEW
   const [isCompanyDetailsComplete, setIsCompanyDetailsComplete] = useState(false); // NEW
   const [userRole, setUserRole] = useState<string | null>(null); // NEW
+  const [deviceToken, setDeviceToken] = useState<string | null>(null); // NEW
+  const [deviceSecret, setDeviceSecret] = useState<string | null>(null); // NEW
 
   // Function to fetch and set company ID and details
   const fetchUserDetailsAndCompany = useCallback(async (loggedInUser: User | null) => {
@@ -114,6 +122,71 @@ export function SessionProvider(props: React.PropsWithChildren<{}>) {
       setUser(newSession?.user ?? null);
       setIsLoading(false);
       fetchUserDetailsAndCompany(newSession?.user ?? null); // Fetch company ID and details for changed user state
+
+      // NEW: Handle device token registration and storage
+      if (newSession?.user) {
+        (async () => {
+          let storedDeviceToken: string | null = null;
+          let storedDeviceSecret: string | null = null;
+
+          if (Platform.OS === 'web') {
+            storedDeviceToken = localStorage.getItem('device_token');
+            storedDeviceSecret = localStorage.getItem('device_secret');
+          } else {
+            storedDeviceToken = await SecureStore.getItemAsync('device_token');
+            storedDeviceSecret = await SecureStore.getItemAsync('device_secret');
+          }
+
+          if (storedDeviceToken && storedDeviceSecret) {
+            setDeviceToken(storedDeviceToken);
+            setDeviceSecret(storedDeviceSecret);
+            console.log("AuthContext: Re-using stored device credentials - Token:", storedDeviceToken, "Secret:", storedDeviceSecret?.substring(0, 5) + "...");
+          } else {
+            const newDeviceToken = uuidv4();
+            const newDeviceSecret = uuidv4();
+
+            console.log("AuthContext: No stored device credentials found. Attempting to register new device - Generated Token:", newDeviceToken, "Secret:", newDeviceSecret.substring(0, 5) + "...");
+
+            try {
+              const { error: rpcError } = await supabase.rpc('register_device', {
+                p_device_token: newDeviceToken,
+                p_secret: newDeviceSecret,
+              });
+
+              if (rpcError) {
+                console.error("AuthContext: Failed to register device with Supabase RPC:", rpcError.message);
+                // Log the entire error object for more details
+                console.error("AuthContext: Supabase RPC error details:", rpcError);
+              } else {
+                if (Platform.OS === 'web') {
+                  localStorage.setItem('device_token', newDeviceToken);
+                  localStorage.setItem('device_secret', newDeviceSecret);
+                } else {
+                  await SecureStore.setItemAsync('device_token', newDeviceToken);
+                  await SecureStore.setItemAsync('device_secret', newDeviceSecret);
+                }
+                setDeviceToken(newDeviceToken);
+                setDeviceSecret(newDeviceSecret);
+                console.log("AuthContext: Successfully registered and stored new device credentials - Token:", newDeviceToken, "Secret:", newDeviceSecret.substring(0, 5) + "...");
+              }
+            } catch (e) {
+              console.error("AuthContext: Error during device registration RPC call:", e);
+            }
+          }
+        })();
+      } else {
+        // User logged out, clear device credentials
+        setDeviceToken(null);
+        setDeviceSecret(null);
+        if (Platform.OS === 'web') {
+          localStorage.removeItem('device_token');
+          localStorage.removeItem('device_secret');
+        } else {
+          SecureStore.deleteItemAsync('device_token');
+          SecureStore.deleteItemAsync('device_secret');
+        }
+        console.log("AuthContext: User logged out, cleared device credentials.");
+      }
     });
 
     // Cleanup subscription on unmount
@@ -172,6 +245,8 @@ export function SessionProvider(props: React.PropsWithChildren<{}>) {
     isCompanyDetailsComplete,
     userRole, // NEW
     refreshUser,
+    deviceToken, // NEW
+    deviceSecret, // NEW
   };
 
   return (

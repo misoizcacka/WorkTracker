@@ -1,4 +1,4 @@
-import { randomUUID } from 'expo-crypto';
+import { v4 as randomUUID } from 'uuid';
 import { insertLocalLocationEvent } from '~/db/database';
 
 export type TransitionEventType = 'enter_geofence' | 'exit_geofence' | 'periodic_update';

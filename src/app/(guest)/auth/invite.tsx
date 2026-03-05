@@ -9,7 +9,7 @@ import { supabase } from '../../../utils/supabase';
 import { Invite } from '../../../types';
 import { theme } from '../../../theme';
 import AnimatedScreen from '../../../components/AnimatedScreen';
-import Logo from '../../../../assets/logokoordblack.png';
+import Logo from '../../../../assets/koordlogoblack1.svg';
 import { useTranslation } from 'react-i18next';
 import { LanguageSelector } from '../../../components/LanguageSelector';
 import { Feather } from '@expo/vector-icons'; // For password toggle

@@ -15,7 +15,7 @@ import kotlinx.coroutines.tasks.await
 import java.util.UUID
 import java.util.concurrent.TimeUnit
 
-class LocationUpdateWorker(appContext: Context, workerParams: WorkerParameters) :
+class PeriodicLocationPingWorker(appContext: Context, workerParams: WorkerParameters) :
     CoroutineWorker(appContext, workerParams) {
 
     init {
@@ -25,6 +25,7 @@ class LocationUpdateWorker(appContext: Context, workerParams: WorkerParameters) 
     private lateinit var fusedLocationClient: FusedLocationProviderClient
     private lateinit var locationDbHelper: LocationDbHelper
     private lateinit var supabaseService: SupabaseService
+    private lateinit var deviceAuthenticator: DeviceAuthenticator // NEW: DeviceAuthenticator
 
     override suspend fun doWork(): ListenableWorker.Result {
         Log.d("LocationUpdateWorker", "doWork started.")
@@ -32,6 +33,7 @@ class LocationUpdateWorker(appContext: Context, workerParams: WorkerParameters) 
         // Initialize components
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(applicationContext)
         locationDbHelper = LocationDbHelper(applicationContext)
+        deviceAuthenticator = DeviceAuthenticator(applicationContext) // NEW: Initialize DeviceAuthenticator
 
         // Retrieve data from SharedPreferences
         val sharedPrefs = applicationContext.getSharedPreferences(Constants.SHARED_PREFS_NAME, Context.MODE_PRIVATE)
@@ -40,23 +42,22 @@ class LocationUpdateWorker(appContext: Context, workerParams: WorkerParameters) 
         val companyId = sharedPrefs.getString(Constants.KEY_COMPANY_ID, null as String?)
         val supabaseUrl = sharedPrefs.getString(Constants.KEY_SUPABASE_URL, null as String?)
         val supabasePublishableKey = sharedPrefs.getString(Constants.KEY_SUPABASE_PUBLISHABLE_KEY, null as String?)
-        val accessToken = sharedPrefs.getString(Constants.KEY_ACCESS_TOKEN, null as String?)
+        // Removed accessToken
 
         Log.d("LocationUpdateWorker", "SharedPreferences values: " +
                 "workerId=$workerId, " +
                 "assignmentId=$assignmentId, " +
                 "companyId=$companyId, " +
                 "supabaseUrl=${supabaseUrl?.take(5)}..., " + // Log first 5 chars for brevity/security
-                "supabasePublishableKey=${supabasePublishableKey?.take(5)}..., " + // Log first 5 chars
-                "accessToken=${accessToken?.take(5)}...") // Log first 5 chars
+                "supabasePublishableKey=${supabasePublishableKey?.take(5)}...") // Log first 5 chars
 
-        if (workerId == null || assignmentId == null || companyId == null || supabaseUrl == null || supabasePublishableKey == null || accessToken == null) {
+        if (workerId == null || assignmentId == null || companyId == null || supabaseUrl == null || supabasePublishableKey == null) { // Removed accessToken from null check
             Log.e("LocationUpdateWorker", "Missing required parameters in SharedPreferences. Cannot track location.")
             return ListenableWorker.Result.failure()
         }
 
-        // Initialize SupabaseService with retrieved credentials
-        supabaseService = SupabaseService(applicationContext, supabaseUrl, supabasePublishableKey, accessToken)
+        // Initialize SupabaseService with retrieved credentials and device authenticator
+        supabaseService = SupabaseService(applicationContext, supabaseUrl, supabasePublishableKey, deviceAuthenticator) // NEW: Pass deviceAuthenticator
 
         // Check for permissions
         val hasPermissions = hasLocationPermissions()
@@ -73,7 +74,7 @@ class LocationUpdateWorker(appContext: Context, workerParams: WorkerParameters) 
             location?.let {
                 val locationEventId = UUID.randomUUID().toString()
                 val timestamp = System.currentTimeMillis()
-                val type = "PING"
+                val type = "ping"
                 val notes = "Periodic background location update via WorkManager"
 
                 // 1. Write to local SQLite FIRST
@@ -105,18 +106,18 @@ class LocationUpdateWorker(appContext: Context, workerParams: WorkerParameters) 
                 )
                 if (supabasePushSuccessful) {
                     locationDbHelper.updateLocationEventSyncedStatus(locationEventId, 1)
-                    Log.d("LocationUpdateWorker", "Successfully pushed and marked as synced: $locationEventId")
+                    Log.d("LocationUpdateWorker", "Location $locationEventId successfully pushed to Supabase and marked as synced.")
                 } else {
-                    Log.e("LocationUpdateWorker", "Failed to push to Supabase, leaving synced = 0: $locationEventId")
+                    Log.w("LocationUpdateWorker", "Failed to push location $locationEventId to Supabase (best-effort). It remains marked as unsynced locally.")
                 }
                 ListenableWorker.Result.success()
             } ?: run {
-                Log.w("LocationUpdateWorker", "Last known location is null.")
+                Log.w("LocationUpdateWorker", "Last known location is null. Skipping location event processing.")
                 ListenableWorker.Result.success()
             }
         } catch (e: Exception) {
-            Log.e("LocationUpdateWorker", "Error getting location or saving event: ${e.message}", e)
-            ListenableWorker.Result.failure()
+            Log.e("LocationUpdateWorker", "Error getting location or saving event for $workerId: ${e.message}. Location will remain unsynced if saved locally.", e)
+            ListenableWorker.Result.success() // Return success for best-effort, even if location acquisition failed
         }
     }
 

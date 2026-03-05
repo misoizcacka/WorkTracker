@@ -5,9 +5,10 @@ declare class BackgroundLocationModule extends NativeModule {
     workerId: string,
     assignmentId: string,
     companyId: string,
-    supabaseUrl: string,
-    supabasePublishableKey: string,
-    accessToken: string
+    supabaseConfig: string,
+    deviceToken: string,
+    deviceSecret: string,
+    geofenceAssignments: string
   ) => Promise<void>;
   stop: () => Promise<void>;
 }

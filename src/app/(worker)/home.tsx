@@ -14,6 +14,7 @@ import { theme } from "../../theme";
 import { MapView, Marker, Circle } from '../../components/MapView'; // Custom MapView component
 import { useSession } from '~/context/AuthContext';
 import { useAssignments } from '~/context/AssignmentsContext';
+import { useProjects } from '~/context/ProjectsContext';
 import { ProcessedAssignmentStep, WorkSession, ProcessedAssignmentStepWithStatus, AssignmentStatus } from '~/types'; // Updated import
 import moment from 'moment';
 import Toast from 'react-native-toast-message';
@@ -21,8 +22,12 @@ import { saveLocalTransitionEvent, TransitionEventType } from '~/utils/localTran
 import AssignmentSelectionModal from '../../components/AssignmentSelectionModal'; // Import AssignmentSelectionModal
 import { View, Text } from '../../components/Themed'; // Custom Text component for consistent fonts
 
+import { GeofenceAssignment } from 'background-location'; // Import the GeofenceAssignment interface
+
 export default function Home() {
-  const { user, userCompanyId, isCompanyIdLoading, session } = useSession();
+  const { user, userCompanyId, isCompanyIdLoading, session, deviceToken, deviceSecret } = useSession();
+  console.log("Home: useSession deviceToken:", deviceToken, "deviceSecret:", deviceSecret?.substring(0, 5) + "...");
+  const { loadInitialProjects, isLoading: projectsLoading } = useProjects();
   const [currentDate, setCurrentDate] = useState(moment().format('YYYY-MM-DD'));
   const [locationPermission, setLocationPermission] = useState<Location.PermissionStatus | null>(null);
   const [workerMapLocation, setWorkerMapLocation] = useState<{ latitude: number; longitude: number } | null>(null);
@@ -41,8 +46,12 @@ export default function Home() {
   const [isAssignmentSelectionModalVisible, setIsAssignmentSelectionModalVisible] = useState(false);
   const [selectedNextAssignmentId, setSelectedNextAssignmentId] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false); // New state for pull-to-refresh
+  const [isProcessingCheckInOut, setIsProcessingCheckInOut] = useState(false); // NEW: State for check-in/out loading
+  const [pendingAction, setPendingAction] = useState<'checking_in' | 'checking_out' | null>(null);
 
   const { processedAssignments, loadAssignmentsForDate, loadWorkSessionsForDate, isLoading: assignmentsLoading, activeWorkSession, startWorkSession, endWorkSession, updateWorkSessionAssignment, lastCheckoutAssignmentId } = useAssignments();
+
+  const isDataLoading = assignmentsLoading || projectsLoading;
 
   const ACCEPTABLE_DISTANCE = 150; // meters
 
@@ -67,9 +76,12 @@ export default function Home() {
   // Handle pull-to-refresh action
   const onRefresh = useCallback(async () => {
     setIsRefreshing(true); // Start refreshing indicator
-    await fetchHomeData(true); // Force fetch new data from Supabase
+    await Promise.all([
+      loadInitialProjects(),
+      fetchHomeData(true)
+    ]);
     setIsRefreshing(false); // Stop refreshing indicator
-  }, [fetchHomeData]); // Dependency for useCallback
+  }, [fetchHomeData, loadInitialProjects]); // Dependency for useCallback
 
   // Update date state if the day changes
   useEffect(() => {
@@ -86,10 +98,19 @@ export default function Home() {
   // Request permissions on mount
   useEffect(() => {
     (async () => {
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      setLocationPermission(status);
+      const { status: foregroundStatus } = await Location.requestForegroundPermissionsAsync();
+      setLocationPermission(foregroundStatus);
 
-      if (status === 'granted') {
+      if (foregroundStatus === 'granted') {
+        const { status: backgroundStatus } = await Location.requestBackgroundPermissionsAsync();
+        if (backgroundStatus !== 'granted') {
+          Alert.alert(
+            "Background Location Required",
+            "This app requires background location access to track work hours accurately. Please set location permission to 'Allow all the time' in settings.",
+            [{ text: "Open Settings", onPress: () => Linking.openSettings() }]
+          );
+        }
+        
         const { status: notifStatus } = await Notifications.requestPermissionsAsync();
         if (notifStatus !== "granted") {
           Alert.alert("Permission required", "Notification access is needed for alerts.");
@@ -99,9 +120,19 @@ export default function Home() {
   }, []);
   
   const requestPermissionAgain = async () => {
-    const { status } = await Location.requestForegroundPermissionsAsync();
-    setLocationPermission(status);
-    if (status !== 'granted') {
+    const { status: foregroundStatus } = await Location.requestForegroundPermissionsAsync();
+    setLocationPermission(foregroundStatus);
+    
+    if (foregroundStatus === 'granted') {
+      const { status: backgroundStatus } = await Location.requestBackgroundPermissionsAsync();
+      if (backgroundStatus !== 'granted') {
+        Alert.alert(
+          "Background Location Required",
+          "This app requires background location access to track work hours accurately. Please set location permission to 'Allow all the time' in settings.",
+          [{ text: "Open Settings", onPress: () => Linking.openSettings() }]
+        );
+      }
+    } else {
         Alert.alert(
             "Permission Required",
             "Location access is essential for this app to function. Please enable it in your settings.",
@@ -247,7 +278,7 @@ export default function Home() {
 
   // 📍 Fetch foreground location for map display when not checked in
   useEffect(() => {
-    let intervalId: NodeJS.Timeout | undefined; // Use NodeJS.Timeout for clarity
+    let intervalId: number | undefined; // Use NodeJS.Timeout for clarity
     let isMounted = true; // To prevent state updates on unmounted component
 
     const fetchAndSetLocation = async () => {
@@ -271,7 +302,7 @@ export default function Home() {
           if (targetProjectLocation) {
             d = getDistance(
               newWorkerLocation,
-              { latitude: targetProjectLocation.lat, longitude: targetProjectLocation.lon }
+              { latitude: targetProjectLocation.lat, longitude: targetProjectLocation.lon },
             );
             setDistance(d); // Update distance state for map display
           } else {
@@ -318,6 +349,7 @@ export default function Home() {
 
 
   const handleCheckIn = async () => {
+    // Initial guard conditions
     if (checkedIn) {
       Alert.alert("Already Checked In", `You are already checked into ${relevantAssignment?.type === 'project' ? relevantAssignment?.project?.name : relevantAssignment?.location?.name}.`);
       return;
@@ -328,6 +360,17 @@ export default function Home() {
     }
     if (!targetProjectLocation) {
       Alert.alert("Location Missing", `Assignment ${projectLocationName} has no valid location. Cannot check in.`);
+      return;
+    }
+
+    // Double check background permissions before starting native module
+    const { status: bgStatus } = await Location.getBackgroundPermissionsAsync();
+    if (bgStatus !== 'granted') {
+      Alert.alert(
+        "Background Location Required",
+        "This app requires background location access to track work hours accurately. Please set location permission to 'Allow all the time' in settings.",
+        [{ text: "Open Settings", onPress: () => Linking.openSettings() }]
+      );
       return;
     }
 
@@ -358,48 +401,83 @@ export default function Home() {
       return;
     }
 
-    try {
-      await startWorkSession(relevantAssignment.id, currentLocation);
-      
-      const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL as string | undefined;
-      const supabasePublishableKey = process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY as string | undefined;
+    setIsProcessingCheckInOut(true); // NEW: Set loading state
+    setPendingAction('checking_in');
+    
+    requestAnimationFrame(async () => { // NEW: Wrap async operations in requestAnimationFrame to allow UI to update
+      try {
+        await startWorkSession(relevantAssignment.id, currentLocation);
+        
+        const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL as string | undefined;
+        const supabasePublishableKey = process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY as string | undefined;
 
-      let errorMessage = '';
-      if (!user?.id) errorMessage = 'User ID is missing.';
-      else if (isCompanyIdLoading) errorMessage = 'Company ID is still loading.';
-      else if (!userCompanyId) errorMessage = 'Company ID is missing for user.';
-      else if (!relevantAssignment?.id) errorMessage = 'Relevant assignment ID is missing.';
-      else if (!supabaseUrl) errorMessage = 'Supabase URL is missing from configuration.';
-      else if (!supabasePublishableKey) errorMessage = 'Supabase Publishable Key is missing from configuration.';
-      else if (!session?.access_token) errorMessage = 'User access token is missing for authentication.';
-
-      if (errorMessage) {
-        console.error("BackgroundLocation Configuration Error:", errorMessage);
-        Toast.show({
-          type: 'error',
-          text1: 'Configuration Error',
-          text2: 'An application configuration error occurred. Please try again.',
+        let errorMessage = '';
+        if (!user?.id) errorMessage = 'User ID is missing.';
+        else if (isCompanyIdLoading) errorMessage = 'Company ID is still loading.';
+        else if (!userCompanyId) errorMessage = 'Company ID is missing for user.';
+              else if (!relevantAssignment?.id) errorMessage = 'Relevant assignment ID is missing.';
+              else if (!supabaseUrl) errorMessage = 'Supabase URL is missing from configuration.';
+              else if (!supabasePublishableKey) errorMessage = 'Supabase Publishable Key is missing from configuration.';
+              else if (!deviceToken) errorMessage = 'Device token is missing. Please re-login.'; // NEW
+                    else if (!deviceSecret) errorMessage = 'Device secret is missing. Please re-login.'; // NEW
+                    
+                    if (errorMessage) {
+                      console.error("BackgroundLocation Configuration Error:", errorMessage);
+                      Toast.show({
+                        type: 'error',
+                        text1: 'Configuration Error',
+                        text2: 'An application configuration error occurred. Please try again.',
+                      });
+                      return;
+                    }
+              
+                    console.log("Home: Passing to BackgroundLocation.start - deviceToken:", deviceToken, "deviceSecret:", deviceSecret?.substring(0, 5) + "..."); // NEW LOG
+              
+                    // Geofence assignments to pass to the native module
+                    // Constructed immediately before calling BackgroundLocation.start to ensure fresh data
+                    const currentGeofenceAssignments: GeofenceAssignment[] = [];
+                    if (relevantAssignment.type === 'project' && relevantAssignment.project?.location) {
+                      currentGeofenceAssignments.push({
+                        id: relevantAssignment.id,
+                        latitude: relevantAssignment.project.location.latitude,
+                        longitude: relevantAssignment.project.location.longitude,
+                        radius: ACCEPTABLE_DISTANCE,
+                        type: relevantAssignment.type,
+                        status: 'active', // Assuming it's now active after successful startWorkSession
+                      });
+                    } else if (relevantAssignment.type === 'common_location' && relevantAssignment.location?.latitude && relevantAssignment.location?.longitude) {
+                      currentGeofenceAssignments.push({
+                        id: relevantAssignment.id,
+                        latitude: relevantAssignment.location.latitude,
+                        longitude: relevantAssignment.location.longitude,
+                        radius: ACCEPTABLE_DISTANCE,
+                        type: relevantAssignment.type,
+                        status: 'active',
+                      });
+                    }
+              
+              
+                    BackgroundLocation.start(
+                      user!.id,
+                      relevantAssignment.id,
+                      userCompanyId!,
+                      JSON.stringify({ url: supabaseUrl!, key: supabasePublishableKey! }), // NEW: Combined supabaseConfig
+                      deviceToken!, // NEW: Pass deviceToken
+                      deviceSecret!, // NEW: Pass deviceSecret
+                      JSON.stringify(currentGeofenceAssignments) // NEW: Stringify the array
+                    );
+                    Toast.show({          type: 'success',
+          text1: 'Checked In',
+          text2: `You are now working on ${projectLocationName}.`
         });
-        return;
+        setSelectedNextAssignmentId(null); // Clear manual selection on successful check-in
+      } catch (err: any) {
+        Alert.alert("Check-in Failed", err.message || "An error occurred during check-in.");
+      } finally {
+        setIsProcessingCheckInOut(false); // NEW: Reset loading state
+        setPendingAction(null);
       }
-
-      BackgroundLocation.start(
-        user.id,
-        relevantAssignment.id,
-        userCompanyId,
-        supabaseUrl,
-        supabasePublishableKey,
-        session.access_token
-      );
-      Toast.show({
-        type: 'success',
-        text1: 'Checked In',
-        text2: `You are now working on ${projectLocationName}.`
-      });
-      setSelectedNextAssignmentId(null); // Clear manual selection on successful check-in
-    } catch (err: any) {
-      Alert.alert("Check-in Failed", err.message || "An error occurred during check-in.");
-    }
+    }); // NEW: Execute after next animation frame (allowing UI to update)
   };
 
   const handleCheckOut = async () => {
@@ -421,28 +499,40 @@ export default function Home() {
       return;
     }
 
-    try {
-      await endWorkSession(activeWorkSession.id, currentLocation);
-      BackgroundLocation.stop(); // Stop background location tracking
-      Toast.show({
-        type: 'info',
-        text1: 'Checked Out',
-        text2: `You have successfully checked out from ${projectLocationName}.`
-      });
-      setElapsedTime(0); // Reset timer
-      notificationSentRef.current = false; // Reset notification lock
-      setOutOfRange(false); // Reset out of range of assignment
-      setSelectedNextAssignmentId(null); // Clear manual selection on successful check-out
-    } catch (err: any) {
-      Alert.alert("Check-out Failed", err.message || "An error occurred during check-out.");
-    }
+    setIsProcessingCheckInOut(true); // NEW: Set loading state
+    setPendingAction('checking_out');
+    
+    requestAnimationFrame(async () => { // NEW: Wrap async operations in requestAnimationFrame to allow UI to update
+      try {
+        await endWorkSession(activeWorkSession.id, currentLocation);
+        BackgroundLocation.stop(); // Stop background location tracking
+        Toast.show({
+          type: 'info',
+          text1: 'Checked Out',
+          text2: `You have successfully checked out from ${projectLocationName}.`
+        });
+        setElapsedTime(0); // Reset timer
+        notificationSentRef.current = false; // Reset notification lock
+        setOutOfRange(false); // Reset out of range of assignment
+        setSelectedNextAssignmentId(null); // Clear manual selection on successful check-out
+      } catch (err: any) {
+        Alert.alert("Check-out Failed", err.message || "An error occurred during check-out.");
+      } finally {
+        setIsProcessingCheckInOut(false); // NEW: Reset loading state
+        setPendingAction(null);
+      }
+    }); // NEW: Execute after next animation frame (allowing UI to update)
   };
 
 
 
   // Determine button state and text
-  const buttonDisabled = assignmentsLoading || (checkedIn ? false : (!isNearby || !relevantAssignment || !targetProjectLocation)); // Changed to targetProjectLocation
-  const buttonTitle = checkedIn ? "Check Out" : (relevantAssignment ? "Check In" : "No Next Assignment");
+  // stableCheckedIn represents what the UI should show regardless of the immediate (and sometimes premature) updates from the context
+  const stableCheckedIn = pendingAction === 'checking_in' ? true : (pendingAction === 'checking_out' ? false : checkedIn);
+  const isActuallyProcessing = isProcessingCheckInOut || pendingAction !== null;
+  
+  const buttonDisabled = isDataLoading || (stableCheckedIn ? false : (!isNearby || !relevantAssignment || !targetProjectLocation)); // Changed to targetProjectLocation
+  const buttonTitle = stableCheckedIn ? "Check Out" : (relevantAssignment ? "Check In" : "No Next Assignment");
 
 
 
@@ -530,6 +620,11 @@ export default function Home() {
     );
   }
 
+  const filteredAssignmentsForModal = currentWorkersAssignments.filter((assign: ProcessedAssignmentStepWithStatus) => assign.status !== 'active');
+
+  console.log("DEBUG Home: currentWorkersAssignments (IDs and Statuses):", currentWorkersAssignments.map(a => ({ id: a.id, status: a.status, title: a.type === 'project' ? a.project?.name : a.location?.name })));
+  console.log("DEBUG Home: filteredAssignmentsForModal (IDs and Statuses):", filteredAssignmentsForModal.map(a => ({ id: a.id, status: a.status, title: a.type === 'project' ? a.project?.name : a.location?.name })));
+
   return (
     <AnimatedScreen>
       <View style={styles.container}>
@@ -557,7 +652,7 @@ export default function Home() {
             )}
             {/* Status Chip */}
             <View style={[styles.statusChipContainer, {
-                backgroundColor: assignmentsLoading || !locationReady || !relevantAssignment
+                backgroundColor: isDataLoading || !locationReady || !relevantAssignment
                     ? theme.statusColors.neutralBackground
                     : checkedIn
                     ? theme.statusColors.activeBackground
@@ -566,7 +661,7 @@ export default function Home() {
                     : theme.statusColors.warningBackground,
             }]}>
                 <Text style={[styles.statusChipText, {
-                    color: assignmentsLoading || !locationReady || !relevantAssignment
+                    color: isDataLoading || !locationReady || !relevantAssignment
                         ? theme.statusColors.neutralText
                         : checkedIn
                         ? theme.statusColors.activeText
@@ -574,7 +669,7 @@ export default function Home() {
                         ? theme.statusColors.successText
                         : theme.statusColors.warningText,
                 }]} fontType="medium">
-                    {assignmentsLoading
+                    {isDataLoading
                     ? "Loading assignments..."
                     : !locationReady
                     ? "Fetching location..."
@@ -590,7 +685,7 @@ export default function Home() {
           </Card>
 
           {/* Single Assignment Card (Relevant Assignment) */}
-          {assignmentsLoading ? (
+          {isDataLoading ? (
             <ActivityIndicator size="large" color={theme.colors.primary} />
           ) : !relevantAssignment ? (
             <Card style={styles.projectInfoCard}>
@@ -656,7 +751,7 @@ export default function Home() {
                       showsUserLocation={true}
                       showsMyLocationButton={false}
                       region={mapRegion}
-                      onRegionChangeComplete={setMapRegion}
+
                     >
                       <Marker
                         coordinate={{ latitude: targetProjectLocation.lat, longitude: targetProjectLocation.lon }}
@@ -689,12 +784,22 @@ export default function Home() {
         </ScrollView>
         <View style={[styles.footer, { paddingBottom: theme.spacing(2) }]}>
           <Button
-            title={buttonTitle}
-            onPress={checkedIn ? handleCheckOut : handleCheckIn}
-            style={checkedIn ? styles.checkOutButton : styles.checkInButton}
-            textStyle={styles.buttonText}
-            disabled={buttonDisabled || assignmentsLoading || !relevantAssignment}
-          />
+            onPress={stableCheckedIn ? handleCheckOut : handleCheckIn}
+            style={stableCheckedIn ? styles.checkOutButton : styles.checkInButton}
+            disabled={buttonDisabled || isActuallyProcessing}
+          >
+            <View style={styles.buttonContent}>
+              <Text fontType="medium" style={styles.buttonText}>
+                {buttonTitle}
+              </Text>
+              {isActuallyProcessing && (
+                <ActivityIndicator
+                  color={theme.colors.pageBackground}
+                  style={styles.activityIndicator}
+                />
+              )}
+            </View>
+          </Button>
         </View>
       </View>
       <AssignmentSelectionModal
@@ -905,6 +1010,7 @@ const styles = StyleSheet.create({
   buttonText: {
     color: "white",
     fontSize: theme.fontSizes.md, // Changed from lg to md
+    backgroundColor: 'transparent', // Explicitly set to transparent
   },
   loadingIndicator: {
     marginVertical: theme.spacing(4),
@@ -985,5 +1091,14 @@ const styles = StyleSheet.create({
     right: theme.spacing(2),
     top: '50%',
     transform: [{ translateY: -12 }], // Center vertically
+  },
+  buttonContent: { // NEW style for button content wrapper
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'transparent', // Explicitly set to transparent
+  },
+  activityIndicator: { // NEW style for activity indicator
+    marginLeft: theme.spacing(1),
   },
 });

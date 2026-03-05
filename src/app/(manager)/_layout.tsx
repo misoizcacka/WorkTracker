@@ -1,9 +1,9 @@
 import React, { useEffect } from "react";
-import { Image, Pressable } from "react-native";
+import { Image, Pressable, View } from "react-native";
 import { Drawer } from "expo-router/drawer";
 import { Ionicons } from "@expo/vector-icons";
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { withLayoutContext, useRouter, useSegments, Link } from 'expo-router'; // Added Link
+import { withLayoutContext, useRouter, useSegments, Link, Slot } from 'expo-router';
 import { useDebouncedWindowDimensions } from "../../hooks/useDebouncedWindowDimensions";
 import { DrawerToggleButton } from '@react-navigation/drawer';
 
@@ -13,6 +13,7 @@ import { ProjectsProvider } from "../../context/ProjectsContext";
 import { AssignmentsProvider } from "../../context/AssignmentsContext";
 import { InvitesProvider } from "../../context/InvitesContext";
 import { useSession } from "../../context/AuthContext";
+import { ManagerSidebar } from "./components/ManagerSidebar";
 
 
 const { Navigator } = createBottomTabNavigator();
@@ -24,17 +25,16 @@ import { StatusBar } from "expo-status-bar";
 import { ProfileProvider } from "../../context/ProfileContext";
 
 function ManagerProviders({ children }: { children: React.ReactNode }) {
-  const { user, isLoading, userRole } = useSession(); // Add userRole here
+  const { user, isLoading, userRole } = useSession();
   const router = useRouter();
   const segments = useSegments();
 
   useEffect(() => {
     if (isLoading) return;
-    // Only apply this logic for managers/owners
     if (user && (userRole === 'manager' || userRole === 'owner')) {
       const companySetupComplete = user.user_metadata?.company_setup_complete || false;
       const inCompanySetup = segments.includes('company-setup');
-      const inSubscriptionFlow = segments.includes('subscription'); // Check if currently in subscription flow
+      const inSubscriptionFlow = segments.includes('subscription');
 
       if (!companySetupComplete && !inCompanySetup && !inSubscriptionFlow) {
         router.replace('/(manager)/company-setup');
@@ -58,11 +58,10 @@ function ManagerProviders({ children }: { children: React.ReactNode }) {
 }
 
 
-export default function TabsLayout() { // Renamed from ManagerLayout
+export default function TabsLayout() {
   const { width } = useDebouncedWindowDimensions(50);
   const isLargeScreen = width >= 900;
 
-  // Add these lines
   const { user, userRole } = useSession();
   const getLogoHref = () => {
     if (!user) {
@@ -73,160 +72,37 @@ export default function TabsLayout() { // Renamed from ManagerLayout
     } else if (userRole === 'worker') {
       return '/(worker)/home';
     }
-    return '/(guest)'; // Default fallback
+    return '/(guest)';
   };
 
   return (
     <>
       <StatusBar style="dark" backgroundColor={theme.colors.cardBackground} />
       {isLargeScreen ? (
-        // 🖥️ Web/Desktop → Sidebar Drawer
         <ManagerProviders>
-          <Drawer
-            screenOptions={{
-              headerShown: true,
-              headerLeft: () => <DrawerToggleButton tintColor={theme.colors.bodyText} />, // Add DrawerToggleButton here
-              headerStyle: {
-                backgroundColor: theme.colors.cardBackground,
-                elevation: 0, // Remove shadow on Android
-                shadowOpacity: 0, // Remove shadow on iOS
-                borderBottomWidth: 1,
-                borderBottomColor: theme.colors.borderColor,
-              },
-              headerTintColor: theme.colors.bodyText,
-              headerTitle: () => (
-                <Link href={getLogoHref()} asChild>
-                  <Pressable>
-                    <Image
-                      source={require('../../../assets/logokoordblack.png')}
-                      style={{ width: 150, height: 40, resizeMode: 'contain' }}
-                    />
-                  </Pressable>
-                </Link>
-              ),
-              drawerStyle: { backgroundColor: theme.colors.pageBackground, width: 260 },
-              drawerActiveTintColor: "#2563EB",
-              drawerLabelStyle: { fontSize: 16, fontWeight: "500" },
-              drawerItemStyle: { display: 'none' }                                                                                                                  
-            }}
-          >
-            <Drawer.Screen
-              name="dashboard"
-              options={{
-                title: "Dashboard",
-                drawerIcon: ({ color, size }: { color: string; size: number }) => (
-                  <Ionicons name="home-outline" color={color} size={size} />
-                ),
-                drawerItemStyle: { display: 'flex' },
-              }}
-            />
-            <Drawer.Screen
-              name="map-overview"
-              options={{
-                title: "Map Overview",
-                drawerIcon: ({ color, size }: { color: string; size: number }) => (
-                  <Ionicons name="map-outline" color={color} size={size} />
-                ),
-                drawerItemStyle: { display: 'flex' },
-              }}
-            />
-            <Drawer.Screen
-              name="location-replay"
-              options={{
-                title: "Location Replay",
-                drawerIcon: ({ color, size }: { color: string; size: number }) => (
-                  <Ionicons name="timer-outline" color={color} size={size} />
-                ),
-                drawerItemStyle: { display: 'flex' },
-              }}
-            />
-            <Drawer.Screen
-              name="employees"
-              options={{
-                title: "Employees",
-                drawerIcon: ({ color, size }: { color: string; size: number }) => (
-                  <Ionicons name="people-outline" color={color} size={size} />
-                ),
-                drawerItemStyle: { display: 'flex' },
-              }}
-            />
-            <Drawer.Screen
-              name="projects"
-              options={{
-                title: "Projects",
-                drawerIcon: ({ color, size }: { color: string; size: number }) => (
-                  <Ionicons name="folder-outline" color={color} size={size} />
-                ),
-                drawerItemStyle: { display: 'flex' },
-              }}
-            />
-
-            <Drawer.Screen
-              name="worker-assignments"
-              options={{
-                title: "Worker Assignments",
-                drawerIcon: ({ color, size }: { color: string; size: number }) => (
-                  <Ionicons name="calendar-outline" color={color} size={size} />
-                ),
-                drawerItemStyle: { display: 'flex' },
-              }}
-            />
-
-            <Drawer.Screen
-              name="corrections"
-              options={{
-                title: "Session Corrections",
-                drawerIcon: ({ color, size }: { color: string; size: number }) => (
-                  <Ionicons name="construct-outline" color={color} size={size} />
-                ),
-                drawerItemStyle: { display: 'flex' },
-              }}
-            />
-            <Drawer.Screen
-              name="reports"
-              options={{
-                title: "Reports",
-                drawerIcon: ({ color, size }: { color: string; size: number }) => (
-                  <Ionicons name="document-text-outline" color={color} size={size} />
-                ),
-                drawerItemStyle: { display: 'flex' },
-              }}
-            />
-            <Drawer.Screen
-              name="account"
-              options={{
-                title: "Account",
-                drawerIcon: ({ color, size }: { color: string; size: number }) => (
-                  <Ionicons name="person-circle-outline" color={color} size={size} />
-                ),
-                drawerItemStyle: { display: 'flex' },
-              }}
-            />
-            <Drawer.Screen
-              name="company-setup"
-              options={{ headerShown: false }}
-            />
-            <Drawer.Screen
-              name="setup-complete"
-            />
-          </Drawer>
+          <View style={{ flex: 1, flexDirection: 'row', backgroundColor: theme.colors.pageBackground }}>
+            <ManagerSidebar />
+            <View style={{ flex: 1 }}>
+              <Slot />
+            </View>
+          </View>
         </ManagerProviders>
       ) : (
-        // 📱 Mobile → Tabs
         <ManagerProviders>
           <BottomTabs
             screenOptions={{
               headerShown: false,
               tabBarActiveTintColor: theme.colors.cardBackground,
-                      tabBarStyle: {
-                        backgroundColor: "rgba(0,0,0,0.25)",
-                        borderTopWidth: 0,
-                        elevation: 0,
-                        position: "absolute",
-                        bottom: 0,
-                        left: 0,
-                        right: 0,
-                      },          tabBarLabelStyle: {
+              tabBarStyle: {
+                backgroundColor: "rgba(0,0,0,0.25)",
+                borderTopWidth: 0,
+                elevation: 0,
+                position: "absolute",
+                bottom: 0,
+                left: 0,
+                right: 0,
+              },
+              tabBarLabelStyle: {
                 fontSize: 12,
                 fontWeight: "600",
               },
@@ -268,7 +144,6 @@ export default function TabsLayout() { // Renamed from ManagerLayout
                 ),
               }}
             />
-
             <BottomTabs.Screen
               name="worker-assignments"
               options={{

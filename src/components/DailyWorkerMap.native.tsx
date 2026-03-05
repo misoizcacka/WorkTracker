@@ -1,11 +1,12 @@
 import React, { useMemo } from 'react';
-import MapView, { Marker, Polyline } from 'react-native-maps'; // Import for native maps
-import { View, StyleSheet, Text } from 'react-native';
-import { FeatureCollection, Point, LineString, Feature } from 'geojson'; // Still need GeoJSON types for interfaces
+import MapView, { Marker, Polyline, Callout } from 'react-native-maps'; // Import for native maps
+import { View, StyleSheet } from 'react-native';
+import { Text } from './Themed'; // Use project-specific Text component
+import { FeatureCollection, Point, LineString } from 'geojson';
 import moment from 'moment';
-import { Assignment, LocationEvent } from '~/hooks/useMapGeoJSON'; // Import Assignment and LocationEvent
+import { Assignment, LocationEvent } from '~/hooks/useMapGeoJSON';
+import { theme } from '~/theme';
 
-// Props for the DailyWorkerMap component
 export interface DailyWorkerMapProps {
   assignments: Assignment[];
   locationEvents: LocationEvent[];
@@ -14,19 +15,19 @@ export interface DailyWorkerMapProps {
     longitude: number;
     latitudeDelta: number;
     longitudeDelta: number;
-    zoom?: number; // Added optional zoom property
+    zoom?: number;
   };
   region?: {
     latitude: number;
     longitude: number;
     latitudeDelta: number;
     longitudeDelta: number;
-    zoom?: number; // Added optional zoom property
+    zoom?: number;
   };
   zoom?: number;
   onWebZoomChange?: (zoom: number) => void;
-  workerId: string; // Pass workerId for map context/labels
-  style?: any; // Use 'any' for React Native style prop
+  workerId: string;
+  style?: any;
 
   // GeoJSON props that will be passed down
   assignmentPointsGeoJSON: FeatureCollection<Point>;
@@ -37,7 +38,6 @@ export interface DailyWorkerMapProps {
 const DailyWorkerMapNative: React.FC<DailyWorkerMapProps> = (props) => {
   const {
     assignments,
-    locationEvents,
     region,
     style,
     assignmentPointsGeoJSON,
@@ -72,30 +72,40 @@ const DailyWorkerMapNative: React.FC<DailyWorkerMapProps> = (props) => {
     if (!assignmentPointsGeoJSON || assignmentPointsGeoJSON.features.length === 0) return [];
     return assignmentPointsGeoJSON.features.map(feature => {
       const coordinates = (feature.geometry as Point).coordinates;
+      const props = feature.properties;
+      
+      const start = moment(props?.startTime);
+      const end = moment(props?.endTime);
+      const duration = moment.duration(end.diff(start));
+      const hours = Math.floor(duration.asHours());
+      const minutes = duration.minutes();
+
       return {
         latitude: coordinates[1],
         longitude: coordinates[0],
-        title: feature.properties?.name || '',
-        description: `Assignment ${feature.properties?.assignmentOrder || ''}`,
-        id: feature.properties?.id || '',
-        assignmentOrder: feature.properties?.assignmentOrder || 0,
+        title: props?.name || '',
+        address: props?.address || '',
+        startTime: start.format('HH:mm'),
+        endTime: end.format('HH:mm'),
+        duration: `${hours}h ${minutes}m`,
+        id: props?.id || '',
+        assignmentOrder: props?.assignmentOrder || 0,
       };
-    }).sort((a,b) => a.assignmentOrder - b.assignmentOrder); // Ensure markers are sorted
+    }).sort((a,b) => a.assignmentOrder - b.assignmentOrder);
   }, [assignmentPointsGeoJSON]);
-
 
   return (
     <View style={StyleSheet.flatten([styles.mapContainer, style])}>
       <MapView
         style={styles.map}
-        initialRegion={region} // Use region directly for initial, can add onRegionChange for controlled
+        initialRegion={region}
         region={region}
       >
         {/* Render full trail */}
         {trailCoordinates.length > 1 && (
           <Polyline
             coordinates={trailCoordinates}
-            strokeColor="#888888" // Dark gray
+            strokeColor="#888888"
             strokeWidth={2}
             lineCap="round"
             lineJoin="round"
@@ -108,7 +118,7 @@ const DailyWorkerMapNative: React.FC<DailyWorkerMapProps> = (props) => {
           <Polyline
             key={`segment-${segIndex}`}
             coordinates={segment}
-            strokeColor="#007bff" // Blue
+            strokeColor={theme.colors.primary}
             strokeWidth={4}
             lineCap="round"
             lineJoin="round"
@@ -117,17 +127,34 @@ const DailyWorkerMapNative: React.FC<DailyWorkerMapProps> = (props) => {
         ))}
 
         {/* Render assignment points */}
-        {assignmentMarkers.map((marker, index) => (
+        {assignmentMarkers.map((marker) => (
           <Marker
-            key={marker.id}
+            key={`${marker.id}-${marker.assignmentOrder}`}
             coordinate={marker}
-            title={marker.title}
-            description={marker.description}
             zIndex={3}
           >
             <View style={styles.assignmentMarker}>
-              <Text style={styles.assignmentMarkerText}>{marker.assignmentOrder}</Text>
+              <Text style={styles.assignmentMarkerText} fontType="bold">{marker.assignmentOrder}</Text>
             </View>
+            <Callout tooltip>
+              <View style={styles.calloutContainer}>
+                <Text style={styles.calloutTitle} fontType="bold">{marker.title}</Text>
+                {marker.address ? <Text style={styles.calloutAddress} fontType="regular">{marker.address}</Text> : null}
+                <View style={styles.calloutDivider} />
+                <View style={styles.calloutRow}>
+                  <Text style={styles.calloutLabel} fontType="medium">Entered: </Text>
+                  <Text style={styles.calloutValue} fontType="regular">{marker.startTime}</Text>
+                </View>
+                <View style={styles.calloutRow}>
+                  <Text style={styles.calloutLabel} fontType="medium">Exited: </Text>
+                  <Text style={styles.calloutValue} fontType="regular">{marker.endTime}</Text>
+                </View>
+                <View style={[styles.calloutRow, {marginTop: 4}]}>
+                  <Text style={styles.calloutLabel} fontType="medium">Total Time: </Text>
+                  <Text style={[styles.calloutValue, {color: theme.colors.primary}]} fontType="bold">{marker.duration}</Text>
+                </View>
+              </View>
+            </Callout>
           </Marker>
         ))}
       </MapView>
@@ -145,19 +172,59 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
   },
   assignmentMarker: {
-    backgroundColor: '#28a745',
-    width: 24,
-    height: 24,
-    borderRadius: 12,
+    backgroundColor: theme.colors.success,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 2,
     borderColor: '#ffffff',
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
   },
   assignmentMarkerText: {
     color: '#ffffff',
     fontSize: 12,
-    fontWeight: 'bold',
+  },
+  calloutContainer: {
+    backgroundColor: theme.colors.cardBackground,
+    borderRadius: 8,
+    padding: 12,
+    width: 200,
+    borderWidth: 1,
+    borderColor: theme.colors.borderColor,
+  },
+  calloutTitle: {
+    fontSize: 14,
+    color: theme.colors.headingText,
+    marginBottom: 2,
+  },
+  calloutAddress: {
+    fontSize: 11,
+    color: theme.colors.bodyText,
+    marginBottom: 8,
+  },
+  calloutDivider: {
+    height: 1,
+    backgroundColor: theme.colors.borderColor,
+    marginBottom: 8,
+  },
+  calloutRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 2,
+  },
+  calloutLabel: {
+    fontSize: 11,
+    color: theme.colors.bodyText,
+  },
+  calloutValue: {
+    fontSize: 11,
+    color: theme.colors.headingText,
   },
 });
 

@@ -3,5 +3,20 @@
         <service
             android:name="app.koord.backgroundlocation.PeriodicLocationTrackingService"
             android:foregroundServiceType="location" />
+        
+        <receiver
+            android:name="app.koord.backgroundlocation.GeofenceBroadcastReceiver"
+            android:enabled="true"
+            android:exported="true" />
+
+        <receiver
+            android:name="app.koord.backgroundlocation.BootReceiver"
+            android:enabled="true"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.QUICKBOOT_POWERON" />
+            </intent-filter>
+        </receiver>
     </application>
 </manifest>

@@ -1,4 +1,4 @@
-import React, { useState, useContext, useCallback, useMemo, useEffect } from 'react';
+import React, { useState, useContext, useCallback, useMemo, useEffect, useRef } from 'react';
 import { supabase } from '../utils/supabase';
 import {
   Project,
@@ -39,7 +39,7 @@ import NetInfo, { NetInfoState } from '@react-native-community/netinfo';
 import * as SQLite from 'expo-sqlite'; // Import SQLite for typing (though no longer SQLiteTransaction)
 import AsyncStorage from '@react-native-async-storage/async-storage'; // Import AsyncStorage
 import moment from 'moment';
-import { randomUUID } from 'expo-crypto';
+import { v4 as randomUUID } from 'uuid';
 
 export type AssignmentStatus = 'active' | 'completed' | 'next' | 'pending';
 
@@ -55,6 +55,7 @@ interface AssignmentsContextType {
   error: string | null;
   loadAssignmentsForDate: (date: string, workerIds: string[], forceFetchFromSupabase?: boolean) => Promise<void>;
   loadWorkSessionsForDate: (date: string, workerId: string) => Promise<void>;
+  loadCommonLocations: () => Promise<void>;
   clearAssignments: () => void;
   insertAssignmentStep: (
     record: Omit<AssignmentRecord, 'id' | 'created_at' | 'created_by' | 'company_id'>
@@ -106,14 +107,27 @@ export function AssignmentsProvider({ children }: { children: React.ReactNode })
 
   const [activeWorkSession, setActiveWorkSession] = useState<WorkSession | null>(null);
   const [loadedWorkSessions, setLoadedWorkSessions] = useState<WorkSession[]>([]);
+  const loadingDates = useRef(new Set<string>());
   const [lastCompletedSortKey, setLastCompletedSortKey] = useState<string | null>(null);
   const [lastCheckoutAssignmentId, setLastCheckoutAssignmentId] = useState<string | null>(null);
   const [lastCheckoutDate, setLastCheckoutDate] = useState<string | null>(null); // YYYY-MM-DD
+
+  const loadCommonLocations = useCallback(async () => {
+    try {
+      const data = await fetchCommonLocations();
+      if (data) {
+        setCommonLocations(data);
+      }
+    } catch (err: any) {
+      console.error("Failed to load common locations:", err);
+    }
+  }, []);
 
   // Initialize SQLite DB and listen for network changes, ONLY for workers.
   useEffect(() => {
     if (userRole === 'worker') {
       getDb(); // Initialize the DB
+      loadCommonLocations(); // Load common locations
 
       const unsubscribe = NetInfo.addEventListener((state: NetInfoState) => {
         setIsOffline(state.isConnected === false);
@@ -123,7 +137,7 @@ export function AssignmentsProvider({ children }: { children: React.ReactNode })
         unsubscribe();
       };
     }
-  }, [userRole]);
+  }, [userRole, loadCommonLocations]);
 
   // Load last checkout data from AsyncStorage on mount
   useEffect(() => {
@@ -245,6 +259,14 @@ export function AssignmentsProvider({ children }: { children: React.ReactNode })
   const loadAssignmentsForDate = useCallback(
     async (date: string, workerIds: string[], forceFetchFromSupabase = false) => {
       if (!userCompanyId || workerIds.length === 0) return;
+      
+      const loadingKey = `${date}_${workerIds.join(',')}`;
+      if (loadingDates.current.has(loadingKey)) {
+        console.log(`Assignments for ${loadingKey} already loading, skipping duplicate call.`);
+        return;
+      }
+      
+      loadingDates.current.add(loadingKey);
       setIsLoading(true);
       setError(null);
       try {
@@ -260,44 +282,53 @@ export function AssignmentsProvider({ children }: { children: React.ReactNode })
 
           if (userRole === 'worker') {
             const db = await getDb();
-            await db.withTransactionAsync(async () => {
-              await db.runAsync(`DELETE FROM local_assignments WHERE worker_id = ? AND assigned_date = ?;`, workerIds[0], date);
-              for (const assign of fetchedAssignments) {
-                await db.runAsync(
-                  `INSERT INTO local_assignments (id, company_id, worker_id, assigned_date, sort_key, ref_id, ref_type, start_time, created_at, created_by, synced) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`,
-                  [
-                    assign.id,
-                    assign.company_id,
-                    assign.worker_id,
-                    assign.assigned_date,
-                    assign.sort_key,
-                    assign.ref_id,
-                    assign.ref_type,
-                    assign.start_time || null,
-                    assign.created_at,
-                    assign.created_by,
-                    1
-                  ]
-                );
-              }
-            });
+            // We use sequential runAsync instead of withTransactionAsync to prevent
+            // "cannot start a transaction within a transaction" errors during app init
+            // where multiple components might trigger a sync simultaneously.
+            await db.runAsync(`DELETE FROM local_assignments WHERE worker_id = ? AND assigned_date = ?;`, workerIds[0], date);
+            for (const assign of fetchedAssignments) {
+              await db.runAsync(
+                `INSERT INTO local_assignments (id, company_id, worker_id, assigned_date, sort_key, ref_id, ref_type, start_time, created_at, created_by, synced) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`,
+                [
+                  assign.id,
+                  assign.company_id,
+                  assign.worker_id,
+                  assign.assigned_date,
+                  assign.sort_key,
+                  assign.ref_id,
+                  assign.ref_type,
+                  assign.start_time || null,
+                  assign.created_at,
+                  assign.created_by,
+                  1
+                ]
+              );
+            }
           }
         }
         
+        if (forceFetchFromSupabase) {
+          await loadCommonLocations();
+        }
+
         setAssignments((prev: AssignmentRecord[]) => {
-          const newAssignments = prev.filter(a => !fetchedAssignments.some(fa => fa.id === a.id));
-          newAssignments.push(...fetchedAssignments);
-          return newAssignments;
+          // Remove ALL existing assignments for this date and these workers to avoid stale/deleted data
+          const filtered = prev.filter(a => 
+            !(a.assigned_date === date && workerIds.includes(a.worker_id))
+          );
+          // Add the newly fetched ones
+          return [...filtered, ...fetchedAssignments];
         });
 
       } catch (err: any) {
         console.error("CRITICAL: Error in loadAssignmentsForDate:", err);
         setError(err.message);
       } finally {
+        loadingDates.current.delete(loadingKey);
         setIsLoading(false);
       }
     },
-    [userCompanyId, isOffline, userRole]
+    [userCompanyId, isOffline, userRole, loadCommonLocations]
   );
   
   // If there's an active session from a previous day, load its data
@@ -329,6 +360,7 @@ export function AssignmentsProvider({ children }: { children: React.ReactNode })
   ) => {
     if (!userCompanyId || !user?.id) return;
     const newRecord = {
+      id: randomUUID(), // Generate a UUID for the new assignment
       ...record,
       company_id: userCompanyId,
       created_by: user.id,
@@ -415,32 +447,10 @@ export function AssignmentsProvider({ children }: { children: React.ReactNode })
         console.error("Failed to create Supabase work session:", err);
         throw err;
       }
-    }
-
-
-    
-    const locationEvent = {
-        company_id: userCompanyId,
-        worker_id: user.id,
-        assignment_id: assignmentId,
-        type: 'enter_geofence',
-        latitude: location.latitude,
-        longitude: location.longitude,
-        notes: 'Checked in',
-    };
-
-    if (isOffline) {
-        await insertLocalLocationEvent({
-            ...locationEvent,
-            id: randomUUID(),
-            created_at: new Date().toISOString(),
-            synced: 0,
-        });
-    } else {
-        await insertLocationEvent(locationEvent);
-    }
-
-  }, [user, userCompanyId, isOffline]);
+        }
+        // --- Removed explicit location event insertion ---
+        // The native background module now handles geofence entry/exit events.
+      }, [user, userCompanyId, isOffline]);
 
   const endWorkSession = useCallback(async (sessionId: string, location: { latitude: number; longitude: number }) => {
     if (!user?.id || !userCompanyId) return;
@@ -451,28 +461,14 @@ export function AssignmentsProvider({ children }: { children: React.ReactNode })
         throw new Error("Session to end not found.");
     }
     
-    const locationEvent = {
-        company_id: sessionToEnd.company_id,
-        worker_id: sessionToEnd.worker_id,
-        assignment_id: sessionToEnd.assignment_id,
-        type: 'exit_geofence',
-        latitude: location.latitude,
-        longitude: location.longitude,
-        notes: 'Checked out',
-    };
-
     // Optimistically update UI first for immediate feedback
     setActiveWorkSession(null);
     const updatedSessionOptimistic = { ...sessionToEnd, end_time: new Date().toISOString(), synced: isOffline ? false : true };
     setLoadedWorkSessions(prev => prev.map(s => (s.id === sessionId ? updatedSessionOptimistic : s)));
 
     if (isOffline) {
-        await insertLocalLocationEvent({
-            ...locationEvent,
-            id: randomUUID(),
-            created_at: new Date().toISOString(),
-            synced: 0,
-        });
+        // --- Removed explicit location event insertion ---
+        // The native background module now handles geofence entry/exit events.
 
         const updatedSession = { ...sessionToEnd, end_time: new Date().toISOString(), synced: false }; // Offline sessions are not synced
         await updateLocalWorkSession(updatedSession);
@@ -492,10 +488,7 @@ export function AssignmentsProvider({ children }: { children: React.ReactNode })
     } else { // Online path
         try {
             // Run network requests in parallel
-            const [locationEventResult, endedSession] = await Promise.all([
-                insertLocationEvent(locationEvent),
-                endWorkSessionService(sessionId)
-            ]);
+            const endedSession = await endWorkSessionService(sessionId); // Removed insertLocationEvent call
 
             // If everything successful, update AsyncStorage and ensure final UI state reflects synced data
             if (endedSession) {
@@ -589,6 +582,7 @@ export function AssignmentsProvider({ children }: { children: React.ReactNode })
     error,
     loadAssignmentsForDate,
     loadWorkSessionsForDate,
+    loadCommonLocations,
     clearAssignments,
     insertAssignmentStep,
     updateAssignmentSortKey,
