@@ -1,10 +1,8 @@
 import * as SQLite from 'expo-sqlite';
 import { WorkSession } from '~/types';
 
-// Define the database name
 const DB_NAME = 'workhourstracker.db';
 
-// Define table creation SQL statements
 const CREATE_LOCAL_ASSIGNMENTS_TABLE_SQL = `
 CREATE TABLE IF NOT EXISTS local_assignments (
     id TEXT PRIMARY KEY NOT NULL,
@@ -54,35 +52,25 @@ let _dbPromise: Promise<SQLite.SQLiteDatabase> | null = null;
 
 async function initializeDb(): Promise<SQLite.SQLiteDatabase> {
   const db = await SQLite.openDatabaseAsync(DB_NAME);
-
   await db.execAsync(
     CREATE_LOCAL_ASSIGNMENTS_TABLE_SQL + '\n' +
     CREATE_LOCAL_WORK_SESSIONS_TABLE_SQL + '\n' +
     CREATE_LOCAL_LOCATION_EVENTS_TABLE_SQL
   );
-
-  console.log('SQLite database initialized and tables created.');
   return db;
 }
 
 export function getDb(): Promise<SQLite.SQLiteDatabase> {
-  if (_db) {
-    return Promise.resolve(_db);
-  }
+  if (_db) return Promise.resolve(_db);
   if (!_dbPromise) {
     _dbPromise = initializeDb().then(db => {
       _db = db;
       return db;
-    }).catch(error => {
-      console.error("Failed to initialize database:", error);
-      _dbPromise = null; // Reset promise on failure
-      throw error;
     });
   }
   return _dbPromise;
 }
 
-// Export some basic CRUD for debugging/testing (can be expanded later)
 export async function insertLocalAssignment(assignment: any) {
   const db = await getDb();
   return db.runAsync(
@@ -93,11 +81,10 @@ export async function insertLocalAssignment(assignment: any) {
 
 export async function getLocalAssignments(workerId: string, assignedDate: string): Promise<any[]> {
   const db = await getDb();
-  const result = await db.getAllAsync(
+  return await db.getAllAsync(
     `SELECT * FROM local_assignments WHERE worker_id = ? AND assigned_date = ? ORDER BY sort_key`,
     workerId, assignedDate
   );
-  return result;
 }
 
 export async function insertLocalWorkSession(session: any) {
@@ -118,53 +105,14 @@ export async function updateLocalWorkSession(session: any) {
 
 export async function getLocalWorkSessions(workerId: string, assignedDate: string): Promise<any[]> {
   const db = await getDb();
-  type WorkSessionRow = {
-    id: string;
-    created_at: string;
-    company_id: string;
-    worker_id: string;
-    assignment_id: string;
-    start_time: string;
-    end_time: string | null;
-    total_break_minutes: number;
-    synced: number;
-    "assignment.sort_key": string;
-  };
-
   const result = await db.getAllAsync(
-    `SELECT
-        lws.id,
-        lws.created_at,
-        lws.company_id,
-        lws.worker_id,
-        lws.assignment_id,
-        lws.start_time,
-        lws.end_time,
-        lws.total_break_minutes,
-        lws.synced,
-        la.sort_key AS "assignment.sort_key" -- Alias for nested property
-     FROM local_work_sessions lws
-     JOIN local_assignments la ON lws.assignment_id = la.id
-     WHERE lws.worker_id = ?
-       AND SUBSTR(lws.start_time, 1, 10) = ? -- Compare YYYY-MM-DD part of start_time
-     ORDER BY lws.start_time ASC`,
+    `SELECT lws.*, la.sort_key AS "assignment.sort_key" FROM local_work_sessions lws JOIN local_assignments la ON lws.assignment_id = la.id WHERE lws.worker_id = ? AND SUBSTR(lws.start_time, 1, 10) = ? ORDER BY lws.start_time ASC`,
     workerId, assignedDate
-  ) as WorkSessionRow[];
+  ) as any[];
 
-  // Manually construct the nested assignment object
   return result.map((row) => ({
-    id: row.id,
-    created_at: row.created_at,
-    company_id: row.company_id,
-    worker_id: row.worker_id,
-    assignment_id: row.assignment_id,
-    start_time: row.start_time,
-    end_time: row.end_time,
-    total_break_minutes: row.total_break_minutes,
-    synced: row.synced,
-    assignment: {
-      sort_key: row["assignment.sort_key"]
-    }
+    ...row,
+    assignment: { sort_key: row["assignment.sort_key"] }
   }));
 }
 
@@ -177,19 +125,15 @@ export async function insertLocalLocationEvent(event: any) {
 }
 
 export async function getUnsyncedLocationEvents(): Promise<any[]> {
-    const db = await getDb();
-    const result = await db.getAllAsync(`SELECT * FROM local_location_events WHERE synced = 0`);
-    return result;
+  const db = await getDb();
+  return await db.getAllAsync(`SELECT * FROM local_location_events WHERE synced = 0`);
 }
 
 export async function markLocationEventsAsSynced(eventIds: number[]) {
-    if (eventIds.length === 0) return;
-    const db = await getDb();
-    const placeholders = eventIds.map(() => '?').join(',');
-    return db.runAsync(
-        `UPDATE local_location_events SET synced = 1 WHERE id IN (${placeholders})`,
-        ...eventIds
-    );
+  if (eventIds.length === 0) return;
+  const db = await getDb();
+  const placeholders = eventIds.map(() => '?').join(',');
+  return db.runAsync(`UPDATE local_location_events SET synced = 1 WHERE id IN (${placeholders})`, ...eventIds);
 }
 
 export async function getUnsyncedWorkSessions(): Promise<WorkSession[]> {
@@ -202,8 +146,5 @@ export async function markWorkSessionsAsSynced(sessionIds: string[]) {
   if (sessionIds.length === 0) return;
   const db = await getDb();
   const placeholders = sessionIds.map(() => '?').join(',');
-  return db.runAsync(
-      `UPDATE local_work_sessions SET synced = 1 WHERE id IN (${placeholders})`,
-      ...sessionIds
-  );
+  return db.runAsync(`UPDATE local_work_sessions SET synced = 1 WHERE id IN (${placeholders})`, ...sessionIds);
 }
