@@ -15,7 +15,7 @@ import { I18nextProvider } from 'react-i18next';
 import i18n from '../i18n';
 import { theme } from '../theme';
 
-import Toast from 'react-native-toast-message';
+import Toast, { BaseToast, ErrorToast, ToastConfig } from 'react-native-toast-message';
 
 import { useFonts } from 'expo-font';
 import * as SplashScreen from 'expo-splash-screen';
@@ -30,6 +30,102 @@ import {
 
 // Keep the splash screen visible while we fetch resources
 SplashScreen.preventAutoHideAsync();
+
+const toastConfig: ToastConfig = {
+  success: (props) => (
+    <BaseToast
+      {...props}
+      style={{ 
+        borderLeftColor: theme.colors.success,
+        backgroundColor: 'white',
+        borderRadius: theme.radius.md,
+        borderWidth: 1,
+        borderColor: theme.colors.borderColor,
+        height: 'auto',
+        minHeight: 60,
+        paddingVertical: 10,
+        ...Platform.select({
+          web: {
+            boxShadow: '0px 4px 12px rgba(0,0,0,0.08)',
+          }
+        })
+      }}
+      contentContainerStyle={{ paddingHorizontal: 15 }}
+      text1Style={{
+        fontSize: theme.fontSizes.md,
+        fontFamily: theme.font['bold'],
+        color: theme.colors.headingText
+      }}
+      text2Style={{
+        fontSize: theme.fontSizes.sm,
+        fontFamily: theme.font['regular'],
+        color: theme.colors.bodyText
+      }}
+    />
+  ),
+  error: (props) => (
+    <ErrorToast
+      {...props}
+      style={{ 
+        borderLeftColor: theme.colors.danger,
+        backgroundColor: 'white',
+        borderRadius: theme.radius.md,
+        borderWidth: 1,
+        borderColor: theme.colors.borderColor,
+        height: 'auto',
+        minHeight: 60,
+        paddingVertical: 10,
+        ...Platform.select({
+          web: {
+            boxShadow: '0px 4px 12px rgba(0,0,0,0.08)',
+          }
+        })
+      }}
+      contentContainerStyle={{ paddingHorizontal: 15 }}
+      text1Style={{
+        fontSize: theme.fontSizes.md,
+        fontFamily: theme.font['bold'],
+        color: theme.colors.headingText
+      }}
+      text2Style={{
+        fontSize: theme.fontSizes.sm,
+        fontFamily: theme.font['regular'],
+        color: theme.colors.bodyText
+      }}
+    />
+  ),
+  info: (props) => (
+    <BaseToast
+      {...props}
+      style={{ 
+        borderLeftColor: theme.colors.secondary,
+        backgroundColor: 'white',
+        borderRadius: theme.radius.md,
+        borderWidth: 1,
+        borderColor: theme.colors.borderColor,
+        height: 'auto',
+        minHeight: 60,
+        paddingVertical: 10,
+        ...Platform.select({
+          web: {
+            boxShadow: '0px 4px 12px rgba(0,0,0,0.08)',
+          }
+        })
+      }}
+      contentContainerStyle={{ paddingHorizontal: 15 }}
+      text1Style={{
+        fontSize: theme.fontSizes.md,
+        fontFamily: theme.font['bold'],
+        color: theme.colors.headingText
+      }}
+      text2Style={{
+        fontSize: theme.fontSizes.sm,
+        fontFamily: theme.font['regular'],
+        color: theme.colors.bodyText
+      }}
+    />
+  )
+};
 
 export default function RootLayout() {
   const [fontsLoaded, fontError] = useFonts({
@@ -73,7 +169,7 @@ export default function RootLayout() {
           </EmployeesProvider>
         </I18nextProvider>
       </SessionProvider>
-      <Toast />
+      <Toast config={toastConfig} />
     </SafeAreaProvider>
   );
 }

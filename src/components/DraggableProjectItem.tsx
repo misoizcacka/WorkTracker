@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Platform } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, Platform } from 'react-native';
+import { Text } from './Themed';
 import { Draggable, DraggableProvided } from '@hello-pangea/dnd';
 import { Project } from '../context/ProjectsContext';
 import { theme } from '~/theme';
@@ -33,8 +34,8 @@ const DraggableProjectItem: React.FC<DraggableProjectItemProps> = ({
     <View style={[styles.container, { backgroundColor: hexToRgba(item.color, 0.1) }, isSelected && styles.selected]}>
       <View style={[styles.colorIndicator, { backgroundColor: item.color }]} />
       <View style={styles.itemInfo}>
-        <Text style={styles.itemName}>{item.name}</Text>
-        <Text style={styles.itemSubtitle}>{item.address}</Text>
+        <Text style={styles.itemName} fontType="medium">{item.name}</Text>
+        <Text style={styles.itemSubtitle} fontType="regular">{item.address}</Text>
       </View>
       {isSelected && <Ionicons name="checkmark-circle" size={20} color={theme.colors.primary} />}
     </View>

@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Platform } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, Platform } from 'react-native';
+import { Text } from './Themed';
 import { Draggable, DraggableProvided } from '@hello-pangea/dnd';
 import { CommonLocation } from '~/types';
 import { theme } from '~/theme';
@@ -18,13 +19,16 @@ const DraggableLocationItem: React.FC<DraggableLocationItemProps> = ({
     <View style={styles.container}>
       <View style={[styles.colorIndicator, { backgroundColor: theme.colors.secondary }]} />
       <View style={styles.itemInfo}>
-        <Text style={styles.itemName}>{item.name}</Text>
+        <Text style={styles.itemName} fontType="medium">{item.name}</Text>
+        {item.address && (
+          <Text style={styles.itemSubtitle} fontType="regular">{item.address}</Text>
+        )}
       </View>
     </View>
   );
 
   return (
-    <Draggable draggableId={`location-${item.id}`} index={index}>
+    <Draggable draggableId={`common_location-${item.id}`} index={index}>
       {(provided: DraggableProvided) => (
         <div
           ref={provided.innerRef}
@@ -65,6 +69,10 @@ const styles = StyleSheet.create({
   itemName: {
     fontWeight: '500',
     color: theme.colors.headingText,
+  },
+  itemSubtitle: {
+    fontSize: 12,
+    color: theme.colors.bodyText,
   },
 });
 

@@ -113,6 +113,7 @@ export function AssignmentsProvider({ children }: { children: React.ReactNode })
   const [lastCheckoutDate, setLastCheckoutDate] = useState<string | null>(null); // YYYY-MM-DD
 
   const loadCommonLocations = useCallback(async () => {
+    setIsLoading(true);
     try {
       const data = await fetchCommonLocations();
       if (data) {
@@ -120,6 +121,9 @@ export function AssignmentsProvider({ children }: { children: React.ReactNode })
       }
     } catch (err: any) {
       console.error("Failed to load common locations:", err);
+      setError("Failed to load locations");
+    } finally {
+      setIsLoading(false);
     }
   }, []);
 
@@ -127,7 +131,6 @@ export function AssignmentsProvider({ children }: { children: React.ReactNode })
   useEffect(() => {
     if (userRole === 'worker') {
       getDb(); // Initialize the DB
-      loadCommonLocations(); // Load common locations
 
       const unsubscribe = NetInfo.addEventListener((state: NetInfoState) => {
         setIsOffline(state.isConnected === false);
@@ -137,7 +140,14 @@ export function AssignmentsProvider({ children }: { children: React.ReactNode })
         unsubscribe();
       };
     }
-  }, [userRole, loadCommonLocations]);
+  }, [userRole]);
+
+  // Load common locations for ALL authenticated users (managers and workers)
+  useEffect(() => {
+    if (userCompanyId) {
+      loadCommonLocations();
+    }
+  }, [userCompanyId, loadCommonLocations]);
 
   // Load last checkout data from AsyncStorage on mount
   useEffect(() => {

@@ -18,19 +18,24 @@ interface SidebarItemProps {
 }
 
 const SidebarItem = ({ icon, label, href, isActive, isExpanded }: SidebarItemProps) => {
+  const [isHovered, setIsHovered] = useState(false);
+
   return (
     <Link href={href as any} asChild>
       <Pressable 
+        onHoverIn={() => setIsHovered(true)}
+        onHoverOut={() => setIsHovered(false)}
         style={StyleSheet.flatten([
           styles.item, 
           isActive && styles.activeItem,
+          isHovered && !isActive && styles.hoveredItem,
           !isExpanded && styles.collapsedItem
         ])}
       >
         <Ionicons 
           name={icon} 
           size={22} 
-          color={isActive ? "#2563EB" : theme.colors.iconColor} 
+          color={isActive ? "#2563EB" : (isHovered ? "#1F2937" : theme.colors.iconColor)} 
         />
         {isExpanded && (
           <Text 
@@ -38,7 +43,8 @@ const SidebarItem = ({ icon, label, href, isActive, isExpanded }: SidebarItemPro
             fontType={isActive ? "bold" : "regular"}
             style={StyleSheet.flatten([
               styles.label, 
-              isActive && styles.activeLabel
+              isActive && styles.activeLabel,
+              isHovered && !isActive && styles.hoveredLabel
             ])}
           >
             {label}
@@ -51,6 +57,7 @@ const SidebarItem = ({ icon, label, href, isActive, isExpanded }: SidebarItemPro
 
 export const ManagerSidebar = () => {
   const [isExpanded, setIsExpanded] = useState(false);
+  const [isSignOutHovered, setIsSignOutHovered] = useState(false);
   const animation = useRef(new Animated.Value(SIDEBAR_COLLAPSED_WIDTH)).current;
   const pathname = usePathname();
   const { signOut } = useSession();
@@ -71,6 +78,7 @@ export const ManagerSidebar = () => {
     { icon: 'timer-outline', label: 'Location Replay', href: '/(manager)/location-replay' },
     { icon: 'people-outline', label: 'Employees', href: '/(manager)/employees' },
     { icon: 'folder-outline', label: 'Projects', href: '/(manager)/projects' },
+    { icon: 'pin-outline', label: 'Common Locations', href: '/(manager)/common-locations' },
     { icon: 'calendar-outline', label: 'Worker Assignments', href: '/(manager)/worker-assignments' },
     { icon: 'construct-outline', label: 'Session Corrections', href: '/(manager)/corrections' },
     { icon: 'document-text-outline', label: 'Reports', href: '/(manager)/reports' },
@@ -167,11 +175,29 @@ export const ManagerSidebar = () => {
         <View style={styles.bottomSection}>
           <Pressable 
             onPress={() => signOut()}
-            style={StyleSheet.flatten([styles.item, !isExpanded && styles.collapsedItem])}
+            onHoverIn={() => setIsSignOutHovered(true)}
+            onHoverOut={() => setIsSignOutHovered(false)}
+            style={StyleSheet.flatten([
+              styles.item, 
+              isSignOutHovered && styles.hoveredItem,
+              !isExpanded && styles.collapsedItem
+            ])}
           >
-            <Ionicons name="log-out-outline" size={22} color={theme.colors.iconColor} />
+            <Ionicons 
+              name="log-out-outline" 
+              size={22} 
+              color={isSignOutHovered ? "#1F2937" : theme.colors.iconColor} 
+            />
             {isExpanded && (
-              <Text fontType="regular" style={styles.label}>Sign Out</Text>
+              <Text 
+                fontType="regular" 
+                style={StyleSheet.flatten([
+                  styles.label,
+                  isSignOutHovered && styles.hoveredLabel
+                ])}
+              >
+                Sign Out
+              </Text>
             )}
           </Pressable>
         </View>
@@ -223,6 +249,9 @@ const styles = StyleSheet.create({
   activeItem: {
     backgroundColor: theme.colors.primaryMuted,
   },
+  hoveredItem: {
+    backgroundColor: "#F3F4F6",
+  },
   label: {
     marginLeft: 12,
     fontSize: theme.fontSizes.md,
@@ -233,6 +262,9 @@ const styles = StyleSheet.create({
   activeLabel: {
     color: "#2563EB",
     fontWeight: '600',
+  },
+  hoveredLabel: {
+    color: "#1F2937",
   },
   bottomSection: {
     paddingTop: 16,

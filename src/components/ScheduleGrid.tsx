@@ -122,6 +122,9 @@ const AssignmentBlock = React.memo(function AssignmentBlock({
         <View style={[styles.colorIndicator, { backgroundColor: theme.colors.secondary }]} />      
         <View style={styles.assignmentInfo}>
           <Text style={styles.assignmentName} numberOfLines={1} fontType="medium">{assignment.location.name}</Text>  
+          {assignment.location.address && (
+            <Text style={styles.assignmentAddress} numberOfLines={1} fontType="regular">{assignment.location.address}</Text>
+          )}
         </View>
       </View>
     ) : (

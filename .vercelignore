@@ -1,0 +1,12 @@
+node_modules
+.git
+android
+ios
+.expo
+web-build
+dist
+*.psd
+*.zip
+*.tar.gz
+.gradle
+build

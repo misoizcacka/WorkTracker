@@ -39,8 +39,9 @@ export interface Project {
 }
 
 export interface CommonLocation {
-  id:string;
+  id: string;
   name: string;
+  address: string | null;
   company_id: string;
   latitude: number | null;
   longitude: number | null;

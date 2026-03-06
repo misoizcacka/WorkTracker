@@ -75,3 +75,4 @@ modules/background-location/android/build/
 
 # Local properties
 local.properties
+.vercel

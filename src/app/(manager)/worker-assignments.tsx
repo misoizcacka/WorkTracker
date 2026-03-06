@@ -171,7 +171,12 @@ export default function ProjectAssignmentScreen() {
     }
 
     const assignedDateStr = moment(selectedDate).format('YYYY-MM-DD');
-    const [draggedItemType, draggedItemRefId] = draggableId.split(/-(.*)/s); 
+    
+    // Robust split: handles cases like project-ID or common_location-ID
+    // It finds the LAST dash to separate the prefix from the UUID
+    const lastDashIndex = draggableId.lastIndexOf('-');
+    const draggedItemType = draggableId.substring(0, lastDashIndex);
+    const draggedItemRefId = draggableId.substring(lastDashIndex + 1);
 
     const getWorkerAssignments = (workerId: string) => {
       return processedAssignments[workerId] || [];
@@ -225,9 +230,12 @@ export default function ProjectAssignmentScreen() {
 
       const tempSequence = Array.from(currentWorkerAssignments);
       tempSequence.splice(source.index, 1); // Remove from source
-      tempSequence.splice(destination.index, 0, movedAssignment); // Insert at destination (local simulation)
 
+      // Calculate the key for the GAP at the destination index BEFORE inserting the item back
       const newSortKey = calculateNewSortKey(destination.index, tempSequence as (ProcessedAssignmentStep | AssignmentRecord)[]);
+
+      // Update local sequence for any potential UI sync needs
+      tempSequence.splice(destination.index, 0, movedAssignment);
 
       try {
         await updateAssignmentSortKey(movedAssignment.id, newSortKey);

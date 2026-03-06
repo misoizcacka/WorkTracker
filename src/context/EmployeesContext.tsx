@@ -15,38 +15,48 @@ export interface EmployeesContextType {
 export const EmployeesContext = createContext<EmployeesContextType | null>(null);
 
 export function EmployeesProvider({ children }: { children: React.ReactNode }) {
-  const { userCompanyId, isCompanyIdLoading } = useSession(); // Get company ID from AuthContext
+  const { userCompanyId, isCompanyIdLoading } = useSession(); 
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [loading, setLoading] = useState(true);
-  const seatLimit = 10; // This could be dynamic based on subscription
+  const [seatLimit, setSeatLimit] = useState(0);
 
   useEffect(() => {
     if (isCompanyIdLoading) {
-      setLoading(true); // Still loading if company ID is loading from AuthContext
+      setLoading(true);
       return;
     }
     if (!userCompanyId) {
-      setEmployees([]); // Clear employees if no company ID
+      setEmployees([]);
+      setSeatLimit(0);
       setLoading(false);
       return;
     }
 
-    const fetchEmployees = async () => {
+    const fetchData = async () => {
       setLoading(true);
-      const { data, error } = await supabase.from('employees')
-        .select('*')
-        .eq('company_id', userCompanyId) // Filter by company ID
-        .order('created_at', { ascending: false });
+      
+      // Fetch Employees and Company seat limit in parallel
+      const [empRes, compRes] = await Promise.all([
+        supabase.from('employees')
+          .select('*')
+          .eq('company_id', userCompanyId)
+          .order('created_at', { ascending: false }),
+        supabase.from('companies')
+          .select('worker_seats')
+          .eq('id', userCompanyId)
+          .single()
+      ]);
 
-      if (error) {
-        console.error('Error fetching employees:', error);
-      } else {
-        setEmployees(data as Employee[]);
-      }
+      if (empRes.error) console.error('Error fetching employees:', empRes.error);
+      else setEmployees(empRes.data as Employee[]);
+
+      if (compRes.error) console.error('Error fetching company seats:', compRes.error);
+      else setSeatLimit(compRes.data?.worker_seats || 0);
+
       setLoading(false);
     };
 
-    fetchEmployees();
+    fetchData();
 
     // Setup real-time subscription for the specific company
     const employeeSubscription = supabase

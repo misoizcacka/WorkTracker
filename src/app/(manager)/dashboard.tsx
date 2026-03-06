@@ -1,105 +1,263 @@
-import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, ScrollView, ActivityIndicator, TouchableOpacity, Alert, Platform } from 'react-native';
-import { useRouter, Link } from 'expo-router';
+import React, { useState, useEffect, useContext, useMemo } from 'react';
+import { View, StyleSheet, ScrollView, ActivityIndicator, TouchableOpacity, Platform } from 'react-native';
+import { useRouter } from 'expo-router';
 import { useSession } from '../../context/AuthContext';
 import { supabase } from '../../utils/supabase';
 import { theme } from '../../theme';
 import AnimatedScreen from '../../components/AnimatedScreen';
 import { Card } from '../../components/Card';
-import { Ionicons } from '@expo/vector-icons'; // For icons
-import { Text } from '../../components/Themed'; // Import Themed Text
+import { Ionicons } from '@expo/vector-icons';
+import { Text } from '../../components/Themed';
 import { Button } from '../../components/Button';
+import { EmployeesContext } from '../../context/EmployeesContext';
+import moment from 'moment';
 
+interface DashboardStats {
+  totalWorkers: number;
+  workersOnline: number;
+  totalHoursToday: number;
+  activeSessions: any[];
+  monthToDateHours: number;
+  activeProjectsCount: number;
+  topWorkers: { name: string, hours: number }[];
+  idleWorkers: string[];
+  unassignedCount: number;
+}
 
-// Mock Data (will replace with real data from contexts/supabase later)
-const MOCKED_SUMMARY_DATA = {
-  totalWorkers: 15,
-  workersOnline: 10,
-  totalHoursToday: 75.5,
-  totalHoursThisWeek: 350.2,
-  monthlyCostEstimate: 1250.00,
-};
-
-const MOCKED_ACTIVITY_FEED = [
-  { id: '1', event: 'Worker John Doe clocked in', time: '08:03 AM' },
-  { id: '2', event: 'Worker Jane Smith started a break', time: '09:41 AM' },
-  { id: '3', event: 'Worker Mike Ross clocked out', time: '12:55 PM' },
-  { id: '4', event: 'Worker Rachel Green missed scheduled shift', time: '09:00 AM' },
-  { id: '5', event: 'Worker Harvey Specter completed Project Alpha', time: '04:30 PM' },
-];
-
-const MOCKED_WORKERS_DATA = [
-  { id: 'w1', name: 'John Doe', status: 'Clocked In', todayHours: 8, weekHours: 40, redFlags: [] },
-  { id: 'w2', name: 'Jane Smith', status: 'On Break', todayHours: 4, weekHours: 20, redFlags: [] },
-  { id: 'w3', name: 'Mike Ross', status: 'Clocked Out', todayHours: 5, weekHours: 25, redFlags: ['Missing Clock-out'] },
-  { id: 'w4', name: 'Harvey Specter', status: 'Clocked In', todayHours: 7, weekHours: 38, redFlags: ['Overtime Approaching'] },
-];
-
-const MOCKED_TIMESHEET_DATA = [
-  { worker: 'John Doe', totalHours: 40, overtime: 0, missingEntries: 0, status: 'Approved' },
-  { worker: 'Jane Smith', totalHours: 35, overtime: 3, missingEntries: 1, status: 'Pending' },
-  { worker: 'Mike Ross', totalHours: 20, overtime: 0, missingEntries: 0, status: 'Approved' },
-];
-
-const MOCKED_SCHEDULE_DATA = [
-  { worker: 'John Doe', status: 'On Site (Project Alpha)', late: false, absent: false },
-  { worker: 'Jane Smith', status: 'On Break', late: false, absent: false },
-  { worker: 'Mike Ross', status: 'Off Shift', late: false, absent: false },
-  { worker: 'Rachel Green', status: 'Absent', late: true, absent: true },
-];
-
-const MOCKED_ALERTS_DATA = [
-  { id: 'a1', type: 'warning', message: 'Worker Mike Ross: Missing clock-out for Project Beta.' },
-  { id: 'a2', type: 'info', message: 'Worker Harvey Specter: Overtime approaching (38/40h).' },
-  { id: 'a3', type: 'error', message: 'Subscription: 15/20 worker seats used. Consider upgrading.' },
-];
+interface ActivityEvent {
+  id: string;
+  type: 'work_session' | 'location_event' | 'message';
+  event: string;
+  time: string;
+  timestamp: Date;
+  projectName?: string;
+}
 
 export default function NewManagerDashboard() {
   const router = useRouter();
-  const { user, isLoading: isUserLoading } = useSession()!;
+  const { user, userCompanyId, userCompanyName, isLoading: isAuthLoading } = useSession();
+  const employeesContext = useContext(EmployeesContext);
 
-  const [organizationName, setOrganizationName] = useState('Your Organization');
-  const [subscriptionStatus, setSubscriptionStatus] = useState<string | null>(null);
-  const [organizationId, setOrganizationId] = useState<string | null>(null);
-  const [isOrganizationLoading, setIsOrganizationLoading] = useState(true);
+  const [stats, setStats] = useState<DashboardStats>({
+    totalWorkers: 0,
+    workersOnline: 0,
+    totalHoursToday: 0,
+    activeSessions: [],
+    monthToDateHours: 0,
+    activeProjectsCount: 0,
+    topWorkers: [],
+    idleWorkers: [],
+    unassignedCount: 0,
+  });
+  
+  const [activities, setActivities] = useState<ActivityEvent[]>([]);
+  const [isLoadingStats, setIsLoadingStats] = useState(true);
 
-  // Fetch organization name on component mount or user change
+  const employees = employeesContext?.employees || [];
+  const workers = useMemo(() => employees.filter(e => e.role === 'worker'), [employees]);
+  const totalWorkersCount = workers.length;
+
   useEffect(() => {
-    if (isUserLoading || !user) {
-      setIsOrganizationLoading(true);
-      return;
-    }
+    if (!userCompanyId) return;
 
-    const orgId = user.app_metadata?.organization_id as string;
-    const subStatus = user.app_metadata?.subscription_status as string;
+    const fetchDashboardData = async () => {
+      setIsLoadingStats(true);
+      try {
+        const today = moment().startOf('day').toISOString();
+        const startOfMonth = moment().startOf('month').toISOString();
+        const startOfWeek = moment().startOf('week').toISOString();
 
-    setOrganizationId(orgId);
-    setSubscriptionStatus(subStatus);
+        // 1. Fetch active sessions and projects
+        const { data: activeSessions, error: activeError } = await supabase
+          .from('work_sessions')
+          .select('*, employees(full_name), projects(name)')
+          .eq('company_id', userCompanyId)
+          .is('check_out_at', null);
 
-    if (orgId && subStatus === 'active') {
-      const fetchOrganizationName = async () => {
-        const { data, error } = await supabase
-          .from('organizations')
-          .select('name')
-          .eq('id', orgId)
-          .single();
+        if (activeError) throw activeError;
 
-        if (error) {
-          console.error("Error fetching organization name:", error.message);
-          setOrganizationName('Your Organization');
-        } else if (data) {
-          setOrganizationName(data.name || 'Your Organization');
-        }
-        setIsOrganizationLoading(false);
-      };
-      fetchOrganizationName();
-    } else {
-      setIsOrganizationLoading(false);
-    }
-  }, [user, isUserLoading]);
+        // Calculate unique active projects
+        const activeProjectIds = new Set(activeSessions?.map(s => s.project_id).filter(Boolean));
 
+        // 2. Fetch today's and month's sessions for hours calculation
+        const { data: monthSessions, error: sessionsError } = await supabase
+          .from('work_sessions')
+          .select('duration_minutes, check_in_at, worker_id')
+          .eq('company_id', userCompanyId)
+          .gte('check_in_at', startOfMonth)
+          .not('check_out_at', 'is', null);
 
-  if (isUserLoading || isOrganizationLoading) {
+        if (sessionsError) throw sessionsError;
+
+        const totalMinutesToday = monthSessions
+          ?.filter(s => moment(s.check_in_at).isSameOrAfter(today))
+          .reduce((acc, s) => acc + (s.duration_minutes || 0), 0) || 0;
+
+        const totalMinutesMonth = monthSessions?.reduce((acc, s) => acc + (s.duration_minutes || 0), 0) || 0;
+
+        // 3. Top Workers this week
+        const weeklyWorkersMap: Record<string, number> = {};
+        monthSessions
+          ?.filter(s => moment(s.check_in_at).isSameOrAfter(startOfWeek))
+          .forEach(s => {
+            weeklyWorkersMap[s.worker_id] = (weeklyWorkersMap[s.worker_id] || 0) + (s.duration_minutes || 0);
+          });
+
+        const topWorkers = Object.entries(weeklyWorkersMap)
+          .map(([id, mins]) => ({
+            name: workers.find(w => w.id === id)?.full_name || 'Worker',
+            hours: Math.round((mins / 60) * 10) / 10
+          }))
+          .sort((a, b) => b.hours - a.hours)
+          .slice(0, 3);
+
+        // 4. Idle Workers (not clocked in)
+        const onlineWorkerIds = new Set(activeSessions?.map(s => s.worker_id));
+        const idleWorkers = workers
+          .filter(w => !onlineWorkerIds.has(w.id))
+          .map(w => w.full_name)
+          .slice(0, 5);
+
+        // 5. Unassigned workers for today (based on assignments table)
+        const { data: todayAssignments } = await supabase
+          .from('worker_assignments')
+          .select('worker_id')
+          .eq('company_id', userCompanyId)
+          .eq('assigned_date', moment().format('YYYY-MM-DD'));
+        
+        const assignedWorkerIds = new Set(todayAssignments?.map(a => a.worker_id));
+        const unassignedCount = workers.filter(w => !assignedWorkerIds.has(w.id)).length;
+
+        setStats({
+          totalWorkers: totalWorkersCount,
+          workersOnline: activeSessions?.length || 0,
+          totalHoursToday: Math.round((totalMinutesToday / 60) * 10) / 10,
+          activeSessions: activeSessions || [],
+          monthToDateHours: Math.round((totalMinutesMonth / 60) * 10) / 10,
+          activeProjectsCount: activeProjectIds.size,
+          topWorkers,
+          idleWorkers,
+          unassignedCount,
+        });
+
+        // 6. Fetch recent activities (sessions, location events, and project messages)
+        const [sessionsRes, locationsRes, messagesRes] = await Promise.all([
+          supabase
+            .from('work_sessions')
+            .select('id, check_in_at, check_out_at, employees(full_name)')
+            .eq('company_id', userCompanyId)
+            .order('created_at', { ascending: false })
+            .limit(5),
+          supabase
+            .from('location_events')
+            .select('id, type, created_at, worker_id, employees(full_name)')
+            .eq('company_id', userCompanyId)
+            .order('created_at', { ascending: false })
+            .limit(5),
+          supabase
+            .from('project_messages')
+            .select('id, text, created_at, sender_id, project_id, projects(name), auth_users:sender_id(full_name)')
+            .order('created_at', { ascending: false })
+            .limit(5)
+        ]);
+
+        // Note: project_messages schema uses sender_id from auth.users, might need to join with employees
+        // For simplicity, we'll try to find the sender in our workers list if name is missing
+        
+        const messageActivities: ActivityEvent[] = (messagesRes.data || []).map(m => ({
+          id: m.id,
+          type: 'message',
+          event: `New message from ${workers.find(w => w.id === m.sender_id)?.full_name || 'Team Member'}`,
+          time: moment(m.created_at).format('hh:mm A'),
+          timestamp: new Date(m.created_at),
+          projectName: (m.projects as any)?.name
+        }));
+
+        const sessionActivities: ActivityEvent[] = (sessionsRes.data || []).flatMap(s => {
+          const events: ActivityEvent[] = [];
+          const name = (s.employees as any)?.full_name || 'Worker';
+          
+          events.push({
+            id: `in-${s.id}`,
+            type: 'work_session',
+            event: `${name} clocked in`,
+            time: moment(s.check_in_at).format('hh:mm A'),
+            timestamp: new Date(s.check_in_at)
+          });
+
+          if (s.check_out_at) {
+            events.push({
+              id: `out-${s.id}`,
+              type: 'work_session',
+              event: `${name} clocked out`,
+              time: moment(s.check_out_at).format('hh:mm A'),
+              timestamp: new Date(s.check_out_at)
+            });
+          }
+          return events;
+        });
+
+        const locationActivities: ActivityEvent[] = (locationsRes.data || []).map(l => ({
+          id: l.id,
+          type: 'location_event',
+          event: `${(l.employees as any)?.full_name || 'Worker'} ${l.type === 'enter_geofence' ? 'entered' : 'exited'} project site`,
+          time: moment(l.created_at).format('hh:mm A'),
+          timestamp: new Date(l.created_at)
+        }));
+
+        const allActivities = [...sessionActivities, ...locationActivities, ...messageActivities]
+          .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())
+          .slice(0, 10);
+
+        setActivities(allActivities);
+
+      } catch (error) {
+        console.error('Error fetching dashboard data:', error);
+      } finally {
+        setIsLoadingStats(false);
+      }
+    };
+
+    fetchDashboardData();
+
+    // Set up real-time subscriptions
+    const sessionsChannel = supabase
+      .channel('dashboard-sessions')
+      .on('postgres_changes', { 
+        event: '*', 
+        schema: 'public', 
+        table: 'work_sessions',
+        filter: `company_id=eq.${userCompanyId}`
+      }, () => fetchDashboardData())
+      .subscribe();
+
+    const locationsChannel = supabase
+      .channel('dashboard-locations')
+      .on('postgres_changes', { 
+        event: 'INSERT', 
+        schema: 'public', 
+        table: 'location_events',
+        filter: `company_id=eq.${userCompanyId}`
+      }, () => fetchDashboardData())
+      .subscribe();
+
+    const messagesChannel = supabase
+      .channel('dashboard-messages')
+      .on('postgres_changes', { 
+        event: 'INSERT', 
+        schema: 'public', 
+        table: 'project_messages'
+      }, () => fetchDashboardData())
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(sessionsChannel);
+      supabase.removeChannel(locationsChannel);
+      supabase.removeChannel(messagesChannel);
+    };
+  }, [userCompanyId, totalWorkersCount, workers]);
+
+  if (isAuthLoading || isLoadingStats) {
     return (
       <AnimatedScreen>
         <View style={styles.loadingContainer}>
@@ -110,197 +268,225 @@ export default function NewManagerDashboard() {
     );
   }
 
-  // If subscription is not active, show CTA
-  if (subscriptionStatus !== 'active' && organizationId) {
-    return (
-      <AnimatedScreen>
-        <View style={styles.containerCenter}>
-          <Text style={styles.pageTitle}>Subscription Not Active</Text>
-          <Text style={styles.pageSubtitle}>
-            It looks like your subscription is not active. Please complete your payment to access all features.
-          </Text>
-          <Button
-            title="Retry Payment"
-            onPress={() => router.replace('/subscription/setup')}
-            style={styles.ctaButton}
-            textStyle={styles.ctaButtonText}
-          />
-        </View>
-      </AnimatedScreen>
-    );
-  }
+  const estimatedPayroll = stats.monthToDateHours * 25; // Using default $25/hr as it's not in DB
 
-    return (
-      <AnimatedScreen>
-        <ScrollView contentContainerStyle={styles.scrollContent}>
-          <View style={styles.pageHeader}>
-            <Text style={styles.pageTitle} fontType="bold">Dashboard</Text>
-            <Text style={styles.pageSubtitle}>{organizationName}</Text>
-          </View>
-  
-          <View style={styles.dashboardContent}>
-            <View style={styles.column}>
-              {/* 1. High-Level Summary Cards */}
-              <Card style={styles.sectionCard}>
-                <Text style={styles.sectionTitle} fontType="bold">Overview</Text>
-                <View style={styles.summaryCardsContainer}>
-                  <Card style={styles.summaryCard}>
-                    <Text style={styles.summaryValue} fontType="bold">{MOCKED_SUMMARY_DATA.totalWorkers}</Text>
-                    <Text style={styles.summaryLabel} fontType="regular">Total Workers</Text>
-                  </Card>
-                  <Card style={styles.summaryCard}>
-                    <Text style={styles.summaryValue} fontType="bold">{MOCKED_SUMMARY_DATA.workersOnline}</Text>
-                    <Text style={styles.summaryLabel} fontType="regular">Workers Online</Text>
-                  </Card>
-                  <Card style={styles.summaryCard}>
-                    <Text style={styles.summaryValue} fontType="bold">{MOCKED_SUMMARY_DATA.totalHoursToday}</Text>
-                    <Text style={styles.summaryLabel} fontType="regular">Hours Today</Text>
-                  </Card>
-                  <Card style={styles.summaryCard}>
-                    <Text style={styles.summaryValue} fontType="bold">{MOCKED_SUMMARY_DATA.totalHoursThisWeek}</Text>
-                    <Text style={styles.summaryLabel} fontType="regular">Hours This Week</Text>
-                  </Card>
-                  <Card style={styles.summaryCard}>
-                    <Text style={styles.summaryValue} fontType="bold">€{MOCKED_SUMMARY_DATA.monthlyCostEstimate}</Text>
-                    <Text style={styles.summaryLabel} fontType="regular">Est. Monthly Cost</Text>
-                  </Card>
+  return (
+    <AnimatedScreen>
+      <ScrollView contentContainerStyle={styles.scrollContent}>
+        <View style={styles.pageHeader}>
+          <Text style={styles.pageTitle} fontType="bold">Dashboard</Text>
+          <Text style={styles.pageSubtitle}>{userCompanyName}</Text>
+        </View>
+
+        <View style={styles.dashboardContent}>
+          <View style={styles.column}>
+            {/* 1. Overview Cards */}
+            <Card style={styles.sectionCard}>
+              <Text style={styles.sectionTitle} fontType="bold">Overview</Text>
+              <View style={styles.summaryCardsContainer}>
+                <Card style={styles.summaryCard}>
+                  <Text style={styles.summaryValue} fontType="bold">{totalWorkersCount}</Text>
+                  <Text style={styles.summaryLabel}>Total Workers</Text>
+                </Card>
+                <Card style={styles.summaryCard}>
+                  <Text style={styles.summaryValue} fontType="bold">{stats.workersOnline}</Text>
+                  <Text style={styles.summaryLabel}>Workers Online</Text>
+                </Card>
+                <Card style={styles.summaryCard}>
+                  <Text style={styles.summaryValue} fontType="bold">{stats.totalHoursToday}h</Text>
+                  <Text style={styles.summaryLabel}>Hours Today</Text>
+                </Card>
+              </View>
+            </Card>
+
+            {/* NEW: 2. Project Health & Schedule */}
+            <Card style={styles.sectionCard}>
+              <Text style={styles.sectionTitle} fontType="bold">Projects & Assignments</Text>
+              <View style={styles.statsGrid}>
+                <View style={styles.statBox}>
+                  <Text style={styles.statValue} fontType="bold">{stats.activeProjectsCount}</Text>
+                  <Text style={styles.statLabel}>Active Projects</Text>
                 </View>
-              </Card>
-  
-              {/* 3. Workers Overview */}
-              <Card style={styles.sectionCard}>
-                <Text style={styles.sectionTitle} fontType="bold">Workers</Text>
-                {MOCKED_WORKERS_DATA.map(worker => (
-                  <View key={worker.id} style={styles.workerItem}>
+                <View style={styles.statBox}>
+                  <Text style={styles.statValue} fontType="bold">{stats.unassignedCount}</Text>
+                  <Text style={styles.statLabel}>Unassigned</Text>
+                </View>
+              </View>
+              <Button
+                title="View Assignments"
+                onPress={() => router.push('/(manager)/worker-assignments')}
+                style={styles.outlineButton}
+                textStyle={styles.outlineButtonText}
+              />
+            </Card>
+
+            {/* 3. Active Workers List */}
+            <Card style={styles.sectionCard}>
+              <View style={styles.cardHeaderRow}>
+                <Text style={styles.sectionTitle} fontType="bold">Workers Currently Online</Text>
+                <Ionicons name="radio-button-on" size={16} color={theme.colors.success} />
+              </View>
+              {stats.activeSessions.length === 0 ? (
+                <Text style={styles.emptyText}>No workers are currently clocked in.</Text>
+              ) : (
+                stats.activeSessions.map(session => (
+                  <View key={session.id} style={styles.workerItem}>
                     <View style={styles.workerInfo}>
-                      <Text style={styles.workerName} fontType="medium">{worker.name}</Text>
-                      <Text style={styles.workerStatus} fontType="regular">{worker.status}</Text>
+                      <Text style={styles.workerName} fontType="medium">
+                        {(session.employees as any)?.full_name || 'Worker'}
+                      </Text>
+                      <Text style={styles.workerStatus}>
+                        {session.projects?.name ? `At ${session.projects.name}` : 'Clocked in'} since {moment(session.check_in_at).format('hh:mm A')}
+                      </Text>
                     </View>
-                    <View style={styles.workerHours}>
-                      <Text fontType="regular">Today: {worker.todayHours}h</Text>
-                      <Text fontType="regular">Week: {worker.weekHours}h</Text>
-                    </View>
-                    {worker.redFlags.length > 0 && (
-                      <Text style={styles.workerRedFlags} fontType="regular">🚩 {worker.redFlags.join(', ')}</Text>
-                    )}
-                    <View style={styles.workerActions}>
-                      <TouchableOpacity style={styles.iconButton}>
-                        <Ionicons name="create-outline" size={theme.fontSizes.lg} color={theme.colors.primary} />
-                      </TouchableOpacity>
-                      <TouchableOpacity style={styles.iconButton}>
-                        <Ionicons name="trash-outline" size={theme.fontSizes.lg} color={theme.colors.danger} />
-                      </TouchableOpacity>
-                    </View>
+                    <TouchableOpacity 
+                      onPress={() => router.push({ pathname: '/(manager)/map-overview', params: { workerId: session.worker_id } })}
+                      style={styles.iconButton}
+                    >
+                      <Ionicons name="locate-outline" size={20} color={theme.colors.primary} />
+                    </TouchableOpacity>
                   </View>
-                ))}
-                <Button
-                  onPress={() => {}} // TODO: Add actual onPress handler
-                  style={styles.addWorkerButton}
-                >
-                  <Ionicons name="person-add-outline" size={theme.fontSizes.lg} color="white" />
-                  <Text style={styles.addWorkerButtonText}>Add/Invite Worker</Text>
-                </Button>
-              </Card>
-  
-              {/* 5. Schedule Snapshot */}
-              <Card style={styles.sectionCard}>
-                <Text style={styles.sectionTitle} fontType="bold">Schedule Snapshot (Today)</Text>
-                {MOCKED_SCHEDULE_DATA.map(schedule => (
-                  <View key={schedule.worker} style={styles.scheduleItem}>
-                    <Text style={styles.scheduleWorker} fontType="medium">{schedule.worker}</Text>
-                    <Text fontType="regular">{schedule.status}</Text>
-                    {schedule.late && <Text style={styles.scheduleLate} fontType="regular">Late</Text>}
-                    {schedule.absent && <Text style={styles.scheduleAbsent} fontType="regular">Absent</Text>}
-                  </View>
-                ))}
-              </Card>
-  
-              {/* 7. Billing & Subscription Quick View */}
-              <Card style={styles.sectionCard}>
-                <Text style={styles.sectionTitle} fontType="bold">Billing & Subscription</Text>
-                <View style={styles.billingRow}>
-                  <Text style={styles.billingLabel} fontType="regular">Current Plan:</Text>
-                  <Text style={styles.billingValue} fontType="medium">Standard (20 Workers)</Text>
+                ))
+              )}
+            </Card>
+
+            {/* NEW: 4. Financial Snapshot */}
+            <Card style={styles.sectionCard}>
+              <Text style={styles.sectionTitle} fontType="bold">Financial Quick View (MTD)</Text>
+              <View style={styles.financialRow}>
+                <View>
+                  <Text style={styles.financialLabel}>Total Hours</Text>
+                  <Text style={styles.financialValue} fontType="bold">{stats.monthToDateHours}h</Text>
                 </View>
-                <View style={styles.billingRow}>
-                  <Text style={styles.billingLabel} fontType="regular">Workers Used:</Text>
-                  <Text style={styles.billingValue} fontType="medium">15/20</Text>
+                <View style={{ alignItems: 'flex-end' }}>
+                  <Text style={styles.financialLabel}>Est. Payroll</Text>
+                  <Text style={[styles.financialValue, { color: theme.colors.success }]} fontType="bold">
+                    ${estimatedPayroll.toLocaleString()}
+                  </Text>
                 </View>
-                <View style={styles.billingRow}>
-                  <Text style={styles.billingLabel} fontType="regular">Billing Cycle:</Text>
-                  <Text style={styles.billingValue} fontType="medium">Monthly</Text>
-                </View>
-                <View style={styles.billingRow}>
-                  <Text style={styles.billingLabel} fontType="regular">Next Invoice:</Text>
-                  <Text style={styles.billingValue} fontType="medium">Dec 1, 2025</Text>
-                </View>
-                <Button
-                  title="Manage Subscription"
-                  onPress={() => {}} // TODO: Add actual onPress handler
-                  style={styles.manageSubscriptionButton}
-                  textStyle={styles.manageSubscriptionButtonText}
-                  fontType="regular"
-                />
-              </Card>
-            </View>
-  
-            <View style={styles.column}>
-              {/* 2. Today’s Activity Feed */}
-              <Card style={styles.sectionCard}>
-                <Text style={styles.sectionTitle} fontType="bold">Today's Activity</Text>
-                {MOCKED_ACTIVITY_FEED.map(activity => (
-                  <View key={activity.id} style={styles.activityItem}>
-                    <Text style={styles.activityText} fontType="regular">{activity.event}</Text>
-                    <Text style={styles.activityTime} fontType="medium">{activity.time}</Text>
-                  </View>
-                ))}
-              </Card>
-  
-              {/* 4. Timesheet Snapshot */}
-              <Card style={styles.sectionCard}>
-                <Text style={styles.sectionTitle} fontType="bold">Timesheet Snapshot (Current Pay Period)</Text>
-                {MOCKED_TIMESHEET_DATA.map(timesheet => (
-                  <View key={timesheet.worker} style={styles.timesheetItem}>
-                    <Text style={styles.timesheetWorker} fontType="medium">{timesheet.worker}</Text>
-                    <View style={styles.timesheetDetails}>
-                      <Text fontType="regular">Total: {timesheet.totalHours}h</Text>
-                      {timesheet.overtime > 0 && <Text style={styles.timesheetOvertime} fontType="regular">Overtime: {timesheet.overtime}h</Text>}
-                      {timesheet.missingEntries > 0 && <Text style={styles.timesheetMissing} fontType="regular">Missing: {timesheet.missingEntries}</Text>}
-                    </View>
-                    <Button
-                      title="Approve"
-                      onPress={() => {}} // TODO: Add actual onPress handler
-                      style={styles.approveButton}
-                      textStyle={styles.approveButtonText}
-                      fontType="regular"
-                    />
-                  </View>
-                ))}
-                <Button
-                  onPress={() => {}} // TODO: Add actual onPress handler
-                  style={styles.exportButton}
-                >
-                  <Ionicons name="download-outline" size={theme.fontSizes.lg} color={theme.colors.bodyText} />
-                  <Text style={styles.exportButtonText}>Export Timesheets</Text>
-                </Button>
-              </Card>
-  
-              {/* 6. Alerts & Tasks */}
-              <Card style={styles.sectionCard}>
-                <Text style={styles.sectionTitle} fontType="bold">Alerts & Tasks</Text>
-                {MOCKED_ALERTS_DATA.map(alert => (
-                  <View key={alert.id} style={[styles.alertItem, alert.type === 'error' && styles.alertError, alert.type === 'warning' && styles.alertWarning]}>
-                    <Ionicons name={alert.type === 'error' ? 'alert-circle-outline' : alert.type === 'warning' ? 'warning-outline' : 'information-circle-outline'} size={theme.fontSizes.lg} color={alert.type === 'error' ? theme.colors.danger : alert.type === 'warning' ? 'orange' : theme.colors.primary} />
-                    <Text style={styles.alertText} fontType="regular">{alert.message}</Text>
-                  </View>
-                ))}
-              </Card>
-            </View>
+              </View>
+              <Text style={styles.financialNote}>* Estimated at average $25/hr</Text>
+            </Card>
           </View>
-        </ScrollView>
-      </AnimatedScreen>
-    );
-  }
+
+          <View style={styles.column}>
+            {/* NEW: 5. Map Preview */}
+            <Card style={styles.sectionCard}>
+              <View style={styles.cardHeaderRow}>
+                <Text style={styles.sectionTitle} fontType="bold">Live Map Preview</Text>
+                <Ionicons name="map-outline" size={18} color={theme.colors.primary} />
+              </View>
+              <TouchableOpacity 
+                style={styles.mapPreviewPlaceholder}
+                onPress={() => router.push('/(manager)/map-overview')}
+              >
+                <View style={styles.mapOverlay}>
+                  <Ionicons name="expand-outline" size={24} color="white" />
+                  <Text style={styles.mapOverlayText}>Open Full Map</Text>
+                </View>
+                {/* Visual placeholder for map */}
+                <View style={styles.mapGridLines}>
+                  {[1,2,3,4,5].map(i => <View key={i} style={styles.gridLineH} />)}
+                  {[1,2,3,4,5].map(i => <View key={i} style={styles.gridLineV} />)}
+                  <View style={[styles.mapDot, { top: '30%', left: '40%' }]} />
+                  <View style={[styles.mapDot, { top: '60%', left: '70%', backgroundColor: theme.colors.secondary }]} />
+                </View>
+              </TouchableOpacity>
+            </Card>
+
+            {/* 6. Real-time Activity Feed */}
+            <Card style={styles.sectionCard}>
+              <Text style={styles.sectionTitle} fontType="bold">Live Activity Feed</Text>
+              {activities.length === 0 ? (
+                <Text style={styles.emptyText}>No recent activity found.</Text>
+              ) : (
+                activities.map(activity => (
+                  <View key={activity.id} style={styles.activityItem}>
+                    <View style={styles.activityIconContainer}>
+                      <Ionicons 
+                        name={
+                          activity.type === 'work_session' ? 'time-outline' : 
+                          activity.type === 'message' ? 'chatbubble-ellipses-outline' : 
+                          'location-outline'
+                        } 
+                        size={18} 
+                        color={theme.colors.primary} 
+                      />
+                    </View>
+                    <View style={styles.activityContent}>
+                      <Text style={styles.activityText}>
+                        {activity.event}
+                        {activity.projectName && <Text style={{ color: theme.colors.primary }}> in {activity.projectName}</Text>}
+                      </Text>
+                      <Text style={styles.activityTime}>{activity.time}</Text>
+                    </View>
+                  </View>
+                ))
+              )}
+            </Card>
+
+            {/* NEW: 7. Worker Utilization */}
+            <Card style={styles.sectionCard}>
+              <Text style={styles.sectionTitle} fontType="bold">Top Workers (This Week)</Text>
+              {stats.topWorkers.length === 0 ? (
+                <Text style={styles.emptyText}>No hours logged this week.</Text>
+              ) : (
+                stats.topWorkers.map((worker, index) => (
+                  <View key={index} style={styles.utilizationRow}>
+                    <View style={styles.utilizationInfo}>
+                      <Text style={styles.workerName} fontType="medium">{worker.name}</Text>
+                      <View style={styles.utilizationBarBg}>
+                        <View style={[styles.utilizationBarFill, { width: `${Math.min((worker.hours / 40) * 100, 100)}%` }]} />
+                      </View>
+                    </View>
+                    <Text style={styles.utilizationValue} fontType="bold">{worker.hours}h</Text>
+                  </View>
+                ))
+              )}
+
+              {stats.idleWorkers.length > 0 && (
+                <View style={{ marginTop: theme.spacing(2) }}>
+                  <Text style={[styles.sectionTitle, { fontSize: theme.fontSizes.md }]} fontType="bold">Idle Workers</Text>
+                  <View style={styles.idleWorkersList}>
+                    {stats.idleWorkers.map((name, i) => (
+                      <View key={i} style={styles.idleBadge}>
+                        <Text style={styles.idleBadgeText}>{name}</Text>
+                      </View>
+                    ))}
+                  </View>
+                </View>
+              )}
+            </Card>
+
+            {/* 8. Quick Actions */}
+            <Card style={styles.sectionCard}>
+              <Text style={styles.sectionTitle} fontType="bold">Quick Actions</Text>
+              <View style={styles.quickActionsGrid}>
+                <TouchableOpacity style={styles.quickActionButton} onPress={() => router.push('/(manager)/employees')}>
+                  <Ionicons name="person-add-outline" size={24} color={theme.colors.primary} />
+                  <Text style={styles.quickActionLabel}>Add Worker</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.quickActionButton} onPress={() => router.push('/(manager)/reports')}>
+                  <Ionicons name="document-text-outline" size={24} color={theme.colors.primary} />
+                  <Text style={styles.quickActionLabel}>Reports</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.quickActionButton} onPress={() => router.push('/(manager)/projects')}>
+                  <Ionicons name="folder-outline" size={24} color={theme.colors.primary} />
+                  <Text style={styles.quickActionLabel}>Projects</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.quickActionButton} onPress={() => router.push('/(manager)/subscription')}>
+                  <Ionicons name="card-outline" size={24} color={theme.colors.primary} />
+                  <Text style={styles.quickActionLabel}>Billing</Text>
+                </TouchableOpacity>
+              </View>
+            </Card>
+          </View>
+        </View>
+      </ScrollView>
+    </AnimatedScreen>
+  );
+}
+
 const styles = StyleSheet.create({
   scrollContent: {
     paddingBottom: theme.spacing(4),
@@ -308,7 +494,7 @@ const styles = StyleSheet.create({
       web: {
         maxWidth: 1400,
         alignSelf: 'center',
-        paddingHorizontal: theme.spacing(4), // Add horizontal padding for web
+        paddingHorizontal: theme.spacing(4),
       },
     }),
   },
@@ -323,18 +509,9 @@ const styles = StyleSheet.create({
     fontSize: theme.fontSizes.md,
     color: theme.colors.bodyText,
   },
-  containerCenter: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: theme.spacing(4),
-    backgroundColor: theme.colors.background,
-  },
-  // New styles for the main page header
   pageHeader: {
     paddingVertical: theme.spacing(4),
     paddingHorizontal: theme.spacing(2),
-    backgroundColor: theme.colors.background,
     alignItems: 'flex-start',
   },
   pageTitle: {
@@ -346,20 +523,18 @@ const styles = StyleSheet.create({
     fontSize: theme.fontSizes.lg,
     color: theme.colors.bodyText,
   },
-  // Dashboard Content Layout
   dashboardContent: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'space-between',
-    marginHorizontal: -theme.spacing(2), // Counteract column padding
+    marginHorizontal: -theme.spacing(2),
   },
   column: {
-    width: '100%', // Default to full width on small screens
+    width: '100%',
     paddingHorizontal: theme.spacing(2),
-    marginBottom: theme.spacing(2), // Add vertical spacing between columns/cards
     ...Platform.select({
       web: {
-        width: '49%', // Two columns on large screens
+        width: '50%',
       },
     }),
   },
@@ -367,69 +542,45 @@ const styles = StyleSheet.create({
     marginBottom: theme.spacing(2),
     borderRadius: theme.radius.xl,
     backgroundColor: theme.colors.cardBackground,
-    padding: theme.spacing(4),
+    padding: theme.spacing(3),
     borderWidth: 1,
     borderColor: theme.colors.borderColor,
-    ...Platform.select({
-      web: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.05,
-        shadowRadius: 10,
-      },
-      native: {
-        elevation: 6,
-      },
-    }),
   },
   sectionTitle: {
     fontSize: theme.fontSizes.lg,
     color: theme.colors.headingText,
-    marginBottom: theme.spacing(3),
+    marginBottom: theme.spacing(2),
   },
-  // Summary Cards
+  cardHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: theme.spacing(2),
+  },
   summaryCardsContainer: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
     justifyContent: 'space-between',
-    // marginHorizontal: -theme.spacing(1), // Already handled by parent sectionCard
+    gap: theme.spacing(2),
   },
   summaryCard: {
-    width: '48%',
-    marginBottom: theme.spacing(2),
+    flex: 1,
     padding: theme.spacing(2),
     alignItems: 'center',
     borderWidth: 1,
     borderColor: theme.colors.borderColor,
     borderRadius: theme.radius.lg,
-    backgroundColor: theme.colors.background, // Slightly different background for sub-cards
+    backgroundColor: theme.colors.background,
   },
   summaryValue: {
     fontSize: theme.fontSizes.xl,
     color: theme.colors.primary,
   },
   summaryLabel: {
-    fontSize: theme.fontSizes.sm,
+    fontSize: theme.fontSizes.xs,
     color: theme.colors.bodyText,
     textAlign: 'center',
+    marginTop: 4,
   },
-  // Activity Feed
-  activityItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingVertical: theme.spacing(1.5),
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.borderColor,
-  },
-  activityText: {
-    fontSize: theme.fontSizes.md,
-    color: theme.colors.bodyText,
-  },
-  activityTime: {
-    fontSize: theme.fontSizes.sm,
-    color: theme.colors.bodyText,
-  },
-  // Workers Overview
   workerItem: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -439,8 +590,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   workerInfo: {
-    flex: 2,
-    flexDirection: 'column',
+    flex: 1,
   },
   workerName: {
     fontSize: theme.fontSizes.md,
@@ -448,129 +598,45 @@ const styles = StyleSheet.create({
   },
   workerStatus: {
     fontSize: theme.fontSizes.sm,
-    color: theme.colors.primary,
-  },
-  workerHours: {
-    flex: 1,
-    alignItems: 'flex-end',
-  },
-  workerRedFlags: {
-    fontSize: theme.fontSizes.sm,
-    color: theme.colors.danger,
-    marginLeft: theme.spacing(1),
-  },
-  workerActions: {
-    flexDirection: 'row',
-    marginLeft: theme.spacing(1),
+    color: theme.colors.bodyText,
+    marginTop: 2,
   },
   iconButton: {
-    padding: theme.spacing(0.5),
+    padding: theme.spacing(1),
   },
-  addWorkerButton: {
-    backgroundColor: theme.colors.primary,
-    paddingHorizontal: theme.spacing(4),
-    paddingVertical: theme.spacing(2),
-    borderRadius: theme.radius.lg,
-    marginTop: theme.spacing(3),
+  activityItem: {
     flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  addWorkerButtonText: {
-    color: 'white',
-    fontSize: 18,
-    marginLeft: theme.spacing(1),
-  },
-  // Timesheet Snapshot
-  timesheetItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
     paddingVertical: theme.spacing(1.5),
     borderBottomWidth: 1,
     borderBottomColor: theme.colors.borderColor,
   },
-  timesheetWorker: {
-    fontSize: theme.fontSizes.md,
-    color: theme.colors.headingText,
-  },
-  timesheetDetails: {
-    flexDirection: 'row',
-    gap: theme.spacing(1),
-  },
-  timesheetOvertime: {
-    color: 'orange',
-  },
-  timesheetMissing: {
-    color: theme.colors.danger,
-  },
-  approveButton: {
-    backgroundColor: theme.colors.secondary,
-    paddingHorizontal: theme.spacing(2),
-    paddingVertical: theme.spacing(1),
-    borderRadius: theme.radius.lg,
-  },
-  approveButtonText: {
-    color: 'white',
-  },
-  exportButton: {
-    flexDirection: 'row',
+  activityIconContainer: {
+    width: 32,
     alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: theme.spacing(4),
-    paddingVertical: theme.spacing(2),
-    borderRadius: theme.radius.lg,
-    marginTop: theme.spacing(3),
-    borderColor: theme.colors.borderColor,
-    borderWidth: 1,
+    paddingTop: 2,
   },
-  exportButtonText: {
+  activityContent: {
+    flex: 1,
     marginLeft: theme.spacing(1),
-    color: theme.colors.bodyText,
-    fontSize: 18,
   },
-  // Schedule Snapshot
-  scheduleItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingVertical: theme.spacing(1.5),
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.borderColor,
-  },
-  scheduleWorker: {
-    fontSize: theme.fontSizes.md,
-    color: theme.colors.headingText,
-  },
-  scheduleLate: {
-    color: 'orange',
-  },
-  scheduleAbsent: {
-    color: theme.colors.danger,
-  },
-  // Alerts & Tasks
-  alertItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: theme.spacing(1.5),
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.borderColor,
-  },
-  alertError: {
-    // backgroundColor: theme.colors.errorBackground, // light red background
-  },
-  alertWarning: {
-    // backgroundColor: theme.colors.warningMuted, // light orange background
-  },
-  alertText: {
-    marginLeft: theme.spacing(1),
+  activityText: {
     fontSize: theme.fontSizes.md,
     color: theme.colors.bodyText,
   },
-  // Billing & Subscription
+  activityTime: {
+    fontSize: theme.fontSizes.xs,
+    color: theme.colors.disabledText,
+    marginTop: 2,
+  },
+  emptyText: {
+    textAlign: 'center',
+    color: theme.colors.disabledText,
+    paddingVertical: theme.spacing(2),
+  },
   billingRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    paddingVertical: theme.spacing(1),
+    marginBottom: theme.spacing(1),
   },
   billingLabel: {
     fontSize: theme.fontSizes.md,
@@ -580,26 +646,188 @@ const styles = StyleSheet.create({
     fontSize: theme.fontSizes.md,
     color: theme.colors.headingText,
   },
+  progressBarBg: {
+    height: 8,
+    backgroundColor: theme.colors.borderColor,
+    borderRadius: 4,
+    marginBottom: theme.spacing(2),
+    overflow: 'hidden',
+  },
+  progressBarFill: {
+    height: '100%',
+    backgroundColor: theme.colors.primary,
+  },
   manageSubscriptionButton: {
     backgroundColor: theme.colors.primary,
-    paddingHorizontal: theme.spacing(4),
-    paddingVertical: theme.spacing(2),
     borderRadius: theme.radius.lg,
-    marginTop: theme.spacing(3),
-    alignItems: 'center',
+    height: 48,
   },
   manageSubscriptionButtonText: {
     color: 'white',
   },
-  ctaButton: { // Used for "Retry Payment"
-    backgroundColor: theme.colors.primary,
-    paddingHorizontal: theme.spacing(5),
-    paddingVertical: theme.spacing(2.5),
+  outlineButton: {
+    backgroundColor: 'transparent',
+    borderWidth: 1,
+    borderColor: theme.colors.primary,
     borderRadius: theme.radius.lg,
-    alignSelf: 'center', // Center the button
-    marginTop: theme.spacing(4),
+    marginTop: theme.spacing(2),
+    height: 44,
   },
-  ctaButtonText: { // Used for "Retry Payment"
+  outlineButtonText: {
+    color: theme.colors.primary,
+  },
+  quickActionsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: theme.spacing(2),
+  },
+  quickActionButton: {
+    width: '47%',
+    aspectRatio: 1.2,
+    backgroundColor: theme.colors.background,
+    borderRadius: theme.radius.lg,
+    borderWidth: 1,
+    borderColor: theme.colors.borderColor,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: theme.spacing(1),
+  },
+  quickActionLabel: {
+    marginTop: theme.spacing(1),
+    fontSize: theme.fontSizes.sm,
+    color: theme.colors.headingText,
+    textAlign: 'center',
+  },
+  statsGrid: {
+    flexDirection: 'row',
+    gap: theme.spacing(2),
+  },
+  statBox: {
+    flex: 1,
+    backgroundColor: theme.colors.background,
+    padding: theme.spacing(2),
+    borderRadius: theme.radius.lg,
+    borderWidth: 1,
+    borderColor: theme.colors.borderColor,
+  },
+  statValue: {
+    fontSize: theme.fontSizes.lg,
+    color: theme.colors.primary,
+  },
+  statLabel: {
+    fontSize: theme.fontSizes.xs,
+    color: theme.colors.bodyText,
+    marginTop: 2,
+  },
+  financialRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  financialLabel: {
+    fontSize: theme.fontSizes.xs,
+    color: theme.colors.bodyText,
+    marginBottom: 4,
+  },
+  financialValue: {
+    fontSize: theme.fontSizes.xl,
+    color: theme.colors.headingText,
+  },
+  financialNote: {
+    fontSize: theme.fontSizes.xs,
+    color: theme.colors.disabledText,
+    marginTop: theme.spacing(1),
+    fontStyle: 'italic',
+  },
+  mapPreviewPlaceholder: {
+    height: 150,
+    backgroundColor: '#E5E7EB',
+    borderRadius: theme.radius.lg,
+    overflow: 'hidden',
+    position: 'relative',
+  },
+  mapOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.3)',
+    zIndex: 2,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  mapOverlayText: {
     color: 'white',
+    fontSize: theme.fontSizes.sm,
+    fontWeight: 'bold',
+    marginTop: 4,
+  },
+  mapGridLines: {
+    flex: 1,
+    padding: 10,
+  },
+  gridLineH: {
+    height: 1,
+    backgroundColor: 'rgba(0,0,0,0.05)',
+    marginVertical: 25,
+  },
+  gridLineV: {
+    position: 'absolute',
+    width: 1,
+    backgroundColor: 'rgba(0,0,0,0.05)',
+    top: 0,
+    bottom: 0,
+    left: 0, // This is just a base, we use a loop in JSX
+  },
+  mapDot: {
+    position: 'absolute',
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: theme.colors.primary,
+    borderWidth: 2,
+    borderColor: 'white',
+  },
+  utilizationRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: theme.spacing(1.5),
+  },
+  utilizationInfo: {
+    flex: 1,
+    marginRight: theme.spacing(2),
+  },
+  utilizationBarBg: {
+    height: 6,
+    backgroundColor: theme.colors.borderColor,
+    borderRadius: 3,
+    marginTop: 4,
+    overflow: 'hidden',
+  },
+  utilizationBarFill: {
+    height: '100%',
+    backgroundColor: theme.colors.primary,
+  },
+  utilizationValue: {
+    fontSize: theme.fontSizes.md,
+    color: theme.colors.headingText,
+  },
+  idleWorkersList: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: theme.spacing(1),
+  },
+  idleBadge: {
+    backgroundColor: theme.colors.background,
+    paddingHorizontal: theme.spacing(1.5),
+    paddingVertical: theme.spacing(0.5),
+    borderRadius: theme.radius.pill,
+    borderWidth: 1,
+    borderColor: theme.colors.borderColor,
+  },
+  idleBadgeText: {
+    fontSize: theme.fontSizes.xs,
+    color: theme.colors.bodyText,
   },
 });

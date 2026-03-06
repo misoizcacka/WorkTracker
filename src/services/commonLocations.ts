@@ -3,6 +3,7 @@ import { supabase } from '../utils/supabase';
 interface CommonLocation {
   id: string;
   name: string;
+  address: string | null;
   company_id: string; // This will likely be handled by RLS/database functions
   latitude: number | null;
   longitude: number | null;
@@ -11,12 +12,14 @@ interface CommonLocation {
 
 interface NewCommonLocation {
   name: string;
+  address?: string | null;
   latitude?: number | null;
   longitude?: number | null;
 }
 
 interface UpdateCommonLocation {
   name?: string;
+  address?: string | null;
   latitude?: number | null;
   longitude?: number | null;
 }
