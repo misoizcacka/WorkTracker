@@ -61,6 +61,18 @@ function ManagerProviders({ children }: { children: React.ReactNode }) {
 export default function TabsLayout() {
   const { width } = useDebouncedWindowDimensions(50);
   const isLargeScreen = width >= 900;
+  const router = useRouter();
+  const segments = useSegments();
+
+  // Redirect to mobile-only if a manager tries to access via a small screen (mobile web)
+  useEffect(() => {
+    if (width > 0 && !isLargeScreen) {
+      // Allow only the mobile-only screen itself to be viewed
+      if (!segments.includes('mobile-only')) {
+        router.replace('/mobile-only');
+      }
+    }
+  }, [width, isLargeScreen, segments, router]);
 
   const { user, userRole } = useSession();
   const getLogoHref = () => {
