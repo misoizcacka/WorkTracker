@@ -172,11 +172,23 @@ export default function ProjectAssignmentScreen() {
 
     const assignedDateStr = moment(selectedDate).format('YYYY-MM-DD');
     
-    // Robust split: handles cases like project-ID or common_location-ID
-    // It finds the LAST dash to separate the prefix from the UUID
-    const lastDashIndex = draggableId.lastIndexOf('-');
-    const draggedItemType = draggableId.substring(0, lastDashIndex);
-    const draggedItemRefId = draggableId.substring(lastDashIndex + 1);
+    // Improved parsing for draggableId:
+    // Formats: "project-UUID" or "common_location-UUID"
+    let draggedItemType: 'project' | 'common_location';
+    let draggedItemRefId: string;
+
+    if (draggableId.startsWith('project-')) {
+      draggedItemType = 'project';
+      draggedItemRefId = draggableId.replace('project-', '');
+    } else if (draggableId.startsWith('common_location-')) {
+      draggedItemType = 'common_location';
+      draggedItemRefId = draggableId.replace('common_location-', '');
+    } else {
+      // Fallback for existing items already in a worker column
+      // These draggableIds are just the assignment UUID
+      draggedItemType = 'project'; // Default, though reordering uses assignment ID
+      draggedItemRefId = draggableId;
+    }
 
     const getWorkerAssignments = (workerId: string) => {
       return processedAssignments[workerId] || [];

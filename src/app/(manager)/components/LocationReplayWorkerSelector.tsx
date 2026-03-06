@@ -65,20 +65,14 @@ const LocationReplayWorkerSelector = ({ onSelectionChange, initialWorkerId, init
 
     useEffect(() => {
         // When initialWorkerId or initialDate changes from props, update internal state
-        if (initialWorkerId && initialWorkerId !== selectedWorkerId) {
+        // Only update if they actually differ to avoid infinite loops
+        if (initialWorkerId !== undefined && initialWorkerId !== selectedWorkerId) {
             setSelectedWorkerId(initialWorkerId);
         }
-        if (initialDate && initialDate.getTime() !== selectedDate.getTime()) {
+        if (initialDate !== undefined && initialDate.getTime() !== selectedDate.getTime()) {
             setSelectedDate(initialDate);
         }
-    }, [initialWorkerId, initialDate, selectedWorkerId, selectedDate]); // Add selectedWorkerId, selectedDate to dependencies
-
-    useEffect(() => {
-        // Emit initial selection if available
-        if (selectedWorkerId) {
-            onSelectionChange(selectedWorkerId, selectedDate);
-        }
-    }, []); // Run only once on mount
+    }, [initialWorkerId, initialDate]); // Removed selectedWorkerId and selectedDate from deps
 
     const handleWorkerPress = (worker: Worker) => {
         setSelectedWorkerId(worker.worker_id);
