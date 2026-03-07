@@ -1,22 +1,21 @@
 import React, { useState, useEffect } from 'react';
-import { View, TextInput, StyleSheet, ActivityIndicator, Alert, ScrollView, Platform, Dimensions, Image, Pressable } from 'react-native';
+import { View, TextInput, StyleSheet, ActivityIndicator, ScrollView, Platform, Dimensions, Image, Pressable, TouchableOpacity } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useRouter, Link } from 'expo-router';
 import { Button } from '../../components/Button';
-import { Text } from '../../components/Themed'; // Import Themed Text
+import { Card } from '../../components/Card';
+import { Text } from '../../components/Themed';
 import { theme } from '../../theme';
 import AnimatedScreen from '../../components/AnimatedScreen';
 import Logo from '../../../assets/koordlogoblack1.svg';
 import { supabase } from '../../utils/supabase';
 import { useSession } from '../../context/AuthContext';
 import { useTranslation } from 'react-i18next';
-import { LanguageSelector } from '../../components/LanguageSelector';
 
 const { width } = Dimensions.get('window');
-const isLargeScreen = width > 768;
 
 export default function Login() {
-  const { refreshUser, user, userRole } = useSession()!; // Get refreshUser and user/userRole
+  const { refreshUser, user, userRole } = useSession()!;
   const router = useRouter();
   const { t } = useTranslation();
 
@@ -26,7 +25,6 @@ export default function Login() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState<{ email?: string; password?: string; general?: string }>({});
 
-  // Redirect if user is already logged in
   useEffect(() => {
     if (user) {
       if (userRole === 'manager' || userRole === 'owner') {
@@ -51,13 +49,11 @@ export default function Login() {
     setIsSubmitting(true);
     try {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
-
       if (error) {
-        setErrors({ general: t('login.errors.invalidCredentials') }); // Generic error for security
+        setErrors({ general: t('login.errors.invalidCredentials') });
         console.error('Login error:', error.message);
       } else {
-        await refreshUser(); // Refresh user state to get latest app_metadata
-        // The _layout.tsx will handle redirection after successful login and refreshUser
+        await refreshUser();
       }
     } catch (error: any) {
       setErrors({ general: error.message });
@@ -67,93 +63,84 @@ export default function Login() {
     }
   };
 
-  const getLogoHref = () => {
-    if (!user) {
-      return '/(guest)';
-    }
-    // Assuming user is logged in
-    if (userRole === 'manager' || userRole === 'owner') {
-      return '/(manager)/dashboard';
-    } else if (userRole === 'worker') {
-      return '/(worker)/home';
-    }
-    return '/(guest)'; // Default fallback
-  };
-
   return (
     <AnimatedScreen>
-      <View style={styles.outerContainer}>
-        {isLargeScreen && (
-          <View style={styles.marketingContainer}>
-            <Link href={getLogoHref()} style={styles.marketingLogo} asChild>
-              <Image source={Logo} resizeMode="contain" />
-            </Link>
-            <Text style={styles.marketingTitle} fontType="bold">{t('login.marketingTitle')}</Text>
-            <Text style={styles.marketingDescription} fontType="regular">{t('login.marketingDescription')}</Text>
-            <Text style={styles.marketingBullet} fontType="regular">✅ {t('login.marketingBullet1')}</Text>
-            <Text style={styles.marketingBullet} fontType="regular">✅ {t('login.marketingBullet2')}</Text>
-            <Text style={styles.marketingBullet} fontType="regular">✅ {t('login.marketingBullet3')}</Text>
-            <Text style={styles.marketingBullet} fontType="regular">✅ {t('login.marketingBullet4')}</Text>
-            <Text style={styles.marketingDescription} fontType="regular">{t('login.marketingDescription2')}</Text>
-          </View>
-        )}
-        {isLargeScreen && <View style={styles.separatorVertical} />}
-        {!isLargeScreen && (
-            <Link href={getLogoHref()} style={styles.smallScreenLogo} asChild>
-              <Image source={Logo} resizeMode="contain" />
-            </Link>
-        )}
+      <View style={styles.container}>
+        {/* Header with Logo in top left */}
+        <View style={styles.header}>
+          <Link href="/(guest)" asChild>
+            <TouchableOpacity activeOpacity={0.7}>
+              <Image source={Logo} style={styles.logo} resizeMode="contain" />
+            </TouchableOpacity>
+          </Link>
+        </View>
+
         <ScrollView contentContainerStyle={styles.scrollContent}>
-          <View style={styles.content}>
+          <Card style={styles.loginCard}>
             <Text style={styles.title} fontType="bold">{t('login.loginHeading')}</Text>
             <Text style={styles.description} fontType="regular">{t('login.loginDescription')}</Text>
 
-            {errors.general && <View style={styles.errorContainer}><Text style={styles.errorText} fontType="regular">{errors.general}</Text></View>}
+            {errors.general && (
+              <View style={styles.errorContainer}>
+                <Text style={styles.errorText} fontType="regular">{errors.general}</Text>
+              </View>
+            )}
             
-            <TextInput
-              style={styles.input}
-              placeholder={t('login.emailPlaceholder')}
-              value={email}
-              onChangeText={setEmail}
-              keyboardType="email-address"
-              autoCapitalize="none"
-              placeholderTextColor={theme.colors.bodyText}
-            />
-            {errors.email && <View style={styles.errorContainer}><Text style={styles.errorText} fontType="regular">{errors.email}</Text></View>}
-
-            <View style={styles.passwordInputContainer}>
+            <View style={styles.inputGroup}>
+              <Text style={styles.label} fontType="medium">{t('login.emailPlaceholder')}</Text>
               <TextInput
-                style={styles.passwordInput}
-                placeholder={t('login.passwordPlaceholder')}
-                value={password}
-                onChangeText={setPassword}
-                secureTextEntry={!passwordVisible}
-                placeholderTextColor={theme.colors.bodyText}
+                style={styles.input}
+                placeholder="email@example.com"
+                value={email}
+                onChangeText={setEmail}
+                keyboardType="email-address"
+                autoCapitalize="none"
+                placeholderTextColor={theme.colors.disabledText}
               />
-              <Pressable onPress={() => setPasswordVisible(!passwordVisible)} style={styles.passwordToggle}>
-                <Feather
-                  name={passwordVisible ? 'eye' : 'eye-off'}
-                  size={20}
-                  color={theme.colors.iconColor}
-                />
-              </Pressable>
+              {errors.email && <Text style={styles.fieldError} fontType="regular">{errors.email}</Text>}
             </View>
-            {errors.password && <View style={styles.errorContainer}><Text style={styles.errorText} fontType="regular">{errors.password}</Text></View>}
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.label} fontType="medium">{t('login.passwordPlaceholder')}</Text>
+              <View style={styles.passwordInputContainer}>
+                <TextInput
+                  style={styles.passwordInput}
+                  placeholder="••••••••"
+                  value={password}
+                  onChangeText={setPassword}
+                  secureTextEntry={!passwordVisible}
+                  placeholderTextColor={theme.colors.disabledText}
+                />
+                <Pressable onPress={() => setPasswordVisible(!passwordVisible)} style={styles.passwordToggle}>
+                  <Feather
+                    name={passwordVisible ? 'eye' : 'eye-off'}
+                    size={20}
+                    color={theme.colors.iconColor}
+                  />
+                </Pressable>
+              </View>
+              {errors.password && <Text style={styles.fieldError} fontType="regular">{errors.password}</Text>}
+            </View>
+
+            <View style={styles.forgotPasswordContainer}>
+              <Link href="/(guest)/forgot-password" asChild>
+                <TouchableOpacity>
+                  <Text style={styles.forgotPasswordLink} fontType="regular">{t('login.forgotPassword')}</Text>
+                </TouchableOpacity>
+              </Link>
+            </View>
 
             <Button
               onPress={handleLogin}
               disabled={isSubmitting}
-              style={styles.primaryButton}
+              style={styles.loginButton}
             >
-              {isSubmitting ? <ActivityIndicator color="#fff" /> : <Text style={styles.primaryButtonText} fontType="regular">{t('login.loginButton')}</Text>}
+              {isSubmitting ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <Text style={styles.loginButtonText} fontType="regular">{t('login.loginButton')}</Text>
+              )}
             </Button>
-
-            <View style={styles.linkContainer}>
-                <Link href="/(guest)/forgot-password" asChild>
-                    <Text style={styles.forgotPasswordLink} fontType="regular">{t('login.forgotPassword')}</Text>
-                </Link>
-            </View>
-
 
             <View style={styles.separatorContainer}>
               <View style={styles.separatorLine} />
@@ -164,131 +151,57 @@ export default function Login() {
             <Button
               title={t('login.signUpButton')}
               onPress={() => router.push('/auth/signup')}
-              style={styles.secondaryButton}
-            />
-          </View>
-        </ScrollView>
-      </View>
-      <View style={styles.languageSelectorContainer}>
-        <LanguageSelector />
-      </View>
-    </AnimatedScreen>
-  );
-}
+              style={styles.signUpButton}
+              textStyle={styles.signUpButtonText}
+              />
+              </Card>
+              </ScrollView>
+              </View>
+              </AnimatedScreen>
+              );
+              }
 
-const styles = StyleSheet.create({
-  outerContainer: {
+              const styles = StyleSheet.create({
+
+  container: {
     flex: 1,
-    flexDirection: isLargeScreen ? 'row' : 'column',
+    backgroundColor: theme.colors.pageBackground,
   },
-  marketingContainer: {
-    flex: 1,
-    backgroundColor: theme.colors.background, // Changed to consistent background
-    justifyContent: 'center',
-    padding: theme.spacing(8),
-    paddingTop: theme.spacing(8),
-  },
-  marketingLogo: {
+  header: {
     position: 'absolute',
-    top: theme.spacing(4),
-    left: theme.spacing(4),
-    width: 100,
-    height: 30,
-  },
-  smallScreenLogo: {
-    position: 'absolute',
-    top: theme.spacing(4),
-    left: theme.spacing(4),
-    width: 100,
-    height: 30,
+    top: 0,
+    left: 0,
+    padding: theme.spacing(4),
     zIndex: 10,
   },
-  marketingTitle: {
-    fontSize: 40,
-    color: theme.colors.headingText, // Changed to dark text color
-    marginBottom: theme.spacing(4),
-    lineHeight: 48,
-  },
-  marketingDescription: {
-    fontSize: 18,
-    color: theme.colors.bodyText, // Changed to dark text color
-    marginBottom: theme.spacing(4),
-    lineHeight: 28,
-  },
-  marketingBullet: {
-    fontSize: 16,
-    color: theme.colors.bodyText, // Changed to dark text color
-    marginBottom: theme.spacing(1),
-  },
-  separatorVertical: {
-    width: 1,
-    backgroundColor: theme.colors.borderColor,
-    // Adjust height if needed, flex: 1 should make it fill parent height
+  logo: {
+    width: 120,
+    height: 36,
   },
   scrollContent: {
     flexGrow: 1,
     justifyContent: 'center',
-    padding: theme.spacing(2),
-  },
-  container: { // Renamed from content to container for the main login form wrapper
-    flex: 1,
-    backgroundColor: theme.colors.background, // Consistent background
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
     padding: theme.spacing(3),
-    backgroundColor: theme.colors.cardBackground,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.borderColor,
-    ...Platform.select({
-      web: {
-        width: '100%',
-        maxWidth: 1400,
-        alignSelf: 'center',
-      },
-    }),
+    paddingTop: theme.spacing(10), // Space for header
   },
-  logo: {
-    width: 100,
-    height: 30,
-  },
-  navLinks: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: theme.spacing(3),
-  },
-  navLinkText: {
-    fontSize: 16,
-    color: theme.colors.bodyText,
-  },
-  signInButton: {
-    backgroundColor: theme.colors.primary,
-    paddingHorizontal: theme.spacing(3),
-    paddingVertical: theme.spacing(1.5),
-    borderRadius: theme.radius.md,
-  },
-  signInButtonText: {
-    color: 'white',
-  },
-  content: { // This is the actual login form content
-    justifyContent: 'center',
-    padding: theme.spacing(4),
-    backgroundColor: theme.colors.cardBackground, // Consistent with card backgrounds
-    marginHorizontal: 'auto',
-    maxWidth: 500,
+  loginCard: {
     width: '100%',
-    borderRadius: theme.radius.lg,
+    maxWidth: 420,
+    backgroundColor: theme.colors.cardBackground,
+    borderRadius: theme.radius.xl,
+    padding: theme.spacing(5),
+    borderWidth: 1,
+    borderColor: theme.colors.borderColor,
     ...Platform.select({
       web: {
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
+        shadowOffset: { width: 0, height: 10 },
         shadowOpacity: 0.1,
-        shadowRadius: 12,
+        shadowRadius: 20,
       },
       native: {
-        elevation: 8,
+        elevation: 10,
       }
     }),
   },
@@ -305,76 +218,83 @@ const styles = StyleSheet.create({
     marginBottom: theme.spacing(4),
   },
   errorContainer: {
-    backgroundColor: theme.colors.errorBackground, // Use theme color
+    backgroundColor: theme.colors.errorBackground,
     borderRadius: theme.radius.md,
     padding: theme.spacing(2),
-    marginBottom: theme.spacing(2),
+    marginBottom: theme.spacing(3),
+    borderWidth: 1,
+    borderColor: theme.colors.errorText,
   },
   errorText: {
-    color: theme.colors.errorText, // Use theme color
+    color: theme.colors.errorText,
     textAlign: 'center',
+    fontSize: 14,
+  },
+  inputGroup: {
+    marginBottom: theme.spacing(2.5),
+  },
+  label: {
+    fontSize: 14,
+    color: theme.colors.headingText,
+    marginBottom: theme.spacing(1),
+    marginLeft: 4,
   },
   input: {
-    height: 50,
+    height: 52,
     borderColor: theme.colors.borderColor,
     borderWidth: 1,
-    borderRadius: theme.radius.md,
+    borderRadius: theme.radius.lg,
     paddingHorizontal: theme.spacing(2),
-    marginBottom: theme.spacing(2),
     fontSize: 16,
     color: theme.colors.headingText,
-    backgroundColor: theme.colors.background, // Use theme color for input background
+    backgroundColor: theme.colors.background,
   },
   passwordInputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     borderColor: theme.colors.borderColor,
     borderWidth: 1,
-    borderRadius: theme.radius.md,
-    marginBottom: theme.spacing(2),
-    backgroundColor: theme.colors.background, // Use theme color for input background
+    borderRadius: theme.radius.lg,
+    backgroundColor: theme.colors.background,
   },
   passwordInput: {
     flex: 1,
-    height: 50,
+    height: 52,
     paddingHorizontal: theme.spacing(2),
     fontSize: 16,
     color: theme.colors.headingText,
-    backgroundColor: theme.colors.background, // Use theme color for input background
   },
   passwordToggle: {
-    padding: theme.spacing(2),
+    padding: theme.spacing(1.5),
   },
-  primaryButton: {
-    backgroundColor: theme.colors.primary,
-    borderRadius: theme.radius.md,
-    marginTop: theme.spacing(2),
-    height: 50,
-    justifyContent: 'center',
+  fieldError: {
+    color: theme.colors.errorText,
+    fontSize: 12,
+    marginTop: 4,
+    marginLeft: 4,
   },
-  primaryButtonText: {
-    color: 'white',
-    fontSize: 16,
-  },
-  secondaryButton: {
-    backgroundColor: theme.colors.secondary, // Assuming secondary is defined in theme
-    borderRadius: theme.radius.md,
-    marginTop: theme.spacing(1),
-    height: 50,
-    justifyContent: 'center',
-  },
-  linkContainer: {
-      alignItems: 'flex-end',
-      marginBottom: theme.spacing(2),
+  forgotPasswordContainer: {
+    alignItems: 'flex-end',
+    marginBottom: theme.spacing(4),
   },
   forgotPasswordLink: {
-      color: theme.colors.primary,
-      fontSize: 14,
+    color: theme.colors.primary,
+    fontSize: 14,
+  },
+  loginButton: {
+    backgroundColor: theme.colors.primary,
+    borderRadius: theme.radius.lg,
+    height: 52,
+    justifyContent: 'center',
+  },
+  loginButtonText: {
+    color: 'white',
+    fontSize: 16,
   },
   separatorContainer: {
     flexDirection: "row",
     alignItems: "center",
-    marginVertical: theme.spacing(2),
+    marginVertical: theme.spacing(4),
   },
   separatorLine: {
     flex: 1,
@@ -383,12 +303,19 @@ const styles = StyleSheet.create({
   },
   separatorText: {
     marginHorizontal: theme.spacing(2),
-    color: theme.colors.bodyText,
+    color: theme.colors.disabledText,
+    fontSize: 14,
   },
-  languageSelectorContainer: {
-    position: 'absolute',
-    top: Platform.OS === 'web' ? theme.spacing(4) : theme.spacing(6), // Adjust for notch on native
-    right: theme.spacing(4),
-    zIndex: 100, // Ensure it's above other content
+  signUpButton: {
+    backgroundColor: 'transparent',
+    borderWidth: 1.5,
+    borderColor: theme.colors.primary,
+    borderRadius: theme.radius.lg,
+    height: 52,
+    justifyContent: 'center',
+  },
+  signUpButtonText: {
+    color: theme.colors.primary,
+    fontSize: 16,
   },
 });

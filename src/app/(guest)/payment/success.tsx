@@ -1,16 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, ActivityIndicator, ScrollView, Platform, Image, Dimensions } from 'react-native';
-import { useLocalSearchParams, useRouter, Link } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { supabase } from '../../../utils/supabase';
 import { Button } from '../../../components/Button';
+import { Card } from '../../../components/Card';
 import { theme } from '../../../theme';
 import AnimatedScreen from '../../../components/AnimatedScreen';
 import { useSession } from '../../../context/AuthContext';
 import { Text } from '../../../components/Themed';
 import { useTranslation } from 'react-i18next';
+import Logo from '../../../../assets/koordlogoblack1.svg';
 
 const { width } = Dimensions.get('window');
-const isLargeScreen = width > 768;
+const isLargeScreen = width > 900;
 
 export default function PaymentSuccess() {
   const { session_id } = useLocalSearchParams();
@@ -38,12 +40,11 @@ export default function PaymentSuccess() {
       });
 
       if (funcError) {
-        // Check for specific technical error messages from Supabase Edge Functions
         const genericErrorMessage = t('payment.genericVerificationError', 'Payment verification failed due to an internal error. Please try again or contact support.');
         if (funcError.message.includes('Edge Function returned a non-2xx status code') || funcError.message.includes('Function threw an error')) {
             throw new Error(genericErrorMessage);
         }
-        throw funcError; // Re-throw other errors
+        throw funcError;
       }
 
       if (data.status === 'success') {
@@ -52,7 +53,6 @@ export default function PaymentSuccess() {
         if (Platform.OS === 'web') {
           localStorage.removeItem('pendingSubscription');
         }
-        // No automatic redirect, let user click to continue
       } else {
         setStatus('failed');
         setError(data.message || t('payment.verificationFailed', 'Payment verification failed.'));
@@ -61,7 +61,6 @@ export default function PaymentSuccess() {
       setStatus('failed');
       const errorMessage = err.message || t('payment.verificationError', 'An unexpected error occurred during verification.');
       
-      // Ensure specific technical errors are generalized
       const genericErrorMessage = t('payment.genericVerificationError', 'Payment verification failed due to an internal error. Please try again or contact support.');
       if (errorMessage.includes('Edge Function returned a non-2xx status code') || errorMessage.includes('Function threw an error')) {
         setError(genericErrorMessage);
@@ -83,26 +82,34 @@ export default function PaymentSuccess() {
       case 'success':
         return (
           <>
+            <View style={styles.iconCircle}>
+                <Text style={styles.statusIcon}>✅</Text>
+            </View>
             <Text style={styles.title} fontType='bold'>{t('payment.successTitle', 'Payment Successful!')}</Text>
-            <Text style={styles.description}>{t('payment.successDescription', 'Your payment was successful. Click below to continue to your company setup.')}</Text>
+            <Text style={styles.description} fontType='regular'>
+                {t('payment.successDescription', 'Your payment was successful. Click below to continue to your company setup.')}
+            </Text>
             <Button
               title={t('payment.continueToSetup', 'Continue to Company Setup')}
               onPress={() => router.replace('/(manager)/company-setup')}
               style={styles.ctaButton}
-              textStyle={styles.ctaButtonText}
             />
           </>
         );
       case 'failed':
         return (
           <>
+            <View style={[styles.iconCircle, { backgroundColor: theme.colors.errorBackground }]}>
+                <Text style={styles.statusIcon}>❌</Text>
+            </View>
             <Text style={styles.title} fontType='bold'>{t('payment.failedTitle', 'Payment Failed')}</Text>
-            <Text style={styles.errorText}>{error}</Text>
+            <View style={styles.errorContainer}>
+                <Text style={styles.errorText} fontType='regular'>{error}</Text>
+            </View>
             <Button
               title={t('payment.tryAgain', 'Try Again')}
-              onPress={() => router.replace('/(guest)/pricing')}
+              onPress={() => router.replace('/subscription/setup')}
               style={styles.ctaButton}
-              textStyle={styles.ctaButtonText}
             />
           </>
         );
@@ -112,28 +119,25 @@ export default function PaymentSuccess() {
   };
 
   return (
-    <AnimatedScreen backgroundColor={theme.colors.background}>
-      <ScrollView contentContainerStyle={styles.scrollContent}>
+    <AnimatedScreen>
+      <View style={styles.container}>
+        {/* Header with Logo in top left */}
         <View style={styles.header}>
-            <Link href="/(guest)" asChild>
-                <Image
-                source={require('../../../../assets/koordlogoblack1.svg')}
-                style={styles.logo}
-                resizeMode="contain"
-                />
-            </Link>
+          <Image source={Logo} style={styles.logo} resizeMode="contain" />
         </View>
 
-        <View style={styles.mainContent}>
-            <View style={styles.card}>
+        <ScrollView contentContainerStyle={styles.scrollContent}>
+          <View style={styles.mainContent}>
+            <Card style={styles.statusCard}>
                 {renderContent()}
-            </View>
-        </View>
+            </Card>
+          </View>
+        </ScrollView>
 
         <View style={styles.footer}>
-            <Text style={styles.footerText} fontType="regular">© {new Date().getFullYear()} WorkHoursTracker. {t('common.allRightsReserved')}</Text>
+            <Text style={styles.footerText} fontType="regular">© {new Date().getFullYear()} Koord. {t('common.allRightsReserved')}</Text>
         </View>
-      </ScrollView>
+      </View>
     </AnimatedScreen>
   );
 }
@@ -141,116 +145,114 @@ export default function PaymentSuccess() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: theme.colors.background,
+    backgroundColor: theme.colors.pageBackground,
+  },
+  header: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    padding: theme.spacing(4),
+    zIndex: 10,
+  },
+  logo: {
+    width: 120,
+    height: 36,
   },
   scrollContent: {
     flexGrow: 1,
-    justifyContent: 'space-between',
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    justifyContent: 'center',
     padding: theme.spacing(3),
-    backgroundColor: theme.colors.cardBackground,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.borderColor,
-    ...Platform.select({
-        web: {
-          width: '100%',
-          maxWidth: 1400,
-          alignSelf: 'center',
-        },
-    }),
-  },
-  logo: {
-    width: 100,
-    height: 30,
+    paddingTop: theme.spacing(12),
+    paddingBottom: theme.spacing(8),
   },
   mainContent: {
-    flex: 1,
-    justifyContent: 'center',
     alignItems: 'center',
-    padding: theme.spacing(4),
-  },
-  card: {
     width: '100%',
-    maxWidth: 500,
-    padding: theme.spacing(5),
+    maxWidth: 600,
+    alignSelf: 'center',
+  },
+  statusCard: {
+    width: '100%',
+    maxWidth: 450,
     backgroundColor: theme.colors.cardBackground,
     borderRadius: theme.radius.xl,
+    padding: theme.spacing(5),
     borderWidth: 1,
     borderColor: theme.colors.borderColor,
     alignItems: 'center',
     ...Platform.select({
         web: {
             shadowColor: '#000',
-            shadowOffset: { width: 0, height: 4 },
-            shadowOpacity: 0.05,
-            shadowRadius: 10,
+            shadowOffset: { width: 0, height: 10 },
+            shadowOpacity: 0.1,
+            shadowRadius: 20,
         },
         native: {
-            elevation: 6,
+            elevation: 10,
         },
     }),
   },
+  iconCircle: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: '#D1FAE5', // Light green
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: theme.spacing(3),
+  },
+  statusIcon: {
+    fontSize: 40,
+  },
   title: {
-    fontSize: isLargeScreen ? 32 : 28,
+    fontSize: 28,
     color: theme.colors.headingText,
     textAlign: 'center',
-    marginBottom: theme.spacing(2),
+    marginBottom: theme.spacing(1),
   },
   description: {
-    fontSize: isLargeScreen ? 18 : 16,
+    fontSize: 16,
     color: theme.colors.bodyText,
     textAlign: 'center',
     marginBottom: theme.spacing(4),
-    maxWidth: 600,
+    lineHeight: 24,
   },
   statusText: {
     fontSize: 18,
     color: theme.colors.bodyText,
     textAlign: 'center',
   },
-  errorText: {
-    fontSize: 16,
-    color: theme.colors.errorText,
+  errorContainer: {
     backgroundColor: theme.colors.errorBackground,
-    padding: theme.spacing(2),
     borderRadius: theme.radius.md,
-    marginBottom: theme.spacing(4),
-    textAlign: 'center',
+    padding: theme.spacing(2),
+    marginBottom: theme.spacing(3),
+    borderWidth: 1,
+    borderColor: theme.colors.errorText,
     width: '100%',
+  },
+  errorText: {
+    color: theme.colors.errorText,
+    textAlign: 'center',
+    fontSize: 14,
   },
   ctaButton: {
     backgroundColor: theme.colors.primary,
-    paddingHorizontal: theme.spacing(5),
-    paddingVertical: theme.spacing(2),
     borderRadius: theme.radius.lg,
     width: '100%',
-    alignItems: 'center',
-  },
-  ctaButtonText: {
-    color: 'white',
-    fontSize: 18,
-    fontWeight: 'bold',
+    height: 52,
+    justifyContent: 'center',
   },
   footer: {
-    padding: theme.spacing(5),
-    backgroundColor: theme.colors.cardBackground,
-    borderTopWidth: 1,
-    borderTopColor: theme.colors.borderColor,
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    padding: theme.spacing(3),
     alignItems: 'center',
-    ...Platform.select({
-      web: {
-        width: '100%',
-        maxWidth: 1400,
-        alignSelf: 'center',
-      },
-    }),
   },
   footerText: {
-    fontSize: 14,
-    color: theme.colors.bodyText,
+    fontSize: 12,
+    color: theme.colors.disabledText,
   },
 });

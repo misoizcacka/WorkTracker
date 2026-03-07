@@ -1,19 +1,19 @@
 import React, { useState, useEffect } from 'react';
-import { View, TextInput, StyleSheet, ActivityIndicator, Alert, ScrollView, Platform, Dimensions, Image, Pressable } from 'react-native';
-import { Feather } from '@expo/vector-icons';
+import { View, TextInput, StyleSheet, ActivityIndicator, Alert, ScrollView, Platform, Dimensions, Image, Pressable, TouchableOpacity } from 'react-native';
+import { Feather, Ionicons } from '@expo/vector-icons';
 import { useRouter, Link } from 'expo-router';
 import { useSession } from '../../context/AuthContext';
 import { Button } from '../../components/Button';
+import { Card } from '../../components/Card';
 import { Text } from '../../components/Themed';
 import { theme } from '../../theme';
 import AnimatedScreen from '../../components/AnimatedScreen';
-import Logo from '../../../assets/koordlogoblack1.svg'; // Corrected path
+import Logo from '../../../assets/koordlogoblack1.svg';
 import { supabase } from '../../utils/supabase';
 import { useTranslation } from 'react-i18next';
-import { LanguageSelector } from '../../components/LanguageSelector';
 
 const { width } = Dimensions.get('window');
-const isLargeScreen = width > 768;
+const isLargeScreen = width > 900;
 
 export default function Signup() {
   const router = useRouter();
@@ -27,20 +27,7 @@ export default function Signup() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState<{ fullName?: string; email?: string; password?: string; general?: string }>({});
 
-  const getLogoHref = () => {
-    if (!user) {
-      return '/(guest)';
-    }
-    if (userRole === 'manager' || userRole === 'owner') {
-      return '/(manager)/dashboard';
-    } else if (userRole === 'worker') {
-      return '/(worker)/home';
-    }
-    return '/(guest)';
-  };
-
   const handleSignup = async () => {
-    console.log("Analytics: Signup initiated.");
     const newErrors: { fullName?: string; email?: string; password?: string; } = {};
     if (!fullName) newErrors.fullName = t('signup.errors.fullNameRequired');
     if (!email) {
@@ -56,13 +43,11 @@ export default function Signup() {
 
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
-      console.log("Analytics: Signup validation failed.", newErrors);
       return;
     }
 
     setErrors({});
     setIsSubmitting(true);
-    console.log("Analytics: Attempting Supabase signup.");
 
     try {
       const { data, error } = await supabase.auth.signUp({
@@ -77,14 +62,11 @@ export default function Signup() {
       });
 
       if (error) {
-        console.error("Analytics: Supabase signup failed.", error.message);
         setErrors({ general: error.message });
         return;
       }
 
       if (data.user) {
-        console.log("Analytics: Supabase signup successful, user created. User ID:", data.user.id);
-
         const { data: edgeFunctionData, error: edgeFunctionError } = await supabase.functions.invoke('create-owner-and-company', {
           body: {
             userId: data.user.id,
@@ -95,197 +77,273 @@ export default function Signup() {
         });
 
         if (edgeFunctionError) {
-          console.error('Error invoking create-owner-and-company Edge Function:', edgeFunctionError);
           setErrors({ general: t('signup.failedToFinalizeSetup') });
           return;
         }
         
-        const { company, employee } = edgeFunctionData;
-        console.log('Company and owner employee created:', company, employee);
-
+        const { company } = edgeFunctionData;
         await refreshUser();
         router.push({ pathname: '/subscription/setup', params: { companyId: company.id } });
       } else {
-        console.log("Analytics: Supabase signup successful, but user object is null. Likely awaiting email confirmation.");
-        setErrors({ general: t('signup.checkEmailConfirmation') }); // New i18n key needed
+        setErrors({ general: t('signup.checkEmailConfirmation') });
       }
     } catch (error: any) {
-      console.error("Analytics: Supabase signup encountered an unexpected error.", error.message);
       setErrors({ general: error.message || t('signup.unexpectedError') });
     } finally {
       setIsSubmitting(false);
-      console.log("Analytics: Signup request finished.");
     }
   };
 
   return (
     <AnimatedScreen>
-      <View style={styles.outerContainer}>
-        {isLargeScreen && (
-          <View style={styles.marketingContainer}>
-            <Link href={getLogoHref()} style={styles.marketingLogo} asChild>
-              <Image source={Logo} resizeMode="contain" />
-            </Link>
-            <Text style={styles.marketingTitle} fontType="bold">{t('signup.marketingTitle')}</Text>
-            <Text style={styles.marketingDescription} fontType="regular">{t('signup.marketingDescription')}</Text>
-            <Text style={styles.marketingBullet} fontType="regular">✅ {t('signup.marketingBullet1')}</Text>
-            <Text style={styles.marketingBullet} fontType="regular">✅ {t('signup.marketingBullet2')}</Text>
-            <Text style={styles.marketingBullet} fontType="regular">✅ {t('signup.marketingBullet3')}</Text>
-            <Text style={styles.marketingBullet} fontType="regular">✅ {t('signup.marketingBullet4')}</Text>
-            <Text style={styles.marketingDescription} fontType="regular">{t('signup.marketingDescription2')}</Text>
-          </View>
-        )}
-        {isLargeScreen && <View style={styles.separatorVertical} />}
-        {!isLargeScreen && (
-            <Link href={getLogoHref()} style={styles.smallScreenLogo} asChild>
-              <Image source={Logo} resizeMode="contain" />
-            </Link>
-        )}
+      <View style={styles.container}>
+        {/* Logo Header */}
+        <View style={styles.header}>
+          <Link href="/(guest)" asChild>
+            <TouchableOpacity activeOpacity={0.7}>
+              <Image source={Logo} style={styles.logo} resizeMode="contain" />
+            </TouchableOpacity>
+          </Link>
+        </View>
+
         <ScrollView contentContainerStyle={styles.scrollContent}>
-          <View style={styles.content}>
-            <Text style={styles.title} fontType="bold">{t('signup.createYourAccount')}</Text>
-            <Text style={styles.description} fontType="regular">{t('signup.registerManagerAccount')}</Text>
+          <View style={styles.mainLayout}>
+            {/* Left Column: Marketing (Desktop Only) */}
+            {isLargeScreen && (
+              <View style={styles.marketingColumn}>
+                <Text style={styles.marketingTitle} fontType="bold">
+                  {t('signup.marketingTitle')}
+                </Text>
+                <Text style={styles.marketingSubtitle} fontType="regular">
+                  {t('signup.marketingDescription')}
+                </Text>
 
-            {errors.general && <View style={styles.errorContainer}><Text style={styles.errorText} fontType="regular">{errors.general}</Text></View>}
+                <View style={styles.bulletList}>
+                  <View style={styles.bulletItem}>
+                    <View style={styles.bulletIcon}>
+                      <Ionicons name="calendar-outline" size={24} color={theme.colors.primary} />
+                    </View>
+                    <View style={styles.bulletTextContainer}>
+                      <Text style={styles.bulletTitle} fontType="bold">{t('signup.smartSchedulingTitle')}</Text>
+                      <Text style={styles.bulletDescription} fontType="regular">
+                        {t('signup.smartSchedulingDesc')}
+                      </Text>
+                    </View>
+                  </View>
 
-            <TextInput
-              style={styles.input}
-              placeholder={t('signup.fullNamePlaceholder')}
-              value={fullName}
-              onChangeText={setFullName}
-              autoCapitalize="words"
-              placeholderTextColor={theme.colors.bodyText}
-            />
-            {errors.fullName && <View style={styles.errorContainer}><Text style={styles.errorText} fontType="regular">{errors.fullName}</Text></View>}
+                  <View style={styles.bulletItem}>
+                    <View style={styles.bulletIcon}>
+                      <Ionicons name="map-outline" size={24} color={theme.colors.primary} />
+                    </View>
+                    <View style={styles.bulletTextContainer}>
+                      <Text style={styles.bulletTitle} fontType="bold">{t('signup.realTimeOversightTitle')}</Text>
+                      <Text style={styles.bulletDescription} fontType="regular">
+                        {t('signup.realTimeOversightDesc')}
+                      </Text>
+                    </View>
+                  </View>
 
-            <TextInput
-              style={styles.input}
-              placeholder={t('signup.emailAddressPlaceholder')}
-              value={email}
-              onChangeText={setEmail}
-              keyboardType="email-address"
-              autoCapitalize="none"
-              placeholderTextColor={theme.colors.bodyText}
-            />
-            {errors.email && <View style={styles.errorContainer}><Text style={styles.errorText} fontType="regular">{errors.email}</Text></View>}
+                  <View style={styles.bulletItem}>
+                    <View style={styles.bulletIcon}>
+                      <Ionicons name="document-text-outline" size={24} color={theme.colors.primary} />
+                    </View>
+                    <View style={styles.bulletTextContainer}>
+                      <Text style={styles.bulletTitle} fontType="bold">{t('signup.automatedReportingTitle')}</Text>
+                      <Text style={styles.bulletDescription} fontType="regular">
+                        {t('signup.automatedReportingDesc')}
+                      </Text>
+                    </View>
+                  </View>
+                </View>
+              </View>
+            )}
 
-            <View style={styles.passwordInputContainer}>
-              <TextInput
-                style={styles.passwordInput}
-                placeholder={t('signup.passwordPlaceholder')}
-                value={password}
-                onChangeText={setPassword}
-                secureTextEntry={!passwordVisible}
-                placeholderTextColor={theme.colors.bodyText}
-              />
-              <Pressable onPress={() => setPasswordVisible(!passwordVisible)} style={styles.passwordToggle}>
-                <Feather
-                  name={passwordVisible ? 'eye' : 'eye-off'}
-                  size={20}
-                  color={theme.colors.iconColor}
-                />
-              </Pressable>
-            </View>
-            {errors.password && <View style={styles.errorContainer}><Text style={styles.errorText} fontType="regular">{errors.password}</Text></View>}
-            
-            <Button
-              onPress={handleSignup}
-              disabled={isSubmitting}
-              style={styles.primaryButton}
-            >
-              {isSubmitting ? <ActivityIndicator color="#fff" /> : <Text style={styles.primaryButtonText} fontType="regular">{t('signup.continueButton')}</Text>}
-            </Button><Button
-              title={t('signup.signUpWithGoogle')}
-              onPress={() => Alert.alert(t('signup.signUpWithGoogle'), t('signup.googleSignupComingSoon'))}
-              style={styles.googleButton}
-            />
+            {/* Right Column: Sign Up Form */}
+            <View style={styles.formColumn}>
+              <Card style={styles.signupCard}>
+                <Text style={styles.title} fontType="bold">{t('signup.createYourAccount')}</Text>
+                <Text style={styles.description} fontType="regular">{t('signup.registerManagerAccount')}</Text>
 
-            <View style={styles.signInLinkContainer}>
-              <Text style={styles.signInText} fontType="regular">{t('signup.alreadyHaveAccount')}</Text><Link href="/(guest)/login" asChild>
-                <Text style={styles.signInLink} fontType="regular">{t('signup.signInLink')}</Text>
-              </Link>
+                {errors.general && (
+                  <View style={styles.errorContainer}>
+                    <Text style={styles.errorText} fontType="regular">{errors.general}</Text>
+                  </View>
+                )}
+
+                <View style={styles.inputGroup}>
+                  <Text style={styles.label} fontType="medium">{t('signup.fullNamePlaceholder')}</Text>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="John Doe"
+                    value={fullName}
+                    onChangeText={setFullName}
+                    autoCapitalize="words"
+                    placeholderTextColor={theme.colors.disabledText}
+                  />
+                  {errors.fullName && <Text style={styles.fieldError} fontType="regular">{errors.fullName}</Text>}
+                </View>
+
+                <View style={styles.inputGroup}>
+                  <Text style={styles.label} fontType="medium">{t('signup.emailAddressPlaceholder')}</Text>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="email@example.com"
+                    value={email}
+                    onChangeText={setEmail}
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                    placeholderTextColor={theme.colors.disabledText}
+                  />
+                  {errors.email && <Text style={styles.fieldError} fontType="regular">{errors.email}</Text>}
+                </View>
+
+                <View style={styles.inputGroup}>
+                  <Text style={styles.label} fontType="medium">{t('signup.passwordPlaceholder')}</Text>
+                  <View style={styles.passwordInputContainer}>
+                    <TextInput
+                      style={styles.passwordInput}
+                      placeholder="••••••••"
+                      value={password}
+                      onChangeText={setPassword}
+                      secureTextEntry={!passwordVisible}
+                      placeholderTextColor={theme.colors.disabledText}
+                    />
+                    <Pressable onPress={() => setPasswordVisible(!passwordVisible)} style={styles.passwordToggle}>
+                      <Feather
+                        name={passwordVisible ? 'eye' : 'eye-off'}
+                        size={20}
+                        color={theme.colors.iconColor}
+                      />
+                    </Pressable>
+                  </View>
+                  {errors.password && <Text style={styles.fieldError} fontType="regular">{errors.password}</Text>}
+                </View>
+
+                <Button
+                  onPress={handleSignup}
+                  disabled={isSubmitting}
+                  style={styles.signupButton}
+                >
+                  {isSubmitting ? (
+                    <ActivityIndicator color="#fff" />
+                  ) : (
+                    <Text style={styles.signupButtonText} fontType="regular">{t('signup.continueButton')}</Text>
+                  )}
+                </Button>
+
+                <View style={styles.signInLinkContainer}>
+                  <Text style={styles.signInText} fontType="regular">{t('signup.alreadyHaveAccount')}</Text>
+                  <Link href="/(guest)/login" asChild>
+                    <TouchableOpacity>
+                      <Text style={styles.signInLink} fontType="regular">{t('signup.signInLink')}</Text>
+                    </TouchableOpacity>
+                  </Link>
+                </View>
+              </Card>
             </View>
           </View>
         </ScrollView>
-      </View>
-      <View style={styles.languageSelectorContainer}>
-        <LanguageSelector />
       </View>
     </AnimatedScreen>
   );
 }
 
 const styles = StyleSheet.create({
-  outerContainer: {
+  container: {
     flex: 1,
-    flexDirection: isLargeScreen ? 'row' : 'column',
+    backgroundColor: theme.colors.pageBackground,
   },
-  marketingContainer: {
-    flex: 1,
-    backgroundColor: theme.colors.background,
-    justifyContent: 'center',
-    padding: theme.spacing(8),
-    paddingTop: theme.spacing(8),
-  },
-  marketingLogo: {
+  header: {
     position: 'absolute',
-    top: theme.spacing(4),
-    left: theme.spacing(4),
-    width: 100,
-    height: 30,
-  },
-  smallScreenLogo: {
-    position: 'absolute',
-    top: theme.spacing(4),
-    left: theme.spacing(4),
-    width: 100,
-    height: 30,
+    top: 0,
+    left: 0,
+    padding: theme.spacing(4),
     zIndex: 10,
   },
-  marketingTitle: {
-    fontSize: 40,
-    color: theme.colors.headingText,
-    marginBottom: theme.spacing(4),
-    lineHeight: 48,
-  },
-  marketingDescription: {
-    fontSize: 18,
-    color: theme.colors.bodyText,
-    marginBottom: theme.spacing(4),
-    lineHeight: 28,
-  },
-  marketingBullet: {
-    fontSize: 16,
-    color: theme.colors.bodyText,
-    marginBottom: theme.spacing(1),
-  },
-  separatorVertical: {
-    width: 1,
-    backgroundColor: theme.colors.borderColor,
-    height: '100%',
+  logo: {
+    width: 120,
+    height: 36,
   },
   scrollContent: {
     flexGrow: 1,
+    padding: theme.spacing(3),
+    paddingTop: theme.spacing(10),
     justifyContent: 'center',
-    padding: theme.spacing(2),
   },
-  content: {
+  mainLayout: {
+    flexDirection: 'row',
+    alignItems: 'center',
     justifyContent: 'center',
-    padding: theme.spacing(4),
-    backgroundColor: theme.colors.cardBackground,
-    marginHorizontal: 'auto',
-    maxWidth: 500,
     width: '100%',
-    borderRadius: theme.radius.lg,
+    maxWidth: 1200,
+    alignSelf: 'center',
+    gap: theme.spacing(8),
+  },
+  marketingColumn: {
+    flex: 1,
+    maxWidth: 500,
+  },
+  marketingTitle: {
+    fontSize: 42,
+    color: theme.colors.headingText,
+    lineHeight: 52,
+    marginBottom: theme.spacing(2),
+  },
+  marketingSubtitle: {
+    fontSize: 18,
+    color: theme.colors.bodyText,
+    lineHeight: 28,
+    marginBottom: theme.spacing(6),
+  },
+  bulletList: {
+    gap: theme.spacing(4),
+  },
+  bulletItem: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: theme.spacing(2),
+  },
+  bulletIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: theme.radius.md,
+    backgroundColor: theme.colors.primaryMuted,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  bulletTextContainer: {
+    flex: 1,
+  },
+  bulletTitle: {
+    fontSize: 18,
+    color: theme.colors.headingText,
+    marginBottom: 4,
+  },
+  bulletDescription: {
+    fontSize: 15,
+    color: theme.colors.bodyText,
+    lineHeight: 22,
+  },
+  formColumn: {
+    flex: 1,
+    maxWidth: 450,
+    width: '100%',
+  },
+  signupCard: {
+    backgroundColor: theme.colors.cardBackground,
+    borderRadius: theme.radius.xl,
+    padding: theme.spacing(5),
+    borderWidth: 1,
+    borderColor: theme.colors.borderColor,
     ...Platform.select({
       web: {
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
+        shadowOffset: { width: 0, height: 10 },
         shadowOpacity: 0.1,
-        shadowRadius: 12,
+        shadowRadius: 20,
       },
       native: {
-        elevation: 8,
+        elevation: 10,
       }
     }),
   },
@@ -305,19 +363,30 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.errorBackground,
     borderRadius: theme.radius.md,
     padding: theme.spacing(2),
-    marginBottom: theme.spacing(2),
+    marginBottom: theme.spacing(3),
+    borderWidth: 1,
+    borderColor: theme.colors.errorText,
   },
   errorText: {
     color: theme.colors.errorText,
     textAlign: 'center',
+    fontSize: 14,
+  },
+  inputGroup: {
+    marginBottom: theme.spacing(2),
+  },
+  label: {
+    fontSize: 14,
+    color: theme.colors.headingText,
+    marginBottom: theme.spacing(1),
+    marginLeft: 4,
   },
   input: {
-    height: 50,
+    height: 52,
     borderColor: theme.colors.borderColor,
     borderWidth: 1,
-    borderRadius: theme.radius.md,
+    borderRadius: theme.radius.lg,
     paddingHorizontal: theme.spacing(2),
-    marginBottom: theme.spacing(2),
     fontSize: 16,
     color: theme.colors.headingText,
     backgroundColor: theme.colors.background,
@@ -327,44 +396,41 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderColor: theme.colors.borderColor,
     borderWidth: 1,
-    borderRadius: theme.radius.md,
-    marginBottom: theme.spacing(2),
+    borderRadius: theme.radius.lg,
     backgroundColor: theme.colors.background,
   },
   passwordInput: {
     flex: 1,
-    height: 50,
+    height: 52,
     paddingHorizontal: theme.spacing(2),
     fontSize: 16,
     color: theme.colors.headingText,
-    backgroundColor: theme.colors.background,
   },
   passwordToggle: {
-    padding: theme.spacing(2),
+    padding: theme.spacing(1.5),
   },
-  primaryButton: {
+  fieldError: {
+    color: theme.colors.errorText,
+    fontSize: 12,
+    marginTop: 4,
+    marginLeft: 4,
+  },
+  signupButton: {
     backgroundColor: theme.colors.primary,
-    borderRadius: theme.radius.md,
+    borderRadius: theme.radius.lg,
+    height: 52,
     marginTop: theme.spacing(2),
-    height: 50,
     justifyContent: 'center',
   },
-  primaryButtonText: {
+  signupButtonText: {
     color: 'white',
     fontSize: 16,
   },
-  googleButton: {
-    backgroundColor: theme.colors.accent, // Using accent color for Google button
-    borderRadius: theme.radius.md,
-    marginTop: theme.spacing(1),
-    height: 50,
-    justifyContent: 'center',
-  },
-  // googleButtonText is not used, as Button component's default text style is used
   signInLinkContainer: {
     flexDirection: 'row',
     justifyContent: 'center',
     marginTop: theme.spacing(3),
+    gap: 4,
   },
   signInText: {
     fontSize: 14,
@@ -373,11 +439,5 @@ const styles = StyleSheet.create({
   signInLink: {
     fontSize: 14,
     color: theme.colors.primary,
-  },
-  languageSelectorContainer: {
-    position: 'absolute',
-    top: Platform.OS === 'web' ? theme.spacing(4) : theme.spacing(6),
-    right: theme.spacing(4),
-    zIndex: 100,
   },
 });

@@ -3,14 +3,17 @@ import { View, StyleSheet, ScrollView, Platform, Dimensions, Image, TextInput, T
 import { Text } from '../../components/Themed';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Button } from '../../components/Button';
+import { Card } from '../../components/Card';
 import { theme } from '../../theme';
 import { useTranslation } from 'react-i18next';
 import { useSession } from '../../context/AuthContext';
 import { setStorageItemAsync } from '../../hooks/useStorageState';
 import { supabase } from '../../utils/supabase';
+import AnimatedScreen from '../../components/AnimatedScreen';
+import Logo from '../../../assets/koordlogoblack1.svg';
 
 const { width } = Dimensions.get('window');
-const isLargeScreen = width > 768;
+const isLargeScreen = width > 900;
 
 // Define pricing constants from pricing page
 const BASE_MONTHLY_FEE = 10; // EUR
@@ -43,8 +46,20 @@ export default function SubscriptionSetupPage() {
   };
 
   const handleCancel = async () => {
-    await setStorageItemAsync('pendingSubscription', null);
-    signOut();
+    setIsSubmitting(true);
+    try {
+      // Call the cleanup Edge Function to delete the user and company
+      const { error: cleanupError } = await supabase.functions.invoke('cleanup-user-on-cancel');
+      if (cleanupError) {
+        console.error('Error during cleanup:', cleanupError);
+      }
+    } catch (err) {
+      console.error('Unexpected error during cleanup:', err);
+    } finally {
+      await setStorageItemAsync('pendingSubscription', null);
+      signOut();
+      setIsSubmitting(false);
+    }
   };
 
   const handleContinue = async () => {
@@ -125,34 +140,44 @@ export default function SubscriptionSetupPage() {
   }
 
   return (
-    <View style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scrollContent}>
+    <AnimatedScreen>
+      <View style={styles.container}>
+        {/* Header with Logo in top left */}
         <View style={styles.header}>
-            <Image
-              source={require('../../../assets/koordlogoblack1.svg')}
-              style={styles.logo}
-              resizeMode="contain"
-            />
+          <Image source={Logo} style={styles.logo} resizeMode="contain" />
         </View>
 
-        <View style={styles.pricingSection}>
-          <Text style={styles.title} fontType="bold">{t('subscriptionSetup.title', 'Confirm Your Plan')}</Text>
-          <Text style={styles.description} fontType="regular">
-            {t('subscriptionSetup.description', 'Review your subscription details before proceeding to payment.')}
-          </Text>
+        <ScrollView contentContainerStyle={styles.scrollContent}>
+          <View style={styles.mainContent}>
+            <Text style={styles.title} fontType="bold">{t('subscriptionSetup.title', 'Confirm Your Plan')}</Text>
+            <Text style={styles.description} fontType="regular">
+              {t('subscriptionSetup.description', 'Review your subscription details before proceeding to payment.')}
+            </Text>
 
-          {error && <View style={styles.errorContainer}><Text style={styles.errorText}>{error}</Text></View>}
+            {error && (
+              <View style={styles.errorContainer}>
+                <Text style={styles.errorText} fontType="regular">{error}</Text>
+              </View>
+            )}
 
-          <View style={styles.pricingCardContainer}>
-            <View style={styles.pricingCard}>
+            <Card style={styles.pricingCard}>
               <Text style={styles.pricingCardTitle} fontType="bold">{t('pricing.singlePlanTitle')}</Text>
-              <Text style={styles.pricingCardBaseFee} fontType="bold">{BASE_MONTHLY_FEE} {t('common.currency')} / {t('common.month')}</Text>
-              <Text style={styles.pricingCardPerWorker} fontType="regular">+ {PRICE_PER_WORKER} {t('common.currency')} / {t('pricing.workerPerMonth')}</Text>
               
-              <Text style={styles.calculatorLabel} fontType="regular">{t('pricing.howManyWorkers')}</Text>
+              <View style={styles.feeContainer}>
+                <Text style={styles.pricingCardBaseFee} fontType="bold">{BASE_MONTHLY_FEE} {t('common.currency')}</Text>
+                <Text style={styles.perMonth} fontType="regular">/ {t('common.month')}</Text>
+              </View>
+              
+              <Text style={styles.pricingCardPerWorker} fontType="regular">
+                + {PRICE_PER_WORKER} {t('common.currency')} / {t('pricing.workerPerMonth')}
+              </Text>
+              
+              <View style={styles.divider} />
+
+              <Text style={styles.calculatorLabel} fontType="medium">{t('pricing.howManyWorkers')}</Text>
               <View style={styles.workerInputGroup}>
                 <TouchableOpacity onPress={handleDecrementWorkers} style={styles.workerButton}>
-                  <Text style={styles.workerButtonText}>-</Text>
+                  <Text style={styles.workerButtonText} fontType="bold">−</Text>
                 </TouchableOpacity>
                 <TextInput
                   style={styles.calculatorInput}
@@ -160,233 +185,237 @@ export default function SubscriptionSetupPage() {
                   value={numWorkers}
                   onChangeText={(text) => setNumWorkers(text.replace(/[^0-9]/g, ''))}
                   placeholder="e.g., 10"
-                  placeholderTextColor={theme.colors.bodyText}
+                  placeholderTextColor={theme.colors.disabledText}
                 />
                 <TouchableOpacity onPress={handleIncrementWorkers} style={styles.workerButton}>
-                  <Text style={styles.workerButtonText}>+</Text>
+                  <Text style={styles.workerButtonText} fontType="bold">+</Text>
                 </TouchableOpacity>
               </View>
-              <Text style={styles.estimatedCostText} fontType="regular">{t('pricing.estimatedMonthlyCost')}: <Text style={styles.estimatedCostValue} fontType="bold">{estimatedCost} {t('common.currency')}</Text></Text>
+
+              <View style={styles.costBreakdown}>
+                <Text style={styles.estimatedCostLabel} fontType="regular">{t('pricing.estimatedMonthlyCost')}</Text>
+                <Text style={styles.estimatedCostValue} fontType="bold">{estimatedCost} {t('common.currency')}</Text>
+              </View>
 
               <Button
                 onPress={handleContinue}
                 disabled={isSubmitting}
                 style={styles.ctaButton}
               >
-                 {isSubmitting ? <ActivityIndicator color="#fff" /> : <Text style={styles.ctaButtonText}>{t('subscriptionSetup.proceedToPayment', 'Proceed to Payment')}</Text>}
+                 {isSubmitting ? (
+                   <ActivityIndicator color="#fff" />
+                 ) : (
+                   <Text style={styles.ctaButtonText} fontType="regular">{t('subscriptionSetup.proceedToPayment', 'Proceed to Payment')}</Text>
+                 )}
               </Button>
-               <Button
-                onPress={handleCancel}
-                style={styles.cancelButton}
-              >
-                <Text style={styles.cancelButtonText}>{t('common.cancel', 'Cancel')}</Text>
-            </Button>
-            </View>
+
+              <TouchableOpacity onPress={handleCancel} style={styles.cancelButton}>
+                <Text style={styles.cancelButtonText} fontType="regular">{t('common.cancel', 'Cancel')}</Text>
+              </TouchableOpacity>
+            </Card>
           </View>
-        </View>
+        </ScrollView>
 
         <View style={styles.footer}>
-          <Text style={styles.footerText} fontType="regular">© {new Date().getFullYear()} WorkHoursTracker. {t('common.allRightsReserved')}</Text>
+          <Text style={styles.footerText} fontType="regular">© {new Date().getFullYear()} Koord. {t('common.allRightsReserved')}</Text>
         </View>
-      </ScrollView>
-    </View>
+      </View>
+    </AnimatedScreen>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: theme.colors.background,
+    backgroundColor: theme.colors.pageBackground,
+  },
+  header: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    padding: theme.spacing(4),
+    zIndex: 10,
+  },
+  logo: {
+    width: 120,
+    height: 36,
   },
   scrollContent: {
     flexGrow: 1,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    justifyContent: 'center',
     padding: theme.spacing(3),
-    backgroundColor: theme.colors.cardBackground,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.borderColor,
-    ...Platform.select({
-      web: {
-        width: '100%',
-        maxWidth: 1400,
-        alignSelf: 'center',
-      },
-    }),
+    paddingTop: theme.spacing(12),
+    paddingBottom: theme.spacing(10),
   },
-  logo: {
-    width: 100,
-    height: 30,
-  },
-  pricingSection: {
-    padding: theme.spacing(8),
+  mainContent: {
     alignItems: 'center',
-    ...Platform.select({
-      web: {
-        width: '100%',
-        maxWidth: 1400,
-        alignSelf: 'center',
-      },
-    }),
+    width: '100%',
+    maxWidth: 600,
+    alignSelf: 'center',
   },
   title: {
-    fontSize: isLargeScreen ? 48 : 32,
+    fontSize: isLargeScreen ? 36 : 28,
     color: theme.colors.headingText,
     textAlign: 'center',
-    marginBottom: theme.spacing(2),
+    marginBottom: theme.spacing(1),
   },
   description: {
-    fontSize: isLargeScreen ? 18 : 16,
+    fontSize: 16,
     color: theme.colors.bodyText,
     textAlign: 'center',
-    marginBottom: theme.spacing(6),
-    maxWidth: 600,
-  },
-  pricingCardContainer: {
-    width: '100%',
-    maxWidth: 500,
-    marginBottom: theme.spacing(6),
+    marginBottom: theme.spacing(5),
+    maxWidth: 400,
   },
   pricingCard: {
-    padding: theme.spacing(5),
+    width: '100%',
+    maxWidth: 450,
     backgroundColor: theme.colors.cardBackground,
     borderRadius: theme.radius.xl,
+    padding: theme.spacing(5),
     borderWidth: 1,
     borderColor: theme.colors.borderColor,
     alignItems: 'center',
-    textAlign: 'center',
     ...Platform.select({
       web: {
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.05,
-        shadowRadius: 10,
+        shadowOffset: { width: 0, height: 10 },
+        shadowOpacity: 0.1,
+        shadowRadius: 20,
       },
       native: {
-        elevation: 6,
+        elevation: 10,
       },
     }),
   },
   pricingCardTitle: {
-    fontSize: 32,
+    fontSize: 20,
     color: theme.colors.primary,
-    marginBottom: theme.spacing(2),
+    marginBottom: theme.spacing(3),
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+  },
+  feeContainer: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    marginBottom: theme.spacing(0.5),
   },
   pricingCardBaseFee: {
     fontSize: 48,
     color: theme.colors.headingText,
-    marginBottom: theme.spacing(0.5),
+  },
+  perMonth: {
+    fontSize: 18,
+    color: theme.colors.bodyText,
+    marginLeft: 4,
   },
   pricingCardPerWorker: {
-    fontSize: 20,
+    fontSize: 16,
     color: theme.colors.bodyText,
     marginBottom: theme.spacing(4),
   },
+  divider: {
+    width: '100%',
+    height: 1,
+    backgroundColor: theme.colors.borderColor,
+    marginBottom: theme.spacing(4),
+  },
   calculatorLabel: {
-    fontSize: 18,
+    fontSize: 14,
     color: theme.colors.headingText,
     marginBottom: theme.spacing(2),
   },
   workerInputGroup: {
     flexDirection: 'row',
     alignItems: 'center',
-    width: '80%',
-    marginBottom: theme.spacing(3),
+    width: '100%',
+    marginBottom: theme.spacing(4),
     justifyContent: 'center',
   },
   workerButton: {
     backgroundColor: theme.colors.background,
     borderColor: theme.colors.borderColor,
     borderWidth: 1,
-    borderRadius: theme.radius.md,
-    width: 45,
-    height: 45,
+    borderRadius: theme.radius.lg,
+    width: 48,
+    height: 48,
     justifyContent: 'center',
     alignItems: 'center',
   },
   workerButtonText: {
     color: theme.colors.headingText,
-    fontSize: 24,
-    fontWeight: 'bold',
+    fontSize: 20,
   },
   calculatorInput: {
     flex: 1,
-    height: 45,
+    maxWidth: 100,
+    height: 48,
     borderColor: theme.colors.borderColor,
     borderWidth: 1,
-    borderRadius: theme.radius.md,
+    borderRadius: theme.radius.lg,
     paddingHorizontal: theme.spacing(2),
     fontSize: 18,
     color: theme.colors.headingText,
     textAlign: 'center',
     marginHorizontal: theme.spacing(2),
+    backgroundColor: theme.colors.background,
   },
-  estimatedCostText: {
-    fontSize: 20,
-    color: theme.colors.bodyText,
+  costBreakdown: {
+    width: '100%',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: theme.colors.pageBackground,
+    padding: theme.spacing(2.5),
+    borderRadius: theme.radius.lg,
     marginBottom: theme.spacing(4),
   },
+  estimatedCostLabel: {
+    fontSize: 14,
+    color: theme.colors.bodyText,
+  },
   estimatedCostValue: {
-    fontSize: 32,
+    fontSize: 24,
     color: theme.colors.primary,
   },
   ctaButton: {
     backgroundColor: theme.colors.primary,
-    paddingHorizontal: theme.spacing(5),
-    paddingVertical: theme.spacing(2.5),
     borderRadius: theme.radius.lg,
     width: '100%',
+    height: 52,
     justifyContent: 'center',
-    alignItems: 'center',
-    height: 60,
   },
   ctaButtonText: {
     color: 'white',
-    fontSize: 18,
-    fontWeight: 'bold',
+    fontSize: 16,
   },
   cancelButton: {
-    backgroundColor: 'transparent',
-    marginTop: theme.spacing(2),
-    height: 50,
-    justifyContent: 'center',
-    borderRadius: theme.radius.md,
+    marginTop: theme.spacing(2.5),
+    padding: theme.spacing(1),
   },
   cancelButtonText: {
-    color: theme.colors.bodyText,
-    fontSize: 16,
-    fontWeight: 'bold',
-    textAlign: 'center',
+    color: theme.colors.disabledText,
+    fontSize: 14,
   },
   footer: {
-    padding: theme.spacing(5),
-    backgroundColor: theme.colors.cardBackground,
-    borderTopWidth: 1,
-    borderTopColor: theme.colors.borderColor,
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    padding: theme.spacing(3),
     alignItems: 'center',
-    ...Platform.select({
-      web: {
-        width: '100%',
-        maxWidth: 1400,
-        alignSelf: 'center',
-      },
-    }),
   },
   footerText: {
-    fontSize: 14,
-    color: theme.colors.bodyText,
+    fontSize: 12,
+    color: theme.colors.disabledText,
   },
   fullscreenLoading: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: theme.colors.background,
+    backgroundColor: theme.colors.pageBackground,
   },
   loadingText: {
-    fontSize: 18,
+    fontSize: 16,
     color: theme.colors.bodyText,
     marginTop: theme.spacing(2),
   },
@@ -394,12 +423,15 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.errorBackground,
     borderRadius: theme.radius.md,
     padding: theme.spacing(2),
-    marginBottom: theme.spacing(2),
+    marginBottom: theme.spacing(3),
+    borderWidth: 1,
+    borderColor: theme.colors.errorText,
     width: '100%',
+    maxWidth: 450,
   },
   errorText: {
     color: theme.colors.errorText,
     textAlign: 'center',
-    fontWeight: 'bold',
+    fontSize: 14,
   },
 });

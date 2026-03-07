@@ -3,20 +3,23 @@ import { View, StyleSheet, ScrollView, Platform, Dimensions, Image, TextInput, T
 import { Text } from '../../components/Themed';
 import { useRouter, Link } from 'expo-router';
 import { Button } from '../../components/Button';
+import { Card } from '../../components/Card';
 import { theme } from '../../theme';
-import { useTranslation } from 'react-i18next'; // Re-adding i18n
+import { useTranslation } from 'react-i18next';
+import AnimatedScreen from '../../components/AnimatedScreen';
+import Logo from '../../../assets/koordlogoblack1.svg';
+import { Ionicons } from '@expo/vector-icons';
 
 const { width } = Dimensions.get('window');
-const isLargeScreen = width > 768;
+const isLargeScreen = width > 900;
 
-// Define pricing constants
-const BASE_MONTHLY_FEE = 10; // EUR - User specified
-const PRICE_PER_WORKER = 6; // EUR - User specified
+const BASE_MONTHLY_FEE = 10;
+const PRICE_PER_WORKER = 6;
 
 export default function PricingPage() {
-  const { t } = useTranslation(); // Re-adding useTranslation
+  const { t } = useTranslation();
   const router = useRouter();
-  const [numWorkers, setNumWorkers] = useState('1'); // Default to 1 worker
+  const [numWorkers, setNumWorkers] = useState('1');
 
   const estimatedCost = BASE_MONTHLY_FEE + (parseInt(numWorkers || '0') * PRICE_PER_WORKER);
 
@@ -32,44 +35,54 @@ export default function PricingPage() {
   };
 
   return (
-    <View style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scrollContent}>
+    <AnimatedScreen>
+      <View style={styles.container}>
         {/* Header */}
         <View style={styles.header}>
           <Link href="/(guest)" asChild>
-            <Image
-              source={require('../../../assets/koordlogoblack1.svg')}
-              style={styles.logo}
-              resizeMode="contain"
-            />
+            <TouchableOpacity activeOpacity={0.7}>
+              <Image source={Logo} style={styles.logo} resizeMode="contain" />
+            </TouchableOpacity>
           </Link>
           <View style={styles.navLinks}>
             <Link href="/(guest)/pricing" asChild>
-              <Text style={styles.navLinkText} fontType="medium">{t('common.pricing')}</Text>
+              <TouchableOpacity>
+                <Text style={styles.navLinkText} fontType="medium">{t('common.pricing')}</Text>
+              </TouchableOpacity>
             </Link>
             <Link href="/(guest)/login" asChild>
-              <Button title={t('common.signIn')} style={styles.signInButton} textStyle={styles.signInButtonText} />
+              <TouchableOpacity style={styles.signInButton}>
+                <Text style={styles.signInButtonText} fontType="medium">{t('common.signIn')}</Text>
+              </TouchableOpacity>
             </Link>
           </View>
         </View>
 
-        {/* Pricing Section */}
-        <View style={styles.pricingSection}>
-          <Text style={styles.title} fontType="bold">{t('pricing.simpleTransparentPricingTitle')}</Text>
-          <Text style={styles.description} fontType="regular">
-            {t('pricing.simpleTransparentPricingDescription')}
-          </Text>
+        <ScrollView contentContainerStyle={styles.scrollContent}>
+          <View style={styles.pricingSection}>
+            <Text style={styles.title} fontType="bold">{t('pricing.simpleTransparentPricingTitle')}</Text>
+            <Text style={styles.description} fontType="regular">
+              {t('pricing.simpleTransparentPricingDescription')}
+            </Text>
 
-          <View style={styles.pricingCardContainer}>
-            <View style={styles.pricingCard}>
+            <Card style={styles.pricingCard}>
               <Text style={styles.pricingCardTitle} fontType="bold">{t('pricing.singlePlanTitle')}</Text>
-              <Text style={styles.pricingCardBaseFee} fontType="bold">{BASE_MONTHLY_FEE} {t('common.currency')} / {t('common.month')}</Text>
-              <Text style={styles.pricingCardPerWorker} fontType="regular">+ {PRICE_PER_WORKER} {t('common.currency')} / {t('pricing.workerPerMonth')}</Text>
               
-              <Text style={styles.calculatorLabel} fontType="regular">{t('pricing.howManyWorkers')}</Text>
+              <View style={styles.feeContainer}>
+                <Text style={styles.pricingCardBaseFee} fontType="bold">{BASE_MONTHLY_FEE} {t('common.currency')}</Text>
+                <Text style={styles.perMonth} fontType="regular">/ {t('common.month')}</Text>
+              </View>
+              
+              <Text style={styles.pricingCardPerWorker} fontType="regular">
+                + {PRICE_PER_WORKER} {t('common.currency')} / {t('pricing.workerPerMonth')}
+              </Text>
+              
+              <View style={styles.divider} />
+
+              <Text style={styles.calculatorLabel} fontType="medium">{t('pricing.howManyWorkers')}</Text>
               <View style={styles.workerInputGroup}>
                 <TouchableOpacity onPress={handleDecrementWorkers} style={styles.workerButton}>
-                  <Text style={styles.workerButtonText}>-</Text>
+                  <Text style={styles.workerButtonText} fontType="bold">−</Text>
                 </TouchableOpacity>
                 <TextInput
                   style={styles.calculatorInput}
@@ -77,103 +90,88 @@ export default function PricingPage() {
                   value={numWorkers}
                   onChangeText={(text) => setNumWorkers(text.replace(/[^0-9]/g, ''))}
                   placeholder="e.g., 10"
-                  placeholderTextColor={theme.colors.bodyText}
+                  placeholderTextColor={theme.colors.disabledText}
                 />
                 <TouchableOpacity onPress={handleIncrementWorkers} style={styles.workerButton}>
-                  <Text style={styles.workerButtonText}>+</Text>
+                  <Text style={styles.workerButtonText} fontType="bold">+</Text>
                 </TouchableOpacity>
               </View>
-              <Text style={styles.estimatedCostText} fontType="regular">{t('pricing.estimatedMonthlyCost')}: <Text style={styles.estimatedCostValue} fontType="bold">{estimatedCost} {t('common.currency')}</Text></Text>
+
+              <View style={styles.costBreakdown}>
+                <Text style={styles.estimatedCostLabel} fontType="regular">{t('pricing.estimatedMonthlyCost')}</Text>
+                <Text style={styles.estimatedCostValue} fontType="bold">{estimatedCost} {t('common.currency')}</Text>
+              </View>
 
               <Button
                 title={t('pricing.getStarted')}
-                onPress={() => router.push('/(guest)/register')}
+                onPress={() => router.push('/auth/signup')}
                 style={styles.ctaButton}
-                textStyle={styles.ctaButtonText}
               />
+            </Card>
+            
+            <View style={styles.faqSection}>
+              <Text style={styles.faqHeading} fontType="bold">{t('pricing.faqHeading')}</Text>
+              <View style={styles.faqGrid}>
+                {[
+                  { q: 'pricing.faq1Q', a: 'pricing.faq1A', params: { baseFee: BASE_MONTHLY_FEE, perWorkerFee: PRICE_PER_WORKER } },
+                  { q: 'pricing.faq2Q', a: 'pricing.faq2A' },
+                  { q: 'pricing.faq3Q', a: 'pricing.faq3A' },
+                  { q: 'pricing.faq4Q', a: 'pricing.faq4A' },
+                  { q: 'pricing.faq5Q', a: 'pricing.faq5A' },
+                  { q: 'pricing.faq6Q', a: 'pricing.faq6A' }
+                ].map((item, index) => (
+                  <FAQItem
+                    key={index}
+                    question={t(item.q)}
+                    answer={t(item.a, item.params)}
+                  />
+                ))}
+              </View>
             </View>
           </View>
-          
-          {/* FAQ Section */}
-          <View style={styles.faqSection}>
-            <Text style={styles.faqHeading} fontType="bold">{t('pricing.faqHeading')}</Text>
-            <FAQItem
-              question={t('pricing.faq1Q')}
-              answer={t('pricing.faq1A', { baseFee: BASE_MONTHLY_FEE, perWorkerFee: PRICE_PER_WORKER })}
-            />
-            <FAQItem
-              question={t('pricing.faq2Q')}
-              answer={t('pricing.faq2A')}
-            />
-            <FAQItem
-              question={t('pricing.faq3Q')}
-              answer={t('pricing.faq3A')}
-            />
-            <FAQItem
-              question={t('pricing.faq4Q')}
-              answer={t('pricing.faq4A')}
-            />
-            <FAQItem
-              question={t('pricing.faq5Q')}
-              answer={t('pricing.faq5A')}
-            />
-            <FAQItem
-              question={t('pricing.faq6Q')}
-              answer={t('pricing.faq6A')}
-            />
-          </View>
-        </View>
+        </ScrollView>
 
-        {/* Footer */}
         <View style={styles.footer}>
           <Text style={styles.footerText} fontType="regular">© {new Date().getFullYear()} Koord. {t('common.allRightsReserved')}</Text>
         </View>
-      </ScrollView>
-    </View>
+      </View>
+    </AnimatedScreen>
   );
 }
 
-// FAQ Item Component
-interface FAQItemProps {
-  question: string;
-  answer: string;
-}
-
-const FAQItem: React.FC<FAQItemProps> = ({ question, answer }) => {
+const FAQItem: React.FC<{ question: string; answer: string }> = ({ question, answer }) => {
   const [isExpanded, setIsExpanded] = useState(false);
 
   return (
-    <View style={styles.faqItem}>
-      <TouchableOpacity onPress={() => setIsExpanded(!isExpanded)} style={styles.faqQuestionButton}>
+    <Card style={styles.faqItem}>
+      <TouchableOpacity onPress={() => setIsExpanded(!isExpanded)} style={styles.faqQuestionButton} activeOpacity={0.7}>
         <Text style={styles.faqQuestionText} fontType="medium">{question}</Text>
-        <Text style={styles.faqExpandIcon}>{isExpanded ? '-' : '+'}</Text>
+        <Ionicons name={isExpanded ? "chevron-up" : "chevron-down"} size={20} color={theme.colors.primary} />
       </TouchableOpacity>
       {isExpanded && (
         <View style={styles.faqAnswerContainer}>
           <Text style={styles.faqAnswerText} fontType="regular">{answer}</Text>
         </View>
       )}
-    </View>
+    </Card>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: theme.colors.background,
+    backgroundColor: theme.colors.pageBackground,
   },
-  scrollContent: {
-    flexGrow: 1,
-  },
-  // Header (from index.tsx)
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: theme.spacing(3),
+    paddingHorizontal: theme.spacing(4),
+    paddingVertical: theme.spacing(3),
     backgroundColor: theme.colors.cardBackground,
     borderBottomWidth: 1,
     borderBottomColor: theme.colors.borderColor,
+    zIndex: 10,
     ...Platform.select({
       web: {
         width: '100%',
@@ -189,7 +187,7 @@ const styles = StyleSheet.create({
   navLinks: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: theme.spacing(3),
+    gap: theme.spacing(4),
   },
   navLinkText: {
     fontSize: 16,
@@ -203,9 +201,12 @@ const styles = StyleSheet.create({
   },
   signInButtonText: {
     color: 'white',
+    fontSize: 15,
   },
-
-  // Pricing Section
+  scrollContent: {
+    flexGrow: 1,
+    paddingBottom: theme.spacing(10),
+  },
   pricingSection: {
     padding: theme.spacing(8),
     alignItems: 'center',
@@ -224,152 +225,163 @@ const styles = StyleSheet.create({
     marginBottom: theme.spacing(2),
   },
   description: {
-    fontSize: isLargeScreen ? 18 : 16,
+    fontSize: 18,
     color: theme.colors.bodyText,
     textAlign: 'center',
-    marginBottom: theme.spacing(6),
+    marginBottom: theme.spacing(8),
     maxWidth: 600,
-  },
-  
-  // Single Pricing Card Styles
-  pricingCardContainer: {
-    width: '100%',
-    maxWidth: 500, // Limit width of single card
-    marginBottom: theme.spacing(6),
+    lineHeight: 28,
   },
   pricingCard: {
-    padding: theme.spacing(5),
+    width: '100%',
+    maxWidth: 450,
     backgroundColor: theme.colors.cardBackground,
     borderRadius: theme.radius.xl,
+    padding: theme.spacing(5),
     borderWidth: 1,
     borderColor: theme.colors.borderColor,
     alignItems: 'center',
-    textAlign: 'center',
+    marginBottom: theme.spacing(10),
     ...Platform.select({
       web: {
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.05,
-        shadowRadius: 10,
+        shadowOffset: { width: 0, height: 10 },
+        shadowOpacity: 0.1,
+        shadowRadius: 20,
       },
       native: {
-        elevation: 6,
+        elevation: 10,
       },
     }),
   },
   pricingCardTitle: {
-    fontSize: 32,
+    fontSize: 20,
     color: theme.colors.primary,
-    marginBottom: theme.spacing(2),
+    marginBottom: theme.spacing(3),
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+  },
+  feeContainer: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    marginBottom: theme.spacing(0.5),
   },
   pricingCardBaseFee: {
     fontSize: 48,
     color: theme.colors.headingText,
-    marginBottom: theme.spacing(0.5),
+  },
+  perMonth: {
+    fontSize: 18,
+    color: theme.colors.bodyText,
+    marginLeft: 4,
   },
   pricingCardPerWorker: {
-    fontSize: 20,
+    fontSize: 16,
     color: theme.colors.bodyText,
     marginBottom: theme.spacing(4),
   },
+  divider: {
+    width: '100%',
+    height: 1,
+    backgroundColor: theme.colors.borderColor,
+    marginBottom: theme.spacing(4),
+  },
   calculatorLabel: {
-    fontSize: 18,
+    fontSize: 14,
     color: theme.colors.headingText,
     marginBottom: theme.spacing(2),
   },
   workerInputGroup: {
     flexDirection: 'row',
     alignItems: 'center',
-    width: '80%',
-    marginBottom: theme.spacing(3),
+    width: '100%',
+    marginBottom: theme.spacing(4),
     justifyContent: 'center',
   },
   workerButton: {
     backgroundColor: theme.colors.background,
     borderColor: theme.colors.borderColor,
     borderWidth: 1,
-    borderRadius: theme.radius.md,
-    width: 45,
-    height: 45,
+    borderRadius: theme.radius.lg,
+    width: 48,
+    height: 48,
     justifyContent: 'center',
     alignItems: 'center',
   },
   workerButtonText: {
     color: theme.colors.headingText,
-    fontSize: 24,
-    fontWeight: 'bold',
+    fontSize: 20,
   },
   calculatorInput: {
     flex: 1,
-    height: 45,
+    maxWidth: 100,
+    height: 48,
     borderColor: theme.colors.borderColor,
     borderWidth: 1,
-    borderRadius: theme.radius.md,
+    borderRadius: theme.radius.lg,
     paddingHorizontal: theme.spacing(2),
     fontSize: 18,
     color: theme.colors.headingText,
     textAlign: 'center',
     marginHorizontal: theme.spacing(2),
+    backgroundColor: theme.colors.background,
   },
-  estimatedCostText: {
-    fontSize: 20,
-    color: theme.colors.bodyText,
+  costBreakdown: {
+    width: '100%',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: theme.colors.pageBackground,
+    padding: theme.spacing(2.5),
+    borderRadius: theme.radius.lg,
     marginBottom: theme.spacing(4),
   },
+  estimatedCostLabel: {
+    fontSize: 14,
+    color: theme.colors.bodyText,
+  },
   estimatedCostValue: {
-    fontSize: 32,
+    fontSize: 24,
     color: theme.colors.primary,
   },
   ctaButton: {
     backgroundColor: theme.colors.primary,
-    paddingHorizontal: theme.spacing(5),
-    paddingVertical: theme.spacing(2.5),
     borderRadius: theme.radius.lg,
     width: '100%',
+    height: 52,
+    justifyContent: 'center',
   },
-  ctaButtonText: {
-    color: 'white',
-    fontSize: 18,
-  },
-
-  // FAQ Section
   faqSection: {
     width: '100%',
     maxWidth: 900,
     alignItems: 'center',
-    paddingVertical: theme.spacing(6),
   },
   faqHeading: {
-    fontSize: isLargeScreen ? 36 : 28,
+    fontSize: 32,
     color: theme.colors.headingText,
     textAlign: 'center',
-    marginBottom: theme.spacing(5),
+    marginBottom: theme.spacing(6),
+  },
+  faqGrid: {
+    width: '100%',
+    gap: theme.spacing(2),
   },
   faqItem: {
     width: '100%',
-    backgroundColor: theme.colors.cardBackground,
-    borderRadius: theme.radius.md,
-    borderWidth: 1,
-    borderColor: theme.colors.borderColor,
-    marginBottom: theme.spacing(2),
-    overflow: 'hidden', // Ensures content respects border radius
+    padding: 0,
+    overflow: 'hidden',
+    borderRadius: theme.radius.lg,
   },
   faqQuestionButton: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     padding: theme.spacing(3),
-    backgroundColor: theme.colors.cardBackground,
   },
   faqQuestionText: {
-    fontSize: 18,
+    fontSize: 17,
     color: theme.colors.headingText,
-    flexShrink: 1, // Allows text to wrap
-  },
-  faqExpandIcon: {
-    fontSize: 24,
-    color: theme.colors.primary,
-    marginLeft: theme.spacing(2),
+    flexShrink: 1,
   },
   faqAnswerContainer: {
     paddingHorizontal: theme.spacing(3),
@@ -379,28 +391,16 @@ const styles = StyleSheet.create({
     borderTopColor: theme.colors.borderColor,
   },
   faqAnswerText: {
-    fontSize: 16,
+    fontSize: 15,
     color: theme.colors.bodyText,
-    lineHeight: 22,
+    lineHeight: 24,
   },
-
-  // Footer (from index.tsx)
   footer: {
     padding: theme.spacing(5),
-    backgroundColor: theme.colors.cardBackground,
-    borderTopWidth: 1,
-    borderTopColor: theme.colors.borderColor,
     alignItems: 'center',
-    ...Platform.select({
-      web: {
-        width: '100%',
-        maxWidth: 1400,
-        alignSelf: 'center',
-      },
-    }),
   },
   footerText: {
-    fontSize: 14,
-    color: theme.colors.bodyText,
+    fontSize: 12,
+    color: theme.colors.disabledText,
   },
 });

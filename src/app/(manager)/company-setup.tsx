@@ -1,19 +1,20 @@
 import React, { useState, useContext, useEffect } from 'react';
 import { View, TextInput, StyleSheet, ActivityIndicator, ScrollView, Platform, Image, Dimensions } from 'react-native';
-import { useRouter, Link } from 'expo-router';
+import { useRouter } from 'expo-router';
 import Toast from 'react-native-toast-message';
 import { Button } from '../../components/Button';
+import { Card } from '../../components/Card';
 import { theme } from '../../theme';
 import AnimatedScreen from '../../components/AnimatedScreen';
 import { useSession } from '../../context/AuthContext';
-import { EmployeesContext } from '../../context/EmployeesContext';
 import { supabase } from '../../utils/supabase';
 import { Dropdown } from 'react-native-element-dropdown';
 import { countries } from '../../utils/countries';
-import { Text } from '../../components/Themed'; // Import Themed Text
+import { Text } from '../../components/Themed';
+import Logo from '../../../assets/koordlogoblack1.svg';
 
 const { width } = Dimensions.get('window');
-const isLargeScreen = width > 768;
+const isLargeScreen = width > 900;
 
 export default function CompanySetup() {
   const router = useRouter();
@@ -21,13 +22,13 @@ export default function CompanySetup() {
 
   const [companyName, setCompanyName] = useState('');
   const [selectedCountry, setSelectedCountry] = useState<{ name: string; emoji: string, code: string } | null>(null);
-  const [loading, setLoading] = useState(true); // Changed to true initially to show loading state
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (isLoading) return; // Wait for session loading
+    if (isLoading) return;
     if (!user || !session) {
-      router.replace('/(guest)/login'); // Redirect if no user session
+      router.replace('/(guest)/login');
       return;
     }
 
@@ -125,83 +126,94 @@ export default function CompanySetup() {
     }
   };
 
-  if (isLoading || loading) { // Show loading screen while session or company data is loading
+  if (isLoading || loading) {
     return (
         <View style={styles.fullscreenLoading}>
             <ActivityIndicator size="large" color={theme.colors.primary} />
-            <Text style={styles.loadingText}>Loading company information...</Text>
+            <Text style={styles.loadingText} fontType="regular">Loading company information...</Text>
         </View>
     );
   }
 
   return (
-    <AnimatedScreen backgroundColor={theme.colors.background}>
-      <ScrollView contentContainerStyle={styles.scrollContent}>
-        {/* Header */}
+    <AnimatedScreen>
+      <View style={styles.container}>
+        {/* Header with Logo in top left */}
         <View style={styles.header}>
-            <Link href="/(guest)" asChild>
-                <Image
-                source={require('../../../assets/logokoordblack.png')}
-                style={styles.logo}
-                resizeMode="contain"
-                />
-            </Link>
+          <Image source={Logo} style={styles.logo} resizeMode="contain" />
         </View>
 
-        <View style={styles.mainContent}>
-            <View style={styles.card}>
-                <Text style={styles.title} fontType="bold">Company Setup</Text>
-                <Text style={styles.description}>
-                    Finalize your company details to get started with your account.
-                </Text>
+        <ScrollView contentContainerStyle={styles.scrollContent}>
+          <View style={styles.mainContent}>
+            <Card style={styles.setupCard}>
+              <Text style={styles.title} fontType="bold">Company Setup</Text>
+              <Text style={styles.description} fontType="regular">
+                Finalize your company details to get started with your account.
+              </Text>
 
-                {error && <View style={styles.errorContainer}><Text style={styles.errorText}>{error}</Text></View>}
+              {error && (
+                <View style={styles.errorContainer}>
+                  <Text style={styles.errorText} fontType="regular">{error}</Text>
+                </View>
+              )}
 
+              <View style={styles.inputGroup}>
+                <Text style={styles.label} fontType="medium">Company Name *</Text>
                 <TextInput
-                    style={styles.input}
-                    placeholder="Company Name *"
-                    value={companyName}
-                    onChangeText={setCompanyName}
-                    autoCapitalize="words"
-                    placeholderTextColor={theme.colors.bodyText}
+                  style={styles.input}
+                  placeholder="e.g. Koord Tech"
+                  value={companyName}
+                  onChangeText={setCompanyName}
+                  autoCapitalize="words"
+                  placeholderTextColor={theme.colors.disabledText}
                 />
-                <Dropdown
-                    style={styles.dropdown}
-                    placeholderStyle={styles.placeholderStyle}
-                    selectedTextStyle={styles.selectedTextStyle}
-                    inputSearchStyle={styles.inputSearchStyle}
-                    iconStyle={styles.iconStyle}
-                    data={countries}
-                    search
-                    maxHeight={300}
-                    labelField="name"
-                    valueField="code"
-                    placeholder="Select Country *"
-                    searchPlaceholder="Search..."
-                    value={selectedCountry?.code}
-                    onChange={item => {
-                    setSelectedCountry(item);
-                    }}
-                    renderLeftIcon={() => (
-                    <Text style={{ marginRight: 10, fontSize: 18 }}>{selectedCountry?.emoji}</Text>
-                    )}
-                />
-                
-                <Button
-                    onPress={handleSaveCompanyDetails}
-                    disabled={loading}
-                    style={styles.ctaButton}
-                >
-                    {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.ctaButtonText}>Save Details</Text>}
-                </Button>
-            </View>
-        </View>
+              </View>
 
-        {/* Footer */}
+              <View style={styles.inputGroup}>
+                <Text style={styles.label} fontType="medium">Country *</Text>
+                <Dropdown
+                  style={styles.dropdown}
+                  placeholderStyle={styles.placeholderStyle}
+                  selectedTextStyle={styles.selectedTextStyle}
+                  inputSearchStyle={styles.inputSearchStyle}
+                  iconStyle={styles.iconStyle}
+                  data={countries}
+                  search
+                  maxHeight={300}
+                  labelField="name"
+                  valueField="code"
+                  placeholder="Select Country"
+                  searchPlaceholder="Search..."
+                  value={selectedCountry?.code}
+                  onChange={item => setSelectedCountry(item)}
+                  renderLeftIcon={() => (
+                    <Text style={{ marginRight: 10, fontSize: 18 }}>{selectedCountry?.emoji}</Text>
+                  )}
+                  containerStyle={styles.dropdownContainer}
+                  itemTextStyle={styles.dropdownItemText}
+                  selectedTextProps={{ fontType: 'regular' } as any}
+                />
+              </View>
+              
+              <Button
+                onPress={handleSaveCompanyDetails}
+                disabled={loading}
+                style={styles.ctaButton}
+              >
+                {loading ? (
+                  <ActivityIndicator color="#fff" />
+                ) : (
+                  <Text style={styles.ctaButtonText} fontType="regular">Complete Setup</Text>
+                )}
+              </Button>
+            </Card>
+          </View>
+        </ScrollView>
+
         <View style={styles.footer}>
-          <Text style={styles.footerText} fontType="regular">© {new Date().getFullYear()} WorkHoursTracker. All Rights Reserved</Text>
+          <Text style={styles.footerText} fontType="regular">© {new Date().getFullYear()} Koord. All Rights Reserved</Text>
         </View>
-      </ScrollView>
+      </View>
     </AnimatedScreen>
   );
 }
@@ -209,111 +221,123 @@ export default function CompanySetup() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: theme.colors.background,
+    backgroundColor: theme.colors.pageBackground,
+  },
+  header: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    padding: theme.spacing(4),
+    zIndex: 10,
+  },
+  logo: {
+    width: 120,
+    height: 36,
   },
   scrollContent: {
     flexGrow: 1,
-    justifyContent: 'space-between',
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    justifyContent: 'center',
     padding: theme.spacing(3),
-    backgroundColor: theme.colors.cardBackground,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.borderColor,
-    ...Platform.select({
-        web: {
-          width: '100%',
-          maxWidth: 1400,
-          alignSelf: 'center',
-        },
-    }),
-  },
-  logo: {
-    width: 100,
-    height: 30,
+    paddingTop: theme.spacing(12),
+    paddingBottom: theme.spacing(8),
   },
   mainContent: {
-    flex: 1,
-    justifyContent: 'center',
     alignItems: 'center',
-    padding: theme.spacing(4),
-  },
-  card: {
     width: '100%',
-    maxWidth: 500,
-    padding: theme.spacing(5),
+    maxWidth: 600,
+    alignSelf: 'center',
+  },
+  setupCard: {
+    width: '100%',
+    maxWidth: 450,
     backgroundColor: theme.colors.cardBackground,
     borderRadius: theme.radius.xl,
+    padding: theme.spacing(5),
     borderWidth: 1,
     borderColor: theme.colors.borderColor,
-    alignItems: 'center',
     ...Platform.select({
-        web: {
-            shadowColor: '#000',
-            shadowOffset: { width: 0, height: 4 },
-            shadowOpacity: 0.05,
-            shadowRadius: 10,
-        },
-        native: {
-            elevation: 6,
-        },
+      web: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 10 },
+        shadowOpacity: 0.1,
+        shadowRadius: 20,
+      },
+      native: {
+        elevation: 10,
+      },
     }),
   },
   title: {
-    fontSize: isLargeScreen ? 32 : 28,
+    fontSize: 28,
     color: theme.colors.headingText,
     textAlign: 'center',
-    marginBottom: theme.spacing(2),
+    marginBottom: theme.spacing(1),
   },
   description: {
-    fontSize: isLargeScreen ? 18 : 16,
+    fontSize: 16,
     color: theme.colors.bodyText,
     textAlign: 'center',
     marginBottom: theme.spacing(4),
-    maxWidth: 600,
   },
   errorContainer: {
     backgroundColor: theme.colors.errorBackground,
     borderRadius: theme.radius.md,
     padding: theme.spacing(2),
-    marginBottom: theme.spacing(2),
+    marginBottom: theme.spacing(3),
+    borderWidth: 1,
+    borderColor: theme.colors.errorText,
     width: '100%',
   },
   errorText: {
     color: theme.colors.errorText,
     textAlign: 'center',
-    fontWeight: 'bold',
+    fontSize: 14,
+  },
+  inputGroup: {
+    width: '100%',
+    marginBottom: theme.spacing(2.5),
+  },
+  label: {
+    fontSize: 14,
+    color: theme.colors.headingText,
+    marginBottom: theme.spacing(1),
+    marginLeft: 4,
   },
   input: {
-    height: 50,
+    height: 52,
     borderColor: theme.colors.borderColor,
     borderWidth: 1,
-    borderRadius: theme.radius.md,
+    borderRadius: theme.radius.lg,
     paddingHorizontal: theme.spacing(2),
-    marginBottom: theme.spacing(2),
     fontSize: 16,
     color: theme.colors.headingText,
-    backgroundColor: theme.colors.background, // Changed to background for consistency
+    backgroundColor: theme.colors.background,
   },
   dropdown: {
-    height: 50,
+    height: 52,
     borderColor: theme.colors.borderColor,
     borderWidth: 1,
-    borderRadius: theme.radius.md,
+    borderRadius: theme.radius.lg,
     paddingHorizontal: theme.spacing(2),
-    marginBottom: theme.spacing(2),
-    backgroundColor: theme.colors.background, // Changed to background for consistency
+    backgroundColor: theme.colors.background,
+  },
+  dropdownContainer: {
+    borderRadius: theme.radius.md,
+    backgroundColor: theme.colors.background,
+    borderWidth: 1,
+    borderColor: theme.colors.borderColor,
+  },
+  dropdownItemText: {
+    color: theme.colors.headingText,
+    fontSize: 16,
   },
   placeholderStyle: {
     fontSize: 16,
-    color: theme.colors.bodyText, // Changed to bodyText for consistency
+    color: theme.colors.disabledText,
   },
   selectedTextStyle: {
     fontSize: 16,
-    color: theme.colors.headingText, // Changed to headingText for consistency
+    color: theme.colors.headingText,
   },
   iconStyle: {
     width: 20,
@@ -322,49 +346,41 @@ const styles = StyleSheet.create({
   inputSearchStyle: {
     height: 40,
     fontSize: 16,
-    color: theme.colors.headingText, // Changed to headingText for consistency
+    color: theme.colors.headingText,
   },
   ctaButton: {
     backgroundColor: theme.colors.primary,
-    paddingHorizontal: theme.spacing(5),
-    paddingVertical: theme.spacing(2),
     borderRadius: theme.radius.lg,
     width: '100%',
-    alignItems: 'center',
+    height: 52,
+    justifyContent: 'center',
     marginTop: theme.spacing(2),
   },
   ctaButtonText: {
     color: 'white',
-    fontSize: 18,
-    fontWeight: 'bold',
+    fontSize: 16,
   },
   fullscreenLoading: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: theme.colors.background,
+    backgroundColor: theme.colors.pageBackground,
   },
   loadingText: {
-    fontSize: 18,
+    fontSize: 16,
     color: theme.colors.bodyText,
     marginTop: theme.spacing(2),
   },
   footer: {
-    padding: theme.spacing(5),
-    backgroundColor: theme.colors.cardBackground,
-    borderTopWidth: 1,
-    borderTopColor: theme.colors.borderColor,
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    padding: theme.spacing(3),
     alignItems: 'center',
-    ...Platform.select({
-      web: {
-        width: '100%',
-        maxWidth: 1400,
-        alignSelf: 'center',
-      },
-    }),
   },
   footerText: {
-    fontSize: 14,
-    color: theme.colors.bodyText,
+    fontSize: 12,
+    color: theme.colors.disabledText,
   },
 });
