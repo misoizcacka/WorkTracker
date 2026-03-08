@@ -68,7 +68,7 @@ export default function Login() {
       router.push('/(guest)/pricing');
     } else {
       // On mobile, redirect to browser signup page
-      Linking.openURL('https://work-tracker-ji0vqcxsb-misoizcackas-projects.vercel.app/auth/signup');
+      Linking.openURL('https://work-tracker-git-main-misoizcackas-projects.vercel.app/auth/signup');
     }
   };
 
