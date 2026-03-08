@@ -65,10 +65,10 @@ export default function Login() {
 
   const handleSignUp = () => {
     if (Platform.OS === 'web') {
-      router.push('/(guest)/pricing');
+      router.push('/auth/signup');
     } else {
       // On mobile, redirect to browser signup page
-      Linking.openURL('https://work-tracker-git-main-misoizcackas-projects.vercel.app/auth/signup');
+      Linking.openURL('https://work-tracker-sandy-iota.vercel.app/auth/signup');
     }
   };
 

@@ -35,7 +35,8 @@ export default function GuestLayout() {
         <Stack.Screen name="invalid-invite" />
         <Stack.Screen name="company-details" />
         <Stack.Screen name="signup-success" />
-        <Stack.Screen name="register" />
+        <Stack.Screen name="auth" />
+        <Stack.Screen name="signup" />
       </Stack>
     </I18nextProvider>
   );
