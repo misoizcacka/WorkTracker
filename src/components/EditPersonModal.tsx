@@ -1,10 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { Modal, View, Text, TextInput, StyleSheet, ActivityIndicator, TouchableOpacity, Image } from 'react-native';
+import { Modal, View, TextInput, StyleSheet, ActivityIndicator, TouchableOpacity, Image, Alert } from 'react-native';
 import { Button } from './Button';
 import { theme } from '../theme';
 import { Employee } from '../types';
 import { Ionicons } from '@expo/vector-icons';
 import { Dropdown } from 'react-native-element-dropdown';
+import { Text } from './Themed';
+import { Card } from './Card';
+import * as ImagePicker from 'expo-image-picker';
+import { uploadAvatar } from '../services/profile';
+import UserAvatar from './UserAvatar';
 
 interface EditPersonModalProps {
   visible: boolean;
@@ -18,11 +23,13 @@ const EditPersonModal: React.FC<EditPersonModalProps> = ({ visible, onClose, emp
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
-  const [reportingTo, setReportingTo] = useState<string | null>(null); // Changed to string | null
+  const [reportingTo, setReportingTo] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
   const [error, setError] = useState('');
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
 
-  const managers = allEmployees.filter(e => e.role === 'manager');
+  const managers = allEmployees.filter(e => e.role === 'manager' && e.id !== employee?.id);
 
   useEffect(() => {
     if (employee) {
@@ -30,8 +37,40 @@ const EditPersonModal: React.FC<EditPersonModalProps> = ({ visible, onClose, emp
       setEmail(employee.email || '');
       setPhone(employee.phone_number || '');
       setReportingTo(employee.reporting_to);
+      setAvatarUrl(employee.avatar_url);
     }
   }, [employee]);
+
+  const handleImagePickAndUpload = async () => {
+    if (!employee) return;
+
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Permission Denied', 'Sorry, we need camera roll permissions to make this work!');
+      return;
+    }
+
+    let result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: 'images',
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.5,
+    });
+
+    if (!result.canceled && result.assets && result.assets.length > 0) {
+      setIsUploadingAvatar(true);
+      try {
+        const localUri = result.assets[0].uri;
+        const storagePath = await uploadAvatar(employee.id, localUri);
+        setAvatarUrl(storagePath);
+      } catch (error: any) {
+        console.error("Error uploading avatar:", error);
+        Alert.alert("Upload Failed", error.message || "Failed to upload avatar.");
+      } finally {
+        setIsUploadingAvatar(false);
+      }
+    }
+  };
 
   const handleSave = async () => {
     if (!fullName) {
@@ -45,12 +84,13 @@ const EditPersonModal: React.FC<EditPersonModalProps> = ({ visible, onClose, emp
     setError('');
     setLoading(true);
     try {
-      onSave({
+      await onSave({
         ...employee,
         full_name: fullName,
         email,
         phone_number: phone,
         reporting_to: reportingTo,
+        avatar_url: avatarUrl,
       });
       setLoading(false);
       onClose();
@@ -62,97 +102,119 @@ const EditPersonModal: React.FC<EditPersonModalProps> = ({ visible, onClose, emp
 
   return (
     <Modal
-      animationType="slide"
+      animationType="fade"
       transparent={true}
       visible={visible}
       onRequestClose={onClose}
     >
-      <View style={styles.centeredView}>
-        <View style={styles.modalView}>
-          <TouchableOpacity style={styles.closeButton} onPress={onClose}>
-            <Ionicons name="close-circle-outline" size={30} color={theme.colors.bodyText} />
-          </TouchableOpacity>
-          <Text style={styles.modalText}>Edit Details</Text>
-
-          {error && <Text style={styles.errorText}>{error}</Text>}
-
-          <View style={styles.contentLayout}>
-            <View style={styles.avatarContainer}>
-              {employee?.avatar_url ? (
-                <Image source={{ uri: employee.avatar_url }} style={styles.avatar} />
-              ) : (
-                <Ionicons name="person" size={100} color={theme.colors.bodyText} style={styles.avatarPlaceholder} />
-              )}
-              <TouchableOpacity style={styles.avatarEditButton}>
-                <Ionicons name="pencil" size={20} color="white" />
+      <View style={styles.overlay}>
+        <View style={styles.modalContainer}>
+          <Card style={styles.modalView}>
+            <View style={styles.modalHeader}>
+              <View>
+                <Text style={styles.modalTitle} fontType="bold">Edit Employee</Text>
+                <Text style={styles.modalSubtitle}>Update profile and role details</Text>
+              </View>
+              <TouchableOpacity style={styles.closeButton} onPress={onClose}>
+                <Ionicons name="close" size={24} color={theme.colors.bodyText} />
               </TouchableOpacity>
             </View>
 
-            <View style={styles.formContainer}>
-              <View style={styles.fieldRow}>
-                <Text style={styles.label}>Name</Text>
-                <TextInput
-                  style={styles.input}
-                  placeholder="Full Name *"
-                  value={fullName}
-                  onChangeText={setFullName}
-                  placeholderTextColor="#999"
-                />
+            {error ? <Text style={styles.errorText} fontType="medium">{error}</Text> : null}
+
+            <View style={styles.content}>
+              <View style={styles.avatarSection}>
+                <View style={styles.avatarWrapper}>
+                  <UserAvatar 
+                    avatarUrl={avatarUrl} 
+                    size={90} 
+                    style={styles.avatar} 
+                  />
+                  <TouchableOpacity 
+                    style={styles.avatarEditButton} 
+                    onPress={handleImagePickAndUpload}
+                    disabled={isUploadingAvatar}
+                  >
+                    {isUploadingAvatar ? (
+                      <ActivityIndicator size="small" color="white" />
+                    ) : (
+                      <Ionicons name="camera" size={16} color="white" />
+                    )}
+                  </TouchableOpacity>
+                </View>
               </View>
-              <View style={styles.fieldRow}>
-                <Text style={styles.label}>Email</Text>
-                <TextInput
-                  style={styles.input}
-                  placeholder="Email Address"
-                  value={email}
-                  onChangeText={setEmail}
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                  placeholderTextColor="#999"
-                />
-              </View>
-              <View style={styles.fieldRow}>
-                <Text style={styles.label}>Phone</Text>
-                <TextInput
-                  style={styles.input}
-                  placeholder="Phone Number"
-                  value={phone}
-                  onChangeText={setPhone}
-                  keyboardType="phone-pad"
-                  placeholderTextColor="#999"
-                />
-              </View>
-              {employee?.role === 'worker' && (
-                <View style={styles.fieldRow}>
-                  <Text style={styles.label}>Reports to</Text>
-                  <Dropdown
-                    style={styles.dropdown}
-                    placeholderStyle={styles.placeholderStyle}
-                    selectedTextStyle={styles.selectedTextStyle}
-                    inputSearchStyle={styles.inputSearchStyle}
-                    iconStyle={styles.iconStyle}
-                    data={managers.map(m => ({ label: m.full_name, value: m.id }))}
-                    search
-                    maxHeight={300}
-                    labelField="label"
-                    valueField="value"
-                    placeholder="Select manager"
-                    searchPlaceholder="Search..."
-                    value={reportingTo}
-                    onChange={item => {
-                      setReportingTo(item.value);
-                    }}
+
+              <View style={styles.form}>
+                <View style={styles.inputGroup}>
+                  <Text style={styles.label} fontType="bold">Full Name</Text>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Enter full name"
+                    value={fullName}
+                    onChangeText={setFullName}
+                    placeholderTextColor={theme.colors.disabledText}
                   />
                 </View>
-              )}
+
+                <View style={styles.inputGroup}>
+                  <Text style={styles.label} fontType="bold">Email Address</Text>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Enter email address"
+                    value={email}
+                    onChangeText={setEmail}
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                    placeholderTextColor={theme.colors.disabledText}
+                  />
+                </View>
+
+                <View style={styles.inputGroup}>
+                  <Text style={styles.label} fontType="bold">Phone Number</Text>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Enter phone number"
+                    value={phone}
+                    onChangeText={setPhone}
+                    keyboardType="phone-pad"
+                    placeholderTextColor={theme.colors.disabledText}
+                  />
+                </View>
+
+                {employee?.role === 'worker' && (
+                  <View style={styles.inputGroup}>
+                    <Text style={styles.label} fontType="bold">Reporting To</Text>
+                    <Dropdown
+                      style={styles.dropdown}
+                      placeholderStyle={styles.placeholderStyle}
+                      selectedTextStyle={styles.selectedTextStyle}
+                      inputSearchStyle={styles.inputSearchStyle}
+                      iconStyle={styles.iconStyle}
+                      data={managers.map(m => ({ label: m.full_name, value: m.id }))}
+                      search
+                      maxHeight={300}
+                      labelField="label"
+                      valueField="value"
+                      placeholder="Select manager"
+                      searchPlaceholder="Search..."
+                      value={reportingTo}
+                      onChange={item => setReportingTo(item.value)}
+                    />
+                  </View>
+                )}
+              </View>
             </View>
-          </View>
-          
-          <View style={styles.buttonContainer}>
-            <Button onPress={handleSave} disabled={loading} style={styles.saveButton}>
-              {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Save Changes</Text>}
-            </Button>
-          </View>
+            
+            <View style={styles.footer}>
+              <Button 
+                onPress={handleSave} 
+                disabled={loading || isUploadingAvatar} 
+                style={styles.saveButton}
+                title="Save Changes"
+                loading={loading}
+              />
+            </View>
+          </Card>
         </View>
       </View>
     </Modal>
@@ -160,128 +222,142 @@ const EditPersonModal: React.FC<EditPersonModalProps> = ({ visible, onClose, emp
 };
 
 const styles = StyleSheet.create({
-  centeredView: {
+  overlay: {
     flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+  },
+  modalContainer: {
+    width: '90%',
+    maxWidth: 550,
   },
   modalView: {
-    margin: 20,
-    backgroundColor: 'white',
-    borderRadius: 20,
-    padding: 25,
-    alignItems: 'stretch',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-    elevation: 5,
-    width: '90%',
-    maxWidth: 600,
+    padding: 0,
+    borderRadius: theme.radius.xl,
+    backgroundColor: theme.colors.cardBackground,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: theme.colors.borderColor,
   },
-  modalText: {
-    marginBottom: 25,
-    textAlign: 'center',
-    fontSize: 24,
-    fontWeight: 'bold',
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    padding: theme.spacing(3),
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.borderColor,
+  },
+  modalTitle: {
+    fontSize: theme.fontSizes.lg,
+    color: theme.colors.headingText,
+  },
+  modalSubtitle: {
+    fontSize: theme.fontSizes.xs,
+    color: theme.colors.bodyText,
+    marginTop: 2,
   },
   closeButton: {
-    position: 'absolute',
-    top: 15,
-    right: 15,
-    zIndex: 1,
-  },
-  contentLayout: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-  },
-  avatarContainer: {
-    marginRight: 20,
+    backgroundColor: theme.colors.pageBackground,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    justifyContent: 'center',
     alignItems: 'center',
   },
+  content: {
+    padding: theme.spacing(3),
+  },
+  avatarSection: {
+    alignItems: 'center',
+    marginBottom: theme.spacing(3),
+  },
+  avatarWrapper: {
+    position: 'relative',
+  },
   avatar: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    borderWidth: 2,
-    borderColor: theme.colors.primary,
+    width: 90,
+    height: 90,
+    borderRadius: 45,
+    borderWidth: 3,
+    borderColor: 'white',
   },
   avatarPlaceholder: {
-    width: 100,
-    height: 100,
-    textAlign: 'center',
-    lineHeight: 100, // To center the icon vertically
+    width: 90,
+    height: 90,
+    borderRadius: 45,
+    backgroundColor: theme.colors.pageBackground,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 3,
+    borderColor: 'white',
   },
   avatarEditButton: {
     position: 'absolute',
     bottom: 0,
     right: 0,
     backgroundColor: theme.colors.primary,
+    width: 30,
+    height: 30,
     borderRadius: 15,
-    padding: 5,
-  },
-  formContainer: {
-    flex: 1,
-  },
-  fieldRow: {
-    flexDirection: 'row',
+    justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 15,
+    borderWidth: 2,
+    borderColor: 'white',
+  },
+  form: {
+    gap: theme.spacing(2),
+  },
+  inputGroup: {
+    marginBottom: theme.spacing(1),
   },
   label: {
-    width: 80,
-    fontSize: 16,
-    fontWeight: '500',
+    fontSize: theme.fontSizes.xs,
     color: theme.colors.bodyText,
+    marginBottom: theme.spacing(1),
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   input: {
-    flex: 1,
-    height: 45,
-    borderColor: '#ddd',
+    height: 48,
+    backgroundColor: theme.colors.pageBackground,
+    borderRadius: theme.radius.md,
+    paddingHorizontal: theme.spacing(2),
     borderWidth: 1,
-    borderRadius: 10,
-    paddingHorizontal: 15,
+    borderColor: theme.colors.borderColor,
     fontSize: 16,
-    backgroundColor: '#f9f9f9',
+    color: theme.colors.headingText,
   },
   dropdown: {
-    flex: 1,
-    height: 45,
-    borderColor: '#ddd',
+    height: 48,
+    backgroundColor: theme.colors.pageBackground,
+    borderRadius: theme.radius.md,
+    paddingHorizontal: theme.spacing(2),
     borderWidth: 1,
-    borderRadius: 10,
-    paddingHorizontal: 15,
-    backgroundColor: '#f9f9f9',
+    borderColor: theme.colors.borderColor,
   },
-  buttonContainer: {
-    marginTop: 20,
+  footer: {
+    padding: theme.spacing(3),
+    borderTopWidth: 1,
+    borderTopColor: theme.colors.borderColor,
   },
   saveButton: {
     backgroundColor: theme.colors.primary,
-    paddingVertical: 12,
-    borderRadius: 10,
-  },
-  buttonText: {
-    color: 'white',
-    fontWeight: 'bold',
-    fontSize: 16,
-    textAlign: 'center'
+    height: 52,
+    borderRadius: theme.radius.lg,
   },
   errorText: {
-    color: 'red',
-    marginBottom: 10,
+    color: theme.colors.danger,
+    margin: theme.spacing(2),
     textAlign: 'center',
   },
   placeholderStyle: {
     fontSize: 16,
-    color: '#999',
+    color: theme.colors.disabledText,
   },
   selectedTextStyle: {
     fontSize: 16,
+    color: theme.colors.headingText,
   },
   iconStyle: {
     width: 20,

@@ -19,8 +19,13 @@ interface DashboardStats {
   activeSessions: any[];
   monthToDateHours: number;
   activeProjectsCount: number;
+  totalProjectsCount: number;
+  plannedProjectsCount: number;
+  plannedProjects: { id: string, name: string, address?: string }[];
+  allProjects: Record<string, string>; // ID to Name map
+  allLocations: Record<string, string>; // ID to Name map
   topWorkers: { name: string, hours: number }[];
-  idleWorkers: string[];
+  currentMonthYear: string;
   unassignedCount: number;
 }
 
@@ -45,8 +50,13 @@ export default function NewManagerDashboard() {
     activeSessions: [],
     monthToDateHours: 0,
     activeProjectsCount: 0,
+    totalProjectsCount: 0,
+    plannedProjectsCount: 0,
+    plannedProjects: [],
+    allProjects: {},
+    allLocations: {},
     topWorkers: [],
-    idleWorkers: [],
+    currentMonthYear: moment().format('MMMM YYYY'),
     unassignedCount: 0,
   });
   
@@ -63,53 +73,54 @@ export default function NewManagerDashboard() {
     const fetchDashboardData = async () => {
       setIsLoadingStats(true);
       try {
+        const todayStr = moment().format('YYYY-MM-DD');
         const today = moment().startOf('day').toISOString();
         const startOfMonth = moment().startOf('month').toISOString();
         const startOfWeek = moment().startOf('week').toISOString();
 
-        // 1. Fetch active sessions and projects
+        // 1. Fetch active sessions
         const { data: activeSessions, error: activeError } = await supabase
           .from('work_sessions')
-          .select('*, employees(full_name), projects(name)')
+          .select('*, employees(full_name), worker_assignments(ref_id, ref_type)')
           .eq('company_id', userCompanyId)
-          .is('check_out_at', null);
+          .is('end_time', null);
 
         if (activeError) throw activeError;
-
-        // Calculate unique active projects
-        const activeProjectIds = new Set(activeSessions?.map(s => s.project_id).filter(Boolean));
 
         // 2. Fetch today's and month's sessions for hours calculation
         const { data: monthSessions, error: sessionsError } = await supabase
           .from('work_sessions')
-          .select('duration_minutes, check_in_at, worker_id')
+          .select('start_time, end_time, worker_id')
           .eq('company_id', userCompanyId)
-          .gte('check_in_at', startOfMonth)
-          .not('check_out_at', 'is', null);
+          .gte('start_time', startOfMonth)
+          .not('end_time', 'is', null);
 
         if (sessionsError) throw sessionsError;
 
+        const calculateMinutes = (start: string, end: string) => {
+          return moment(end).diff(moment(start), 'minutes');
+        };
+
         const totalMinutesToday = monthSessions
-          ?.filter(s => moment(s.check_in_at).isSameOrAfter(today))
-          .reduce((acc, s) => acc + (s.duration_minutes || 0), 0) || 0;
+          ?.filter(s => moment(s.start_time).isSameOrAfter(today))
+          .reduce((acc, s) => acc + calculateMinutes(s.start_time, s.end_time!), 0) || 0;
 
-        const totalMinutesMonth = monthSessions?.reduce((acc, s) => acc + (s.duration_minutes || 0), 0) || 0;
+        const totalMinutesMonth = monthSessions?.reduce((acc, s) => acc + calculateMinutes(s.start_time, s.end_time!), 0) || 0;
 
-        // 3. Top Workers this week
-        const weeklyWorkersMap: Record<string, number> = {};
-        monthSessions
-          ?.filter(s => moment(s.check_in_at).isSameOrAfter(startOfWeek))
-          .forEach(s => {
-            weeklyWorkersMap[s.worker_id] = (weeklyWorkersMap[s.worker_id] || 0) + (s.duration_minutes || 0);
-          });
+        // 3. Top Workers this month
+        const monthlyWorkersMap: Record<string, number> = {};
+        monthSessions?.forEach(s => {
+          const mins = calculateMinutes(s.start_time, s.end_time!);
+          monthlyWorkersMap[s.worker_id] = (monthlyWorkersMap[s.worker_id] || 0) + mins;
+        });
 
-        const topWorkers = Object.entries(weeklyWorkersMap)
+        const topWorkers = Object.entries(monthlyWorkersMap)
           .map(([id, mins]) => ({
             name: workers.find(w => w.id === id)?.full_name || 'Worker',
             hours: Math.round((mins / 60) * 10) / 10
           }))
           .sort((a, b) => b.hours - a.hours)
-          .slice(0, 3);
+          .slice(0, 5); // Show top 5 for monthly overview
 
         // 4. Idle Workers (not clocked in)
         const onlineWorkerIds = new Set(activeSessions?.map(s => s.worker_id));
@@ -119,14 +130,76 @@ export default function NewManagerDashboard() {
           .slice(0, 5);
 
         // 5. Unassigned workers for today (based on assignments table)
-        const { data: todayAssignments } = await supabase
+        const { data: todayAssignments, error: assignmentsError } = await supabase
           .from('worker_assignments')
-          .select('worker_id')
+          .select('worker_id, ref_id, ref_type')
           .eq('company_id', userCompanyId)
-          .eq('assigned_date', moment().format('YYYY-MM-DD'));
+          .eq('assigned_date', todayStr);
         
+        if (assignmentsError) console.error('Assignments Error:', assignmentsError);
+
         const assignedWorkerIds = new Set(todayAssignments?.map(a => a.worker_id));
         const unassignedCount = workers.filter(w => !assignedWorkerIds.has(w.id)).length;
+
+        const plannedProjectIds = new Set(
+          todayAssignments
+            ?.filter(a => a.ref_type === 'project')
+            .map(a => a.ref_id)
+        );
+
+        // 6. Fetch today's context data
+        const [locationsRes, projectsRes, commonLocationsRes] = await Promise.all([
+          supabase
+            .from('location_events')
+            .select(`
+              id, 
+              type, 
+              created_at, 
+              worker_id, 
+              employees!location_events_worker_id_fkey(full_name),
+              worker_assignments!location_events_assignment_id_fkey(
+                ref_id,
+                ref_type
+              )
+            `)
+            .eq('company_id', userCompanyId)
+            .gte('created_at', today)
+            .in('type', ['enter_geofence', 'exit_geofence'])
+            .order('created_at', { ascending: false })
+            .limit(10),
+          supabase
+            .from('projects')
+            .select('id, name, address')
+            .eq('company_id', userCompanyId),
+          supabase
+            .from('common_locations')
+            .select('id, name, address')
+            .eq('company_id', userCompanyId)
+        ]);
+
+        if (locationsRes.error) console.error('Locations Query Error:', locationsRes.error);
+        if (projectsRes.error) console.error('Projects Query Error:', projectsRes.error);
+        if (commonLocationsRes.error) console.error('Common Locations Query Error:', commonLocationsRes.error);
+
+        const totalProjectsCount = projectsRes.data?.length || 0;
+        const projectsMap = new Map((projectsRes.data || []).map(p => [p.id, p.name]));
+        const locationsMap = new Map((commonLocationsRes.data || []).map(l => [l.id, l.name]));
+
+        const plannedProjects = (projectsRes.data || [])
+          .filter(p => plannedProjectIds.has(p.id))
+          .map(p => ({ id: p.id, name: p.name, address: p.address }));
+
+        // Calculate unique active project IDs from sessions
+        const activeProjectIds = new Set();
+        activeSessions?.forEach(s => {
+          const assignment = Array.isArray(s.worker_assignments) ? s.worker_assignments[0] : s.worker_assignments;
+          if (assignment?.ref_type === 'project') {
+            activeProjectIds.add(assignment.ref_id);
+          }
+        });
+
+        const allProjects = Object.fromEntries((projectsRes.data || []).map(p => [p.id, p.name]));
+        const allLocations = Object.fromEntries((commonLocationsRes.data || []).map(l => [l.id, l.name]));
 
         setStats({
           totalWorkers: totalWorkersCount,
@@ -135,81 +208,44 @@ export default function NewManagerDashboard() {
           activeSessions: activeSessions || [],
           monthToDateHours: Math.round((totalMinutesMonth / 60) * 10) / 10,
           activeProjectsCount: activeProjectIds.size,
+          totalProjectsCount,
+          plannedProjectsCount: plannedProjectIds.size,
+          plannedProjects,
+          allProjects,
+          allLocations,
           topWorkers,
-          idleWorkers,
+          currentMonthYear: moment().format('MMMM YYYY'),
           unassignedCount,
         });
 
-        // 6. Fetch recent activities (sessions, location events, and project messages)
-        const [sessionsRes, locationsRes, messagesRes] = await Promise.all([
-          supabase
-            .from('work_sessions')
-            .select('id, check_in_at, check_out_at, employees(full_name)')
-            .eq('company_id', userCompanyId)
-            .order('created_at', { ascending: false })
-            .limit(5),
-          supabase
-            .from('location_events')
-            .select('id, type, created_at, worker_id, employees(full_name)')
-            .eq('company_id', userCompanyId)
-            .order('created_at', { ascending: false })
-            .limit(5),
-          supabase
-            .from('project_messages')
-            .select('id, text, created_at, sender_id, project_id, projects(name), auth_users:sender_id(full_name)')
-            .order('created_at', { ascending: false })
-            .limit(5)
-        ]);
-
-        // Note: project_messages schema uses sender_id from auth.users, might need to join with employees
-        // For simplicity, we'll try to find the sender in our workers list if name is missing
-        
-        const messageActivities: ActivityEvent[] = (messagesRes.data || []).map(m => ({
-          id: m.id,
-          type: 'message',
-          event: `New message from ${workers.find(w => w.id === m.sender_id)?.full_name || 'Team Member'}`,
-          time: moment(m.created_at).format('hh:mm A'),
-          timestamp: new Date(m.created_at),
-          projectName: (m.projects as any)?.name
-        }));
-
-        const sessionActivities: ActivityEvent[] = (sessionsRes.data || []).flatMap(s => {
-          const events: ActivityEvent[] = [];
-          const name = (s.employees as any)?.full_name || 'Worker';
+        const locationActivities: ActivityEvent[] = (locationsRes.data || []).map(l => {
+          // Access the joined data via the explicit relationship names
+          const assignment = (l as any).worker_assignments;
+          const firstAssignment = Array.isArray(assignment) ? assignment[0] : assignment;
           
-          events.push({
-            id: `in-${s.id}`,
-            type: 'work_session',
-            event: `${name} clocked in`,
-            time: moment(s.check_in_at).format('hh:mm A'),
-            timestamp: new Date(s.check_in_at)
-          });
-
-          if (s.check_out_at) {
-            events.push({
-              id: `out-${s.id}`,
-              type: 'work_session',
-              event: `${name} clocked out`,
-              time: moment(s.check_out_at).format('hh:mm A'),
-              timestamp: new Date(s.check_out_at)
-            });
+          let siteName = 'Site';
+          if (firstAssignment) {
+            if (firstAssignment.ref_type === 'project') {
+              siteName = projectsMap.get(firstAssignment.ref_id) || 'Project';
+            } else if (firstAssignment.ref_type === 'common_location') {
+              siteName = locationsMap.get(firstAssignment.ref_id) || 'Location';
+            }
           }
-          return events;
+
+          const action = l.type === 'enter_geofence' ? 'entered' : 'exited';
+          const employeeData = (l as any).employees;
+          const workerName = (Array.isArray(employeeData) ? employeeData[0] : employeeData)?.full_name || 'Worker';
+
+          return {
+            id: l.id,
+            type: 'location_event',
+            event: `${workerName} ${action} ${siteName}`,
+            time: moment(l.created_at).format('hh:mm A'),
+            timestamp: new Date(l.created_at)
+          };
         });
 
-        const locationActivities: ActivityEvent[] = (locationsRes.data || []).map(l => ({
-          id: l.id,
-          type: 'location_event',
-          event: `${(l.employees as any)?.full_name || 'Worker'} ${l.type === 'enter_geofence' ? 'entered' : 'exited'} project site`,
-          time: moment(l.created_at).format('hh:mm A'),
-          timestamp: new Date(l.created_at)
-        }));
-
-        const allActivities = [...sessionActivities, ...locationActivities, ...messageActivities]
-          .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())
-          .slice(0, 10);
-
-        setActivities(allActivities);
+        setActivities(locationActivities);
 
       } catch (error) {
         console.error('Error fetching dashboard data:', error);
@@ -241,19 +277,9 @@ export default function NewManagerDashboard() {
       }, () => fetchDashboardData())
       .subscribe();
 
-    const messagesChannel = supabase
-      .channel('dashboard-messages')
-      .on('postgres_changes', { 
-        event: 'INSERT', 
-        schema: 'public', 
-        table: 'project_messages'
-      }, () => fetchDashboardData())
-      .subscribe();
-
     return () => {
       supabase.removeChannel(sessionsChannel);
       supabase.removeChannel(locationsChannel);
-      supabase.removeChannel(messagesChannel);
     };
   }, [userCompanyId, totalWorkersCount, workers]);
 
@@ -299,21 +325,46 @@ export default function NewManagerDashboard() {
               </View>
             </Card>
 
-            {/* NEW: 2. Project Health & Schedule */}
+            {/* 2. Today's Project Schedule */}
             <Card style={styles.sectionCard}>
-              <Text style={styles.sectionTitle} fontType="bold">Projects & Assignments</Text>
+              <Text style={styles.sectionTitle} fontType="bold">Today's Project Schedule</Text>
               <View style={styles.statsGrid}>
                 <View style={styles.statBox}>
-                  <Text style={styles.statValue} fontType="bold">{stats.activeProjectsCount}</Text>
-                  <Text style={styles.statLabel}>Active Projects</Text>
+                  <Text style={styles.statValue} fontType="bold">{stats.plannedProjectsCount} / {stats.totalProjectsCount}</Text>
+                  <Text style={styles.statLabel}>Projects Planned</Text>
                 </View>
                 <View style={styles.statBox}>
                   <Text style={styles.statValue} fontType="bold">{stats.unassignedCount}</Text>
-                  <Text style={styles.statLabel}>Unassigned</Text>
+                  <Text style={styles.statLabel}>Unassigned Workers</Text>
                 </View>
               </View>
+
+              {stats.plannedProjects.length > 0 && (
+                <View style={styles.projectListContainer}>
+                  <Text style={styles.projectListTitle} fontType="bold">Scheduled Projects</Text>
+                  {stats.plannedProjects.map(project => (
+                    <TouchableOpacity 
+                      key={project.id} 
+                      style={styles.projectListItem}
+                      onPress={() => router.push(`/(manager)/projects/${project.id}`)}
+                    >
+                      <View style={styles.projectListIcon}>
+                        <Ionicons name="business-outline" size={18} color={theme.colors.primary} />
+                      </View>
+                      <View style={styles.projectListInfo}>
+                        <Text style={styles.projectListName} fontType="medium">{project.name}</Text>
+                        {project.address && (
+                          <Text style={styles.projectListAddress} numberOfLines={1}>{project.address}</Text>
+                        )}
+                      </View>
+                      <Ionicons name="chevron-forward" size={16} color={theme.colors.disabledText} />
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              )}
+
               <Button
-                title="View Assignments"
+                title="Manage Assignments"
                 onPress={() => router.push('/(manager)/worker-assignments')}
                 style={styles.outlineButton}
                 textStyle={styles.outlineButtonText}
@@ -336,7 +387,7 @@ export default function NewManagerDashboard() {
                         {(session.employees as any)?.full_name || 'Worker'}
                       </Text>
                       <Text style={styles.workerStatus}>
-                        {session.projects?.name ? `At ${session.projects.name}` : 'Clocked in'} since {moment(session.check_in_at).format('hh:mm A')}
+                        since {moment(session.start_time).format('hh:mm A')}
                       </Text>
                     </View>
                     <TouchableOpacity 
@@ -396,19 +447,20 @@ export default function NewManagerDashboard() {
 
             {/* 6. Real-time Activity Feed */}
             <Card style={styles.sectionCard}>
-              <Text style={styles.sectionTitle} fontType="bold">Live Activity Feed</Text>
+              <View style={styles.cardHeaderRow}>
+                <Text style={styles.sectionTitle} fontType="bold">Live Activity Feed</Text>
+                <View style={styles.todayBadge}>
+                  <Text style={styles.todayBadgeText}>Today</Text>
+                </View>
+              </View>
               {activities.length === 0 ? (
-                <Text style={styles.emptyText}>No recent activity found.</Text>
+                <Text style={styles.emptyText}>No location activity today.</Text>
               ) : (
                 activities.map(activity => (
                   <View key={activity.id} style={styles.activityItem}>
                     <View style={styles.activityIconContainer}>
                       <Ionicons 
-                        name={
-                          activity.type === 'work_session' ? 'time-outline' : 
-                          activity.type === 'message' ? 'chatbubble-ellipses-outline' : 
-                          'location-outline'
-                        } 
+                        name="location-outline" 
                         size={18} 
                         color={theme.colors.primary} 
                       />
@@ -416,7 +468,6 @@ export default function NewManagerDashboard() {
                     <View style={styles.activityContent}>
                       <Text style={styles.activityText}>
                         {activity.event}
-                        {activity.projectName && <Text style={{ color: theme.colors.primary }}> in {activity.projectName}</Text>}
                       </Text>
                       <Text style={styles.activityTime}>{activity.time}</Text>
                     </View>
@@ -425,36 +476,26 @@ export default function NewManagerDashboard() {
               )}
             </Card>
 
-            {/* NEW: 7. Worker Utilization */}
+            {/* 7. Worker Utilization - Monthly */}
             <Card style={styles.sectionCard}>
-              <Text style={styles.sectionTitle} fontType="bold">Top Workers (This Week)</Text>
+              <View style={styles.cardHeaderRow}>
+                <Text style={styles.sectionTitle} fontType="bold">Top Workers ({stats.currentMonthYear})</Text>
+                <Ionicons name="trophy-outline" size={18} color={theme.colors.secondary} />
+              </View>
               {stats.topWorkers.length === 0 ? (
-                <Text style={styles.emptyText}>No hours logged this week.</Text>
+                <Text style={styles.emptyText}>No hours logged this month.</Text>
               ) : (
                 stats.topWorkers.map((worker, index) => (
                   <View key={index} style={styles.utilizationRow}>
                     <View style={styles.utilizationInfo}>
                       <Text style={styles.workerName} fontType="medium">{worker.name}</Text>
                       <View style={styles.utilizationBarBg}>
-                        <View style={[styles.utilizationBarFill, { width: `${Math.min((worker.hours / 40) * 100, 100)}%` }]} />
+                        <View style={[styles.utilizationBarFill, { width: `${Math.min((worker.hours / 160) * 100, 100)}%` }]} />
                       </View>
                     </View>
                     <Text style={styles.utilizationValue} fontType="bold">{worker.hours}h</Text>
                   </View>
                 ))
-              )}
-
-              {stats.idleWorkers.length > 0 && (
-                <View style={{ marginTop: theme.spacing(2) }}>
-                  <Text style={[styles.sectionTitle, { fontSize: theme.fontSizes.md }]} fontType="bold">Idle Workers</Text>
-                  <View style={styles.idleWorkersList}>
-                    {stats.idleWorkers.map((name, i) => (
-                      <View key={i} style={styles.idleBadge}>
-                        <Text style={styles.idleBadgeText}>{name}</Text>
-                      </View>
-                    ))}
-                  </View>
-                </View>
               )}
             </Card>
 
@@ -829,5 +870,54 @@ const styles = StyleSheet.create({
   idleBadgeText: {
     fontSize: theme.fontSizes.xs,
     color: theme.colors.bodyText,
+  },
+  projectListContainer: {
+    marginTop: theme.spacing(2),
+    borderTopWidth: 1,
+    borderTopColor: theme.colors.borderColor,
+    paddingTop: theme.spacing(2),
+  },
+  projectListTitle: {
+    fontSize: theme.fontSizes.md,
+    color: theme.colors.headingText,
+    marginBottom: theme.spacing(1.5),
+  },
+  projectListItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: theme.spacing(1),
+    marginBottom: theme.spacing(0.5),
+  },
+  projectListIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: theme.colors.primary + '10',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: theme.spacing(1.5),
+  },
+  projectListInfo: {
+    flex: 1,
+  },
+  projectListName: {
+    fontSize: theme.fontSizes.sm,
+    color: theme.colors.headingText,
+  },
+  projectListAddress: {
+    fontSize: theme.fontSizes.xs,
+    color: theme.colors.disabledText,
+    marginTop: 2,
+  },
+  todayBadge: {
+    backgroundColor: theme.colors.primary + '15',
+    paddingHorizontal: theme.spacing(1.5),
+    paddingVertical: theme.spacing(0.5),
+    borderRadius: theme.radius.pill,
+  },
+  todayBadgeText: {
+    fontSize: theme.fontSizes.xs,
+    color: theme.colors.primary,
+    fontWeight: 'bold',
   },
 });

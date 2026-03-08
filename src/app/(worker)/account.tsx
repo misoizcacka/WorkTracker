@@ -1,102 +1,84 @@
-import React, { useState, useEffect } from "react";
-import { StyleSheet, Switch, View, ScrollView } from "react-native";
+import React from "react";
+import { StyleSheet, View, ScrollView } from "react-native";
 import { Text } from "../../components/Themed";
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
-import * as LocalAuthentication from "expo-local-authentication";
 import { Card } from "../../components/Card";
 import { Button } from "../../components/Button";
 import { theme } from "../../theme";
 import AnimatedScreen from "../../components/AnimatedScreen";
 import { useSession } from "../../context/AuthContext";
-import { setStorageItemAsync, useStorageState } from "../../hooks/useStorageState";
 import { Ionicons } from "@expo/vector-icons";
 
 export default function WorkerAccountScreen() {
   const tabBarHeight = useBottomTabBarHeight();
-  const { signOut, user, userRole, userCompanyName } = useSession()!; // Destructure userRole and userCompanyName
+  const { signOut, user, userRole, userCompanyName } = useSession()!;
 
-  const [isBiometricSupported, setIsBiometricSupported] = useState(false);
-  const [biometricEnabledState, setIsBiometricEnabled] = useStorageState('biometricEnabled');
-  const isBiometricEnabled = biometricEnabledState[1];
-
-  const fullName = user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'N/A';
-  const firstName = fullName.split(' ')[0] || 'N/A';
-  const lastName = fullName.split(' ').slice(1).join(' ') || '';
+  const fullName = user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Member';
   const email = user?.email || "N/A";
-
   const displayRole = userRole ? userRole.charAt(0).toUpperCase() + userRole.slice(1) : 'Worker';
-
-  useEffect(() => {
-    (async () => {
-      const compatible = await LocalAuthentication.hasHardwareAsync();
-      setIsBiometricSupported(compatible);
-    })();
-  }, []);
-
-  const handleBiometricSwitch = async (value: boolean) => {
-    if (value) {
-      const enrolled = await LocalAuthentication.isEnrolledAsync();
-      if (enrolled) {
-        const result = await LocalAuthentication.authenticateAsync({
-          promptMessage: 'Authenticate to enable biometric login',
-        });
-        if (result.success) {
-          await setStorageItemAsync('biometricUser', JSON.stringify({ email: email }));
-          setIsBiometricEnabled('true');
-        }
-      } else {
-        alert("No biometrics are enrolled on this device.");
-      }
-    } else {
-      await setStorageItemAsync('biometricUser', null);
-      setIsBiometricEnabled(null);
-    }
-  };
 
   return (
     <AnimatedScreen>
-      <View style={[styles.container, { paddingBottom: tabBarHeight }]}>
-        <View style={styles.header}>
-          <Text style={styles.title} fontType="bold">My Account</Text>
-        </View>
-        <ScrollView contentContainerStyle={styles.content}>
-          <Card style={styles.infoCard}>
-            <View style={styles.avatar}>
-              <Ionicons name="person-outline" size={50} color={theme.colors.primary} />
-            </View>
-            <Text style={styles.name} fontType="bold">{`${firstName} ${lastName}`}</Text>
-            <Text style={styles.role} fontType="regular">{displayRole}</Text>
-            {userCompanyName && <Text style={styles.companyName} fontType="regular">{userCompanyName}</Text>}
-          </Card>
+      <View style={styles.container}>
+        <ScrollView 
+          contentContainerStyle={[styles.scrollContent, { paddingBottom: tabBarHeight + theme.spacing(4) }]}
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.pageHeader}>
+            <Text style={styles.title} fontType="bold">Account Settings</Text>
+            <Text style={styles.subtitle}>Your profile and company information</Text>
+          </View>
 
-          <Card style={styles.detailsCard}>
-            <View style={styles.detailItem}>
-              <Ionicons name="mail-outline" size={24} color={theme.colors.bodyText} />
-              <Text style={styles.detailText} fontType="regular">{email}</Text>
-            </View>
-          </Card>
-
-          {isBiometricSupported && (
-            <Card style={styles.settingsCard}>
-              <View style={styles.settingItem}>
-                <Ionicons name="finger-print-outline" size={24} color={theme.colors.headingText} />
-                <Text style={styles.settingText} fontType="regular">Enable Biometric Login</Text>
-                <Switch
-                  value={isBiometricEnabled === 'true'}
-                  onValueChange={handleBiometricSwitch}
-                  trackColor={{ false: theme.colors.accent, true: theme.colors.primary }}
-                  thumbColor={theme.colors.cardBackground}
-                />
+          <View style={styles.content}>
+            {/* 1. Profile Overview Card */}
+            <Card style={styles.profileCard}>
+              <View style={styles.profileHeader}>
+                <View style={styles.avatarContainer}>
+                  <Ionicons name="person" size={40} color="white" />
+                </View>
+                <View style={styles.profileInfo}>
+                  <Text style={styles.userName} fontType="bold">{fullName}</Text>
+                  <View style={styles.roleBadge}>
+                    <Text style={styles.roleBadgeText} fontType="bold">{displayRole.toUpperCase()}</Text>
+                  </View>
+                </View>
               </View>
-            </Card>
-          )}
+              
+              <View style={styles.divider} />
+              
+              <View style={styles.detailRow}>
+                <View style={styles.detailIcon}>
+                  <Ionicons name="mail-outline" size={18} color={theme.colors.primary} />
+                </View>
+                <View style={styles.detailContent}>
+                  <Text style={styles.detailLabel}>Email Address</Text>
+                  <Text style={styles.detailValue} fontType="medium">{email}</Text>
+                </View>
+              </View>
 
-          <Button
-            title="Log Out"
-            onPress={() => signOut()}
-            style={styles.logoutButton}
-            textStyle={styles.logoutButtonText}
-          />
+              {userCompanyName && (
+                <View style={styles.detailRow}>
+                  <View style={styles.detailIcon}>
+                    <Ionicons name="business-outline" size={18} color={theme.colors.primary} />
+                  </View>
+                  <View style={styles.detailContent}>
+                    <Text style={styles.detailLabel}>Company</Text>
+                    <Text style={styles.detailValue} fontType="medium">{userCompanyName}</Text>
+                  </View>
+                </View>
+              )}
+            </Card>
+
+            {/* 2. Logout Action */}
+            <View style={styles.logoutContainer}>
+              <Button
+                title="Log Out"
+                onPress={() => signOut()}
+                style={styles.logoutButton}
+                textStyle={styles.logoutButtonText}
+              />
+            </View>
+          </View>
         </ScrollView>
       </View>
     </AnimatedScreen>
@@ -108,79 +90,109 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: theme.colors.pageBackground,
   },
-  header: {
-    paddingHorizontal: theme.spacing(2),
-    paddingTop: theme.spacing(2),
-    paddingBottom: theme.spacing(1),
+  scrollContent: {
+    paddingTop: theme.spacing(3),
+  },
+  pageHeader: {
+    paddingHorizontal: theme.spacing(3),
+    marginBottom: theme.spacing(3),
   },
   title: {
-    fontSize: 28,
+    fontSize: theme.fontSizes.xl,
     color: theme.colors.headingText,
+  },
+  subtitle: {
+    fontSize: theme.fontSizes.md,
+    color: theme.colors.bodyText,
+    marginTop: 2,
   },
   content: {
-    padding: theme.spacing(2),
+    paddingHorizontal: theme.spacing(3),
   },
-  infoCard: {
-    alignItems: 'center',
+  profileCard: {
+    borderRadius: theme.radius.xl,
     padding: theme.spacing(3),
+    marginBottom: theme.spacing(3),
+    borderWidth: 1,
+    borderColor: theme.colors.borderColor,
+  },
+  profileHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
     marginBottom: theme.spacing(2),
   },
-  avatar: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: theme.colors.accent,
+  avatarContainer: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: theme.colors.primary,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: theme.spacing(2),
+    marginRight: theme.spacing(2),
   },
-  name: {
-    fontSize: 22,
+  profileInfo: {
+    flex: 1,
+  },
+  userName: {
+    fontSize: 20,
     color: theme.colors.headingText,
   },
-  role: {
-    fontSize: 16,
-    color: theme.colors.bodyText,
+  roleBadge: {
+    backgroundColor: theme.colors.primary + '15',
+    paddingHorizontal: theme.spacing(1),
+    paddingVertical: 2,
+    borderRadius: theme.radius.sm,
+    alignSelf: 'flex-start',
     marginTop: 4,
   },
-  companyName: {
-    fontSize: 14,
-    color: theme.colors.bodyText,
-    marginTop: theme.spacing(1),
+  roleBadgeText: {
+    fontSize: 10,
+    color: theme.colors.primary,
+    letterSpacing: 0.5,
   },
-  detailsCard: {
-    padding: theme.spacing(2),
-    marginBottom: theme.spacing(2),
+  divider: {
+    height: 1,
+    backgroundColor: theme.colors.borderColor,
+    marginVertical: theme.spacing(2),
   },
-  detailItem: {
+  detailRow: {
     flexDirection: 'row',
     alignItems: 'center',
-  },
-  detailText: {
-    fontSize: 16,
-    marginLeft: theme.spacing(2),
-    color: theme.colors.headingText,
-  },
-  settingsCard: {
-    padding: theme.spacing(2),
     marginBottom: theme.spacing(2),
   },
-  settingItem: {
-    flexDirection: 'row',
+  detailIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: theme.colors.primary + '10',
+    justifyContent: 'center',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    marginRight: theme.spacing(1.5),
   },
-  settingText: {
-    fontSize: 16,
-    marginLeft: theme.spacing(2),
+  detailContent: {
     flex: 1,
+  },
+  detailLabel: {
+    fontSize: 12,
+    color: theme.colors.disabledText,
+    marginBottom: 2,
+  },
+  detailValue: {
+    fontSize: 14,
     color: theme.colors.headingText,
   },
-  logoutButton: {
-    backgroundColor: theme.colors.danger,
+  logoutContainer: {
+    alignItems: 'center',
     marginTop: theme.spacing(2),
   },
+  logoutButton: {
+    width: '100%',
+    height: 56,
+    borderRadius: theme.radius.lg,
+    backgroundColor: theme.colors.danger,
+  },
   logoutButtonText: {
-    color: theme.colors.cardBackground,
+    color: 'white',
+    fontSize: 16,
   },
 });

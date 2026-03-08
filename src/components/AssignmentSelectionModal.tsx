@@ -1,8 +1,10 @@
 import React from 'react';
-import { Modal, View, Text, FlatList, TouchableOpacity, StyleSheet, SafeAreaView } from 'react-native';
+import { Modal, View, FlatList, TouchableOpacity, StyleSheet, SafeAreaView, Platform } from 'react-native';
 import { theme } from '~/theme';
 import { Ionicons } from '@expo/vector-icons';
-import { ProcessedAssignmentStepWithStatus } from '~/context/AssignmentsContext'; // Adjust import path as necessary
+import { ProcessedAssignmentStepWithStatus } from '~/context/AssignmentsContext';
+import { Text } from './Themed';
+import { Card } from './Card';
 
 interface AssignmentSelectionModalProps {
   isVisible: boolean;
@@ -27,131 +29,178 @@ const AssignmentSelectionModal: React.FC<AssignmentSelectionModalProps> = ({
       ]}
       onPress={() => onSelectAssignment(item.id)}
     >
-      <View style={[styles.colorIndicator, { backgroundColor: item.type === 'project' && item.project ? item.project.color : theme.colors.primary }]} />
+      <View style={[styles.iconContainer, { backgroundColor: item.project?.color || theme.colors.primary + '20' }]}>
+        <Ionicons 
+          name={item.type === 'project' ? "business-outline" : "pin-outline"} 
+          size={20} 
+          color={currentSelectedId === item.id ? theme.colors.primary : theme.colors.bodyText} 
+        />
+      </View>
+      
       <View style={styles.textContainer}>
-        <Text style={styles.assignmentTitle}>{item.type === 'project' ? item.project?.name : item.location?.name}</Text>
+        <Text style={styles.assignmentTitle} fontType="bold">
+          {item.type === 'project' ? item.project?.name : item.location?.name}
+        </Text>
         {item.type === 'project' && item.project?.address && (
-          <Text style={styles.assignmentAddress}>{item.project.address}</Text>
+          <Text style={styles.assignmentAddress} numberOfLines={1}>{item.project.address}</Text>
         )}
         {item.start_time && (
-          <Text style={styles.assignmentTime}>Scheduled: {item.start_time}</Text>
+          <View style={styles.timeRow}>
+            <Ionicons name="time-outline" size={12} color={theme.colors.disabledText} />
+            <Text style={styles.assignmentTime}> {item.start_time}</Text>
+          </View>
         )}
       </View>
-      {currentSelectedId === item.id && (
-        <Ionicons name="checkmark-circle" size={24} color={theme.colors.success} />
+
+      {currentSelectedId === item.id ? (
+        <Ionicons name="checkmark-circle" size={24} color={theme.colors.primary} />
+      ) : (
+        <Ionicons name="chevron-forward" size={18} color={theme.colors.disabledText} />
       )}
     </TouchableOpacity>
   );
 
   return (
     <Modal
-      animationType="slide"
+      animationType="fade"
       transparent={true}
       visible={isVisible}
       onRequestClose={onClose}
     >
-      <SafeAreaView style={styles.centeredView}>
-        <View style={styles.modalView}>
-          <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>Select Assignment</Text>
-            <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-              <Ionicons name="close-circle" size={30} color={theme.colors.bodyText} />
-            </TouchableOpacity>
-          </View>
-          <FlatList
-            data={assignments.filter(assign => assign.status !== 'completed')} // Only show non-completed assignments
-            renderItem={renderItem}
-            keyExtractor={(item) => item.id}
-            style={styles.assignmentList}
-            contentContainerStyle={styles.assignmentListContent}
-            ListEmptyComponent={
-              <Text style={styles.emptyListText}>No upcoming assignments.</Text>
-            }
-          />
-        </View>
-      </SafeAreaView>
+      <View style={styles.overlay}>
+        <SafeAreaView style={styles.centeredView}>
+          <Card style={styles.modalView}>
+            <View style={styles.modalHeader}>
+              <View>
+                <Text style={styles.modalTitle} fontType="bold">Select Assignment</Text>
+                <Text style={styles.modalSubtitle}>Choose where you'll be working</Text>
+              </View>
+              <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+                <Ionicons name="close" size={24} color={theme.colors.bodyText} />
+              </TouchableOpacity>
+            </View>
+
+            <FlatList
+              data={assignments} // Removed internal filter to allow all assignments
+              renderItem={renderItem}
+              keyExtractor={(item) => item.id}
+              style={styles.assignmentList}
+              contentContainerStyle={styles.assignmentListContent}
+              showsVerticalScrollIndicator={false}
+              ListEmptyComponent={
+                <View style={styles.emptyContainer}>
+                  <Ionicons name="calendar-outline" size={48} color={theme.colors.borderColor} />
+                  <Text style={styles.emptyListText}>No assignments found for today.</Text>
+                </View>
+              }
+            />
+          </Card>
+        </SafeAreaView>
+      </View>
     </Modal>
   );
 };
 
 const styles = StyleSheet.create({
-  centeredView: {
+  overlay: {
     flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.6)',
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'rgba(0,0,0,0.5)',
+  },
+  centeredView: {
+    width: '100%',
+    alignItems: 'center',
   },
   modalView: {
-    margin: theme.spacing(2),
-    backgroundColor: theme.colors.cardBackground,
-    borderRadius: theme.radius.lg,
     width: '90%',
+    maxWidth: 500,
     maxHeight: '80%',
-    ...theme.shadow.soft,
+    padding: 0, // Managed by internal views
+    borderRadius: theme.radius.xl,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: theme.colors.borderColor,
   },
   modalHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: theme.spacing(2),
+    alignItems: 'flex-start',
+    padding: theme.spacing(3),
+    backgroundColor: theme.colors.cardBackground,
     borderBottomWidth: 1,
     borderBottomColor: theme.colors.borderColor,
   },
   modalTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
+    fontSize: theme.fontSizes.lg,
     color: theme.colors.headingText,
   },
+  modalSubtitle: {
+    fontSize: theme.fontSizes.xs,
+    color: theme.colors.bodyText,
+    marginTop: 2,
+  },
   closeButton: {
-    padding: theme.spacing(1),
+    backgroundColor: theme.colors.pageBackground,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   assignmentList: {
     width: '100%',
   },
   assignmentListContent: {
-    paddingVertical: theme.spacing(1),
+    paddingBottom: theme.spacing(2),
   },
   assignmentItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: theme.spacing(2),
-    paddingHorizontal: theme.spacing(2),
+    padding: theme.spacing(2.5),
     borderBottomWidth: 1,
     borderBottomColor: theme.colors.borderColor,
   },
   selectedAssignmentItem: {
-    backgroundColor: theme.colors.accent,
+    backgroundColor: theme.colors.primary + '05',
   },
-  colorIndicator: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    marginRight: theme.spacing(1.5),
+  iconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: theme.spacing(2),
   },
   textContainer: {
     flex: 1,
   },
   assignmentTitle: {
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: theme.fontSizes.md,
     color: theme.colors.headingText,
   },
   assignmentAddress: {
-    fontSize: 13,
+    fontSize: theme.fontSizes.xs,
     color: theme.colors.bodyText,
-    marginTop: theme.spacing(0.5),
+    marginTop: 2,
+  },
+  timeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 4,
   },
   assignmentTime: {
-    fontSize: 13,
-    color: theme.colors.bodyText,
-    marginTop: theme.spacing(0.5),
-    fontWeight: '500',
+    fontSize: 11,
+    color: theme.colors.disabledText,
+  },
+  emptyContainer: {
+    alignItems: 'center',
+    paddingVertical: 40,
   },
   emptyListText: {
-    textAlign: 'center',
-    color: theme.colors.bodyText,
-    marginTop: theme.spacing(3),
-    fontSize: 16,
+    color: theme.colors.disabledText,
+    marginTop: 12,
+    fontSize: theme.fontSizes.sm,
   },
 });
 

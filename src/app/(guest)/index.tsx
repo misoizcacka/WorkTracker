@@ -7,10 +7,78 @@ import { Card } from '../../components/Card';
 import { theme } from '../../theme';
 import AnimatedScreen from '../../components/AnimatedScreen';
 import Logo from '../../../assets/koordlogoblack1.svg';
-import { Ionicons } from '@expo/vector-icons';
+import { Video, ResizeMode } from 'expo-av';
+import { LinearGradient } from 'expo-linear-gradient';
 
 const { width } = Dimensions.get('window');
 const isLargeScreen = width > 900;
+
+interface FeatureItemProps {
+  title: string;
+  description: string;
+  asset: any;
+  isVideo?: boolean;
+  reverse?: boolean;
+  initialRatio?: number;
+}
+
+const FeatureItem = ({ title, description, asset, isVideo, reverse, initialRatio = 1.77 }: FeatureItemProps) => {
+  const [aspectRatio, setAspectRatio] = useState(initialRatio);
+
+  const textContent = (
+    <View style={styles.featureTextContent}>
+      <Text style={styles.featureTitle} fontType="bold">{title}</Text>
+      <Text style={styles.featureDescription} fontType="regular">{description}</Text>
+    </View>
+  );
+
+  const visualContent = (
+    <View style={styles.featureVisualContainer}>
+      <View style={[styles.visualWrapper, { aspectRatio }]}>
+        {isVideo ? (
+          <Video
+            source={asset}
+            style={styles.fill}
+            videoStyle={{ width: '100%', height: '100%', objectFit: 'contain' }}
+            resizeMode={ResizeMode.CONTAIN}
+            shouldPlay
+            isLooping
+            isMuted
+            onReadyForDisplay={(e: any) => {
+              if (e?.naturalSize?.height > 0) {
+                setAspectRatio(e.naturalSize.width / e.naturalSize.height);
+              }
+            }}
+          />
+        ) : (
+          <Image
+            source={asset}
+            style={styles.fill}
+            resizeMode="contain"
+            onLoad={(e: any) => {
+              const source = e?.nativeEvent?.source || e?.nativeEvent;
+              if (source?.width && source?.height) {
+                setAspectRatio(source.width / source.height);
+              }
+            }}
+          />
+        )}
+        <LinearGradient
+          colors={['transparent', 'rgba(224, 224, 224, 0.1)', theme.colors.pageBackground]}
+          style={styles.visualGradient}
+          locations={[0, 0.9, 1]}
+        />
+      </View>
+    </View>
+  );
+
+  return (
+    <View style={[styles.featureRow, reverse && isLargeScreen && styles.featureRowReverse]}>
+      {textContent}
+      {visualContent}
+    </View>
+  );
+};
 
 export default function LandingPage() {
   const router = useRouter();
@@ -39,71 +107,96 @@ export default function LandingPage() {
           </View>
         </View>
 
-        <ScrollView contentContainerStyle={styles.scrollContent}>
+        <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
           {/* Hero Section */}
           <View style={styles.heroSection}>
-            <View style={styles.heroContent}>
-              <Text style={styles.heroTitle} fontType="bold">
-                Effortless Workforce Management for Modern Businesses
-              </Text>
-              <Text style={styles.heroSubtitle} fontType="regular">
-                Streamline time tracking, project assignments, and reporting with Koord. Built for efficiency, designed for growth.
-              </Text>
-              <View style={styles.heroButtons}>
-                <Button
-                  title="Get Started"
-                  onPress={() => router.push('/auth/signup')}
-                  style={styles.heroButton}
-                />
-                <Text style={styles.heroFinePrint} fontType="regular">
-                  No credit card required. Cancel anytime.
-                </Text>
-              </View>
-            </View>
-            
-            <View style={styles.heroImageContainer}>
-              <Card style={styles.imageCard}>
-                <Image
-                  source={require('../../../assets/appscreenshot.png')}
-                  style={styles.heroImage}
-                  resizeMode="contain"
-                />
-              </Card>
+            <Text style={styles.heroSubtitle} fontType="medium">MODERN FIELD MANAGEMENT</Text>
+            <Text style={styles.heroTitle} fontType="bold">
+              The Operating System for Your Field Workforce
+            </Text>
+            <Text style={styles.heroDescription} fontType="regular">
+              Koord bridges the gap between the office and the field. Real-time location tracking, 
+              automated assignments, and intelligent reporting in one seamless platform.
+            </Text>
+            <View style={styles.heroButtons}>
+              <Button
+                title="Get Started Now"
+                onPress={() => router.push('/auth/signup')}
+                style={styles.heroButton}
+              />
+              <TouchableOpacity style={styles.demoButton} onPress={() => {}}>
+                <Text style={styles.demoButtonText} fontType="medium">Schedule Demo</Text>
+              </TouchableOpacity>
             </View>
           </View>
 
-          {/* Features Grid */}
-          <View style={styles.featuresSection}>
-            <Text style={styles.sectionTitle} fontType="bold">Built for the way you work</Text>
-            <View style={styles.featuresGrid}>
-              {[
-                { icon: 'time-outline', title: 'Precise Time Tracking', desc: 'Capture every minute accurately across projects and tasks.' },
-                { icon: 'calendar-outline', title: 'Intuitive Assignments', desc: 'Easily assign, track, and manage all your team\'s projects.' },
-                { icon: 'stats-chart-outline', title: 'Comprehensive Reporting', desc: 'Generate detailed insights to optimize productivity and costs.' },
-                { icon: 'phone-portrait-outline', title: 'Mobile-First Experience', desc: 'Manage your workforce on the go, from any device.' }
-              ].map((feature, index) => (
-                <Card key={index} style={styles.featureItem}>
-                  <View style={styles.featureIconContainer}>
-                    <Ionicons name={feature.icon as any} size={32} color={theme.colors.primary} />
-                  </View>
-                  <Text style={styles.featureTitle} fontType="bold">{feature.title}</Text>
-                  <Text style={styles.featureDescription} fontType="regular">{feature.desc}</Text>
-                </Card>
-              ))}
+          {/* Feature Showcase */}
+          <View style={styles.featuresList}>
+            <FeatureItem 
+              title="Real-Time Map Overview"
+              description="Monitor your entire field operation from a single, high-fidelity map. Track worker movement, project sites, and live status updates as they happen."
+              asset={require('../../../assets/landing/mapoverview.mp4')}
+              isVideo
+            />
+
+            <FeatureItem 
+              title="Automated Assignments"
+              description="Eliminate the guesswork in scheduling. Assign workers to project sites with precision and ensure your team is always where they need to be."
+              asset={require('../../../assets/landing/assignments.mp4')}
+              isVideo
+              reverse
+            />
+
+            <FeatureItem 
+              title="Location History Replay"
+              description="Verify site visits and optimize routes with comprehensive location history. Replay any worker's path to ensure operational transparency and safety."
+              asset={require('../../../assets/landing/locationreplay.png')}
+            />
+
+            <FeatureItem 
+              title="Integrated Team Communication"
+              description="Connect your managers and workers with context-aware chat. Resolve issues instantly with real-time messaging built directly into the platform."
+              asset={require('../../../assets/landing/workermanagerchat.mp4')}
+              isVideo
+              reverse
+              initialRatio={0.56}
+            />
+
+            <FeatureItem 
+              title="Intelligent Reporting"
+              description="Transform operational data into actionable insights. Generate detailed payroll and project costing reports with one click."
+              asset={require('../../../assets/landing/report.png')}
+              initialRatio={1.4}
+            />
+          </View>
+
+          {/* Stats Bar */}
+          <View style={styles.statsBar}>
+            <View style={styles.statItem}>
+              <Text style={styles.statNumber} fontType="bold">10k+</Text>
+              <Text style={styles.statLabel}>Workers Managed</Text>
+            </View>
+            <View style={styles.statDivider} />
+            <View style={styles.statItem}>
+              <Text style={styles.statNumber} fontType="bold">99.9%</Text>
+              <Text style={styles.statLabel}>System Uptime</Text>
+            </View>
+            <View style={styles.statDivider} />
+            <View style={styles.statItem}>
+              <Text style={styles.statNumber} fontType="bold">24/7</Text>
+              <Text style={styles.statLabel}>Live Visibility</Text>
             </View>
           </View>
 
-          {/* Call to Action */}
+          {/* CTA Section */}
           <View style={styles.ctaSection}>
             <Card style={styles.ctaCard}>
-              <Text style={styles.ctaTitle} fontType="bold">Ready to transform your workflow?</Text>
-              <Text style={styles.ctaSubtitle} fontType="regular">
-                Join hundreds of businesses that use Koord to manage their workforce more effectively.
-              </Text>
+              <Text style={styles.ctaTitle} fontType="bold">Ready to modernize your field operations?</Text>
               <Button
-                title="Get Started for Free"
+                title="Create Your Account"
                 onPress={() => router.push('/auth/signup')}
                 style={styles.ctaButton}
+                textStyle={styles.ctaButtonText}
               />
             </Card>
           </View>
@@ -131,7 +224,7 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.cardBackground,
     borderBottomWidth: 1,
     borderBottomColor: theme.colors.borderColor,
-    zIndex: 10,
+    zIndex: 100,
     ...Platform.select({
       web: {
         width: '100%',
@@ -168,174 +261,194 @@ const styles = StyleSheet.create({
     paddingBottom: theme.spacing(10),
   },
   heroSection: {
-    flexDirection: isLargeScreen ? 'row' : 'column',
+    paddingHorizontal: theme.spacing(4),
+    paddingTop: theme.spacing(16),
+    paddingBottom: theme.spacing(12),
     alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: theme.spacing(8),
-    paddingVertical: theme.spacing(12),
-    gap: isLargeScreen ? theme.spacing(12) : theme.spacing(8),
-    ...Platform.select({
-      web: {
-        width: '100%',
-        maxWidth: 1400,
-        alignSelf: 'center',
-      },
-    }),
-  },
-  heroContent: {
-    flex: isLargeScreen ? 1.2 : undefined,
-    alignItems: isLargeScreen ? 'flex-start' : 'center',
-  },
-  heroTitle: {
-    fontSize: isLargeScreen ? 56 : 36,
-    color: theme.colors.headingText,
-    marginBottom: theme.spacing(3),
-    lineHeight: isLargeScreen ? 68 : 44,
-    textAlign: isLargeScreen ? 'left' : 'center',
+    maxWidth: 1000,
+    alignSelf: 'center',
   },
   heroSubtitle: {
-    fontSize: isLargeScreen ? 20 : 18,
+    color: theme.colors.primary,
+    letterSpacing: 2,
+    fontSize: 14,
+    marginBottom: 20,
+  },
+  heroTitle: {
+    fontSize: isLargeScreen ? 64 : 42,
+    color: theme.colors.headingText,
+    textAlign: 'center',
+    lineHeight: isLargeScreen ? 74 : 50,
+    marginBottom: 28,
+    letterSpacing: -1.5,
+  },
+  heroDescription: {
+    fontSize: 20,
     color: theme.colors.bodyText,
-    marginBottom: theme.spacing(6),
-    lineHeight: 30,
-    textAlign: isLargeScreen ? 'left' : 'center',
-    maxWidth: 600,
+    textAlign: 'center',
+    lineHeight: 32,
+    marginBottom: 44,
+    opacity: 0.8,
+    maxWidth: 800,
   },
   heroButtons: {
-    alignItems: isLargeScreen ? 'flex-start' : 'center',
+    flexDirection: isLargeScreen ? 'row' : 'column',
+    gap: 20,
+    alignItems: 'center',
   },
   heroButton: {
-    backgroundColor: theme.colors.primary,
-    paddingHorizontal: theme.spacing(6),
-    height: 56,
+    height: 60,
+    paddingHorizontal: 40,
     borderRadius: theme.radius.lg,
+    minWidth: 220,
+  },
+  demoButton: {
+    height: 60,
+    paddingHorizontal: 40,
+    borderRadius: theme.radius.lg,
+    borderWidth: 2,
+    borderColor: theme.colors.borderColor,
     justifyContent: 'center',
+    minWidth: 220,
   },
-  heroFinePrint: {
-    fontSize: 14,
-    color: theme.colors.disabledText,
-    marginTop: theme.spacing(2),
+  demoButtonText: {
+    color: theme.colors.headingText,
+    fontSize: 18,
   },
-  heroImageContainer: {
+  featuresList: {
+    paddingHorizontal: theme.spacing(4),
+    maxWidth: 1200,
+    alignSelf: 'center',
+    width: '100%',
+  },
+  featureRow: {
+    flexDirection: isLargeScreen ? 'row' : 'column',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: theme.spacing(12),
+    gap: theme.spacing(8),
+  },
+  featureRowReverse: {
+    flexDirection: 'row-reverse',
+  },
+  featureTextContent: {
     flex: 1,
+    maxWidth: isLargeScreen ? 480 : '100%',
+  },
+  featureVisualContainer: {
+    flex: 1.2,
     width: '100%',
     alignItems: 'center',
   },
-  imageCard: {
-    padding: theme.spacing(1),
+  visualWrapper: {
+    width: '100%',
     borderRadius: theme.radius.xl,
-    backgroundColor: theme.colors.cardBackground,
+    overflow: 'hidden',
+    backgroundColor: 'transparent',
     ...Platform.select({
       web: {
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 20 },
-        shadowOpacity: 0.1,
+        shadowOpacity: 0.05,
         shadowRadius: 30,
       }
     })
   },
-  heroImage: {
-    width: isLargeScreen ? 500 : width * 0.8,
-    height: isLargeScreen ? 400 : 250,
-    borderRadius: theme.radius.lg,
+  fill: {
+    width: '100%',
+    height: '100%',
   },
-  featuresSection: {
-    paddingHorizontal: theme.spacing(8),
-    paddingVertical: theme.spacing(12),
-    ...Platform.select({
-      web: {
-        width: '100%',
-        maxWidth: 1400,
-        alignSelf: 'center',
-      },
-    }),
-  },
-  sectionTitle: {
-    fontSize: 32,
-    color: theme.colors.headingText,
-    textAlign: 'center',
-    marginBottom: theme.spacing(8),
-  },
-  featuresGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'center',
-    gap: theme.spacing(4),
-  },
-  featureItem: {
-    width: isLargeScreen ? '23%' : '100%',
-    minWidth: 250,
-    padding: theme.spacing(4),
-    backgroundColor: theme.colors.cardBackground,
-    borderRadius: theme.radius.xl,
-    borderWidth: 1,
-    borderColor: theme.colors.borderColor,
-  },
-  featureIconContainer: {
-    width: 56,
-    height: 56,
-    borderRadius: theme.radius.md,
-    backgroundColor: theme.colors.primaryMuted,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: theme.spacing(3),
+  visualGradient: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: '15%',
+    zIndex: 1,
   },
   featureTitle: {
-    fontSize: 18,
+    fontSize: isLargeScreen ? 36 : 28,
     color: theme.colors.headingText,
-    marginBottom: theme.spacing(2),
+    marginBottom: 20,
+    lineHeight: isLargeScreen ? 44 : 34,
   },
   featureDescription: {
-    fontSize: 15,
+    fontSize: 18,
     color: theme.colors.bodyText,
-    lineHeight: 24,
+    lineHeight: 28,
+    opacity: 0.8,
+  },
+  statsBar: {
+    flexDirection: isLargeScreen ? 'row' : 'column',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: isLargeScreen ? 60 : 32,
+    paddingVertical: theme.spacing(12),
+    alignSelf: 'center',
+    borderTopWidth: 1,
+    borderBottomWidth: 1,
+    borderColor: theme.colors.borderColor,
+    width: '100%',
+    backgroundColor: theme.colors.cardBackground,
+    marginVertical: theme.spacing(8),
+  },
+  statItem: {
+    alignItems: 'center',
+  },
+  statNumber: {
+    fontSize: 36,
+    color: theme.colors.primary,
+    marginBottom: 8,
+  },
+  statLabel: {
+    fontSize: 14,
+    color: theme.colors.bodyText,
+    opacity: 0.6,
+  },
+  statDivider: {
+    width: 1,
+    height: 40,
+    backgroundColor: theme.colors.borderColor,
+    display: isLargeScreen ? 'flex' : 'none',
   },
   ctaSection: {
-    paddingHorizontal: theme.spacing(8),
+    paddingHorizontal: theme.spacing(4),
     paddingVertical: theme.spacing(12),
-    alignItems: 'center',
-    ...Platform.select({
-      web: {
-        width: '100%',
-        maxWidth: 1400,
-        alignSelf: 'center',
-      },
-    }),
+    maxWidth: 1000,
+    width: '100%',
+    alignSelf: 'center',
   },
   ctaCard: {
-    width: '100%',
-    maxWidth: 800,
-    padding: theme.spacing(8),
     backgroundColor: theme.colors.primary,
+    padding: theme.spacing(10),
     borderRadius: theme.radius.xl,
     alignItems: 'center',
+    gap: 40,
   },
   ctaTitle: {
-    fontSize: isLargeScreen ? 42 : 32,
+    fontSize: isLargeScreen ? 42 : 30,
     color: 'white',
-    marginBottom: theme.spacing(2),
     textAlign: 'center',
-  },
-  ctaSubtitle: {
-    fontSize: 18,
-    color: 'rgba(255, 255, 255, 0.8)',
-    marginBottom: theme.spacing(6),
-    textAlign: 'center',
-    maxWidth: 500,
+    lineHeight: isLargeScreen ? 52 : 38,
   },
   ctaButton: {
     backgroundColor: 'white',
-    paddingHorizontal: theme.spacing(8),
-    height: 56,
+    height: 60,
+    paddingHorizontal: 56,
     borderRadius: theme.radius.lg,
-    justifyContent: 'center',
+  },
+  ctaButtonText: {
+    color: theme.colors.primary,
+    fontSize: 18,
   },
   footer: {
-    padding: theme.spacing(5),
+    paddingVertical: 60,
     alignItems: 'center',
+    borderTopWidth: 1,
+    borderTopColor: theme.colors.borderColor,
   },
   footerText: {
-    fontSize: 12,
+    fontSize: 14,
     color: theme.colors.disabledText,
   },
 });

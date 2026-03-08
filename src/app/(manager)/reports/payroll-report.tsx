@@ -16,6 +16,7 @@ interface PayrollReportItem {
   worker_name: string;
   total_work_hours: number;
   total_break_minutes: number;
+  total_correction_minutes: number;
   payable_hours: number;
 }
 
@@ -60,6 +61,7 @@ const PayrollReport = () => {
 
   const totalWorkHours = reportData.reduce((sum: number, item) => sum + (item.total_work_hours || 0), 0);
   const totalBreakMinutes = reportData.reduce((sum: number, item) => sum + (item.total_break_minutes || 0), 0);
+  const totalCorrectionMinutes = reportData.reduce((sum: number, item) => sum + (item.total_correction_minutes || 0), 0);
   const totalPayableHours = reportData.reduce((sum: number, item) => sum + (item.payable_hours || 0), 0);
 
   const handleExportExcel = async () => {
@@ -69,6 +71,7 @@ const PayrollReport = () => {
       'Employee Name': item.worker_name,
       'Total Work Hours': item.total_work_hours.toFixed(2),
       'Break Time (min)': item.total_break_minutes,
+      'Correction (min)': item.total_correction_minutes,
       'Payable Hours': item.payable_hours.toFixed(2),
     }));
 
@@ -108,9 +111,13 @@ const PayrollReport = () => {
               <div class="stat-label">Total Work Hours</div>
               <div class="stat-value">${totalWorkHours.toFixed(2)}h</div>
             </div>
-            <div class="stat-box" style="border-left: 1px solid #ddd; border-right: 1px solid #ddd;">
+            <div class="stat-box" style="border-left: 1px solid #ddd;">
               <div class="stat-label">Total Break Time</div>
               <div class="stat-value">${totalBreakMinutes}m</div>
+            </div>
+            <div class="stat-box" style="border-left: 1px solid #ddd; border-right: 1px solid #ddd;">
+              <div class="stat-label">Total Correction</div>
+              <div class="stat-value">${totalCorrectionMinutes}m</div>
             </div>
             <div class="stat-box">
               <div class="stat-label">Total Payable</div>
@@ -124,6 +131,7 @@ const PayrollReport = () => {
                 <th>Employee Name</th>
                 <th class="numeric">Total Work Hours</th>
                 <th class="numeric">Break Time (min)</th>
+                <th class="numeric">Correction (min)</th>
                 <th class="numeric">Payable Hours</th>
               </tr>
             </thead>
@@ -133,6 +141,7 @@ const PayrollReport = () => {
                   <td>${item.worker_name}</td>
                   <td class="numeric">${item.total_work_hours.toFixed(2)}</td>
                   <td class="numeric">${item.total_break_minutes}</td>
+                  <td class="numeric">${item.total_correction_minutes}</td>
                   <td class="numeric highlight">${item.payable_hours.toFixed(2)}</td>
                 </tr>
               `).join('')}
@@ -146,7 +155,7 @@ const PayrollReport = () => {
     await exportToPDF(html, fileName);
   };
 
-  const tableMinWidth = 800;
+  const tableMinWidth = 900;
 
   return (
     <AnimatedScreen>
@@ -203,6 +212,10 @@ const PayrollReport = () => {
             <Text style={styles.statLabel} fontType="regular">Total Break Time</Text>
             <Text style={styles.statValue} fontType="bold">{totalBreakMinutes}m</Text>
           </View>
+          <View style={[styles.statBox, styles.statDivider]}>
+            <Text style={styles.statLabel} fontType="regular">Total Correction</Text>
+            <Text style={styles.statValue} fontType="bold">{totalCorrectionMinutes}m</Text>
+          </View>
           <View style={styles.statBox}>
             <Text style={[styles.statLabel, { color: theme.colors.primary }]} fontType="bold">Total Payable</Text>
             <Text style={[styles.statValue, { color: theme.colors.primary }]} fontType="bold">{totalPayableHours.toFixed(2)}h</Text>
@@ -220,7 +233,8 @@ const PayrollReport = () => {
                 <View style={styles.tableHeader}>
                 <Text style={[styles.tableHeaderText, styles.colEmployee]} fontType="bold">Employee Name</Text>
                 <Text style={[styles.tableHeaderText, styles.colNumeric]} fontType="bold">Total Work Hours</Text>
-                <Text style={[styles.tableHeaderText, styles.colNumeric]} fontType="bold">Break Time (min)</Text>
+                <Text style={[styles.tableHeaderText, styles.colNumeric]} fontType="bold">Break (min)</Text>
+                <Text style={[styles.tableHeaderText, styles.colNumeric]} fontType="bold">Correction (min)</Text>
                 <Text style={[styles.tableHeaderText, styles.colPayable]} fontType="bold">Payable Hours</Text>
                 </View>
 
@@ -238,6 +252,9 @@ const PayrollReport = () => {
                         <Text style={[styles.tableCell, styles.colEmployee]} fontType="medium">{item.worker_name}</Text>
                         <Text style={[styles.tableCell, styles.colNumeric]} fontType="regular">{item.total_work_hours.toFixed(2)}</Text>
                         <Text style={[styles.tableCell, styles.colNumeric]} fontType="regular">{item.total_break_minutes}</Text>
+                        <Text style={[styles.tableCell, styles.colNumeric, { color: item.total_correction_minutes >= 0 ? theme.colors.success : theme.colors.danger }]} fontType="medium">
+                            {item.total_correction_minutes >= 0 ? '+' : ''}{item.total_correction_minutes}
+                        </Text>
                         <View style={[styles.tableCell, styles.colPayable]}>
                             <View style={styles.payableBadge}>
                                 <Text style={styles.payableBadgeText} fontType="bold">{item.payable_hours.toFixed(2)}</Text>

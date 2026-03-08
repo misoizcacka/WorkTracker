@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from "react";
-import { StyleSheet, Alert, ScrollView, ActivityIndicator, Linking, TouchableOpacity, RefreshControl, Platform } from "react-native";
+import { StyleSheet, Alert, ScrollView, ActivityIndicator, Linking, TouchableOpacity, RefreshControl, Platform, Image } from "react-native";
 import { Ionicons } from '@expo/vector-icons';
-import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import * as Location from "expo-location";
 import * as Notifications from "expo-notifications";
 import * as BackgroundLocation from 'background-location';
@@ -11,22 +10,20 @@ import { Card } from "../../components/Card";
 import { CircularTimer } from "../../components/CircularTimer";
 import AnimatedScreen from "../../components/AnimatedScreen";
 import { theme } from "../../theme";
-import { MapView, Marker, Circle } from '../../components/MapView'; // Custom MapView component
+import { MapView, Marker, Circle } from '../../components/MapView';
 import { useSession } from '~/context/AuthContext';
 import { useAssignments } from '~/context/AssignmentsContext';
 import { useProjects } from '~/context/ProjectsContext';
-import { ProcessedAssignmentStep, WorkSession, ProcessedAssignmentStepWithStatus, AssignmentStatus } from '~/types'; // Updated import
+import { ProcessedAssignmentStepWithStatus, AssignmentStatus } from '~/types';
 import moment from 'moment';
 import Toast from 'react-native-toast-message';
-import { saveLocalTransitionEvent, TransitionEventType } from '~/utils/localTransitionEvents'; // Import local event utility
-import AssignmentSelectionModal from '../../components/AssignmentSelectionModal'; // Import AssignmentSelectionModal
-import { View, Text } from '../../components/Themed'; // Custom Text component for consistent fonts
+import AssignmentSelectionModal from '../../components/AssignmentSelectionModal';
+import { View, Text } from '../../components/Themed';
 
-import { GeofenceAssignment } from 'background-location'; // Import the GeofenceAssignment interface
+import { GeofenceAssignment } from 'background-location';
 
 export default function Home() {
-  const { user, userCompanyId, isCompanyIdLoading, session, deviceToken, deviceSecret } = useSession();
-  console.log("Home: useSession deviceToken:", deviceToken, "deviceSecret:", deviceSecret?.substring(0, 5) + "...");
+  const { user, userCompanyId, isCompanyIdLoading, deviceToken, deviceSecret, userCompanyName } = useSession();
   const { loadInitialProjects, isLoading: projectsLoading } = useProjects();
   const [currentDate, setCurrentDate] = useState(moment().format('YYYY-MM-DD'));
   const [locationPermission, setLocationPermission] = useState<Location.PermissionStatus | null>(null);
@@ -42,79 +39,57 @@ export default function Home() {
   const [locationReady, setLocationReady] = useState(false);
   const [elapsedTime, setElapsedTime] = useState(0);
   const notificationSentRef = useRef(false);
-  const [outOfRange, setOutOfRange] = useState(false);
   const [isAssignmentSelectionModalVisible, setIsAssignmentSelectionModalVisible] = useState(false);
   const [selectedNextAssignmentId, setSelectedNextAssignmentId] = useState<string | null>(null);
-  const [isRefreshing, setIsRefreshing] = useState(false); // New state for pull-to-refresh
-  const [isProcessingCheckInOut, setIsProcessingCheckInOut] = useState(false); // NEW: State for check-in/out loading
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isProcessingCheckInOut, setIsProcessingCheckInOut] = useState(false);
   const [pendingAction, setPendingAction] = useState<'checking_in' | 'checking_out' | null>(null);
 
-  const { processedAssignments, loadAssignmentsForDate, loadWorkSessionsForDate, isLoading: assignmentsLoading, activeWorkSession, startWorkSession, endWorkSession, updateWorkSessionAssignment, lastCheckoutAssignmentId } = useAssignments();
+  const { processedAssignments, loadAssignmentsForDate, loadWorkSessionsForDate, isLoading: assignmentsLoading, activeWorkSession, startWorkSession, endWorkSession, lastCheckoutAssignmentId } = useAssignments();
 
   const isDataLoading = assignmentsLoading || projectsLoading;
-
   const ACCEPTABLE_DISTANCE = 150; // meters
 
-  // Function to load home screen data, including assignments and work sessions
   const fetchHomeData = useCallback(async (forceFetchFromSupabase = false) => {
     if (user?.id) {
-      // If there is an active session, load data for THAT session's date.
       if (activeWorkSession && activeWorkSession.worker_assignments) {
         const dateToLoad = activeWorkSession.worker_assignments.assigned_date;
         await loadAssignmentsForDate(dateToLoad, [user.id], forceFetchFromSupabase);
         await loadWorkSessionsForDate(dateToLoad, user.id);
-      }
-      // If there is no active session (and we have finished loading it), load data for TODAY.
-      else if (activeWorkSession === null) {
+      } else if (activeWorkSession === null) {
         await loadAssignmentsForDate(currentDate, [user.id], forceFetchFromSupabase);
         await loadWorkSessionsForDate(currentDate, user.id);
       }
-      // If activeWorkSession is undefined, we are still loading it, so do nothing.
     }
-  }, [user?.id, activeWorkSession, loadAssignmentsForDate, loadWorkSessionsForDate, currentDate]); // Dependencies for useCallback
+  }, [user?.id, activeWorkSession, loadAssignmentsForDate, loadWorkSessionsForDate, currentDate]);
 
-  // Handle pull-to-refresh action
   const onRefresh = useCallback(async () => {
-    setIsRefreshing(true); // Start refreshing indicator
+    setIsRefreshing(true);
     await Promise.all([
       loadInitialProjects(),
       fetchHomeData(true)
     ]);
-    setIsRefreshing(false); // Stop refreshing indicator
-  }, [fetchHomeData, loadInitialProjects]); // Dependency for useCallback
+    setIsRefreshing(false);
+  }, [fetchHomeData, loadInitialProjects]);
 
-  // Update date state if the day changes
   useEffect(() => {
     const interval = setInterval(() => {
       const today = moment().format('YYYY-MM-DD');
-      if (today !== currentDate) {
-        setCurrentDate(today);
-      }
-    }, 60000); // Check every minute
-
+      if (today !== currentDate) setCurrentDate(today);
+    }, 60000);
     return () => clearInterval(interval);
   }, [currentDate]);
 
-  // Request permissions on mount
   useEffect(() => {
     (async () => {
       const { status: foregroundStatus } = await Location.requestForegroundPermissionsAsync();
       setLocationPermission(foregroundStatus);
-
       if (foregroundStatus === 'granted') {
         const { status: backgroundStatus } = await Location.requestBackgroundPermissionsAsync();
         if (backgroundStatus !== 'granted') {
-          Alert.alert(
-            "Background Location Required",
-            "This app requires background location access to track work hours accurately. Please set location permission to 'Allow all the time' in settings.",
-            [{ text: "Open Settings", onPress: () => Linking.openSettings() }]
-          );
+          Alert.alert("Background Location Required", "This app requires background location access to track work hours accurately.", [{ text: "Open Settings", onPress: () => Linking.openSettings() }]);
         }
-        
-        const { status: notifStatus } = await Notifications.requestPermissionsAsync();
-        if (notifStatus !== "granted") {
-          Alert.alert("Permission required", "Notification access is needed for alerts.");
-        }
+        await Notifications.requestPermissionsAsync();
       }
     })();
   }, []);
@@ -122,26 +97,14 @@ export default function Home() {
   const requestPermissionAgain = async () => {
     const { status: foregroundStatus } = await Location.requestForegroundPermissionsAsync();
     setLocationPermission(foregroundStatus);
-    
     if (foregroundStatus === 'granted') {
       const { status: backgroundStatus } = await Location.requestBackgroundPermissionsAsync();
-      if (backgroundStatus !== 'granted') {
-        Alert.alert(
-          "Background Location Required",
-          "This app requires background location access to track work hours accurately. Please set location permission to 'Allow all the time' in settings.",
-          [{ text: "Open Settings", onPress: () => Linking.openSettings() }]
-        );
-      }
+      if (backgroundStatus !== 'granted') Linking.openSettings();
     } else {
-        Alert.alert(
-            "Permission Required",
-            "Location access is essential for this app to function. Please enable it in your settings.",
-            [{ text: "Open Settings", onPress: () => Linking.openSettings() }]
-        );
+      Linking.openSettings();
     }
   };
 
-  // Derive checkedIn and sessionStartTime from activeWorkSession
   const checkedIn = !!activeWorkSession;
   const sessionStartTime = activeWorkSession ? new Date(activeWorkSession.start_time).getTime() : null;
 
@@ -149,123 +112,63 @@ export default function Home() {
     return user?.id ? processedAssignments[user.id] || [] : [];
   }, [user?.id, processedAssignments]);
 
-  // Logic to find the *current* assignment being worked on (if any) and the *next* possible assignment
-  const { currentActiveAssignment, nextAssignableAssignment, currentAssignmentIndex } = useMemo(() => {
-    let currentActive: ProcessedAssignmentStepWithStatus | null = null;
-    let nextAssignable: ProcessedAssignmentStepWithStatus | null = null;
-    let currentIdx = -1;
-
-    if (!user?.id || currentWorkersAssignments.length === 0) {
-      return { currentActiveAssignment: null, nextAssignableAssignment: null, currentAssignmentIndex: -1 };
-    }
-
-    currentActive = currentWorkersAssignments.find((assign: ProcessedAssignmentStepWithStatus) => assign.status === 'active') || null;
-    nextAssignable = currentWorkersAssignments.find((assign: ProcessedAssignmentStepWithStatus) => assign.status === 'next') || null;
-
-    if (currentActive) {
-      currentIdx = currentWorkersAssignments.indexOf(currentActive);
-    } else if (nextAssignable) {
-      currentIdx = currentWorkersAssignments.indexOf(nextAssignable);
-    }
-
-    return { currentActiveAssignment: currentActive, nextAssignableAssignment: nextAssignable, currentAssignmentIndex: currentIdx };
+  const { currentActiveAssignment, nextAssignableAssignment } = useMemo(() => {
+    if (!user?.id || currentWorkersAssignments.length === 0) return { currentActiveAssignment: null, nextAssignableAssignment: null };
+    const currentActive = currentWorkersAssignments.find((assign: ProcessedAssignmentStepWithStatus) => assign.status === 'active') || null;
+    const nextAssignable = currentWorkersAssignments.find((assign: ProcessedAssignmentStepWithStatus) => assign.status === 'next') || null;
+    return { currentActiveAssignment: currentActive, nextAssignableAssignment: nextAssignable };
   }, [user?.id, currentWorkersAssignments]);
 
-  // Determine the relevant assignment to display and check-in to
   const { relevantAssignment, isSelectionLocked } = useMemo(() => {
-    let assignmentToDisplay: ProcessedAssignmentStepWithStatus | null = null;
-    let locked = false;
+    if (checkedIn) return { relevantAssignment: currentActiveAssignment, isSelectionLocked: true };
+    
+    const lastCheckoutAss = currentWorkersAssignments.find((assign: ProcessedAssignmentStepWithStatus) => assign.id === lastCheckoutAssignmentId);
+    let assignmentToDisplay = selectedNextAssignmentId 
+      ? currentWorkersAssignments.find(a => a.id === selectedNextAssignmentId) || null
+      : lastCheckoutAss || nextAssignableAssignment;
 
-    if (checkedIn) {
-      assignmentToDisplay = currentActiveAssignment;
-      locked = true; // Cannot select new assignment if already checked in
-    } else {
-      // If not checked in, selection is never locked for the modal.
-      // The `lastCheckoutAssignmentId` will only influence the suggested assignment.
-      locked = false;
-
-      const lastCheckoutAss = currentWorkersAssignments.find(
-        (assign: ProcessedAssignmentStepWithStatus) => assign.id === lastCheckoutAssignmentId
-      );
-
-      if (selectedNextAssignmentId) {
-        // If user manually selected an assignment, use it.
-        assignmentToDisplay = currentWorkersAssignments.find(
-          (assign: ProcessedAssignmentStepWithStatus) => assign.id === selectedNextAssignmentId
-        ) || null;
-      } else if (lastCheckoutAss) {
-        // If there's a last checkout assignment, suggest re-checking into it as the default.
-        assignmentToDisplay = lastCheckoutAss;
-      } else {
-        // Default to the system-determined next assignable assignment.
-        assignmentToDisplay = nextAssignableAssignment;
-      }
-    }
-
-    return { relevantAssignment: assignmentToDisplay, isSelectionLocked: locked };
+    return { relevantAssignment: assignmentToDisplay, isSelectionLocked: false };
   }, [checkedIn, lastCheckoutAssignmentId, selectedNextAssignmentId, currentActiveAssignment, nextAssignableAssignment, currentWorkersAssignments]);
 
-  // The project location for geofencing is always the *relevant* one
-  const targetProjectLocation = useMemo(() => { // Renamed from projectLocation to avoid re-declaration
-    const targetAssignmentForGeofence = relevantAssignment;
-    if (targetAssignmentForGeofence?.type === 'project' && targetAssignmentForGeofence.project) {
-      return { lat: targetAssignmentForGeofence.project.location.latitude, lon: targetAssignmentForGeofence.project.location.longitude };
+  const targetProjectLocation = useMemo(() => {
+    if (relevantAssignment?.type === 'project' && relevantAssignment.project) {
+      return { lat: relevantAssignment.project.location.latitude, lon: relevantAssignment.project.location.longitude };
     }
-    if (targetAssignmentForGeofence?.type === 'common_location' && targetAssignmentForGeofence.location) {
-      return { lat: targetAssignmentForGeofence.location.latitude ?? 0, lon: targetAssignmentForGeofence.location.longitude ?? 0 };
+    if (relevantAssignment?.type === 'common_location' && relevantAssignment.location) {
+      return { lat: relevantAssignment.location.latitude ?? 0, lon: relevantAssignment.location.longitude ?? 0 };
     }
     return null;
   }, [relevantAssignment]);
 
-  const projectLocationName = useMemo(() => {
-    const targetAssignmentForGeofence = relevantAssignment;
-    if (targetAssignmentForGeofence?.type === 'project' && targetAssignmentForGeofence.project) {
-      return targetAssignmentForGeofence.project.name;
-    }
-    if (targetAssignmentForGeofence?.type === 'common_location' && targetAssignmentForGeofence.location) {
-      return targetAssignmentForGeofence.location.name;
-    }
-    return "Project Site";
-  }, [relevantAssignment]);
+  const markerCoord = useMemo(() => {
+    if (!targetProjectLocation) return null;
+    return {
+      latitude: targetProjectLocation.lat,
+      longitude: targetProjectLocation.lon
+    };
+  }, [targetProjectLocation]);
 
-  const projectLocationAddress = useMemo(() => {
-    const targetAssignmentForGeofence = relevantAssignment;
-    if (targetAssignmentForGeofence?.type === 'project' && targetAssignmentForGeofence.project) {
-      return targetAssignmentForGeofence.project.address;
-    }
-    return "";
+  const projectLocationName = useMemo(() => {
+    if (relevantAssignment?.type === 'project' && relevantAssignment.project) return relevantAssignment.project.name;
+    if (relevantAssignment?.type === 'common_location' && relevantAssignment.location) return relevantAssignment.location.name;
+    return "Project Site";
   }, [relevantAssignment]);
 
   const isNearby = distance !== null && distance < ACCEPTABLE_DISTANCE;
 
-  // Location status text for the bottom of the map
   const locationStatusText = useMemo(() => {
-    if (!relevantAssignment) {
-      return "No assignment with location to track.";
-    }
-    if (!locationReady) {
-      return "Fetching location...";
-    }
-    if (!targetProjectLocation) {
-        return "No valid location for assignment.";
-    }
+    if (!relevantAssignment) return "No scheduled assignments today.";
+    if (!locationReady) return "Locating you...";
+    if (!targetProjectLocation) return "No location coordinates for this site.";
+    if (isNearby) return `At ${projectLocationName}`;
+    
+    const displayDistance = distance ?? 0;
+    const formattedDistance = displayDistance > 1000 ? `${(displayDistance / 1000).toFixed(1)}km` : `${Math.round(displayDistance)}m`;
+    return `${formattedDistance} from ${projectLocationName}`;
+  }, [relevantAssignment, locationReady, targetProjectLocation, isNearby, distance, projectLocationName]);
 
-    if (isNearby) {
-      return `At the work site: ${relevantAssignment?.type === 'project' ? relevantAssignment?.project?.name : relevantAssignment?.location?.name}`;
-    } else {
-      const displayDistance = distance ?? 0;
-      const formattedDistance = displayDistance > 1000
-        ? `${(displayDistance / 1000).toFixed(1)}km`
-        : `${Math.round(displayDistance)}m`;
-      return `📏 ${formattedDistance} away from ${relevantAssignment?.type === 'project' ? relevantAssignment?.project?.name : relevantAssignment?.location?.name}`;
-    }
-  }, [relevantAssignment, locationReady, targetProjectLocation, isNearby, distance]);
+  useEffect(() => { fetchHomeData(); }, [fetchHomeData]);
 
-    // Fetch assignments and work sessions based on the user's check-in status
-    useEffect(() => {
-      fetchHomeData(); // Use the encapsulated fetch function
-    }, [fetchHomeData]); // Dependency for useEffect
-  // ⏱ Track elapsed time
   useEffect(() => {
     let timer: number;
     if (checkedIn && sessionStartTime) {
@@ -276,536 +179,282 @@ export default function Home() {
     return () => clearInterval(timer);
   }, [checkedIn, sessionStartTime]);
 
-  // 📍 Fetch foreground location for map display when not checked in
   useEffect(() => {
-    let intervalId: number | undefined; // Use NodeJS.Timeout for clarity
-    let isMounted = true; // To prevent state updates on unmounted component
+    let intervalId: number | undefined;
+    let isMounted = true;
 
     const fetchAndSetLocation = async () => {
-      if (!isMounted) return; // Don't proceed if component is unmounted
-
+      if (!isMounted) return;
       try {
-        const location = await Location.getCurrentPositionAsync({
-          accuracy: Location.Accuracy.High,
-        });
+        const location = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
         const { latitude, longitude } = location.coords;
-        const newWorkerLocation = { latitude, longitude };
-
         if (isMounted) {
-          setWorkerMapLocation(newWorkerLocation);
-          if (!locationReady) {
-            setLocationReady(true);
-          }
-
-          // Calculate distance here for debugging
-          let d: number | null = null;
+          setWorkerMapLocation({ latitude, longitude });
+          if (!locationReady) setLocationReady(true);
           if (targetProjectLocation) {
-            d = getDistance(
-              newWorkerLocation,
-              { latitude: targetProjectLocation.lat, longitude: targetProjectLocation.lon },
-            );
-            setDistance(d); // Update distance state for map display
+            setDistance(getDistance({ latitude, longitude }, { latitude: targetProjectLocation.lat, longitude: targetProjectLocation.lon }));
           } else {
             setDistance(null);
           }
-          console.log("Foreground Location Update:");
-          console.log("  Worker Location:", newWorkerLocation);
-          console.log("  Target Project Location:", targetProjectLocation);
-          console.log("  Calculated Distance:", d, "meters");
         }
       } catch (error) {
-        console.error("Failed to get foreground location for map:", error);
         if (isMounted) {
           setLocationReady(false);
-          setDistance(null); // Reset distance on error
+          setDistance(null);
         }
       }
     };
 
     if (!checkedIn && locationPermission === 'granted') {
-      fetchAndSetLocation(); // Fetch immediately on mount/check-out
-      intervalId = setInterval(fetchAndSetLocation, 10000); // Update every 10 seconds
-    } else {
-      // If checked in, or permissions not granted, ensure we clean up any existing interval
-      if (intervalId) {
-        clearInterval(intervalId);
-      }
-      // Optionally, reset workerMapLocation and locationReady when checked in,
-      // but let's keep them as is for now to avoid flickering if checkedIn state changes rapidly.
+      fetchAndSetLocation();
+      intervalId = setInterval(fetchAndSetLocation, 10000);
     }
-
-    return () => {
-      isMounted = false; // Mark component as unmounted
-      if (intervalId) {
-        clearInterval(intervalId);
-      }
-    };
-  }, [checkedIn, locationPermission, relevantAssignment, targetProjectLocation]); // Added relevantAssignment, targetProjectLocation to dependencies
-
-
-
-
-
-
+    return () => { isMounted = false; if (intervalId) clearInterval(intervalId); };
+  }, [checkedIn, locationPermission, targetProjectLocation]);
 
   const handleCheckIn = async () => {
-    // Initial guard conditions
-    if (checkedIn) {
-      Alert.alert("Already Checked In", `You are already checked into ${relevantAssignment?.type === 'project' ? relevantAssignment?.project?.name : relevantAssignment?.location?.name}.`);
-      return;
-    }
-    if (!relevantAssignment) {
-      Alert.alert("No Assignment", "No assignments available for check-in today.");
-      return;
-    }
-    if (!targetProjectLocation) {
-      Alert.alert("Location Missing", `Assignment ${projectLocationName} has no valid location. Cannot check in.`);
-      return;
-    }
-
-    // Double check background permissions before starting native module
+    if (checkedIn || !relevantAssignment || !targetProjectLocation) return;
     const { status: bgStatus } = await Location.getBackgroundPermissionsAsync();
-    if (bgStatus !== 'granted') {
-      Alert.alert(
-        "Background Location Required",
-        "This app requires background location access to track work hours accurately. Please set location permission to 'Allow all the time' in settings.",
-        [{ text: "Open Settings", onPress: () => Linking.openSettings() }]
-      );
-      return;
-    }
+    if (bgStatus !== 'granted') { Alert.alert("Background Location Required", "Please allow location access 'All the time'."); return; }
 
-    // Fetch current location right before check-in to ensure accuracy
     let currentLocation;
     try {
-      const locationResult = await Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.High,
-      });
-      currentLocation = { latitude: locationResult.coords.latitude, longitude: locationResult.coords.longitude };
-    } catch (err) {
-      console.error("Failed to get current location for check-in:", err);
-      Alert.alert("Location Error", "Could not get your current location. Please ensure location services are enabled and permissions are granted.");
-      return;
-    }
+      const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
+      currentLocation = { latitude: loc.coords.latitude, longitude: loc.coords.longitude };
+    } catch (err) { return; }
 
-    // Recalculate distance with the fresh location
-    let d: number | null = null;
-    if (targetProjectLocation) {
-      d = getDistance(
-        { latitude: currentLocation.latitude, longitude: currentLocation.longitude },
-        { latitude: targetProjectLocation.lat, longitude: targetProjectLocation.lon }
-      );
-    }
+    const d = getDistance(currentLocation, { latitude: targetProjectLocation.lat, longitude: targetProjectLocation.lon });
+    if (d > ACCEPTABLE_DISTANCE) { Alert.alert("Too far", `You must be at ${projectLocationName} to check in.`); return; }
 
-    if (d === null || d > ACCEPTABLE_DISTANCE) {
-      Alert.alert("Too far", `You must be at ${projectLocationName} to check in. You are ${Math.round(d ?? 0)}m away.`);
-      return;
-    }
-
-    setIsProcessingCheckInOut(true); // NEW: Set loading state
+    setIsProcessingCheckInOut(true);
     setPendingAction('checking_in');
     
-    requestAnimationFrame(async () => { // NEW: Wrap async operations in requestAnimationFrame to allow UI to update
-      try {
-        await startWorkSession(relevantAssignment.id, currentLocation);
-        
-        const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL as string | undefined;
-        const supabasePublishableKey = process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY as string | undefined;
+    try {
+      await startWorkSession(relevantAssignment.id, currentLocation);
+      const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
+      const supabaseKey = process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
 
-        let errorMessage = '';
-        if (!user?.id) errorMessage = 'User ID is missing.';
-        else if (isCompanyIdLoading) errorMessage = 'Company ID is still loading.';
-        else if (!userCompanyId) errorMessage = 'Company ID is missing for user.';
-              else if (!relevantAssignment?.id) errorMessage = 'Relevant assignment ID is missing.';
-              else if (!supabaseUrl) errorMessage = 'Supabase URL is missing from configuration.';
-              else if (!supabasePublishableKey) errorMessage = 'Supabase Publishable Key is missing from configuration.';
-              else if (!deviceToken) errorMessage = 'Device token is missing. Please re-login.'; // NEW
-                    else if (!deviceSecret) errorMessage = 'Device secret is missing. Please re-login.'; // NEW
-                    
-                    if (errorMessage) {
-                      console.error("BackgroundLocation Configuration Error:", errorMessage);
-                      Toast.show({
-                        type: 'error',
-                        text1: 'Configuration Error',
-                        text2: 'An application configuration error occurred. Please try again.',
-                      });
-                      return;
-                    }
-              
-                    console.log("Home: Passing to BackgroundLocation.start - deviceToken:", deviceToken, "deviceSecret:", deviceSecret?.substring(0, 5) + "..."); // NEW LOG
-              
-                    // Geofence assignments to pass to the native module
-                    // Constructed immediately before calling BackgroundLocation.start to ensure fresh data
-                    const currentGeofenceAssignments: GeofenceAssignment[] = [];
-                    if (relevantAssignment.type === 'project' && relevantAssignment.project?.location) {
-                      currentGeofenceAssignments.push({
-                        id: relevantAssignment.id,
-                        latitude: relevantAssignment.project.location.latitude,
-                        longitude: relevantAssignment.project.location.longitude,
-                        radius: ACCEPTABLE_DISTANCE,
-                        type: relevantAssignment.type,
-                        status: 'active', // Assuming it's now active after successful startWorkSession
-                      });
-                    } else if (relevantAssignment.type === 'common_location' && relevantAssignment.location?.latitude && relevantAssignment.location?.longitude) {
-                      currentGeofenceAssignments.push({
-                        id: relevantAssignment.id,
-                        latitude: relevantAssignment.location.latitude,
-                        longitude: relevantAssignment.location.longitude,
-                        radius: ACCEPTABLE_DISTANCE,
-                        type: relevantAssignment.type,
-                        status: 'active',
-                      });
-                    }
-              
-              
-                    BackgroundLocation.start(
-                      user!.id,
-                      relevantAssignment.id,
-                      userCompanyId!,
-                      JSON.stringify({ url: supabaseUrl!, key: supabasePublishableKey! }), // NEW: Combined supabaseConfig
-                      deviceToken!, // NEW: Pass deviceToken
-                      deviceSecret!, // NEW: Pass deviceSecret
-                      JSON.stringify(currentGeofenceAssignments) // NEW: Stringify the array
-                    );
-                    Toast.show({          type: 'success',
-          text1: 'Checked In',
-          text2: `You are now working on ${projectLocationName}.`
-        });
-        setSelectedNextAssignmentId(null); // Clear manual selection on successful check-in
-      } catch (err: any) {
-        Alert.alert("Check-in Failed", err.message || "An error occurred during check-in.");
-      } finally {
-        setIsProcessingCheckInOut(false); // NEW: Reset loading state
-        setPendingAction(null);
-      }
-    }); // NEW: Execute after next animation frame (allowing UI to update)
+      const currentGeofenceAssignments: GeofenceAssignment[] = [{
+        id: relevantAssignment.id,
+        latitude: targetProjectLocation.lat,
+        longitude: targetProjectLocation.lon,
+        radius: ACCEPTABLE_DISTANCE,
+        type: relevantAssignment.type,
+        status: 'active',
+      }];
+
+      BackgroundLocation.start(user!.id, relevantAssignment.id, userCompanyId!, JSON.stringify({ url: supabaseUrl, key: supabaseKey }), deviceToken!, deviceSecret!, JSON.stringify(currentGeofenceAssignments));
+      Toast.show({ type: 'success', text1: 'Checked In', text2: `Working on ${projectLocationName}` });
+      setSelectedNextAssignmentId(null);
+    } catch (err: any) {
+      Alert.alert("Check-in Failed", err.message);
+    } finally {
+      setIsProcessingCheckInOut(false);
+      setPendingAction(null);
+    }
   };
 
   const handleCheckOut = async () => {
-    if (!activeWorkSession) {
-      Alert.alert("Not Checked In", "You are not currently checked in.");
-      return;
-    }
-
-    // Fetch current location right before check-out to ensure accuracy
+    if (!activeWorkSession) return;
     let currentLocation;
     try {
-      const locationResult = await Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.High,
-      });
-      currentLocation = { latitude: locationResult.coords.latitude, longitude: locationResult.coords.longitude };
-    } catch (err) {
-      console.error("Failed to get current location for check-out:", err);
-      Alert.alert("Location Error", "Could not get your current location. Please ensure location services are enabled and permissions are granted.");
-      return;
-    }
+      const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
+      currentLocation = { latitude: loc.coords.latitude, longitude: loc.coords.longitude };
+    } catch (err) { return; }
 
-    setIsProcessingCheckInOut(true); // NEW: Set loading state
+    setIsProcessingCheckInOut(true);
     setPendingAction('checking_out');
     
-    requestAnimationFrame(async () => { // NEW: Wrap async operations in requestAnimationFrame to allow UI to update
-      try {
-        await endWorkSession(activeWorkSession.id, currentLocation);
-        BackgroundLocation.stop(); // Stop background location tracking
-        Toast.show({
-          type: 'info',
-          text1: 'Checked Out',
-          text2: `You have successfully checked out from ${projectLocationName}.`
-        });
-        setElapsedTime(0); // Reset timer
-        notificationSentRef.current = false; // Reset notification lock
-        setOutOfRange(false); // Reset out of range of assignment
-        setSelectedNextAssignmentId(null); // Clear manual selection on successful check-out
-      } catch (err: any) {
-        Alert.alert("Check-out Failed", err.message || "An error occurred during check-out.");
-      } finally {
-        setIsProcessingCheckInOut(false); // NEW: Reset loading state
-        setPendingAction(null);
-      }
-    }); // NEW: Execute after next animation frame (allowing UI to update)
+    try {
+      await endWorkSession(activeWorkSession.id, currentLocation);
+      BackgroundLocation.stop();
+      Toast.show({ type: 'info', text1: 'Checked Out', text2: `Success from ${projectLocationName}` });
+      setElapsedTime(0);
+      setSelectedNextAssignmentId(null);
+    } catch (err: any) {
+      Alert.alert("Check-out Failed", err.message);
+    } finally {
+      setIsProcessingCheckInOut(false);
+      setPendingAction(null);
+    }
   };
 
-
-
-  // Determine button state and text
-  // stableCheckedIn represents what the UI should show regardless of the immediate (and sometimes premature) updates from the context
   const stableCheckedIn = pendingAction === 'checking_in' ? true : (pendingAction === 'checking_out' ? false : checkedIn);
   const isActuallyProcessing = isProcessingCheckInOut || pendingAction !== null;
-  
-  const buttonDisabled = isDataLoading || (stableCheckedIn ? false : (!isNearby || !relevantAssignment || !targetProjectLocation)); // Changed to targetProjectLocation
+  const buttonDisabled = isDataLoading || (stableCheckedIn ? false : (!isNearby || !relevantAssignment || !targetProjectLocation));
   const buttonTitle = stableCheckedIn ? "Check Out" : (relevantAssignment ? "Check In" : "No Next Assignment");
 
-
-
-
   useEffect(() => {
-    if (workerMapLocation && targetProjectLocation) { // Changed to targetProjectLocation
-      const { latitude: userLat, longitude: userLon } = workerMapLocation;
-      const { lat: projLat, lon: projLon } = targetProjectLocation; // Changed to targetProjectLocation
-
-      // Calculate the center point
-      const centerLat = (userLat + projLat) / 2;
-      const centerLon = (userLon + projLon) / 2;
-
-      // Calculate the deltas to encompass both points
-      const latDelta = Math.abs(userLat - projLat) * 1.5; // Use 1.5 for a bit of padding
-      const lonDelta = Math.abs(userLon - projLon) * 1.5;
-
-      const region = {
-        latitude: centerLat,
-        longitude: centerLon,
-        latitudeDelta: Math.max(latDelta, 0.005), // Use an even smaller minimum delta for closer zoom
+    if (workerMapLocation && targetProjectLocation) {
+      const latDelta = Math.abs(workerMapLocation.latitude - targetProjectLocation.lat) * 1.5;
+      const lonDelta = Math.abs(workerMapLocation.longitude - targetProjectLocation.lon) * 1.5;
+      setMapRegion({
+        latitude: (workerMapLocation.latitude + targetProjectLocation.lat) / 2,
+        longitude: (workerMapLocation.longitude + targetProjectLocation.lon) / 2,
+        latitudeDelta: Math.max(latDelta, 0.005),
         longitudeDelta: Math.max(lonDelta, 0.005),
-      };
-      setMapRegion(region);
-
+      });
     } else if (workerMapLocation) {
-      // If only worker location is available, center on worker
-      setMapRegion({
-        latitude: workerMapLocation.latitude,
-        longitude: workerMapLocation.longitude,
-        latitudeDelta: 0.005,
-        longitudeDelta: 0.005,
-      });
-    } else if (targetProjectLocation) { // Changed to targetProjectLocation
-      // If only project location is available
-      setMapRegion({
-        latitude: targetProjectLocation.lat, // Changed to targetProjectLocation
-        longitude: targetProjectLocation.lon, // Changed to targetProjectLocation
-        latitudeDelta: 0.005,
-        longitudeDelta: 0.005,
-      });
+      setMapRegion({ latitude: workerMapLocation.latitude, longitude: workerMapLocation.longitude, latitudeDelta: 0.005, longitudeDelta: 0.005 });
+    } else if (targetProjectLocation) {
+      setMapRegion({ latitude: targetProjectLocation.lat, longitude: targetProjectLocation.lon, latitudeDelta: 0.005, longitudeDelta: 0.005 });
     }
-  }, [workerMapLocation, targetProjectLocation]); // Changed to targetProjectLocation
+  }, [workerMapLocation, targetProjectLocation]);
 
   const handleSelectAssignment = (assignmentId: string) => {
     setSelectedNextAssignmentId(assignmentId);
     setIsAssignmentSelectionModalVisible(false);
   };
-  
-  const getStatusChipStyle = (status: AssignmentStatus) => {
-    switch (status) {
-        case 'active':
-            return { backgroundColor: theme.statusColors.activeBackground, textColor: theme.statusColors.activeText };
-        case 'completed':
-            return { backgroundColor: theme.statusColors.completedBackground, textColor: theme.statusColors.completedText };
-        case 'next':
-            return { backgroundColor: theme.statusColors.successBackground, textColor: theme.statusColors.successText };
-        case 'pending':
-            return { backgroundColor: theme.statusColors.pendingBackground, textColor: theme.statusColors.pendingText };
-        default:
-            return { backgroundColor: theme.statusColors.neutralBackground, textColor: theme.statusColors.neutralText };
-    }
-  };
-
-  const relevantAssignmentChipStyle = relevantAssignment ? getStatusChipStyle(relevantAssignment.status) : { backgroundColor: theme.statusColors.neutralBackground, textColor: theme.statusColors.neutralText };
 
   if (locationPermission === null) {
     return (
-      <View style={[styles.container, styles.centered]}>
+      <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color={theme.colors.primary} />
-        <Text style={styles.permissionText} fontType="regular">Checking location permissions...</Text>
+        <Text style={styles.loadingText}>Checking permissions...</Text>
       </View>
     );
   }
 
   if (locationPermission !== 'granted') {
     return (
-      <View style={[styles.container, styles.centered]}>
-        <Text style={styles.permissionTitle} fontType="bold">Location Access Required</Text>
-        <Text style={styles.permissionText} fontType="regular">
-          This app needs your location to verify your position for check-in and to track your work session.
-        </Text>
-        <Button title="Grant Permission" onPress={requestPermissionAgain} style={styles.permissionButton} />
+      <View style={styles.centered}>
+        <Ionicons name="location-outline" size={64} color={theme.colors.primary} />
+        <Text style={styles.pageTitle} fontType="bold">Location Access Required</Text>
+        <Text style={styles.pageSubtitle}>This app needs your location to track work hours.</Text>
+        <Button title="Grant Permission" onPress={requestPermissionAgain} style={{ marginTop: 20 }} />
       </View>
     );
   }
 
-  const filteredAssignmentsForModal = currentWorkersAssignments.filter((assign: ProcessedAssignmentStepWithStatus) => assign.status !== 'active');
-
-  console.log("DEBUG Home: currentWorkersAssignments (IDs and Statuses):", currentWorkersAssignments.map(a => ({ id: a.id, status: a.status, title: a.type === 'project' ? a.project?.name : a.location?.name })));
-  console.log("DEBUG Home: filteredAssignmentsForModal (IDs and Statuses):", filteredAssignmentsForModal.map(a => ({ id: a.id, status: a.status, title: a.type === 'project' ? a.project?.name : a.location?.name })));
-
   return (
     <AnimatedScreen>
-      <View style={styles.container}>
-        <ScrollView
-          contentContainerStyle={styles.scrollViewContent}
-          refreshControl={
-            <RefreshControl
-              refreshing={isRefreshing}
-              onRefresh={onRefresh}
-              tintColor={theme.colors.primary} // iOS
-              progressBackgroundColor={theme.colors.cardBackground} // Android
-              colors={[theme.colors.primary]} // Android
-            />
-          }
-        >
-          {/* Card 1: Worker Status Card */}
-          <Card style={styles.workerStatusCard}>
-            <Text style={styles.workerStatusTitle} fontType="bold">
-              {checkedIn ? "Work Session Active" : "Ready to Work?"}
-            </Text>
-            {checkedIn && sessionStartTime && (
-              <Text style={styles.workerStatusSubtitle} fontType="regular">
-                Checked in at: {new Date(sessionStartTime).toLocaleTimeString()}
+      <ScrollView 
+        contentContainerStyle={styles.scrollContent}
+        refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} colors={[theme.colors.primary]} />}
+      >
+        <View style={styles.pageHeader}>
+          <Image 
+            source={require('../../../assets/koordlogoblack1.png')} 
+            style={styles.logo} 
+            resizeMode="contain" 
+          />
+        </View>
+        <View style={styles.homeContent}>
+          {/* 1. Combined Assignment & Status Card */}
+          <Card style={styles.sectionCard}>
+            <View style={styles.cardHeaderRow}>
+              <Text style={styles.sectionTitle} fontType="bold">
+                {stableCheckedIn ? "Current Assignment" : "Today's Schedule"}
               </Text>
-            )}
-            {/* Status Chip */}
-            <View style={[styles.statusChipContainer, {
-                backgroundColor: isDataLoading || !locationReady || !relevantAssignment
-                    ? theme.statusColors.neutralBackground
-                    : checkedIn
-                    ? theme.statusColors.activeBackground
-                    : isNearby
-                    ? theme.statusColors.successBackground
-                    : theme.statusColors.warningBackground,
-            }]}>
-                <Text style={[styles.statusChipText, {
-                    color: isDataLoading || !locationReady || !relevantAssignment
-                        ? theme.statusColors.neutralText
-                        : checkedIn
-                        ? theme.statusColors.activeText
-                        : isNearby
-                        ? theme.statusColors.successText
-                        : theme.statusColors.warningText,
-                }]} fontType="medium">
-                    {isDataLoading
-                    ? "Loading assignments..."
-                    : !locationReady
-                    ? "Fetching location..."
-                    : !relevantAssignment
-                    ? "No relevant assignment with location"
-                    : checkedIn
-                    ? "On Assignment"
-                    : isNearby
-                    ? "Ready to Check In"
-                    : "Away from Assignment"}
+              <View style={[styles.statusBadge, { 
+                backgroundColor: stableCheckedIn ? theme.statusColors.activeBackground : (isNearby ? theme.statusColors.successBackground : theme.statusColors.warningBackground)
+              }]}>
+                <Text style={[styles.statusBadgeText, { 
+                  color: stableCheckedIn ? theme.statusColors.activeText : (isNearby ? theme.statusColors.successText : theme.statusColors.warningText)
+                }]} fontType="bold">
+                  {stableCheckedIn ? "WORKING" : (isNearby ? "READY" : "AWAY")}
                 </Text>
+              </View>
             </View>
-          </Card>
+            
+            {isDataLoading ? (
+              <ActivityIndicator color={theme.colors.primary} style={{ marginVertical: 10 }} />
+            ) : !relevantAssignment ? (
+              <View style={styles.emptyState}>
+                <Ionicons name="calendar-outline" size={32} color={theme.colors.disabledText} />
+                <Text style={styles.emptyText}>No assignments scheduled for today.</Text>
+              </View>
+            ) : (
+              <View>
+                <TouchableOpacity 
+                  style={styles.assignmentItem} 
+                  onPress={() => setIsAssignmentSelectionModalVisible(true)}
+                  disabled={isSelectionLocked}
+                >
+                  <View style={[styles.projectIconContainer, { backgroundColor: relevantAssignment.project?.color || theme.colors.primary + '20' }]}>
+                    <Ionicons name="business-outline" size={20} color="white" />
+                  </View>
+                  <View style={styles.projectInfo}>
+                    <Text style={styles.projectName} fontType="bold">{projectLocationName}</Text>
+                    <Text style={styles.projectAddress} numberOfLines={1}>{relevantAssignment.project?.address || 'Site assignment'}</Text>
+                  </View>
+                  {!isSelectionLocked && <Ionicons name="chevron-forward" size={20} color={theme.colors.disabledText} />}
+                </TouchableOpacity>
 
-          {/* Single Assignment Card (Relevant Assignment) */}
-          {isDataLoading ? (
-            <ActivityIndicator size="large" color={theme.colors.primary} />
-          ) : !relevantAssignment ? (
-            <Card style={styles.projectInfoCard}>
-              <Text style={styles.projectInfoTitle} fontType="bold">No assignments for today.</Text>
-              <Text style={styles.projectInfoAddress} fontType="regular">Check back later or contact your manager.</Text>
-            </Card>
-          ) : (
-            <TouchableOpacity 
-              onPress={() => setIsAssignmentSelectionModalVisible(true)} 
-              disabled={isSelectionLocked}
-              style={{ width: '100%' }}
-            >
-              <Card 
-                style={[
-                  styles.assignmentCard, 
-                  relevantAssignment.status === 'active' ? styles.activeAssignmentCard : {},
-                  relevantAssignment.status === 'next' ? styles.nextAssignmentCard : {},
-                ]}
-              >
-                <View style={styles.assignmentHeader}>
-                  <View style={[styles.assignmentColorIndicator, { backgroundColor: relevantAssignment.type === 'project' && relevantAssignment.project ? relevantAssignment.project.color : theme.colors.secondary }]} />
-                  <Text style={styles.assignmentTitle} fontType="medium">
-                    {relevantAssignment.type === 'project' ? (relevantAssignment.project?.name || 'Loading Project...') : (relevantAssignment.location?.name || 'Loading Location...')}
+                <View style={styles.statusDetailRow}>
+                  <Ionicons 
+                    name={stableCheckedIn ? "time-outline" : "location-outline"} 
+                    size={16} 
+                    color={theme.colors.bodyText} 
+                  />
+                  <Text style={styles.statusSubText} fontType="medium">
+                    {stableCheckedIn && sessionStartTime 
+                      ? ` Started at ${moment(sessionStartTime).format('hh:mm A')}` 
+                      : ` ${locationStatusText}`}
                   </Text>
                 </View>
-                {relevantAssignment.type === 'project' && relevantAssignment.project && (
-                  <Text style={styles.assignmentSubtitle} fontType="regular">{relevantAssignment.project.address || ''}</Text>
-                )}
-                {relevantAssignment.start_time && (
-                  <Text style={styles.assignmentTime} fontType="medium">Scheduled: {relevantAssignment.start_time}</Text>
-                )}
-                {!isSelectionLocked && (
-                    <View style={styles.selectAssignmentIcon}>
-                        <Ionicons name="chevron-forward" size={theme.fontSizes.lg} color={theme.colors.bodyText} />
-                    </View>
-                )}
-              </Card>
-            </TouchableOpacity>
-          )}
-          
-          {/* Card 3: Circle Timer / Map Card */}
-          <Card style={styles.circleCard}>
-            <Text style={styles.circleCardTitle} fontType="bold">
-              {checkedIn ? "Timer Running" : relevantAssignment ? "Your Current Assignment Location" : "No Assignment Location"}
+              </View>
+            )}
+          </Card>
+
+          {/* 2. Focus Section: Timer or Map */}
+          <Card style={styles.sectionCard}>
+            <Text style={styles.sectionTitle} fontType="bold">
+              {stableCheckedIn ? "Active Session" : "Location Overview"}
             </Text>
-            <View style={styles.timerContainer}>
-              {checkedIn ? (
-                <CircularTimer elapsedTime={elapsedTime} size={220} strokeWidth={15} />
+            <View style={styles.focusContainer}>
+              {stableCheckedIn ? (
+                <CircularTimer elapsedTime={elapsedTime} size={240} strokeWidth={12} />
               ) : (
-                <View style={styles.mapCircleWrapper}>
+                <View style={styles.mapWrapper}>
                   {locationReady && workerMapLocation && targetProjectLocation ? (
                     <MapView
                       ref={mapRef}
-                      style={styles.mapStyle}
-                      customMapStyle={[
-                        { "featureType": "poi", "elementType": "labels", "stylers": [{ "visibility": "off" }] },
-                        { "featureType": "transit", "elementType": "labels", "stylers": [{ "visibility": "off" }] }
-                      ]}
+                      style={styles.map}
                       scrollEnabled={false}
                       zoomEnabled={false}
-                      pitchEnabled={false}
-                      rotateEnabled={false}
                       showsUserLocation={true}
-                      showsMyLocationButton={false}
                       region={mapRegion}
-
                     >
-                      <Marker
+                      <Marker 
                         coordinate={{ latitude: targetProjectLocation.lat, longitude: targetProjectLocation.lon }}
-                        title={projectLocationName}
-                        pinColor="black"
-                      />
-                      <Circle
-                        center={{ latitude: targetProjectLocation.lat, longitude: targetProjectLocation.lon }}
-                        radius={ACCEPTABLE_DISTANCE}
-                        strokeWidth={2}
-                        strokeColor={theme.colors.primary}
-                        fillColor="rgba(84, 133, 226, 0.2)"
-                      />
+                        anchor={{ x: 0.5, y: 0.5 }}
+                      >
+                        <View style={styles.markerContainer}>
+                          <Ionicons name="briefcase" size={16} color="white" />
+                        </View>
+                      </Marker>
+                      <Circle center={{ latitude: targetProjectLocation.lat, longitude: targetProjectLocation.lon }} radius={ACCEPTABLE_DISTANCE} strokeWidth={2} strokeColor={theme.colors.primary} fillColor={theme.colors.primary + '20'} />
                     </MapView>
                   ) : (
-                    <View style={styles.mapOverlayTextContainer}>
-                      <ActivityIndicator size="large" color={theme.colors.primary} />
-                      <Text style={styles.mapOverlayText} fontType="regular">
-                        {relevantAssignment === null ? "No assignment with location for map" : "Fetching location and map..."}
-                      </Text>
+                    <View style={styles.mapLoading}>
+                      <ActivityIndicator color={theme.colors.primary} />
+                      <Text style={styles.mapLoadingText}>Preparing map...</Text>
                     </View>
                   )}
                 </View>
               )}
             </View>
-            <Text style={styles.circleCardCaption} fontType="regular">
-              {checkedIn ? "Tracking your work session." : locationStatusText}
-            </Text>
           </Card>
-        </ScrollView>
-        <View style={[styles.footer, { paddingBottom: theme.spacing(2) }]}>
-          <Button
-            onPress={stableCheckedIn ? handleCheckOut : handleCheckIn}
-            style={stableCheckedIn ? styles.checkOutButton : styles.checkInButton}
-            disabled={buttonDisabled || isActuallyProcessing}
-          >
-            <View style={styles.buttonContent}>
-              <Text fontType="medium" style={styles.buttonText}>
-                {buttonTitle}
-              </Text>
-              {isActuallyProcessing && (
-                <ActivityIndicator
-                  color={theme.colors.pageBackground}
-                  style={styles.activityIndicator}
-                />
-              )}
-            </View>
-          </Button>
         </View>
+      </ScrollView>
+
+      {/* FIXED FOOTER BUTTON */}
+      <View style={styles.footer}>
+        <Button
+          onPress={stableCheckedIn ? handleCheckOut : handleCheckIn}
+          style={[styles.actionButton, stableCheckedIn ? styles.checkOutBtn : styles.checkInBtn]}
+          disabled={buttonDisabled || isActuallyProcessing}
+          title={buttonTitle}
+          textStyle={styles.buttonText}
+          loading={isActuallyProcessing}
+        />
       </View>
+
       <AssignmentSelectionModal
         isVisible={isAssignmentSelectionModalVisible}
         onClose={() => setIsAssignmentSelectionModalVisible(false)}
-        assignments={currentWorkersAssignments.filter((assign: ProcessedAssignmentStepWithStatus) => assign.status !== 'active')}
+        assignments={currentWorkersAssignments}
         onSelectAssignment={handleSelectAssignment}
         currentSelectedId={selectedNextAssignmentId || relevantAssignment?.id || null}
       />
@@ -814,291 +463,188 @@ export default function Home() {
 }
 
 const styles = StyleSheet.create({
-  container: {
+  loadingContainer: {
     flex: 1,
-    backgroundColor: theme.colors.background, // Use background color from theme
-    paddingHorizontal: theme.spacing(2), // Consistent horizontal padding
-  },
-  centered: {
-    flex: 1, // Take full space
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: theme.colors.background,
-    padding: theme.spacing(3),
   },
-  permissionTitle: {
-      fontSize: theme.fontSizes.xl, // Use theme font size
-      color: theme.colors.headingText,
-      textAlign: 'center',
-      marginBottom: theme.spacing(2),
-  },
-  permissionText: {
-      fontSize: theme.fontSizes.md, // Use theme font size
-      color: theme.colors.bodyText,
-      textAlign: 'center',
-      marginBottom: theme.spacing(3),
-  },
-  permissionButton: {
-      paddingVertical: theme.spacing(1.5),
-      paddingHorizontal: theme.spacing(4),
-  },
-  scrollViewContent: {
-    flexGrow: 1,
-    paddingVertical: theme.spacing(2), // Consistent vertical padding
-    width: '100%',
-  },
-  workerStatusCard: {
-    width: "100%",
-    alignItems: "center",
-    marginBottom: theme.spacing(2),
-    borderRadius: theme.radius.xl, // Consistent border radius
-    backgroundColor: theme.colors.cardBackground,
-    paddingVertical: theme.spacing(4), // More vertical padding
-    borderWidth: 1, // Add border
-    borderColor: theme.colors.borderColor, // Consistent border color
-    // Remove shadows/elevation for flat design
-    ...Platform.select({
-      web: {
-        shadowColor: 'transparent',
-        shadowOffset: { width: 0, height: 0 },
-        shadowOpacity: 0,
-        shadowRadius: 0,
-      },
-      native: {
-        elevation: 0,
-      },
-    }),
-  },
-  workerStatusTitle: {
-    fontSize: theme.fontSizes.lg, // Changed from xl to lg
-    color: theme.colors.headingText,
-    marginBottom: theme.spacing(1),
-  },
-  workerStatusSubtitle: {
-    fontSize: theme.fontSizes.md, // Use theme font size
+  loadingText: {
+    marginTop: 10,
     color: theme.colors.bodyText,
-    marginBottom: theme.spacing(2),
   },
-  statusChipContainer: {
-    paddingVertical: theme.spacing(1),
-    paddingHorizontal: theme.spacing(2),
-    borderRadius: theme.radius.pill,
-    marginTop: theme.spacing(1),
+  centered: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  scrollContent: {
+    paddingBottom: 120,
+  },
+  pageHeader: {
+    paddingVertical: theme.spacing(4),
+    paddingHorizontal: theme.spacing(3),
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  logo: {
+    width: 120,
+    height: 36,
+  },
+  pageTitle: {
+    fontSize: theme.fontSizes.xl,
+    color: theme.colors.headingText,
+  },
+  pageSubtitle: {
+    fontSize: theme.fontSizes.lg,
+    color: theme.colors.bodyText,
+    marginTop: 2,
+  },
+  homeContent: {
+    paddingHorizontal: theme.spacing(3),
+  },
+  sectionCard: {
+    marginBottom: theme.spacing(2),
+    borderRadius: theme.radius.xl,
+    backgroundColor: theme.colors.cardBackground,
+    padding: theme.spacing(3),
+    borderWidth: 1,
+    borderColor: theme.colors.borderColor,
+  },
+  sectionTitle: {
+    fontSize: theme.fontSizes.lg,
+    color: theme.colors.headingText,
+  },
+  cardHeaderRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: theme.spacing(2),
+  },
+  statusBadge: {
+    paddingHorizontal: theme.spacing(1.5),
+    paddingVertical: theme.spacing(0.5),
+    borderRadius: theme.radius.pill,
+  },
+  statusBadgeText: {
+    fontSize: theme.fontSizes.xs,
+  },
+  statusInfo: {
+    marginTop: 5,
+  },
+  statusMainText: {
+    fontSize: theme.fontSizes.md,
+    color: theme.colors.bodyText,
+  },
+  statusSubText: {
+    fontSize: theme.fontSizes.sm,
+    color: theme.colors.disabledText,
+    marginTop: 4,
+  },
+  todayText: {
+    fontSize: theme.fontSizes.sm,
+    color: theme.colors.disabledText,
+  },
+  assignmentItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: theme.spacing(1),
+  },
+  projectIconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: theme.spacing(2),
   },
-  statusChipText: {
-    fontSize: theme.fontSizes.sm, // Use theme font size
-    fontWeight: '600',
+  projectInfo: {
+    flex: 1,
   },
-  projectInfoCard: {
-    width: "100%",
-    alignItems: "center",
-    marginBottom: theme.spacing(2),
-    borderRadius: theme.radius.xl, // Consistent border radius
-    backgroundColor: theme.colors.cardBackground,
-    paddingVertical: theme.spacing(4), // More vertical padding
-    borderWidth: 1, // Add border
-    borderColor: theme.colors.borderColor, // Consistent border color
-    // Remove shadows/elevation for flat design
-    ...Platform.select({
-      web: {
-        shadowColor: 'transparent',
-        shadowOffset: { width: 0, height: 0 },
-        shadowOpacity: 0,
-        shadowRadius: 0,
-      },
-      native: {
-        elevation: 0,
-      },
-    }),
-  },
-  projectInfoTitle: {
-    fontSize: theme.fontSizes.md, // Changed from lg to md
+  projectName: {
+    fontSize: theme.fontSizes.md,
     color: theme.colors.headingText,
-    marginBottom: theme.spacing(1),
   },
-  projectInfoAddress: {
-    fontSize: theme.fontSizes.md, // Use theme font size
+  projectAddress: {
+    fontSize: theme.fontSizes.sm,
     color: theme.colors.bodyText,
-    textAlign: 'center',
+    marginTop: 2,
   },
-  circleCard: {
-    width: "100%",
-    alignItems: "center",
-    marginBottom: theme.spacing(3),
-    borderRadius: theme.radius.xl, // Consistent border radius
-    backgroundColor: theme.colors.cardBackground,
-    paddingTop: theme.spacing(4), // More vertical padding
-    paddingBottom: theme.spacing(4), // More vertical padding
-    borderWidth: 1, // Add border
-    borderColor: theme.colors.borderColor, // Consistent border color
-    // Remove shadows/elevation for flat design
-    ...Platform.select({
-      web: {
-        shadowColor: 'transparent',
-        shadowOffset: { width: 0, height: 0 },
-        shadowOpacity: 0,
-        shadowRadius: 0,
-      },
-      native: {
-        elevation: 0,
-      },
-    }),
+  statusDetailRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: theme.spacing(1.5),
+    paddingTop: theme.spacing(1.5),
+    borderTopWidth: 1,
+    borderTopColor: theme.colors.borderColor,
   },
-  circleCardTitle: {
-    fontSize: theme.fontSizes.md, // Changed from lg to md
-    color: theme.colors.headingText,
-    marginBottom: theme.spacing(2),
+  emptyState: {
+    alignItems: 'center',
+    paddingVertical: 20,
   },
-  circleCardCaption: {
-    fontSize: theme.fontSizes.md, // Use theme font size
-    color: theme.colors.bodyText,
-    marginTop: theme.spacing(2),
-    textAlign: 'center',
+  emptyText: {
+    color: theme.colors.disabledText,
+    marginTop: 10,
+    fontSize: theme.fontSizes.sm,
   },
-  timerContainer: {
-    marginVertical: theme.spacing(2),
+  focusContainer: {
     alignItems: 'center',
     justifyContent: 'center',
+    paddingVertical: 10,
   },
-  mapCircleWrapper: {
-    width: 220,
-    height: 220,
-    borderRadius: 110,
+  mapWrapper: {
+    width: '100%',
+    height: 240,
+    borderRadius: theme.radius.lg,
     overflow: 'hidden',
-    backgroundColor: theme.colors.cardBackground,
-    borderWidth: 15,
+    borderWidth: 1,
     borderColor: theme.colors.borderColor,
-    justifyContent: 'center',
-    alignItems: 'center',
   },
-  mapStyle: {
+  map: {
     width: '100%',
     height: '100%',
   },
-  mapOverlayTextContainer: {
-    ...StyleSheet.absoluteFillObject,
+  markerContainer: {
+    backgroundColor: theme.colors.primary,
+    padding: 6,
+    borderRadius: 15,
+    borderWidth: 2,
+    borderColor: 'white',
+  },
+  mapLoading: {
+    flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.8)',
-    borderRadius: 110,
+    backgroundColor: theme.colors.background,
   },
-  mapOverlayText: {
-    fontSize: theme.fontSizes.md, // Use theme font size
-    color: theme.colors.bodyText,
-    marginTop: theme.spacing(1),
-    textAlign: 'center',
+  mapLoadingText: {
+    marginTop: 10,
+    color: theme.colors.disabledText,
   },
   footer: {
-    paddingHorizontal: theme.spacing(2), // Consistent horizontal padding
-    paddingVertical: theme.spacing(2),
-    backgroundColor: theme.colors.background, // Use background color from theme
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    padding: theme.spacing(3),
+    backgroundColor: theme.colors.background,
     borderTopWidth: 1,
     borderTopColor: theme.colors.borderColor,
+  },
+  actionButton: {
+    height: 56,
+    borderRadius: theme.radius.lg,
     width: '100%',
   },
-  checkInButton: {
+  checkInBtn: {
     backgroundColor: theme.colors.primary,
-    paddingVertical: theme.spacing(2), // Use theme spacing
   },
-  checkOutButton: {
-    backgroundColor: theme.colors.warning, // Use theme color for warning
-    paddingVertical: theme.spacing(2), // Use theme spacing
+  checkOutBtn: {
+    backgroundColor: theme.colors.secondary,
   },
   buttonText: {
-    color: "white",
-    fontSize: theme.fontSizes.md, // Changed from lg to md
-    backgroundColor: 'transparent', // Explicitly set to transparent
-  },
-  loadingIndicator: {
-    marginVertical: theme.spacing(4),
-  },
-  assignmentCard: {
-    width: "100%",
-    marginBottom: theme.spacing(2),
-    borderRadius: theme.radius.xl, // Consistent border radius
-    backgroundColor: theme.colors.cardBackground,
-    padding: theme.spacing(3), // Consistent padding
-    borderWidth: 1, // Add border
-    borderColor: theme.colors.borderColor, // Consistent border color
-    // Remove shadows/elevation for flat design
-    ...Platform.select({
-      web: {
-        shadowColor: 'transparent',
-        shadowOffset: { width: 0, height: 0 },
-        shadowOpacity: 0,
-        shadowRadius: 0,
-      },
-      native: {
-        elevation: 0,
-      },
-    }),
-  },
-  activeAssignmentCard: {
-    borderColor: theme.statusColors.activeText,
-    borderWidth: 2, // Keep a stronger border for active state
-  },
-  completedAssignmentCard: {
-    opacity: 0.6,
-    backgroundColor: theme.statusColors.neutralBackground,
-  },
-  nextAssignmentCard: {
-    borderColor: theme.statusColors.successText,
-    borderWidth: 2, // Keep a stronger border for next state
-  },
-  assignmentHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: theme.spacing(1),
-  },
-  assignmentColorIndicator: {
-    width: 8,
-    height: 20,
-    borderRadius: theme.radius.sm,
-    marginRight: theme.spacing(1),
-  },
-  assignmentTitle: {
-    fontSize: theme.fontSizes.md, // Changed from lg to md
-    fontWeight: "600",
-    color: theme.colors.headingText,
-  },
-  assignmentSubtitle: {
-    fontSize: theme.fontSizes.md, // Use theme font size
-    color: theme.colors.bodyText,
-    marginBottom: theme.spacing(0.5),
-  },
-  assignmentTime: {
-    fontSize: theme.fontSizes.md, // Use theme font size
-    fontWeight: '500',
-    color: theme.colors.primary,
-  },
-  assignmentStatusChip: {
-    position: 'absolute',
-    top: theme.spacing(1),
-    right: theme.spacing(1),
-    borderRadius: theme.radius.sm,
-    paddingHorizontal: theme.spacing(1),
-    paddingVertical: theme.spacing(0.5),
-  },
-  assignmentStatusText: {
-    fontSize: theme.fontSizes.sm, // Use theme font size
-    fontWeight: 'bold',
-  },
-  selectAssignmentIcon: {
-    position: 'absolute',
-    right: theme.spacing(2),
-    top: '50%',
-    transform: [{ translateY: -12 }], // Center vertically
-  },
-  buttonContent: { // NEW style for button content wrapper
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'transparent', // Explicitly set to transparent
-  },
-  activityIndicator: { // NEW style for activity indicator
-    marginLeft: theme.spacing(1),
+    color: 'white',
+    fontSize: 16,
   },
 });

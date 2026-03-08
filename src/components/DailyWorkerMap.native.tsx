@@ -7,6 +7,13 @@ import moment from 'moment';
 import { Assignment, LocationEvent } from '~/hooks/useMapGeoJSON';
 import { theme } from '~/theme';
 
+export interface LocationEvent {
+  lat: number;
+  lng: number;
+  timestamp: string; // ISO string
+  type: string;
+}
+
 export interface DailyWorkerMapProps {
   assignments: Assignment[];
   locationEvents: LocationEvent[];
@@ -33,6 +40,7 @@ export interface DailyWorkerMapProps {
   assignmentPointsGeoJSON: FeatureCollection<Point>;
   assignmentSegmentsGeoJSON: FeatureCollection<LineString>;
   fullTrailGeoJSON: FeatureCollection<LineString>;
+  trackingDotsGeoJSON: FeatureCollection<Point>;
 }
 
 const DailyWorkerMapNative: React.FC<DailyWorkerMapProps> = (props) => {

@@ -17,6 +17,7 @@ interface MonthlyPayrollReportEntry {
     worker_full_name: string;
     total_work_hours: number;
     total_break_minutes: number;
+    total_correction_minutes: number;
     payable_hours: number;
 }
 
@@ -77,7 +78,7 @@ const EmployeeHoursReport = () => {
         );
     };
 
-    const totalHoursAllWorkers = reportData.reduce((sum, entry) => sum + entry.total_work_hours, 0);
+    const totalHoursAllWorkers = reportData.reduce((sum, entry) => sum + entry.payable_hours, 0);
 
     const renderWorkerItem = ({ item }: { item: any }) => {
         const isSelected = selectedWorkerIds.includes(item.id);
@@ -170,7 +171,7 @@ const EmployeeHoursReport = () => {
                                     </View>
                                     <View style={styles.statDivider} />
                                     <View style={styles.statBox}>
-                                        <Text style={styles.statLabel} fontType="bold">Total Hours</Text>
+                                        <Text style={styles.statLabel} fontType="bold">Total Payable</Text>
                                         <Text style={styles.statValue} fontType="bold">{totalHoursAllWorkers.toFixed(2)}h</Text>
                                     </View>
                                 </View>
@@ -179,8 +180,9 @@ const EmployeeHoursReport = () => {
                                 <View style={styles.tableContainer}>
                                     <View style={styles.tableHeader}>
                                         <Text style={[styles.tableHeaderText, styles.colWorker]} fontType="bold">Worker Name</Text>
-                                        <Text style={[styles.tableHeaderText, styles.colHours]} fontType="bold">Worked Hours</Text>
-                                        <Text style={[styles.tableHeaderText, styles.colBreaks]} fontType="bold">Breaks (min)</Text>
+                                        <Text style={[styles.tableHeaderText, styles.colHours]} fontType="bold">Worked</Text>
+                                        <Text style={[styles.tableHeaderText, styles.colBreaks]} fontType="bold">Break/Corr</Text>
+                                        <Text style={[styles.tableHeaderText, styles.colPayable]} fontType="bold">Payable</Text>
                                     </View>
 
                                     {loading ? (
@@ -199,11 +201,19 @@ const EmployeeHoursReport = () => {
                                             >
                                                 <Text style={[styles.tableCell, styles.colWorker]} fontType="medium">{row.worker_full_name}</Text>
                                                 <View style={[styles.tableCell, styles.colHours]}>
+                                                    <Text style={styles.tableCellText} fontType="regular">{row.total_work_hours.toFixed(2)}h</Text>
+                                                </View>
+                                                <View style={[styles.tableCell, styles.colBreaks]}>
+                                                    <Text style={styles.smallLabel} fontType="regular">B: {row.total_break_minutes}m</Text>
+                                                    <Text style={[styles.smallLabel, { color: row.total_correction_minutes >= 0 ? theme.colors.success : theme.colors.danger }]} fontType="medium">
+                                                        C: {row.total_correction_minutes >= 0 ? '+' : ''}{row.total_correction_minutes}m
+                                                    </Text>
+                                                </View>
+                                                <View style={[styles.tableCell, styles.colPayable]}>
                                                     <View style={styles.hoursBadge}>
-                                                        <Text style={styles.hoursBadgeText} fontType="bold">{row.total_work_hours.toFixed(2)}</Text>
+                                                        <Text style={styles.hoursBadgeText} fontType="bold">{row.payable_hours.toFixed(2)}h</Text>
                                                     </View>
                                                 </View>
-                                                <Text style={[styles.tableCell, styles.colBreaks]} fontType="regular">{row.total_break_minutes}</Text>
                                             </TouchableOpacity>
                                         ))
                                     )}
@@ -423,18 +433,28 @@ const styles = StyleSheet.create({
         color: theme.colors.bodyText,
         paddingHorizontal: theme.spacing(2),
     },
+    tableCellText: {
+        fontSize: theme.fontSizes.md,
+        color: theme.colors.bodyText,
+    },
     colWorker: {
         flex: 3,
     },
     colHours: {
         flex: 1.5,
         alignItems: 'flex-end',
-        textAlign: 'right',
     },
     colBreaks: {
         flex: 1.5,
-        textAlign: 'right',
-        paddingRight: theme.spacing(4),
+        alignItems: 'center',
+    },
+    colPayable: {
+        flex: 1.5,
+        alignItems: 'flex-end',
+    },
+    smallLabel: {
+        fontSize: 11,
+        color: theme.colors.bodyText,
     },
     hoursBadge: {
         backgroundColor: theme.colors.primaryMuted,

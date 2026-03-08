@@ -1,15 +1,16 @@
 import React, { useRef, useEffect, useState, useMemo, useCallback } from 'react';
-import Map, { Source, Layer, NavigationControl, ViewStateChangeEvent, MapRef, ViewState, Popup } from 'react-map-gl/maplibre';
+import Map, { Source, Layer, NavigationControl, ViewStateChangeEvent, MapRef, ViewState, Popup, Marker } from 'react-map-gl/maplibre';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import maplibregl from 'maplibre-gl';
 import { View, StyleSheet } from 'react-native';
 import { theme } from '../theme';
 import { Text } from './Themed';
 import moment from 'moment';
+import { Ionicons } from '@expo/vector-icons';
 
 import { FeatureCollection, Point, LineString } from 'geojson';
 import { DailyWorkerMapProps } from './DailyWorkerMap.native';
-import { LineLayerSpecification, CircleLayerSpecification, SymbolLayerSpecification } from '@maplibre/maplibre-gl-style-spec';
+import { LineLayerSpecification, CircleLayerSpecification } from '@maplibre/maplibre-gl-style-spec';
 
 // Define layer styles for consistency and reusability
 const fullTrailLayerStyle: LineLayerSpecification = {
@@ -34,31 +35,16 @@ const assignmentSegmentsLayerStyle: LineLayerSpecification = {
   },
 };
 
-const pointsCircleLayerStyle: CircleLayerSpecification = {
-  id: 'assignment-points-circle-layer',
+const trackingDotsLayerStyle: CircleLayerSpecification = {
+  id: 'tracking-dots-layer',
   type: 'circle',
-  source: 'assignment-points-source',
+  source: 'tracking-dots-source',
   paint: {
-    'circle-radius': 12,
-    'circle-color': theme.colors.success,
-    'circle-stroke-width': 2,
+    'circle-radius': 3,
+    'circle-color': theme.colors.secondary,
+    'circle-opacity': 0.6,
+    'circle-stroke-width': 1,
     'circle-stroke-color': '#ffffff',
-  },
-};
-
-const pointsNumberLayerStyle: SymbolLayerSpecification = {
-  id: 'assignment-points-number-layer',
-  type: 'symbol',
-  source: 'assignment-points-source',
-  layout: {
-    'text-field': ['get', 'assignmentOrder'],
-    'text-font': ['Roboto Medium', 'Arial Unicode MS Regular'],
-    'text-size': 12,
-    'text-anchor': 'center',
-    'text-allow-overlap': true,
-  },
-  paint: {
-    'text-color': '#ffffff',
   },
 };
 
@@ -68,10 +54,13 @@ const DailyWorkerMapWeb: React.FC<DailyWorkerMapProps & {
   assignmentPointsGeoJSON: FeatureCollection<Point>;
   assignmentSegmentsGeoJSON: FeatureCollection<LineString>;
   fullTrailGeoJSON: FeatureCollection<LineString>;
+  trackingDotsGeoJSON: FeatureCollection<Point>;
 }> = ({
   assignmentPointsGeoJSON,
   assignmentSegmentsGeoJSON,
   fullTrailGeoJSON,
+  trackingDotsGeoJSON,
+  assignments,
   initialRegion,
   region,
   zoom,
@@ -89,7 +78,6 @@ const DailyWorkerMapWeb: React.FC<DailyWorkerMapProps & {
     padding: { top: 0, bottom: 0, left: 0, right: 0 }
   });
   const [mapLoaded, setMapLoaded] = useState(false);
-  const [selectedAssignment, setSelectedAssignment] = useState<any | null>(null);
 
   // Update viewState when region or zoom props change
   useEffect(() => {
@@ -116,40 +104,46 @@ const DailyWorkerMapWeb: React.FC<DailyWorkerMapProps & {
 
   const onMapLoad = useCallback(() => {
     setMapLoaded(true);
-    // Fit to bounds initially if data is available
     fitMapToBounds();
-  }, [assignmentPointsGeoJSON, assignmentSegmentsGeoJSON, fullTrailGeoJSON]); // Depend on geojson data for initial fitBounds
+  }, [assignmentPointsGeoJSON, assignmentSegmentsGeoJSON, fullTrailGeoJSON, trackingDotsGeoJSON]);
 
-  // Effect to fit map to bounds when GeoJSON data changes or map loads
   const fitMapToBounds = useCallback(() => {
     if (!mapRef.current || !mapLoaded) return;
 
     const allCoords: [number, number][] = [];
 
-    fullTrailGeoJSON.features.forEach(feature => {
-      if (feature.geometry.type === 'LineString') {
-        allCoords.push(...(feature.geometry.coordinates as [number, number][]));
-      }
-    });
-    assignmentPointsGeoJSON.features.forEach(feature => {
-      allCoords.push(feature.geometry.coordinates as [number, number]);
-    });
-    assignmentSegmentsGeoJSON.features.forEach(feature => {
-      if (feature.geometry.type === 'LineString') {
-        allCoords.push(...(feature.geometry.coordinates as [number, number][]));
-      }
-    });
+    if (fullTrailGeoJSON?.features) {
+      fullTrailGeoJSON.features.forEach(feature => {
+        if (feature.geometry.type === 'LineString') {
+          allCoords.push(...(feature.geometry.coordinates as [number, number][]));
+        }
+      });
+    }
+    
+    if (assignmentPointsGeoJSON?.features) {
+      assignmentPointsGeoJSON.features.forEach(feature => {
+        allCoords.push(feature.geometry.coordinates as [number, number]);
+      });
+    }
+
+    if (trackingDotsGeoJSON?.features) {
+      trackingDotsGeoJSON.features.forEach(feature => {
+        allCoords.push(feature.geometry.coordinates as [number, number]);
+      });
+    }
 
     if (allCoords.length > 0) {
       const bounds = new maplibregl.LngLatBounds();
       allCoords.forEach(coord => bounds.extend(coord));
-      mapRef.current.getMap().fitBounds(bounds, { padding: 50, duration: 0 });
+      mapRef.current.getMap().fitBounds(bounds, { padding: 200, duration: 1000 });
     }
-  }, [mapRef, mapLoaded, assignmentPointsGeoJSON, assignmentSegmentsGeoJSON, fullTrailGeoJSON]);
+  }, [mapLoaded, assignmentPointsGeoJSON, fullTrailGeoJSON, trackingDotsGeoJSON]);
 
   useEffect(() => {
-    fitMapToBounds();
-  }, [fitMapToBounds]);
+    if (mapLoaded) {
+      fitMapToBounds();
+    }
+  }, [fitMapToBounds, mapLoaded]);
 
 
   const onMove = useCallback((evt: ViewStateChangeEvent) => {
@@ -168,42 +162,6 @@ const DailyWorkerMapWeb: React.FC<DailyWorkerMapProps & {
     }
   }, [onWebZoomChange]);
 
-  const onMapClick = useCallback((event: any) => {
-    const feature = event.features && event.features[0];
-    if (feature && feature.layer.id === 'assignment-points-circle-layer') {
-      setSelectedAssignment({
-        longitude: feature.geometry.coordinates[0],
-        latitude: feature.geometry.coordinates[1],
-        ...feature.properties
-      });
-    } else {
-      setSelectedAssignment(null);
-    }
-  }, []);
-
-  const assignmentMarkers = useMemo(() => {
-    if (!assignmentPointsGeoJSON || assignmentPointsGeoJSON.features.length === 0) return [];
-    return assignmentPointsGeoJSON.features.map(feature => {
-      const props = feature.properties;
-      const start = moment(props?.startTime);
-      const end = moment(props?.endTime);
-      const duration = moment.duration(end.diff(start));
-      const hours = Math.floor(duration.asHours());
-      const minutes = duration.minutes();
-
-      return {
-        longitude: feature.geometry.coordinates[0],
-        latitude: feature.geometry.coordinates[1],
-        title: props?.name || '',
-        address: props?.address || '',
-        startTime: start.format('HH:mm'),
-        endTime: end.format('HH:mm'),
-        duration: `${hours}h ${minutes}m`,
-        assignmentOrder: props?.assignmentOrder || 0,
-      };
-    });
-  }, [assignmentPointsGeoJSON]);
-
   return (
     <View style={[styles.mapContainer, style]}>
       <Map
@@ -211,8 +169,6 @@ const DailyWorkerMapWeb: React.FC<DailyWorkerMapProps & {
         {...viewState}
         onMove={onMove}
         onLoad={onMapLoad}
-        onClick={onMapClick}
-        interactiveLayerIds={['assignment-points-circle-layer']}
         style={{ width: '100%', height: '100%' }}
         mapStyle={TILE_PROVIDER_STYLE}
         attributionControl={false}
@@ -233,49 +189,76 @@ const DailyWorkerMapWeb: React.FC<DailyWorkerMapProps & {
           </Source>
         )}
 
-        {/* Assignment Points Source and Layers */}
-        {assignmentPointsGeoJSON && (
-          <Source id="assignment-points-source" type="geojson" data={assignmentPointsGeoJSON}>
-            <Layer {...pointsCircleLayerStyle} />
-            <Layer {...pointsNumberLayerStyle} />
+        {/* Tracking Dots Source and Layer */}
+        {trackingDotsGeoJSON && (
+          <Source id="tracking-dots-source" type="geojson" data={trackingDotsGeoJSON}>
+            <Layer {...trackingDotsLayerStyle} />
           </Source>
         )}
 
-        {selectedAssignment && (
-          <Popup
-            longitude={selectedAssignment.longitude}
-            latitude={selectedAssignment.latitude}
-            anchor="bottom"
-            onClose={() => setSelectedAssignment(null)}
-            closeButton={false}
-            className="assignment-popup"
+        {/* Project Markers with Suitcase Icon */}
+        {assignments && assignments.map((site, idx) => (
+          <Marker
+            key={`marker-${site.id}-${idx}`}
+            longitude={site.lng}
+            latitude={site.lat}
+            anchor="center"
           >
-            <View style={styles.calloutContainer}>
-                <Text style={styles.calloutTitle} fontType="bold">{selectedAssignment.name}</Text>
-                {selectedAssignment.address ? <Text style={styles.calloutAddress} fontType="regular">{selectedAssignment.address}</Text> : null}
-                <View style={styles.calloutDivider} />
-                <View style={styles.calloutRow}>
-                  <Text style={styles.calloutLabel} fontType="medium">Entered: </Text>
-                  <Text style={styles.calloutValue} fontType="regular">{moment(selectedAssignment.startTime).format('HH:mm')}</Text>
-                </View>
-                <View style={styles.calloutRow}>
-                  <Text style={styles.calloutLabel} fontType="medium">Exited: </Text>
-                  <Text style={styles.calloutValue} fontType="regular">{moment(selectedAssignment.endTime).format('HH:mm')}</Text>
-                </View>
-                <View style={[styles.calloutRow, {marginTop: 4}]}>
-                  <Text style={styles.calloutLabel} fontType="medium">Total Time: </Text>
-                  <Text style={[styles.calloutValue, {color: theme.colors.primary}]} fontType="bold">
-                    {(() => {
-                        const start = moment(selectedAssignment.startTime);
-                        const end = moment(selectedAssignment.endTime);
-                        const duration = moment.duration(end.diff(start));
-                        return `${Math.floor(duration.asHours())}h ${duration.minutes()}m`;
-                    })()}
+            <View style={styles.suitcaseMarker}>
+              <Ionicons name="briefcase" size={18} color="white" />
+            </View>
+          </Marker>
+        ))}
+
+        {/* Permanent Popups for all project sites */}
+        {assignments && assignments.map((site, idx) => {
+          const durationStr = `${Math.floor(site.totalDurationMinutes / 60)}h ${site.totalDurationMinutes % 60}m`;
+          
+          return (
+            <Popup
+              key={`${site.id}-${idx}`}
+              longitude={site.lng}
+              latitude={site.lat}
+              anchor="bottom"
+              closeButton={false}
+              closeOnClick={false}
+              offset={10}
+              maxWidth="240px"
+            >
+              <View style={styles.card}>
+                <Text style={styles.cardTitle} fontType="bold">{site.name}</Text>
+                <Text style={styles.cardAddress} numberOfLines={1}>{site.address}</Text>
+                
+                <View style={styles.cardDivider} />
+                
+                {site.visits.map((visit: any, vIdx: number) => (
+                  <View key={vIdx} style={styles.visitRow}>
+                    <View style={styles.cardRow}>
+                      <Text style={styles.cardLabel}>Entered:</Text>
+                      <Text style={styles.cardValue}>{moment(visit.startTime).format('hh:mm A')}</Text>
+                    </View>
+                    <View style={styles.cardRow}>
+                      <Text style={styles.cardLabel}>Exited:</Text>
+                      <Text style={styles.cardValue}>
+                        {visit.isStillThere ? 'N/A' : moment(visit.endTime).format('hh:mm A')}
+                      </Text>
+                    </View>
+                    {vIdx < site.visits.length - 1 && <View style={styles.visitDivider} />}
+                  </View>
+                ))}
+                
+                <View style={styles.cardDivider} />
+                
+                <View style={[styles.cardRow, { marginTop: 2 }]}>
+                  <Text style={[styles.cardLabel, { fontWeight: 'bold' }]}>Total Time:</Text>
+                  <Text style={[styles.cardValue, { color: theme.colors.primary }]} fontType="bold">
+                    {durationStr}
                   </Text>
                 </View>
               </View>
-          </Popup>
-        )}
+            </Popup>
+          );
+        })}
       </Map>
     </View>
   );
@@ -291,42 +274,60 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     borderWidth: 1,
     borderColor: theme.colors.borderColor,
-    margin: theme.spacing(2),
   },
-  calloutContainer: {
-    backgroundColor: theme.colors.cardBackground,
-    borderRadius: 8,
-    padding: 12,
-    width: 200,
+  suitcaseMarker: {
+    backgroundColor: theme.colors.primary,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: 'white',
+    // We use standard web shadow for markers on web
+    boxShadow: '0 2px 4px rgba(0,0,0,0.3)',
   },
-  calloutTitle: {
-    fontSize: 14,
+  card: {
+    backgroundColor: 'white',
+    padding: 8,
+    minWidth: 160,
+  },
+  cardTitle: {
+    fontSize: 13,
     color: theme.colors.headingText,
     marginBottom: 2,
   },
-  calloutAddress: {
-    fontSize: 11,
+  cardAddress: {
+    fontSize: 10,
     color: theme.colors.bodyText,
-    marginBottom: 8,
+    marginBottom: 6,
   },
-  calloutDivider: {
+  cardDivider: {
     height: 1,
     backgroundColor: theme.colors.borderColor,
-    marginBottom: 8,
-    width: '100%',
+    marginBottom: 6,
   },
-  calloutRow: {
+  cardRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginBottom: 2,
-    width: '100%',
   },
-  calloutLabel: {
-    fontSize: 11,
+  visitRow: {
+    marginBottom: 4,
+  },
+  visitDivider: {
+    height: 1,
+    backgroundColor: theme.colors.borderColor,
+    opacity: 0.5,
+    marginVertical: 4,
+    borderStyle: 'dashed',
+  },
+  cardLabel: {
+    fontSize: 10,
     color: theme.colors.bodyText,
   },
-  calloutValue: {
-    fontSize: 11,
+  cardValue: {
+    fontSize: 10,
     color: theme.colors.headingText,
   },
 });

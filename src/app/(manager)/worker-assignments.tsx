@@ -22,6 +22,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSession } from '~/context/AuthContext'; // NEW: For user session
 import Toast from 'react-native-toast-message'; // NEW: For toast messages
 import { generateKeyBetween } from '~/utils/fractionalIndexing'; // NEW: For fractional indexing
+import UserAvatar from '~/components/UserAvatar';
 
 // Helper component from old project-assignment.tsx
 const CrossPlatformScrollContainer = React.forwardRef((props: any, ref) => {
@@ -143,11 +144,7 @@ export default function ProjectAssignmentScreen() {
     return (
       <TouchableOpacity onPress={() => handleWorkerPress(item)} style={styles.listItem}>
         <View style={[styles.workerItemContent, isSelected && styles.selectedItem]}>
-          {item.avatar_url ? (
-            <Image source={{ uri: item.avatar_url }} style={styles.avatar} />
-          ) : (
-            <Ionicons name="person" size={40} color={iconColor} style={styles.avatarPlaceholder} />
-          )}
+          <UserAvatar avatarUrl={item.avatar_url} size={40} style={styles.avatar} />
           <View style={styles.workerInfo}>
             <Text style={[styles.itemName, { color: itemNameColor }]} fontType="medium">{item.full_name}</Text>
             <Text style={[styles.itemSubtitle, { color: itemSubtitleColor }]} fontType="regular">{item.email}</Text>

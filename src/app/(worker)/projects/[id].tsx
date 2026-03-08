@@ -9,34 +9,33 @@ import {
   KeyboardAvoidingView,
   Platform,
   Image,
-  // ScrollView, // Removed ScrollView import
   Linking,
   ActivityIndicator,
 } from 'react-native';
-import { Text } from '../../../components/Themed'; // Import custom Themed Text
-import { useLocalSearchParams, useRouter } from 'expo-router'; // Added useRouter
+import { Text } from '../../../components/Themed';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Card } from '../../../components/Card';
 import { theme } from '../../../theme';
 import AnimatedScreen from '../../../components/AnimatedScreen';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
-import { MediaType } from 'expo-image-picker';
 import { MapView, Marker } from '../../../components/MapView';
 import ImageCarouselModal from '../../../components/ImageCarouselModal';
 import { useProjects, ProjectMessage } from '../../../context/ProjectsContext';
+import moment from 'moment';
 
 export default function ProjectDetailsScreen() {
   const { id } = useLocalSearchParams();
-  const router = useRouter(); // Initialize useRouter
+  const router = useRouter();
   const { projects, isLoading, getProjectMessages, sendTextMessage, sendImageMessage } = useProjects();
   const project = projects.find((p) => p.id === id as string);
 
-  const MESSAGES_PER_PAGE = 20; // Define messages per page
+  const MESSAGES_PER_PAGE = 20;
 
-  const [allMessages, setAllMessages] = useState<ProjectMessage[]>([]); // Renamed from 'messages'
-  const [initialMessagesLoading, setInitialMessagesLoading] = useState(true); // For initial load
-  const [hasMoreMessages, setHasMoreMessages] = useState(true); // Whether more messages can be loaded
-  const [isFetchingMoreMessages, setIsFetchingMoreMessages] = useState(false); // For loading more messages
+  const [allMessages, setAllMessages] = useState<ProjectMessage[]>([]);
+  const [initialMessagesLoading, setInitialMessagesLoading] = useState(true);
+  const [hasMoreMessages, setHasMoreMessages] = useState(true);
+  const [isFetchingMoreMessages, setIsFetchingMoreMessages] = useState(false);
   
   const [newMessage, setNewMessage] = useState('');
   const [selectedImages, setSelectedImages] = useState<string[]>([]);
@@ -48,8 +47,8 @@ export default function ProjectDetailsScreen() {
     if (!project) return;
     if (isInitialLoad) {
       setInitialMessagesLoading(true);
-      setAllMessages([]); // Clear messages on initial load
-      setHasMoreMessages(true); // Reset hasMoreMessages
+      setAllMessages([]);
+      setHasMoreMessages(true);
     } else {
       setIsFetchingMoreMessages(true);
     }
@@ -66,8 +65,8 @@ export default function ProjectDetailsScreen() {
       );
       
       setAllMessages(prevMessages => isInitialLoad
-        ? fetchedMessages.reverse() // Reverse for initial load to have oldest at top, newest at bottom
-        : [...fetchedMessages.reverse(), ...prevMessages] // Prepend for load more
+        ? fetchedMessages.reverse()
+        : [...fetchedMessages.reverse(), ...prevMessages]
       );
       setHasMoreMessages(newHasMore);
     } catch (error) {
@@ -89,7 +88,7 @@ export default function ProjectDetailsScreen() {
   };
 
   useEffect(() => {
-    if (project?.id) { // Only run if project.id is available
+    if (project?.id) {
       loadMessages();
     }
   }, [project?.id]);
@@ -117,14 +116,13 @@ export default function ProjectDetailsScreen() {
     } finally {
       setNewMessage('');
       setSelectedImages([]);
-      // After sending, refresh messages to show the new one
       await loadMessages(true);
     }
   };
 
   const handlePickImage = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: 'images',
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
       quality: 1,
       allowsMultipleSelection: true,
       selectionLimit: 5,
@@ -172,21 +170,24 @@ export default function ProjectDetailsScreen() {
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
             <Ionicons name="arrow-back" size={24} color={theme.colors.headingText} />
         </TouchableOpacity>
-        <View style={[styles.colorIndicator, { backgroundColor: project.color || theme.colors.primary }]} />
         <View style={styles.headerTextContainer}>
             <Text style={styles.headerTitle} numberOfLines={1} fontType='bold'>{project.name || ''}</Text>
-            <Text style={styles.headerAddress} numberOfLines={1} fontType='regular'>{project.address || ''}</Text>
+            <View style={styles.headerAddressRow}>
+              <Ionicons name="location-outline" size={14} color={theme.colors.bodyText} />
+              <Text style={styles.headerAddress} numberOfLines={1} fontType='regular'> {project.address || ''}</Text>
+            </View>
         </View>
+        <View style={[styles.colorIndicator, { backgroundColor: project.color || theme.colors.primary }]} />
     </View>
   );
 
   const renderMessage = ({ item }: { item: ProjectMessage }) => (
     <Card style={styles.messageCard}>
       <View style={styles.messageHeader}>
-        <Text style={styles.senderText}>{item.employees?.full_name || 'Unknown User'}</Text>
-        <Text style={styles.timestampText}>{new Date(item.created_at).toLocaleTimeString()}</Text>
+        <Text style={styles.senderText} fontType="bold">{item.employees?.full_name || 'Unknown User'}</Text>
+        <Text style={styles.timestampText}>{moment(item.created_at).format('hh:mm A')}</Text>
       </View>
-      {item.type === 'text' && <Text fontType='regular'>{item.text}</Text>}
+      {item.type === 'text' && <Text fontType='regular' style={styles.messageText}>{item.text}</Text>}
       {item.type === 'image' && item.image_url && (
         <TouchableOpacity onPress={() => openImageModal([item.image_url!], 0)}>
           <Image source={{ uri: item.image_url }} style={styles.messageImage} />
@@ -216,38 +217,42 @@ export default function ProjectDetailsScreen() {
       <KeyboardAvoidingView
         style={styles.container}
         behavior={Platform.OS === "ios" ? "padding" : "height"}
-        keyboardVerticalOffset={Platform.OS === "ios" ? 50 : 0}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 100 : 0}
       >
         <FlatList
           ListHeaderComponent={
-            <>
+            <View style={styles.headerSections}>
               <View style={styles.section}>
                 <Text style={styles.sectionTitle} fontType='bold'>Project Overview</Text>
-                <Text style={styles.explanationText} fontType='regular'>{project.explanation || ''}</Text>
+                <Card style={styles.overviewCard}>
+                  <Text style={styles.explanationText} fontType='regular'>{project.explanation || 'No project description provided.'}</Text>
+                </Card>
               </View>
 
-              <View style={styles.section}>
-                <Text style={styles.sectionTitle} fontType='bold'>Project Images</Text>
-                <FlatList
-                  data={project.photos}
-                  renderItem={renderProjectImage}
-                  keyExtractor={(item, index) => index.toString()}
-                  horizontal
-                  showsHorizontalScrollIndicator={false}
-                  contentContainerStyle={styles.projectImageList}
-                />
-              </View>
+              {project.photos && project.photos.length > 0 && (
+                <View style={styles.section}>
+                  <Text style={styles.sectionTitle} fontType='bold'>Project Images</Text>
+                  <FlatList
+                    data={project.photos}
+                    renderItem={renderProjectImage}
+                    keyExtractor={(item, index) => index.toString()}
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    contentContainerStyle={styles.projectImageList}
+                  />
+                </View>
+              )}
 
               <View style={styles.section}>
                 <Text style={styles.sectionTitle} fontType='bold'>Location</Text>
-                <TouchableOpacity onPress={handleMapPress}>
+                <TouchableOpacity onPress={handleMapPress} style={styles.mapContainer}>
                   <MapView
                     style={styles.map}
                     initialRegion={{
                       latitude: project.location.latitude,
                       longitude: project.location.longitude,
-                      latitudeDelta: 0.02,
-                      longitudeDelta: 0.02,
+                      latitudeDelta: 0.01,
+                      longitudeDelta: 0.01,
                     }}
                     scrollEnabled={false}
                     pitchEnabled={false}
@@ -258,21 +263,24 @@ export default function ProjectDetailsScreen() {
                       title={project.name}
                     />
                   </MapView>
+                  <View style={styles.mapOverlay}>
+                    <Text style={styles.mapOverlayText} fontType="bold">OPEN IN MAPS</Text>
+                  </View>
                 </TouchableOpacity>
               </View>
 
               <View style={styles.section}>
                 <Text style={styles.sectionTitle} fontType='bold'>Discussion</Text>
               </View>
-            </>
+            </View>
           }
           data={allMessages}
           renderItem={renderMessage}
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.listContainer}
           onEndReached={loadMoreMessages}
-          onEndReachedThreshold={0.5} // When 50% from the end, load more
-          ListFooterComponent={() => ( // This will appear at the top of an inverted list
+          onEndReachedThreshold={0.5}
+          ListFooterComponent={() => (
               isFetchingMoreMessages ? (
                   <ActivityIndicator size="small" color={theme.colors.primary} style={{ marginVertical: 10 }} />
               ) : null
@@ -298,18 +306,19 @@ export default function ProjectDetailsScreen() {
             />
           )}
           <View style={styles.textInputRow}>
+            <TouchableOpacity onPress={handlePickImage} style={styles.iconButton}>
+              <Ionicons name="add-circle-outline" size={30} color={theme.colors.primary} />
+            </TouchableOpacity>
             <TextInput
               style={[styles.input, { fontSize: theme.fontSizes.md, fontFamily: theme.font.regular }]}
               value={newMessage}
               onChangeText={setNewMessage}
-              placeholder="Type a message or add an image..."
-              placeholderTextColor={theme.colors.bodyText}
+              placeholder="Type a message..."
+              placeholderTextColor={theme.colors.disabledText}
+              multiline
             />
-            <TouchableOpacity onPress={handlePickImage} style={styles.iconButton}>
-              <Ionicons name="image-outline" size={24} color={theme.colors.primary} />
-            </TouchableOpacity>
-            <TouchableOpacity onPress={handleSendMessage} style={styles.iconButton}>
-              <Ionicons name="send-outline" size={24} color={theme.colors.primary} />
+            <TouchableOpacity onPress={handleSendMessage} style={styles.sendButton}>
+              <Ionicons name="send" size={20} color="white" />
             </TouchableOpacity>
           </View>
         </View>
@@ -329,112 +338,130 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: theme.colors.pageBackground,
   },
-  pageHeader: { // New header style
+  pageHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: theme.spacing(2),
-    paddingHorizontal: theme.spacing(2),
+    paddingHorizontal: theme.spacing(3),
     borderBottomWidth: 1,
     borderBottomColor: theme.colors.borderColor,
-    backgroundColor: theme.colors.cardBackground, // Consistent background color
-    // Remove shadows/elevation for flat design
-    ...Platform.select({
-      web: {
-        shadowColor: 'transparent',
-        shadowOffset: { width: 0, height: 0 },
-        shadowOpacity: 0,
-        shadowRadius: 0,
-      },
-      native: {
-        elevation: 0,
-      },
-    }),
+    backgroundColor: theme.colors.cardBackground,
   },
   backButton: {
-    marginRight: theme.spacing(2),
+    marginRight: theme.spacing(1),
     padding: theme.spacing(1),
   },
   colorIndicator: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    marginRight: theme.spacing(2),
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    marginLeft: theme.spacing(2),
+    borderWidth: 2,
+    borderColor: 'white',
   },
   headerTextContainer: {
     flex: 1,
   },
   headerTitle: {
-    fontSize: theme.fontSizes.lg, // Matching manager's header title
+    fontSize: theme.fontSizes.lg,
     color: theme.colors.headingText,
+  },
+  headerAddressRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 2,
   },
   headerAddress: {
     color: theme.colors.bodyText,
-    marginTop: 2,
-    fontSize: 16, // Matching manager's header address
+    fontSize: theme.fontSizes.sm,
+  },
+  headerSections: {
+    paddingHorizontal: 0,
   },
   section: {
-    marginTop: theme.spacing(2),
-    paddingHorizontal: theme.spacing(2),
+    marginTop: theme.spacing(3),
+    paddingHorizontal: theme.spacing(3),
   },
   sectionTitle: {
-    fontSize: 20,
+    fontSize: theme.fontSizes.md,
     color: theme.colors.headingText,
-    marginBottom: theme.spacing(1),
+    marginBottom: theme.spacing(1.5),
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+  },
+  overviewCard: {
+    padding: theme.spacing(2.5),
+    backgroundColor: theme.colors.cardBackground,
+    borderRadius: theme.radius.lg,
+    borderWidth: 1,
+    borderColor: theme.colors.borderColor,
   },
   explanationText: {
-    fontSize: 16,
-    color: theme.colors.headingText,
+    fontSize: theme.fontSizes.md,
+    color: theme.colors.bodyText,
     lineHeight: 24,
   },
   projectImageList: {
     paddingVertical: theme.spacing(1),
   },
   projectImage: {
-    width: 280, // Fixed width
-    height: 180, // Fixed height
-    borderRadius: theme.radius.md,
+    width: 280,
+    height: 180,
+    borderRadius: theme.radius.lg,
     marginRight: theme.spacing(2),
   },
-  map: {
-    height: 200,
-    borderRadius: theme.radius.md,
+  mapContainer: {
+    borderRadius: theme.radius.lg,
     overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: theme.colors.borderColor,
+    height: 200,
+  },
+  map: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  mapOverlay: {
+    position: 'absolute',
+    bottom: 12,
+    right: 12,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    paddingHorizontal: theme.spacing(1.5),
+    paddingVertical: theme.spacing(0.5),
+    borderRadius: theme.radius.pill,
+  },
+  mapOverlayText: {
+    color: 'white',
+    fontSize: 10,
   },
   listContainer: {
-    paddingBottom: theme.spacing(2),
+    paddingHorizontal: theme.spacing(3),
+    paddingBottom: theme.spacing(4),
   },
   messageCard: {
     marginBottom: theme.spacing(2),
     padding: theme.spacing(2),
-    borderRadius: theme.radius.xl, // Consistent border radius
-    borderWidth: 1, // Add border
-    borderColor: theme.colors.borderColor, // Consistent border color
-    backgroundColor: theme.colors.cardBackground, // Consistent background color
-    // Remove shadows/elevation for flat design
-    ...Platform.select({
-      web: {
-        shadowColor: 'transparent',
-        shadowOffset: { width: 0, height: 0 },
-        shadowOpacity: 0,
-        shadowRadius: 0,
-      },
-      native: {
-        elevation: 0,
-      },
-    }),
+    borderRadius: theme.radius.lg,
+    borderWidth: 1,
+    borderColor: theme.colors.borderColor,
+    backgroundColor: theme.colors.cardBackground,
   },
   messageHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginBottom: 8,
+    alignItems: 'center',
   },
   senderText: {
-    fontSize: theme.fontSizes.md,
-    color: theme.colors.headingText,
+    fontSize: theme.fontSizes.sm,
+    color: theme.colors.primary,
   },
   timestampText: {
+    color: theme.colors.disabledText,
+    fontSize: 10,
+  },
+  messageText: {
+    fontSize: theme.fontSizes.md,
     color: theme.colors.bodyText,
-    fontSize: theme.fontSizes.xs,
   },
   messageImage: {
     width: '100%',
@@ -444,25 +471,39 @@ const styles = StyleSheet.create({
   },
   inputContainer: {
     padding: theme.spacing(2),
+    paddingBottom: Platform.OS === 'ios' ? theme.spacing(4) : theme.spacing(2),
     borderTopWidth: 1,
     borderTopColor: theme.colors.borderColor,
     backgroundColor: theme.colors.cardBackground,
   },
   textInputRow: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-end',
+    gap: 8,
   },
   input: {
     flex: 1,
-    height: 40,
-    backgroundColor: theme.colors.accent,
-    borderRadius: theme.radius.md,
+    minHeight: 44,
+    maxHeight: 100,
+    backgroundColor: theme.colors.pageBackground,
+    borderRadius: 22,
     paddingHorizontal: theme.spacing(2),
+    paddingVertical: 10,
     color: theme.colors.headingText,
+    borderWidth: 1,
+    borderColor: theme.colors.borderColor,
   },
   iconButton: {
-    padding: theme.spacing(1),
-    marginLeft: theme.spacing(1),
+    paddingBottom: 6,
+  },
+  sendButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: theme.colors.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 0,
   },
   previewList: {
     marginBottom: theme.spacing(1),
@@ -485,9 +526,9 @@ const styles = StyleSheet.create({
   },
   emptyDiscussionText: {
     textAlign: 'center',
-    color: theme.colors.bodyText,
+    color: theme.colors.disabledText,
     marginTop: theme.spacing(4),
     marginBottom: theme.spacing(4),
-    fontSize: 16,
+    fontSize: theme.fontSizes.md,
   },
 });

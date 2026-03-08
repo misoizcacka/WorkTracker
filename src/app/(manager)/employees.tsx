@@ -16,6 +16,8 @@ import EditInviteModal from "../../components/EditInviteModal"; // NEW
 import { Employee, Invite } from "../../types";
 import { Ionicons } from '@expo/vector-icons';
 import { Dropdown } from "react-native-element-dropdown";
+import { uploadAvatar, updateEmployeeProfile, getAvatarPublicUrl } from "../../services/profile";
+import UserAvatar from "../../components/UserAvatar";
 
 
 
@@ -168,11 +170,7 @@ export default function ManagerEmployees() {
     return (
       <View key={item.id} style={styles.tableRow}>
         <View style={[styles.tableCell, { width: fixedColumnWidths.avatar }]}>
-          {item.avatar_url ? (
-            <Image source={{ uri: item.avatar_url }} style={styles.avatar} />
-          ) : (
-            <Ionicons name="person" size={40} color={theme.colors.bodyText} style={styles.avatarPlaceholder} />
-          )}
+          <UserAvatar avatarUrl={item.avatar_url} size={40} />
         </View>
         <Text style={[styles.tableCellText, { flex: 1, minWidth: flexibleColumnMinLengths.name }]} numberOfLines={1} ellipsizeMode="tail">{item.full_name}</Text>
         <Text style={[styles.tableCellText, { flex: 1, minWidth: flexibleColumnMinLengths.email }]} numberOfLines={1} ellipsizeMode="tail">{item.email}</Text>

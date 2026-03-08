@@ -10,6 +10,7 @@ import { supabase } from '~/utils/supabase';
 import { MapView } from '~/components/MapView';
 import { Region } from 'react-native-maps';
 import { WorkerLocation } from '~/components/map-types';
+import { EmployeesContext, EmployeesContextType } from '~/context/EmployeesContext';
 
 interface DailyEvent {
   event_id: string;
@@ -43,6 +44,7 @@ const haversineDistance = (lat1: number, lon1: number, lat2: number, lon2: numbe
 };
 
 const LocationReplayMapOnlyPanel = ({ workerId, date }: LocationReplayMapOnlyPanelProps) => {
+  const { getEmployeeById } = React.useContext(EmployeesContext) as EmployeesContextType;
   const [events, setEvents] = useState<DailyEvent[]>([]);
   const [dailySummary, setDailySummary] = useState<DailySummary | null>(null);
   const [loading, setLoading] = useState(false);
@@ -57,11 +59,12 @@ const LocationReplayMapOnlyPanel = ({ workerId, date }: LocationReplayMapOnlyPan
   const [mapZoom, setMapZoom] = useState<number | undefined>(undefined);
 
   useEffect(() => {
-    if (inferredLocation && dailySummary && workerId) {
+    if (inferredLocation && workerId) {
+      const employee = getEmployeeById(workerId);
       setMapWorker([{
         id: workerId,
-        name: "Worker", // Placeholder name, as full_name is not in this summary
-        // avatar: dailySummary.worker_avatar_url || undefined, // Not in this summary
+        name: employee?.full_name || "Worker",
+        avatar: employee?.public_avatar_url || undefined,
         location: {
           latitude: inferredLocation.latitude,
           longitude: inferredLocation.longitude,
@@ -72,7 +75,7 @@ const LocationReplayMapOnlyPanel = ({ workerId, date }: LocationReplayMapOnlyPan
     } else {
       setMapWorker([]);
     }
-  }, [inferredLocation, dailySummary, workerId]);
+  }, [inferredLocation, workerId, getEmployeeById]);
 
   const calculateKilometers = useCallback((eventList: DailyEvent[]) => {
     let totalKm = 0;

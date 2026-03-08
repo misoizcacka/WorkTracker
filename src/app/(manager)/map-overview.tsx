@@ -8,6 +8,7 @@ import { Project, ProjectsContext, ProjectsContextType } from '~/context/Project
 import { theme } from '../../theme'; // Corrected import path
 import AnimatedScreen from '../../components/AnimatedScreen'; // Corrected import path
 import { Ionicons } from '@expo/vector-icons'; 
+import UserAvatar from '../../components/UserAvatar';
 
 import { Employee } from '../../types';
 import { fetchLatestLocationForWorkers, LatestLocation } from '~/services/locationEvents';
@@ -159,11 +160,7 @@ export default function MapOverviewScreen() {
     return (
       <TouchableOpacity onPress={() => handleWorkerPress(item)} style={styles.listItem}>
         <View style={[styles.itemContent, isSelected && styles.selectedItem]}>
-          {item.avatar_url ? (
-            <Image source={{ uri: item.avatar_url }} style={styles.avatar} />
-          ) : (
-            <Ionicons name="person" size={40} color={iconColor} style={styles.avatarPlaceholder} />
-          )}
+          <UserAvatar avatarUrl={item.avatar_url} size={40} style={styles.avatar} />
           <View style={styles.itemInfo}>
             <Text style={[styles.itemName, { color: itemNameColor }]} fontType="medium">{item.full_name}</Text>
             <Text style={[styles.itemSubtitle, { color: itemSubtitleColor }]} fontType="regular">{item.email}</Text>
@@ -196,7 +193,7 @@ export default function MapOverviewScreen() {
       return {
         id: e.id,
         name: e.full_name,
-        avatar: e.avatar_url ?? undefined,
+        avatar: e.public_avatar_url ?? undefined,
         location: locationData ? {
           latitude: locationData.latitude,
           longitude: locationData.longitude,

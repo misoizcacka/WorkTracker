@@ -1,81 +1,105 @@
-import React, { useMemo, useState, useRef, useEffect, useCallback } from 'react';
-import { StyleSheet, ScrollView, View, TouchableOpacity, LayoutChangeEvent, ActivityIndicator, RefreshControl, Platform } from 'react-native';
-import { Text } from '../../../components/Themed'; // Import custom Themed Text
+import React, { useMemo, useState, useEffect, useCallback } from 'react';
+import { StyleSheet, ScrollView, View, TouchableOpacity, ActivityIndicator, RefreshControl, Platform } from 'react-native';
+import { Text } from '../../../components/Themed';
 import { useRouter } from 'expo-router';
 import { Card } from '../../../components/Card';
 import { theme } from '../../../theme';
 import AnimatedScreen from '../../../components/AnimatedScreen';
-import { FontAwesome5 } from '@expo/vector-icons';
+import { Ionicons } from '@expo/vector-icons';
 import { useAssignments } from '../../../context/AssignmentsContext';
 import { useSession } from '~/context/AuthContext';
-import { ProcessedAssignmentStepWithStatus, AssignmentStatus, Project } from '~/types'; // Updated import
+import { ProcessedAssignmentStepWithStatus, AssignmentStatus } from '~/types';
+import moment from 'moment';
 
-// Combined and enriched data structure for timeline display
-interface TimelineItem {
-  id: string; // AssignmentRecord ID
-  ref_id: string; // Project or Location ID
+// Combined and enriched data structure for project list
+interface AssignmentItem {
+  id: string;
+  ref_id: string;
   type: 'project' | 'common_location';
   name: string;
-  address?: string; // Only for projects
-  color: string;
-  startTime: string | null; // HH:MM
-  status: 'Not Started' | 'In Progress' | 'Completed'; // Derived
-  sort_key: string;
+  address?: string;
+  startTime: string | null;
+  status: AssignmentStatus;
 }
 
-const getStatusStyle = (status: 'Not Started' | 'In Progress' | 'Completed') => {
-  switch (status) {
-    case 'Completed':
-      return { color: theme.colors.success, icon: 'check-circle' as const, dotColor: theme.colors.success };
-    case 'In Progress':
-      return { color: theme.colors.warning, icon: 'play-circle' as const, dotColor: theme.colors.warning };
-    case 'Not Started':
-    default:
-      return { color: theme.colors.bodyText, icon: 'circle' as const, dotColor: theme.colors.borderColor };
-  }
-};
-
-const mapAssignmentStatusToTimelineStatus = (status: AssignmentStatus): 'Not Started' | 'In Progress' | 'Completed' => {
+const getStatusBadgeStyle = (status: AssignmentStatus) => {
   switch (status) {
     case 'completed':
-      return 'Completed';
+      return { 
+        bg: theme.statusColors.successBackground, 
+        text: theme.statusColors.successText, 
+        label: 'COMPLETED',
+        icon: 'checkmark-circle' as const 
+      };
     case 'active':
-      return 'In Progress';
+      return { 
+        bg: theme.statusColors.activeBackground, 
+        text: theme.statusColors.activeText, 
+        label: 'IN PROGRESS',
+        icon: 'play-circle' as const 
+      };
     case 'next':
+      return { 
+        bg: theme.statusColors.nextBackground, 
+        text: theme.statusColors.nextText, 
+        label: 'UP NEXT',
+        icon: 'arrow-forward-circle' as const 
+      };
     case 'pending':
     default:
-      return 'Not Started';
+      return { 
+        bg: theme.statusColors.neutralBackground, 
+        text: theme.statusColors.neutralText, 
+        label: 'PENDING',
+        icon: 'ellipse-outline' as const 
+      };
   }
 };
 
-const TimelineCard = ({ item, onPress, onLayout }: { item: TimelineItem; onPress: (id: string) => void; onLayout: (event: LayoutChangeEvent) => void }) => {
-  const statusStyle = getStatusStyle(item.status);
+const AssignmentCard = ({ item, onPress }: { item: AssignmentItem; onPress: (refId: string) => void }) => {
+  const badge = getStatusBadgeStyle(item.status);
 
   return (
-    <View onLayout={onLayout} style={styles.itemWrapper}>
-      <View style={styles.itemTimeContainer}>
-        {item.startTime ? (
-          <>
-            <FontAwesome5 name="clock" size={14} color={theme.colors.primary} />
-            <Text style={styles.itemTimeText}>Arrival: {item.startTime}</Text>
-          </>
-        ) : (
-          <Text style={styles.itemTimeText}>No specific time</Text>
-        )}
-      </View>
-      <TouchableOpacity onPress={() => onPress(item.ref_id)} disabled={item.type === 'common_location'}>
-        <Card style={[styles.itemCard, { borderColor: statusStyle.dotColor, borderWidth: item.status !== 'Not Started' ? 1 : 0 }]}>
-          <Text style={styles.subtitle} fontType='medium'>{item.name}</Text>
-          {item.address ? <Text style={styles.addressText} fontType='regular'>{item.address}</Text> : null}
-          <View style={styles.statusContainer}>
-            <FontAwesome5 name={statusStyle.icon} size={14} color={statusStyle.color} solid={item.status !== 'Not Started'} />
-            <Text style={[styles.statusText, { color: statusStyle.color }]}>
-              {item.status}
+    <Card style={styles.assignmentCard}>
+      <TouchableOpacity 
+        onPress={() => onPress(item.ref_id)} 
+        disabled={item.type === 'common_location'}
+        style={styles.cardTouchable}
+      >
+        <View style={styles.cardHeader}>
+          <View style={[styles.iconContainer, { backgroundColor: item.status === 'active' ? theme.colors.primary : theme.colors.primaryMuted }]}>
+            <Ionicons 
+              name={item.type === 'project' ? "business-outline" : "pin-outline"} 
+              size={20} 
+              color={item.status === 'active' ? 'white' : theme.colors.bodyText} 
+            />
+          </View>
+          <View style={styles.titleContainer}>
+            <Text style={styles.projectName} fontType="bold">{item.name}</Text>
+            {item.address && (
+              <Text style={styles.projectAddress} numberOfLines={1}>{item.address}</Text>
+            )}
+          </View>
+          <View style={[styles.statusBadge, { backgroundColor: badge.bg }]}>
+            <Text style={[styles.statusBadgeText, { color: badge.text }]} fontType="bold">
+              {badge.label}
             </Text>
           </View>
-        </Card>
+        </View>
+
+        <View style={styles.cardFooter}>
+          <View style={styles.footerDetail}>
+            <Ionicons name="time-outline" size={14} color={theme.colors.disabledText} />
+            <Text style={styles.footerText}>
+              {item.startTime ? `Scheduled: ${item.startTime}` : 'No fixed time'}
+            </Text>
+          </View>
+          {item.type === 'project' && (
+            <Ionicons name="chevron-forward" size={16} color={theme.colors.disabledText} />
+          )}
+        </View>
       </TouchableOpacity>
-    </View>
+    </Card>
   );
 };
 
@@ -83,140 +107,81 @@ export default function ProjectsScreen() {
   const router = useRouter();
   const { user } = useSession()!;
   const { processedAssignments, loadAssignmentsForDate, isLoading: assignmentsLoading } = useAssignments();
-  const [cardLayouts, setCardLayouts] = useState<{ [key: string]: { y: number, height: number } }>({});
-  const containerRef = useRef<ScrollView>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   const fetchData = useCallback(async (forceFetchFromSupabase = false) => {
     if (user?.id) {
-      const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+      const today = moment().format('YYYY-MM-DD');
       await loadAssignmentsForDate(today, [user.id], forceFetchFromSupabase);
     }
   }, [user?.id, loadAssignmentsForDate]);
 
-  // Fetch assignments for the worker for today on mount
   useEffect(() => {
     fetchData();
   }, [fetchData]);
 
   const onRefresh = useCallback(async () => {
     setIsRefreshing(true);
-    await fetchData(true); // Force fetch from Supabase
+    await fetchData(true);
     setIsRefreshing(false);
   }, [fetchData]);
 
-  const currentWorkersAssignments = user?.id ? processedAssignments[user.id] || [] : [];
+  const currentWorkersAssignments = useMemo(() => {
+    return user?.id ? processedAssignments[user.id] || [] : [];
+  }, [user?.id, processedAssignments]);
 
-  const todaysPlan = useMemo((): TimelineItem[] => {
-    if (!currentWorkersAssignments) return [];
-    return currentWorkersAssignments.map((assignment: ProcessedAssignmentStepWithStatus) => {
-      let name: string;
-      let address: string | undefined;
-      let color: string;
-      let timelineStatus = mapAssignmentStatusToTimelineStatus(assignment.status);
-
-      // Derive name, address, color based on type
-      if (assignment.type === 'project') {
-        // Ensure project exists before accessing properties
-        name = assignment.project?.name || 'Unnamed Project';
-        address = assignment.project?.address;
-        color = assignment.project?.color || theme.colors.secondary;
-      } else { // common_location
-        // Ensure location exists before accessing properties
-        name = assignment.location?.name || 'Unnamed Location';
-        address = undefined;
-        color = theme.colors.secondary;
-      }
-
-      return {
-        id: assignment.id,
-        ref_id: assignment.ref_id,
-        type: assignment.type,
-        name: name,
-        address: address,
-        color: color,
-        startTime: assignment.start_time || null,
-        status: timelineStatus,
-        sort_key: assignment.sort_key,
-      };
-    }); // Already sorted in context
+  const todaysAssignments = useMemo((): AssignmentItem[] => {
+    return currentWorkersAssignments.map((assignment: ProcessedAssignmentStepWithStatus) => ({
+      id: assignment.id,
+      ref_id: assignment.ref_id,
+      type: assignment.type,
+      name: assignment.type === 'project' ? (assignment.project?.name || 'Unnamed Project') : (assignment.location?.name || 'Unnamed Location'),
+      address: assignment.type === 'project' ? assignment.project?.address : undefined,
+      startTime: assignment.start_time || null,
+      status: assignment.status,
+    }));
   }, [currentWorkersAssignments]);
 
   const handleItemPress = (refId: string) => {
-    // Only navigate to project details for projects
-    const item = todaysPlan.find(tp => tp.ref_id === refId);
+    const item = todaysAssignments.find(a => a.ref_id === refId);
     if (item && item.type === 'project') {
       router.push(`/(worker)/projects/${refId}`);
-    } else {
-      console.log(`Common Location pressed: ${refId}`);
     }
   };
-
-  const handleCardLayout = (assignmentId: string, event: LayoutChangeEvent) => {
-    const { y, height } = event.nativeEvent.layout;
-    setCardLayouts(prev => ({ ...prev, [assignmentId]: { y, height } }));
-  };
-  
-  // Calculate progress height for the timeline line
-  const lastCompletedIndex = useMemo(() => {
-    const indices = todaysPlan.map((p, i) => (p.status === 'Completed' || p.status === 'In Progress') ? i : -1);
-    return Math.max(...indices);
-  }, [todaysPlan]);
-
-  const progressHeight = useMemo(() => {
-    if (lastCompletedIndex === -1) return 0;
-    const lastCompletedItem = todaysPlan[lastCompletedIndex];
-    if (!lastCompletedItem) return 0; // Guard against undefined item
-    // Find the layout of the actual assignment card using its assignment.id
-    const layout = cardLayouts[lastCompletedItem.id]; 
-    if (!layout) return 0;
-    // Height to the middle of the last completed card
-    return layout.y + layout.height / 2;
-  }, [cardLayouts, lastCompletedIndex, todaysPlan]);
-
 
   return (
     <AnimatedScreen>
       <ScrollView 
         style={styles.container} 
-        ref={containerRef} 
-        contentContainerStyle={styles.scrollContentContainer}
+        contentContainerStyle={styles.scrollContent}
         refreshControl={
-          <RefreshControl 
-            refreshing={isRefreshing} 
-            onRefresh={onRefresh} 
-            tintColor={theme.colors.primary} // iOS
-            progressBackgroundColor={theme.colors.cardBackground} // Android
-            colors={[theme.colors.primary]} // Android
-          />
+          <RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} colors={[theme.colors.primary]} />
         }
       >
-        <Text style={styles.title}>Today's Plan</Text>
+        <View style={styles.header}>
+          <Text style={styles.headerTitle} fontType="bold">Today's Schedule</Text>
+          <Text style={styles.headerSubtitle}>{moment().format('dddd, MMMM D')}</Text>
+        </View>
         
-        {assignmentsLoading && todaysPlan.length === 0 ? (
-          <ActivityIndicator size="large" color={theme.colors.primary} style={styles.loadingIndicator} />
-        ) : todaysPlan.length === 0 ? (
-          <View style={styles.emptyStateContainer}>
-            <Text style={styles.emptyStateText}>No assignments scheduled for today.</Text>
-            <Text style={styles.emptyStateSubText}>Check back later or contact your manager.</Text>
+        {assignmentsLoading && todaysAssignments.length === 0 ? (
+          <View style={styles.centerContainer}>
+            <ActivityIndicator size="large" color={theme.colors.primary} />
+          </View>
+        ) : todaysAssignments.length === 0 ? (
+          <View style={styles.emptyState}>
+            <Ionicons name="calendar-outline" size={64} color={theme.colors.borderColor} />
+            <Text style={styles.emptyText} fontType="medium">No assignments for today.</Text>
+            <Text style={styles.emptySubText}>Your schedule will appear here once assigned.</Text>
           </View>
         ) : (
-          <View style={styles.timelineContainer}>
-            <View style={styles.timelineLineContainer}>
-              <View style={styles.timelineLineBackground} />
-              <View style={[styles.timelineLineProgress, { height: progressHeight }]} />
-            </View>
-
-            <View style={styles.timelineItemsContainer}>
-              {todaysPlan.map((item) => (
-                <TimelineCard 
-                  key={item.id} // Use assignment ID as key
-                  item={item} 
-                  onPress={handleItemPress}
-                  onLayout={(event) => handleCardLayout(item.id, event)} // Pass assignment ID
-                />
-              ))}
-            </View>
+          <View style={styles.listContainer}>
+            {todaysAssignments.map((item) => (
+              <AssignmentCard 
+                key={item.id} 
+                item={item} 
+                onPress={handleItemPress}
+              />
+            ))}
           </View>
         )}
       </ScrollView>
@@ -229,115 +194,105 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: theme.colors.pageBackground,
   },
-  scrollContentContainer: {
-    paddingHorizontal: theme.spacing(2),
-    paddingBottom: theme.spacing(2),
+  scrollContent: {
+    padding: theme.spacing(3),
   },
-  title: {
+  header: {
+    marginBottom: theme.spacing(3),
+  },
+  headerTitle: {
     fontSize: theme.fontSizes.xl,
     color: theme.colors.headingText,
-    paddingTop: theme.spacing(2),
-    paddingBottom: theme.spacing(3),
   },
-  timelineContainer: {
-    flexDirection: 'row',
-  },
-  timelineLineContainer: {
-    width: 2,
-    marginRight: theme.spacing(2),
-    position: 'relative', // For absolute positioning of children
-  },
-  timelineLineBackground: {
-    position: 'absolute',
-    top: 0,
-    bottom: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: theme.colors.borderColor,
-  },
-  timelineLineProgress: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: theme.colors.primary,
-  },
-  timelineItemsContainer: {
-    flex: 1,
-    alignItems: 'stretch',
-  },
-  itemWrapper: {
-    marginBottom: theme.spacing(2),
-    width: '100%',
-  },
-  itemTimeContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: theme.spacing(1),
-    paddingLeft: theme.spacing(1)
-  },
-  itemTimeText: {
-    color: theme.colors.primary,
-    marginLeft: theme.spacing(1),
-    fontSize: theme.fontSizes.sm,
-  },
-  itemCard: {
-    padding: theme.spacing(2),
-    width: '100%',
-    borderRadius: theme.radius.xl, // Consistent border radius
-    borderWidth: 1, // Add border
-    borderColor: theme.colors.borderColor, // Consistent border color
-    backgroundColor: theme.colors.cardBackground, // Consistent background color
-    // Remove shadows/elevation for flat design
-    ...Platform.select({
-      web: {
-        shadowColor: 'transparent',
-        shadowOffset: { width: 0, height: 0 },
-        shadowOpacity: 0,
-        shadowRadius: 0,
-      },
-      native: {
-        elevation: 0,
-      },
-    }),
-  },
-  subtitle: {
+  headerSubtitle: {
     fontSize: theme.fontSizes.md,
-    color: theme.colors.headingText,
-  },
-  addressText: {
     color: theme.colors.bodyText,
-    marginTop: theme.spacing(0.5),
-    fontSize: theme.fontSizes.sm,
+    marginTop: 4,
+    textTransform: 'capitalize',
   },
-  statusContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 12,
-  },
-  statusText: {
-    marginLeft: theme.spacing(1),
-    fontSize: theme.fontSizes.sm,
-  },
-  loadingIndicator: {
-    marginTop: theme.spacing(4),
-  },
-  emptyStateContainer: {
+  centerContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: theme.spacing(4),
-    minHeight: 150,
+    paddingVertical: 50,
   },
-  emptyStateText: {
-    fontSize: theme.fontSizes.md,
+  emptyState: {
+    alignItems: 'center',
+    paddingVertical: 60,
+  },
+  emptyText: {
+    fontSize: theme.fontSizes.lg,
     color: theme.colors.bodyText,
-    textAlign: 'center',
-    marginBottom: theme.spacing(1),
+    marginTop: 16,
   },
-  emptyStateSubText: {
+  emptySubText: {
     fontSize: theme.fontSizes.sm,
-    color: theme.colors.bodyText,
+    color: theme.colors.disabledText,
+    marginTop: 8,
     textAlign: 'center',
+  },
+  listContainer: {
+    gap: theme.spacing(2),
+  },
+  assignmentCard: {
+    borderRadius: theme.radius.lg,
+    padding: 0, // Reset padding to handle touchable correctly
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: theme.colors.borderColor,
+  },
+  cardTouchable: {
+    padding: theme.spacing(2),
+  },
+  cardHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+  },
+  iconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: theme.spacing(2),
+  },
+  titleContainer: {
+    flex: 1,
+    marginRight: theme.spacing(1),
+  },
+  projectName: {
+    fontSize: theme.fontSizes.md,
+    color: theme.colors.headingText,
+  },
+  projectAddress: {
+    fontSize: theme.fontSizes.xs,
+    color: theme.colors.bodyText,
+    marginTop: 2,
+  },
+  statusBadge: {
+    paddingHorizontal: theme.spacing(1),
+    paddingVertical: 4,
+    borderRadius: theme.radius.sm,
+  },
+  statusBadgeText: {
+    fontSize: 10,
+  },
+  cardFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: theme.spacing(2),
+    paddingTop: theme.spacing(1.5),
+    borderTopWidth: 1,
+    borderTopColor: theme.colors.borderColor,
+  },
+  footerDetail: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  footerText: {
+    fontSize: theme.fontSizes.xs,
+    color: theme.colors.disabledText,
   },
 });

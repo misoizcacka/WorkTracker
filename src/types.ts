@@ -6,6 +6,7 @@ export interface Employee {
   role: 'worker' | 'manager' | 'owner';
   status: 'pending' | 'active' | 'disabled';
   avatar_url: string | null;
+  public_avatar_url?: string | null; // NEW: Full renderable URL
   reporting_to: string | null; // Changed to string | null
   created_at: string;
   company_id: string; // New: Add company_id
@@ -104,7 +105,8 @@ export interface WorkSession {
   assignment_id: string; // uuid
   start_time: string; // timestamp with time zone
   end_time: string | null; // timestamp with time zone, nullable
-  total_break_minutes?: number; // Added back from original DB schema
+  total_break_minutes: number; // Stored in DB
+  correction_minutes: number; // NEW: Stored in DB, for adjustments
   synced?: boolean; // New: 0 for false, 1 for true in SQLite
   worker_assignments?: AssignmentRecord;
 }

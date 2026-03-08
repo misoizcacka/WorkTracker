@@ -5,6 +5,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { theme } from "../../theme";
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { withLayoutContext } from 'expo-router';
+import { Text } from "../../components/Themed";
 
 const { Navigator } = createBottomTabNavigator();
 export const BottomTabs = withLayoutContext(Navigator);
@@ -41,7 +42,11 @@ function ProtectedWorkerLayout() {
           backgroundColor: theme.colors.pageBackground,
           borderTopColor: theme.colors.borderColor,
         },
-        tabBarLabelStyle: { fontSize: 12, fontWeight: "600" },
+        tabBarLabel: ({ color, children }) => (
+          <Text style={{ color, fontSize: 11, marginBottom: 2 }} fontType="regular">
+            {children}
+          </Text>
+        ),
       }}
     >
       <BottomTabs.Screen

@@ -18,6 +18,7 @@ export interface LocationEvent {
   lat: number;
   lng: number;
   timestamp: string; // ISO string
+  type: string;
 }
 
 interface UseMapGeoJSONProps {
@@ -30,9 +31,30 @@ interface UseMapGeoJSONResult {
   assignmentPointsGeoJSON: FeatureCollection<Point>;
   assignmentSegmentsGeoJSON: FeatureCollection<LineString>;
   fullTrailGeoJSON: FeatureCollection<LineString>;
+  trackingDotsGeoJSON: FeatureCollection<Point>;
 }
 
 export const useMapGeoJSON = ({ assignments, locationEvents, reportDate }: UseMapGeoJSONProps): UseMapGeoJSONResult => {
+  const trackingDotsGeoJSON: FeatureCollection<Point> = useMemo(() => {
+    const features: Feature<Point>[] = locationEvents
+      .filter(event => event.type !== 'enter_geofence' && event.type !== 'exit_geofence')
+      .map(event => ({
+        type: 'Feature',
+        properties: {
+          type: event.type,
+          timestamp: event.timestamp
+        },
+        geometry: {
+          type: 'Point',
+          coordinates: [event.lng, event.lat],
+        },
+      }));
+    return {
+      type: 'FeatureCollection',
+      features: features,
+    };
+  }, [locationEvents]);
+
   const assignmentPointsGeoJSON: FeatureCollection<Point> = useMemo(() => {
     const features: Feature<Point>[] = assignments.map((assignment, index) => ({
       type: 'Feature',
@@ -122,5 +144,5 @@ export const useMapGeoJSON = ({ assignments, locationEvents, reportDate }: UseMa
     };
   }, [locationEvents]);
 
-  return { assignmentPointsGeoJSON, assignmentSegmentsGeoJSON, fullTrailGeoJSON };
+  return { assignmentPointsGeoJSON, assignmentSegmentsGeoJSON, fullTrailGeoJSON, trackingDotsGeoJSON };
 };

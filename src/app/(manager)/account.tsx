@@ -1,9 +1,7 @@
 import React, { useState, useEffect } from "react";
-import { View, StyleSheet, Switch, useWindowDimensions, Image, TouchableOpacity, TextInput, ScrollView, Alert, ActivityIndicator } from 'react-native';
+import { View, StyleSheet, useWindowDimensions, Image, TouchableOpacity, TextInput, ScrollView, Alert, ActivityIndicator, Platform } from 'react-native';
 import { Text } from "../../components/Themed";
-import * as LocalAuthentication from "expo-local-authentication";
 import * as ImagePicker from 'expo-image-picker';
-import { MediaType } from 'expo-image-picker';
 import Toast from 'react-native-toast-message';
 
 import { Card } from "../../components/Card";
@@ -11,23 +9,19 @@ import { Button } from "../../components/Button";
 import { theme } from "../../theme";
 import AnimatedScreen from "../../components/AnimatedScreen";
 import { useSession } from "../../context/AuthContext";
-import { useProfile } from "../../context/ProfileContext"; // NEW
-import { setStorageItemAsync, useStorageState } from "../../hooks/useStorageState";
+import { useProfile } from "../../context/ProfileContext";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { LanguageSelector } from "../../components/LanguageSelector";
-import { uploadAvatar, updateEmployeeProfile, getAvatarPublicUrl } from "../../services/profile"; // NEW
+import { uploadAvatar, updateEmployeeProfile } from "../../services/profile";
 
 export default function ManagerAccount() {
   const { width } = useWindowDimensions();
   const isLargeScreen = width >= 900;
   const { signOut, user } = useSession()!;
-  const { profile, isLoading: isProfileLoading, refetchProfile } = useProfile(); // NEW
+  const { profile, isLoading: isProfileLoading, refetchProfile } = useProfile();
   const router = useRouter();
 
-  const [isBiometricSupported, setIsBiometricSupported] = useState(false);
-  const [[, isBiometricEnabled], setIsBiometricEnabled] = useStorageState('biometricEnabled');
-  
   const [name, setName] = useState(profile?.full_name || '');
   const [phone, setPhone] = useState(profile?.phone || '');
   const [isSavingProfile, setIsSavingProfile] = useState(false);
@@ -39,31 +33,6 @@ export default function ManagerAccount() {
       setPhone(profile.phone || '');
     }
   }, [profile]);
-
-  useEffect(() => {
-    (async () => {
-      const compatible = await LocalAuthentication.hasHardwareAsync();
-      setIsBiometricSupported(compatible);
-    })();
-  }, []);
-
-  const handleBiometricSwitch = async (value: boolean) => {
-    if (value) {
-      const enrolled = await LocalAuthentication.isEnrolledAsync();
-      if (enrolled) {
-        const result = await LocalAuthentication.authenticateAsync();
-        if (result.success) {
-          await setStorageItemAsync('biometricUser', JSON.stringify({ email: user?.email }));
-          setIsBiometricEnabled('true');
-        }
-      } else {
-        alert("No biometrics are enrolled on this device.");
-      }
-    } else {
-      await setStorageItemAsync('biometricUser', null);
-      setIsBiometricEnabled(null);
-    }
-  };
 
   const handleImagePickAndUpload = async () => {
     if (!user?.id) {
@@ -89,14 +58,9 @@ export default function ManagerAccount() {
       try {
         const localUri = result.assets[0].uri;
         const storagePath = await uploadAvatar(user.id, localUri);
-        
-        // Update the employee's avatar_url in the database
         await updateEmployeeProfile(user.id, { avatar_url: storagePath });
-        
-        // Refresh the profile data to update the UI
         await refetchProfile();
         Toast.show({ type: 'success', text1: 'Avatar Updated' });
-
       } catch (error: any) {
         console.error("Error uploading avatar:", error);
         Alert.alert("Upload Failed", error.message || "Failed to upload avatar.");
@@ -129,8 +93,6 @@ export default function ManagerAccount() {
     }
   };
 
-  const layoutStyle = isLargeScreen ? styles.desktopLayout : styles.mobileLayout;
-
   if (isProfileLoading) {
     return (
       <AnimatedScreen>
@@ -142,106 +104,129 @@ export default function ManagerAccount() {
     );
   }
 
+  const roleLabel = profile?.role ? profile.role.toUpperCase() : 'MANAGER';
+
   return (
     <AnimatedScreen>
       <View style={styles.pageHeader}>
         <Text style={styles.pageTitle} fontType="bold">My Account</Text>
         <Text style={styles.pageSubtitle}>Manage your profile, settings, and subscription.</Text>
       </View>
-      <ScrollView style={styles.containerNoPadding} contentContainerStyle={styles.scrollContentContainer}>
+      <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
         
-        <View style={layoutStyle}>
+        <View style={isLargeScreen ? styles.desktopLayout : styles.mobileLayout}>
+            {/* Left Column */}
             <View style={styles.column}>
-                <Card style={styles.card}>
-                    <Text style={styles.cardTitle} fontType="bold">User Profile</Text>
+                <Card style={styles.sectionCard}>
+                    <View style={styles.cardHeaderRow}>
+                        <Text style={styles.sectionTitle} fontType="bold">User Profile</Text>
+                        <View style={styles.roleBadge}>
+                            <Text style={styles.roleBadgeText} fontType="bold">{roleLabel}</Text>
+                        </View>
+                    </View>
+
                     <View style={styles.profileHeader}>
-                        {profile?.public_avatar_url ? (
-                          <Image source={{ uri: profile.public_avatar_url }} style={styles.avatar} />
-                        ) : (
-                          <Ionicons name="person" size={80} color={theme.colors.bodyText} style={styles.avatarPlaceholder} />
-                        )}
-                        <View style={{flex: 1}}>
-                            <Text style={styles.name} fontType="bold">{profile?.full_name}</Text>
-                            <Text style={styles.email} fontType="regular">{user?.email}</Text>
-                            <TouchableOpacity style={styles.uploadButton} onPress={handleImagePickAndUpload} disabled={isUploadingAvatar}>
-                                {isUploadingAvatar ? (
-                                    <ActivityIndicator color={theme.colors.primary} />
-                                ) : (
-                                    <>
-                                        <Ionicons name="camera-outline" size={16} color={theme.colors.primary} />
-                                        <Text style={styles.uploadButtonText} fontType="medium">Upload Picture</Text>
-                                    </>
-                                )}
+                        <View style={styles.avatarWrapper}>
+                            {profile?.public_avatar_url ? (
+                              <Image source={{ uri: profile.public_avatar_url }} style={styles.avatar} />
+                            ) : (
+                              <View style={styles.avatarPlaceholder}>
+                                <Ionicons name="person" size={40} color={theme.colors.bodyText} />
+                              </View>
+                            )}
+                            <TouchableOpacity style={styles.editAvatarButton} onPress={handleImagePickAndUpload} disabled={isUploadingAvatar}>
+                                {isUploadingAvatar ? <ActivityIndicator size="small" color="white" /> : <Ionicons name="camera" size={16} color="white" />}
                             </TouchableOpacity>
                         </View>
-                    </View>
-                    <View style={styles.inputGroup}>
-                        <Text style={styles.label} fontType="regular">Full Name</Text>
-                        <TextInput 
-                            style={styles.input} 
-                            value={name} 
-                            onChangeText={setName} 
-                            placeholder="Full Name"
-                        />
-                    </View>
-                    <View style={styles.inputGroup}>
-                        <Text style={styles.label} fontType="regular">Phone Number</Text>
-                        <TextInput 
-                            style={styles.input} 
-                            value={phone} 
-                            onChangeText={setPhone} 
-                            keyboardType="phone-pad" 
-                            placeholder="Phone Number"
-                        />
-                    </View>
-                    <Button 
-                        title="Save Profile Changes" 
-                        onPress={handleSaveProfileChanges} 
-                        disabled={isSavingProfile || isProfileLoading || isUploadingAvatar} 
-                        style={styles.saveButton}
-                        textStyle={styles.saveButtonText}
-                    >
-                        {isSavingProfile ? <ActivityIndicator color="white" /> : <Text style={styles.saveButtonText} fontType="bold">Save Changes</Text>}
-                    </Button>
-                </Card>
-
-                <Card style={styles.card}>
-                    <Text style={styles.cardTitle} fontType="bold">Security</Text>
-                    {isBiometricSupported && (
-                        <View style={styles.settingRow}>
-                            <Ionicons name="finger-print-outline" size={24} color={theme.colors.bodyText} />
-                            <Text style={styles.settingLabel} fontType="regular">Enable Biometric Login</Text>
-                            <Switch value={isBiometricEnabled === 'true'} onValueChange={handleBiometricSwitch} trackColor={{false: theme.colors.borderColor, true: theme.colors.primary}}/>
+                        <View style={styles.profileMainInfo}>
+                            <Text style={styles.userName} fontType="bold">{profile?.full_name}</Text>
+                            <Text style={styles.userEmail} fontType="regular">{user?.email}</Text>
                         </View>
-                    )}
-                    <View style={styles.settingRow}>
-                         <Ionicons name="lock-closed-outline" size={24} color={theme.colors.bodyText} />
-                        <Text style={styles.settingLabel} fontType="regular">Change Password</Text>
-                        <Button title="Change" style={styles.inlineButton} textStyle={styles.inlineButtonText} fontType="regular"/>
+                    </View>
+
+                    <View style={styles.form}>
+                        <View style={styles.inputGroup}>
+                            <Text style={styles.label} fontType="bold">Full Name</Text>
+                            <TextInput 
+                                style={styles.input} 
+                                value={name} 
+                                onChangeText={setName} 
+                                placeholder="Enter your full name"
+                                placeholderTextColor={theme.colors.disabledText}
+                            />
+                        </View>
+                        <View style={styles.inputGroup}>
+                            <Text style={styles.label} fontType="bold">Phone Number</Text>
+                            <TextInput 
+                                style={styles.input} 
+                                value={phone} 
+                                onChangeText={setPhone} 
+                                keyboardType="phone-pad" 
+                                placeholder="Enter your phone number"
+                                placeholderTextColor={theme.colors.disabledText}
+                            />
+                        </View>
+                        <Button 
+                            title="Save Changes" 
+                            onPress={handleSaveProfileChanges} 
+                            disabled={isSavingProfile || isProfileLoading || isUploadingAvatar} 
+                            style={styles.primaryButton}
+                            textStyle={styles.primaryButtonText}
+                            loading={isSavingProfile}
+                        />
                     </View>
                 </Card>
 
+                <Card style={styles.sectionCard}>
+                    <Text style={styles.sectionTitle} fontType="bold">Security</Text>
+                    <View style={styles.settingItem}>
+                        <View style={styles.settingInfo}>
+                            <View style={styles.settingIcon}>
+                                <Ionicons name="lock-closed-outline" size={20} color={theme.colors.primary} />
+                            </View>
+                            <Text style={styles.settingText} fontType="medium">Password</Text>
+                        </View>
+                        <Button title="Update" style={styles.outlineButtonSmall} textStyle={styles.outlineButtonTextSmall} />
+                    </View>
+                </Card>
             </View>
 
+            {/* Right Column */}
             <View style={styles.column}>
-                <Card style={styles.card}>
-                    <Text style={styles.cardTitle} fontType="bold">Subscription Details</Text>
-                    <View style={styles.settingRow}>
-                        <Ionicons name="ribbon-outline" size={24} color={theme.colors.bodyText} />
-                        <Text style={styles.settingLabel} fontType="regular">Current Plan</Text>
-                        <Text style={styles.planText} fontType="bold">Pro Plan</Text>
+                <Card style={styles.sectionCard}>
+                    <Text style={styles.sectionTitle} fontType="bold">Subscription</Text>
+                    <View style={styles.statsGrid}>
+                        <View style={styles.statBox}>
+                            <Text style={styles.statValue} fontType="bold">Pro Plan</Text>
+                            <Text style={styles.statLabel}>Current Plan</Text>
+                        </View>
+                        <View style={styles.statBox}>
+                            <Text style={styles.statValue} fontType="bold">7 / 10</Text>
+                            <Text style={styles.statLabel}>Seats Used</Text>
+                        </View>
                     </View>
-                     <View style={styles.settingRow}>
-                        <Ionicons name="people-outline" size={24} color={theme.colors.bodyText} />
-                        <Text style={styles.planText} fontType="bold">7 / 10</Text>
+                    <Button 
+                        title="Manage Subscription" 
+                        onPress={() => router.push('/(manager)/subscription/manage-subscription')} 
+                        style={styles.outlineButton}
+                        textStyle={styles.outlineButtonText}
+                    />
+                </Card>
+
+                <Card style={styles.sectionCard}>
+                    <Text style={styles.sectionTitle} fontType="bold">Preferences</Text>
+                    <View style={styles.languageSection}>
+                        <Text style={styles.label} fontType="bold">Display Language</Text>
+                        <LanguageSelector />
                     </View>
-                    <Button title="Manage Subscription" onPress={() => router.push('/(manager)/subscription/manage-subscription')} style={{marginTop: theme.spacing(2)}} />
                 </Card>
-                <Card style={styles.card}>
-                    <Text style={styles.cardTitle} fontType="bold">Language</Text>
-                    <LanguageSelector />
-                </Card>
-                <Button title="Log Out" onPress={() => signOut()} style={styles.logoutButton} textStyle={{fontWeight: 'bold'}}/>
+
+                <Button 
+                    title="Log Out" 
+                    onPress={() => signOut()} 
+                    style={styles.logoutButton} 
+                    textStyle={styles.logoutButtonText}
+                />
             </View>
         </View>
       </ScrollView>
@@ -250,19 +235,27 @@ export default function ManagerAccount() {
 }
 
 const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: theme.colors.pageBackground,
+  },
+  scrollContent: {
+    padding: theme.spacing(3),
+  },
   centered: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: theme.colors.pageBackground,
   },
-  containerNoPadding: { flex: 1, backgroundColor: theme.colors.pageBackground },
-  scrollContentContainer: { padding: theme.spacing(3) },
+  loadingText: {
+    marginTop: theme.spacing(2),
+    color: theme.colors.bodyText,
+  },
   pageHeader: {
     paddingVertical: theme.spacing(4),
-    paddingHorizontal: theme.spacing(2),
-    backgroundColor: theme.colors.background,
-    alignItems: 'flex-start',
+    paddingHorizontal: theme.spacing(3),
+    backgroundColor: theme.colors.pageBackground,
   },
   pageTitle: {
     fontSize: theme.fontSizes.xl,
@@ -270,41 +263,214 @@ const styles = StyleSheet.create({
     marginBottom: theme.spacing(0.5),
   },
   pageSubtitle: {
-    fontSize: theme.fontSizes.lg,
-    color: theme.colors.bodyText,
-  },
-  loadingText: {
-    marginTop: theme.spacing(2),
     fontSize: theme.fontSizes.md,
     color: theme.colors.bodyText,
   },
-  desktopLayout: { flexDirection: 'row' },
-  mobileLayout: { flexDirection: 'column' },
-  column: { flex: 1, marginHorizontal: theme.spacing(1) },
-  card: { marginBottom: theme.spacing(2) },
-  cardTitle: { fontSize: theme.fontSizes.lg, color: theme.colors.headingText, marginBottom: theme.spacing(2) },
-  profileHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: theme.spacing(2) },
-  avatar: { width: 80, height: 80, borderRadius: 40, marginRight: theme.spacing(2) },
+  desktopLayout: {
+    flexDirection: 'row',
+    gap: theme.spacing(2),
+  },
+  mobileLayout: {
+    flexDirection: 'column',
+  },
+  column: {
+    flex: 1,
+  },
+  sectionCard: {
+    marginBottom: theme.spacing(2),
+    padding: theme.spacing(3),
+    borderRadius: theme.radius.xl,
+    backgroundColor: theme.colors.cardBackground,
+    borderWidth: 1,
+    borderColor: theme.colors.borderColor,
+  },
+  cardHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: theme.spacing(3),
+  },
+  sectionTitle: {
+    fontSize: theme.fontSizes.lg,
+    color: theme.colors.headingText,
+    marginBottom: theme.spacing(2),
+  },
+  roleBadge: {
+    backgroundColor: theme.colors.primary + '15',
+    paddingHorizontal: theme.spacing(1.5),
+    paddingVertical: theme.spacing(0.5),
+    borderRadius: theme.radius.pill,
+  },
+  roleBadgeText: {
+    fontSize: 10,
+    color: theme.colors.primary,
+    letterSpacing: 1,
+  },
+  profileHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: theme.spacing(4),
+  },
+  avatarWrapper: {
+    position: 'relative',
+    marginRight: theme.spacing(3),
+  },
+  avatar: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    borderWidth: 3,
+    borderColor: 'white',
+  },
   avatarPlaceholder: {
     width: 80,
     height: 80,
-    marginRight: theme.spacing(2),
-    textAlign: 'center',
-    lineHeight: 80,
+    borderRadius: 40,
+    backgroundColor: theme.colors.pageBackground,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 3,
+    borderColor: 'white',
   },
-  name: { fontSize: theme.fontSizes.xl, color: theme.colors.headingText },
-  email: { fontSize: theme.fontSizes.sm, color: theme.colors.bodyText, marginBottom: theme.spacing(1) },
-  uploadButton: { flexDirection: 'row', alignItems: 'center', backgroundColor: theme.colors.pageBackground, paddingVertical: 4, paddingHorizontal: 8, borderRadius: theme.radius.md, alignSelf: 'flex-start' },
-  uploadButtonText: { color: theme.colors.primary, marginLeft: 4 },
-  inputGroup: { marginBottom: theme.spacing(1.5) },
-  label: { fontSize: theme.fontSizes.sm, color: theme.colors.bodyText, marginBottom: 4 },
-  input: { height: 45, borderColor: theme.colors.borderColor, borderWidth: 1, borderRadius: theme.radius.md, paddingHorizontal: 10, backgroundColor: theme.colors.pageBackground, fontSize: 16 },
-  settingRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: theme.spacing(1) },
-  settingLabel: { flex: 1, fontSize: theme.fontSizes.md, marginLeft: theme.spacing(1.5) },
-  inlineButton: { paddingHorizontal: 16, paddingVertical: 8, height: 'auto' },
-  inlineButtonText: { fontSize: theme.fontSizes.sm },
-  planText: { fontSize: theme.fontSizes.md },
-  logoutButton: { backgroundColor: theme.colors.danger, marginTop: theme.spacing(1) },
-  saveButton: { backgroundColor: theme.colors.primary, marginTop: theme.spacing(2) },
-  saveButtonText: { color: 'white' }
+  editAvatarButton: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    backgroundColor: theme.colors.primary,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: 'white',
+  },
+  profileMainInfo: {
+    flex: 1,
+  },
+  userName: {
+    fontSize: 22,
+    color: theme.colors.headingText,
+  },
+  userEmail: {
+    fontSize: theme.fontSizes.sm,
+    color: theme.colors.bodyText,
+    marginTop: 2,
+  },
+  form: {
+    gap: theme.spacing(2),
+  },
+  inputGroup: {
+    marginBottom: theme.spacing(1),
+  },
+  label: {
+    fontSize: theme.fontSizes.xs,
+    color: theme.colors.bodyText,
+    marginBottom: theme.spacing(1),
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  input: {
+    height: 48,
+    backgroundColor: theme.colors.pageBackground,
+    borderRadius: theme.radius.md,
+    paddingHorizontal: theme.spacing(2),
+    borderWidth: 1,
+    borderColor: theme.colors.borderColor,
+    fontSize: 16,
+    color: theme.colors.headingText,
+  },
+  settingItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: theme.spacing(1),
+  },
+  settingInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing(1.5),
+  },
+  settingIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: theme.colors.primary + '10',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  settingText: {
+    fontSize: theme.fontSizes.md,
+    color: theme.colors.headingText,
+  },
+  statsGrid: {
+    flexDirection: 'row',
+    gap: theme.spacing(2),
+    marginBottom: theme.spacing(3),
+  },
+  statBox: {
+    flex: 1,
+    backgroundColor: theme.colors.pageBackground,
+    padding: theme.spacing(2),
+    borderRadius: theme.radius.lg,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: theme.colors.borderColor,
+  },
+  statValue: {
+    fontSize: theme.fontSizes.lg,
+    color: theme.colors.primary,
+  },
+  statLabel: {
+    fontSize: theme.fontSizes.xs,
+    color: theme.colors.bodyText,
+    marginTop: 2,
+  },
+  languageSection: {
+    gap: theme.spacing(1),
+  },
+  primaryButton: {
+    height: 52,
+    backgroundColor: theme.colors.primary,
+    borderRadius: theme.radius.lg,
+    marginTop: theme.spacing(2),
+  },
+  primaryButtonText: {
+    color: 'white',
+    fontSize: 16,
+  },
+  outlineButton: {
+    height: 48,
+    backgroundColor: 'transparent',
+    borderWidth: 1,
+    borderColor: theme.colors.borderColor,
+    borderRadius: theme.radius.lg,
+  },
+  outlineButtonText: {
+    color: theme.colors.bodyText,
+    fontSize: 14,
+  },
+  outlineButtonSmall: {
+    height: 36,
+    paddingHorizontal: theme.spacing(2),
+    backgroundColor: 'transparent',
+    borderWidth: 1,
+    borderColor: theme.colors.borderColor,
+    borderRadius: theme.radius.md,
+  },
+  outlineButtonTextSmall: {
+    color: theme.colors.bodyText,
+    fontSize: 12,
+  },
+  logoutButton: {
+    height: 56,
+    backgroundColor: theme.colors.danger,
+    borderRadius: theme.radius.lg,
+    marginTop: theme.spacing(2),
+  },
+  logoutButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
 });

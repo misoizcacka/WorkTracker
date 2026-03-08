@@ -8,6 +8,7 @@ import { useSession } from '~/context/AuthContext';
 import { EmployeesContext, EmployeesContextType } from '~/context/EmployeesContext';
 import { theme } from '~/theme';
 import CrossPlatformDatePicker from '~/components/CrossPlatformDatePicker';
+import UserAvatar from '~/components/UserAvatar';
 import { supabase } from '~/utils/supabase'; // Import supabase
 
 import { Employee } from '~/types'; // Assuming Employee type is accessible
@@ -92,11 +93,7 @@ const LocationReplayWorkerSelector = ({ onSelectionChange, initialWorkerId, init
         return (
             <TouchableOpacity onPress={() => handleWorkerPress(item)} style={styles.listItem}>
                 <View style={[styles.itemContent, isSelected && styles.selectedItem]}>
-                    {item.avatar_url ? (
-                        <Image source={{ uri: item.avatar_url }} style={styles.avatar} />
-                    ) : (
-                        <Ionicons name="person" size={40} color={iconColor} style={styles.avatarPlaceholder} />
-                    )}
+                    <UserAvatar avatarUrl={item.avatar_url} size={40} style={styles.avatar} />
                     <View style={styles.itemInfo}>
                         <Text style={styles.itemName} fontType="medium">{item.full_name}</Text>
                         {/* Assuming worker object from RPC has an email, if needed */}

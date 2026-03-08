@@ -2,7 +2,6 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { View, StyleSheet, ScrollView, ActivityIndicator, Image, Platform } from 'react-native';
 import moment from 'moment';
 
-import { Card } from '~/components/Card';
 import { Text } from '~/components/Themed';
 import { theme } from '~/theme';
 import { supabase } from '~/utils/supabase';
@@ -57,63 +56,125 @@ const WorkerDailyDetailsPanel = ({ workerId, date }: WorkerDailyDetailsPanelProp
   const [loadingSummary, setLoadingSummary] = useState(false);
   const [mapRegion, setMapRegion] = useState<Region | undefined>(undefined);
   const [mapZoom, setMapZoom] = useState<number | undefined>(undefined);
+  const [projects, setProjects] = useState<any[]>([]);
+  const [commonLocations, setCommonLocations] = useState<any[]>([]);
 
   const locationEvents: LocationEvent[] = useMemo(() => {
     return events.map(event => ({
       lat: event.latitude,
       lng: event.longitude,
       timestamp: event.event_timestamp,
+      type: event.event_type
     }));
   }, [events]);
 
-  const assignments: Assignment[] = useMemo(() => {
-    interface PendingSession {
+  const assignments: any[] = useMemo(() => {
+    interface Visit {
+      startTime: string;
+      endTime: string;
+      isStillThere?: boolean;
+    }
+    
+    interface GroupedProject {
       id: string;
       name: string;
       address: string;
       lat: number;
       lng: number;
-      startTime: string;
+      visits: Visit[];
+      totalDurationMinutes: number;
     }
     
-    const finalizedAssignments: Assignment[] = [];
-    const activeSessions: Map<string, PendingSession> = new Map();
+    const projectGroups: Map<string, GroupedProject> = new Map();
+    const activeVisits: Map<string, string> = new Map(); // name -> startTime
+
+    // Helper to find project/location details
+    const getSiteDetails = (name: string) => {
+      const p = projects.find(p => p.name === name);
+      if (p) return { lat: p.latitude, lng: p.longitude, address: p.address || '', id: p.id };
+      const cl = commonLocations.find(l => l.name === name);
+      if (cl) return { lat: Number(cl.latitude), lng: Number(cl.longitude), address: cl.address || '', id: cl.id };
+      return null;
+    };
 
     events.forEach((event) => {
       if (event.event_type === 'enter_geofence') {
-        activeSessions.set(event.ref_name, {
-          id: event.event_id,
-          name: event.ref_name,
-          address: event.ref_address,
-          lat: event.latitude,
-          lng: event.longitude,
-          startTime: event.event_timestamp
-        });
+        activeVisits.set(event.ref_name, event.event_timestamp);
       } else if (event.event_type === 'exit_geofence') {
-        const session = activeSessions.get(event.ref_name);
-        if (session) {
-          finalizedAssignments.push({
-            ...session,
-            endTime: event.event_timestamp,
-            sortKey: finalizedAssignments.length
-          });
-          activeSessions.delete(event.ref_name);
+        const startTime = activeVisits.get(event.ref_name);
+        if (startTime) {
+          const details = getSiteDetails(event.ref_name);
+          if (details) {
+            const existing = projectGroups.get(event.ref_name);
+            const visit: Visit = { startTime, endTime: event.event_timestamp };
+            const duration = moment(visit.endTime).diff(moment(visit.startTime), 'minutes');
+            
+            if (existing) {
+              existing.visits.push(visit);
+              existing.totalDurationMinutes += duration;
+            } else {
+              projectGroups.set(event.ref_name, {
+                ...details,
+                name: event.ref_name,
+                visits: [visit],
+                totalDurationMinutes: duration
+              });
+            }
+          }
+          activeVisits.delete(event.ref_name);
         }
       }
     });
 
-    activeSessions.forEach((session) => {
-      finalizedAssignments.push({
-        ...session,
-        endTime: moment(date).endOf('day').toISOString(),
-        sortKey: finalizedAssignments.length
-      });
+    // Handle ongoing visits
+    activeVisits.forEach((startTime, name) => {
+      const details = getSiteDetails(name);
+      if (details) {
+        const isToday = moment(date).isSame(moment(), 'day');
+        const endTime = isToday ? moment().toISOString() : moment(date).endOf('day').toISOString();
+        const visit: Visit = { startTime, endTime, isStillThere: isToday };
+        const duration = moment(visit.endTime).diff(moment(visit.startTime), 'minutes');
+        
+        const existing = projectGroups.get(name);
+        if (existing) {
+          existing.visits.push(visit);
+          existing.totalDurationMinutes += duration;
+        } else {
+          projectGroups.set(name, {
+            ...details,
+            name,
+            visits: [visit],
+            totalDurationMinutes: duration
+          });
+        }
+      }
     });
 
-    return finalizedAssignments.sort((a, b) => moment(a.startTime).valueOf() - moment(b.startTime).valueOf());
-  }, [events, date]);
+    // Convert to array and sort by first visit start time
+    return Array.from(projectGroups.values()).sort((a, b) => 
+      moment(a.visits[0].startTime).valueOf() - moment(b.visits[0].startTime).valueOf()
+    );
+  }, [events, date, projects, commonLocations]);
 
-  const { assignmentPointsGeoJSON, assignmentSegmentsGeoJSON, fullTrailGeoJSON } = useMapGeoJSON({ assignments, locationEvents, reportDate: date });
+  // Adapt for useMapGeoJSON
+  const flatAssignments: Assignment[] = useMemo(() => {
+    return assignments.map((a, idx) => ({
+      id: a.id,
+      name: a.name,
+      address: a.address,
+      lat: a.lat,
+      lng: a.lng,
+      startTime: a.visits[0].startTime,
+      endTime: a.visits[a.visits.length - 1].endTime,
+      sortKey: idx
+    }));
+  }, [assignments]);
+
+  const { assignmentPointsGeoJSON, assignmentSegmentsGeoJSON, fullTrailGeoJSON, trackingDotsGeoJSON } = useMapGeoJSON({ 
+    assignments: flatAssignments, 
+    locationEvents, 
+    reportDate: date 
+  });
 
   const calculateKilometers = useCallback((eventList: DailyEvent[]) => {
     let totalKm = 0;
@@ -130,26 +191,34 @@ const WorkerDailyDetailsPanel = ({ workerId, date }: WorkerDailyDetailsPanelProp
 
     const fetchDetails = async () => {
       setLoading(true);
-      const { data, error } = await supabase.rpc('get_worker_daily_details', {
-        worker_id_param: workerId,
-        report_date: moment(date).format('YYYY-MM-DD'),
-      });
+      
+      const [projRes, locRes, detailsRes] = await Promise.all([
+        supabase.from('projects').select('*'),
+        supabase.from('common_locations').select('*'),
+        supabase.rpc('get_worker_daily_details', {
+          worker_id_param: workerId,
+          report_date: moment(date).format('YYYY-MM-DD'),
+        })
+      ]);
 
-      if (error) {
-        console.error('Error fetching daily details:', error);
+      if (projRes.data) setProjects(projRes.data);
+      if (locRes.data) setCommonLocations(locRes.data);
+
+      if (detailsRes.error) {
+        console.error('Error fetching daily details:', detailsRes.error);
         setEvents([]);
       } else {
-        setEvents(data || []);
-        if (data && data.length > 0) {
+        setEvents(detailsRes.data || []);
+        if (detailsRes.data && detailsRes.data.length > 0) {
             setMapRegion({
-                latitude: data[0].latitude,
-                longitude: data[0].longitude,
-                latitudeDelta: 0.0922,
-                longitudeDelta: 0.0421,
+                latitude: detailsRes.data[0].latitude,
+                longitude: detailsRes.data[0].longitude,
+                latitudeDelta: 0.05,
+                longitudeDelta: 0.05,
             });
             setDailySummary(prev => (prev ? ({
                 ...prev,
-                approx_travelled_km: calculateKilometers(data),
+                approx_travelled_km: calculateKilometers(detailsRes.data),
             }) : null));
         }
       }
@@ -187,20 +256,6 @@ const WorkerDailyDetailsPanel = ({ workerId, date }: WorkerDailyDetailsPanelProp
     fetchSummary();
   }, [workerId, date, calculateKilometers]);
 
-  useEffect(() => {
-    if (!dailySummary || !date || (loading || loadingSummary)) return;
-
-    if (!mapRegion && events.length > 0) {
-        setMapRegion({
-            latitude: events[0].latitude,
-            longitude: events[0].longitude,
-            latitudeDelta: 0.0922,
-            longitudeDelta: 0.0421,
-        });
-        setMapZoom(12);
-    }
-  }, [dailySummary, events, date, loading, loadingSummary, mapRegion]);
-
   const renderEvent = (event: DailyEvent) => {
     const isEnter = event.event_type === 'enter_geofence';
     return (
@@ -215,7 +270,7 @@ const WorkerDailyDetailsPanel = ({ workerId, date }: WorkerDailyDetailsPanelProp
                 {isEnter ? "Entered" : "Exited"} {event.ref_name}
             </Text>
             <Text style={styles.eventSubtext} fontType="regular">
-                {moment(event.event_timestamp).format('HH:mm:ss')}
+                {moment(event.event_timestamp).format('hh:mm:ss A')}
             </Text>
         </View>
       </View>
@@ -276,8 +331,8 @@ const WorkerDailyDetailsPanel = ({ workerId, date }: WorkerDailyDetailsPanelProp
             <View style={styles.statDivider} />
             
             <View style={styles.statBox}>
-                <Text style={styles.statLabel} fontType="bold">Sessions</Text>
-                <Text style={styles.statValue} fontType="bold">{dailySummary.total_work_sessions}</Text>
+                <Text style={styles.statLabel} fontType="bold">Total Events</Text>
+                <Text style={styles.statValue} fontType="bold">{events.length}</Text>
             </View>
         </View>
       )}
@@ -307,7 +362,6 @@ const WorkerDailyDetailsPanel = ({ workerId, date }: WorkerDailyDetailsPanelProp
                 <View style={styles.mapViewWrapper}>
                     <DailyWorkerMap
                         style={{ flex: 1 }}
-                        region={mapRegion}
                         zoom={mapZoom}
                         onWebZoomChange={setMapZoom}
                         assignments={assignments}
@@ -316,6 +370,7 @@ const WorkerDailyDetailsPanel = ({ workerId, date }: WorkerDailyDetailsPanelProp
                         assignmentPointsGeoJSON={assignmentPointsGeoJSON}
                         assignmentSegmentsGeoJSON={assignmentSegmentsGeoJSON}
                         fullTrailGeoJSON={fullTrailGeoJSON}
+                        trackingDotsGeoJSON={trackingDotsGeoJSON}
                     />
                 </View>
             </View>
@@ -408,6 +463,11 @@ const styles = StyleSheet.create({
     contentLayout: {
         flexDirection: 'row',
         gap: theme.spacing(3),
+        ...Platform.select({
+            native: {
+                flexDirection: 'column',
+            }
+        })
     },
     leftColumn: {
         flex: 1.2,

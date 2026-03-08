@@ -12,6 +12,7 @@ import { WorkSession, Employee } from '~/types';
 import ThemedInput from '~/components/ThemedInput';
 import { Ionicons } from '@expo/vector-icons';
 import { Button } from '~/components/Button';
+import UserAvatar from '~/components/UserAvatar';
 
 
 const CorrectionsPage = () => {
@@ -26,9 +27,10 @@ const CorrectionsPage = () => {
     
     const [isModalVisible, setModalVisible] = useState(false);
     const [editingSession, setEditingSession] = useState<WorkSession | null>(null);
-    const [editStartTime, setEditStartTime] = useState('');
-    const [editEndTime, setEditEndTime] = useState('');
     const [editBreak, setEditBreak] = useState('');
+    const [editCorrection, setEditCorrection] = useState('');
+    const [isSaving, setIsSaving] = useState(false);
+    const [checkOutLoading, setCheckOutLoading] = useState<string | null>(null);
 
     const handlePrevMonth = () => {
         const newDate = moment({ year: selectedYear, month: selectedMonth - 1 }).subtract(1, 'month');
@@ -77,48 +79,68 @@ const CorrectionsPage = () => {
     };
 
     useEffect(() => {
-        // Fetch sessions automatically when selectedWorker, month, or year changes
         fetchSessions();
     }, [selectedWorker, selectedMonth, selectedYear]);
 
     const openEditModal = (session: WorkSession) => {
         setEditingSession(session);
-        setEditStartTime(moment(session.start_time).format('HH:mm'));
-        setEditEndTime(session.end_time ? moment(session.end_time).format('HH:mm') : '');
         setEditBreak((session.total_break_minutes || 0).toString());
+        setEditCorrection((session.correction_minutes || 0).toString());
         setModalVisible(true);
+    };
+
+    const handleCheckOut = async (session: WorkSession) => {
+        Alert.alert(
+            "Remote Check Out",
+            "Are you sure you want to end this worker's session right now?",
+            [
+                { text: "Cancel", style: "cancel" },
+                { 
+                    text: "Check Out", 
+                    onPress: async () => {
+                        setCheckOutLoading(session.id);
+                        try {
+                            const { error } = await supabase
+                                .from('work_sessions')
+                                .update({ end_time: new Date().toISOString() })
+                                .eq('id', session.id);
+
+                            if (error) throw error;
+                            Alert.alert("Success", "Worker has been checked out.");
+                            fetchSessions();
+                        } catch (err: any) {
+                            Alert.alert("Error", err.message);
+                        } finally {
+                            setCheckOutLoading(null);
+                        }
+                    }
+                }
+            ]
+        );
     };
 
     const handleSaveChanges = async () => {
         if (!editingSession) return;
+        setIsSaving(true);
 
-        const sessionDate = moment(editingSession.start_time).format('YYYY-MM-DD'); // Get original session date
-        
-        const startDateTime = moment(sessionDate).startOf('day').set({
-            hour: parseInt(editStartTime.split(':')[0]),
-            minute: parseInt(editStartTime.split(':')[1]),
-        }).toISOString();
-        
-        const endDateTime = editEndTime ? moment(sessionDate).startOf('day').set({
-            hour: parseInt(editEndTime.split(':')[0]),
-            minute: parseInt(editEndTime.split(':')[1]),
-        }).toISOString() : null;
+        try {
+            const { error } = await supabase
+                .from('work_sessions')
+                .update({
+                    total_break_minutes: parseInt(editBreak) || 0,
+                    correction_minutes: parseInt(editCorrection) || 0,
+                })
+                .eq('id', editingSession.id);
 
-        const { error } = await supabase
-            .from('work_sessions')
-            .update({
-                start_time: startDateTime,
-                end_time: endDateTime,
-                total_break_minutes: parseInt(editBreak) || 0,
-            })
-            .eq('id', editingSession.id);
-
-        if (error) {
-            Alert.alert('Error updating session', error.message);
-        } else {
+            if (error) throw error;
+            
             Alert.alert('Success', 'Work session updated.');
             setModalVisible(false);
-            fetchSessions(); // Refresh sessions
+            fetchSessions();
+        } catch (error: any) {
+            Alert.alert('Error updating session', error.message);
+        } finally {
+            setIsSaving(false);
         }
     };
 
@@ -126,22 +148,16 @@ const CorrectionsPage = () => {
         const isSelected = selectedWorker?.id === item.id;
         const itemNameColor = isSelected ? theme.colors.primary : styles.itemName.color;
         const itemSubtitleColor = isSelected ? theme.colors.bodyText : styles.itemSubtitle.color;
-        const iconColor = isSelected ? theme.colors.primary : theme.colors.bodyText;
-        const checkmarkColor = isSelected ? theme.colors.primary : theme.colors.primary;
 
         return (
             <TouchableOpacity onPress={() => setSelectedWorker(item)} style={styles.listItem}>
                 <View style={[styles.itemContent, isSelected && styles.selectedItem]}>
-                    {item.avatar_url ? (
-                        <Image source={{ uri: item.avatar_url }} style={styles.avatar} />
-                    ) : (
-                        <Ionicons name="person" size={40} color={iconColor} style={styles.avatarPlaceholder} />
-                    )}
+                    <UserAvatar avatarUrl={item.avatar_url} size={40} style={styles.avatar} />
                     <View style={styles.itemInfo}>
                         <Text style={[styles.itemName, { color: itemNameColor }]} fontType="medium">{item.full_name}</Text>
                         <Text style={[styles.itemSubtitle, { color: itemSubtitleColor }]} fontType="regular">{item.email}</Text>
                     </View>
-                    {isSelected && <Ionicons name="checkmark-circle" size={20} color={checkmarkColor} />}
+                    {isSelected && <Ionicons name="checkmark-circle" size={20} color={theme.colors.primary} />}
                 </View>
             </TouchableOpacity>
         );
@@ -150,10 +166,9 @@ const CorrectionsPage = () => {
     const SessionTableHeader = () => (
         <View style={styles.tableHeaderRow}>
             <Text style={styles.tableHeaderCell} fontType="bold">Date</Text>
-            <Text style={styles.tableHeaderCell} fontType="bold">Start</Text>
-            <Text style={styles.tableHeaderCell} fontType="bold">End</Text>
-            <Text style={styles.tableHeaderCell} fontType="bold">Break</Text>
-            <Text style={styles.tableHeaderCellActions}></Text> {/* Placeholder for Edit button */}
+            <Text style={styles.tableHeaderCell} fontType="bold">Time</Text>
+            <Text style={styles.tableHeaderCell} fontType="bold">Break/Corr</Text>
+            <Text style={styles.tableHeaderCellActions}></Text>
         </View>
     );
 
@@ -166,7 +181,6 @@ const CorrectionsPage = () => {
             <View style={styles.mainContentCard}>
                 
                 <View style={styles.mainLayout}>
-                    {/* Left Panel: Worker List */}
                     <View style={styles.leftPanel}>
                         <Text style={styles.panelTitle} fontType="medium">Workers</Text>
                         <TextInput
@@ -184,7 +198,6 @@ const CorrectionsPage = () => {
                         />
                     </View>
 
-                    {/* Right Panel: Work Sessions and Month Selector */}
                     <View style={styles.rightPanel}>
                         <View style={styles.sessionHeaderControls}>
                             <View style={styles.monthNavigator}>
@@ -215,19 +228,50 @@ const CorrectionsPage = () => {
                                 <>
                                     <SessionTableHeader />
                                     <ScrollView contentContainerStyle={styles.sessionsListContent}>
-                                        {sessions.map((session: WorkSession) => (
-                                            <View key={session.id} style={styles.tableRow}>
-                                                <Text style={styles.tableCellText} fontType="regular">{moment(session.start_time).format('MMM D, YYYY')}</Text>
-                                                <Text style={styles.tableCellText} fontType="regular">{moment(session.start_time).format('HH:mm')}</Text>
-                                                <Text style={styles.tableCellText} fontType="regular">{session.end_time ? moment(session.end_time).format('HH:mm') : 'N/A'}</Text>
-                                                <Text style={styles.tableCellText} fontType="regular">{session.total_break_minutes} min</Text>
-                                                <View style={styles.tableCellActions}>
-                                                    <TouchableOpacity onPress={() => openEditModal(session)}>
-                                                        <Ionicons name="pencil-outline" size={24} color={theme.colors.primary} />
-                                                    </TouchableOpacity>
+                                        {sessions.map((session: WorkSession) => {
+                                            const isActive = !session.end_time;
+                                            return (
+                                                <View key={session.id} style={styles.tableRow}>
+                                                    <View style={styles.tableCell}>
+                                                        <Text style={styles.tableCellTextMain} fontType="medium">{moment(session.start_time).format('MMM D, YYYY')}</Text>
+                                                    </View>
+                                                    <View style={styles.tableCell}>
+                                                        <Text style={styles.tableCellTextSmall} fontType="regular">
+                                                            {moment(session.start_time).format('HH:mm')} - {session.end_time ? moment(session.end_time).format('HH:mm') : '...'}
+                                                        </Text>
+                                                        {isActive && (
+                                                            <View style={styles.activeBadge}>
+                                                                <Text style={styles.activeBadgeText} fontType="bold">ACTIVE</Text>
+                                                            </View>
+                                                        )}
+                                                    </View>
+                                                    <View style={styles.tableCell}>
+                                                        <Text style={styles.tableCellTextSmall} fontType="regular">Break: {session.total_break_minutes}m</Text>
+                                                        <Text style={[styles.tableCellTextSmall, { color: session.correction_minutes >= 0 ? theme.colors.success : theme.colors.danger }]} fontType="medium">
+                                                            Corr: {session.correction_minutes >= 0 ? '+' : ''}{session.correction_minutes}m
+                                                        </Text>
+                                                    </View>
+                                                    <View style={styles.tableCellActions}>
+                                                        {isActive ? (
+                                                            <TouchableOpacity onPress={() => handleCheckOut(session)} disabled={!!checkOutLoading}>
+                                                                {checkOutLoading === session.id ? (
+                                                                    <ActivityIndicator size="small" color={theme.colors.danger} />
+                                                                ) : (
+                                                                    <View style={styles.checkOutButton}>
+                                                                        <Ionicons name="log-out-outline" size={20} color="white" />
+                                                                        <Text style={styles.checkOutButtonText} fontType="bold">END</Text>
+                                                                    </View>
+                                                                )}
+                                                            </TouchableOpacity>
+                                                        ) : (
+                                                            <TouchableOpacity onPress={() => openEditModal(session)} style={styles.actionButton}>
+                                                                <Ionicons name="pencil-outline" size={22} color={theme.colors.primary} />
+                                                            </TouchableOpacity>
+                                                        )}
+                                                    </View>
                                                 </View>
-                                            </View>
-                                        ))}
+                                            );
+                                        })}
                                     </ScrollView>
                                 </>
                             )}
@@ -237,56 +281,67 @@ const CorrectionsPage = () => {
 
                 {/* Modal for editing session */}
                 <Modal
-                    animationType="slide"
+                    animationType="fade"
                     transparent={true}
                     visible={isModalVisible}
                     onRequestClose={() => setModalVisible(false)}
                 >
                     <View style={styles.centeredView}>
-                        <View style={styles.modalView}>
-                            <TouchableOpacity style={styles.closeButton} onPress={() => setModalVisible(false)}>
-                                <Ionicons name="close-circle-outline" size={30} color={theme.colors.bodyText} />
-                            </TouchableOpacity>
-                            <Text style={styles.modalText} fontType="bold">Edit Session</Text>
+                        <Card style={styles.modalCard}>
+                            <View style={styles.modalHeader}>
+                                <Text style={styles.modalTitle} fontType="bold">Adjust Work Session</Text>
+                                <TouchableOpacity onPress={() => setModalVisible(false)}>
+                                    <Ionicons name="close" size={24} color={theme.colors.bodyText} />
+                                </TouchableOpacity>
+                            </View>
+
+                            <View style={styles.sessionSummary}>
+                                <View style={styles.summaryItem}>
+                                    <Text style={styles.summaryLabel} fontType="medium">Original Time</Text>
+                                    <Text style={styles.summaryValue} fontType="bold">
+                                        {moment(editingSession?.start_time).format('HH:mm')} - {editingSession?.end_time ? moment(editingSession?.end_time).format('HH:mm') : 'Active'}
+                                    </Text>
+                                </View>
+                            </View>
                             
                             <View style={styles.fieldRow}>
-                                <Text style={styles.label} fontType="medium">Start Time</Text>
-                                <ThemedInput
-                                    style={styles.input}
-                                    value={editStartTime}
-                                    onChangeText={setEditStartTime}
-                                    placeholder="HH:mm"
-                                    placeholderTextColor="#999"
-                                />
+                                <View style={styles.fieldContainer}>
+                                    <Text style={styles.label} fontType="bold">Break Minutes</Text>
+                                    <ThemedInput
+                                        style={styles.modalInput}
+                                        value={editBreak}
+                                        onChangeText={setEditBreak}
+                                        keyboardType="numeric"
+                                        placeholder="e.g. 30"
+                                    />
+                                    <Text style={styles.fieldHint}>Time excluded from work duration.</Text>
+                                </View>
                             </View>
-                            <View style={styles.fieldRow}>
-                                <Text style={styles.label} fontType="medium">End Time</Text>
-                                <ThemedInput
-                                    style={styles.input}
-                                    value={editEndTime}
-                                    onChangeText={setEditEndTime}
-                                    placeholder="HH:mm (Leave empty if active)"
-                                    placeholderTextColor="#999"
-                                />
-                            </View>
-                            <View style={styles.fieldRow}>
-                                <Text style={styles.label} fontType="medium">Break minutes</Text>
-                                <ThemedInput
-                                    style={styles.input}
-                                    value={editBreak}
-                                    onChangeText={setEditBreak}
-                                    keyboardType="numeric"
-                                    placeholder="Minutes"
-                                    placeholderTextColor="#999"
-                                />
-                            </View>
-                            <View style={styles.buttonContainer}>
 
-                                <Button onPress={handleSaveChanges} style={styles.saveButton}>
-                                    <Text style={styles.buttonText} fontType="bold">Save Changes</Text>
-                                </Button>
+                            <View style={styles.fieldRow}>
+                                <View style={styles.fieldContainer}>
+                                    <Text style={styles.label} fontType="bold">Correction Minutes</Text>
+                                    <ThemedInput
+                                        style={styles.modalInput}
+                                        value={editCorrection}
+                                        onChangeText={setEditCorrection}
+                                        keyboardType="numbers-and-punctuation"
+                                        placeholder="e.g. 15 or -15"
+                                    />
+                                    <Text style={styles.fieldHint}>Add (+) or subtract (-) time for payroll.</Text>
+                                </View>
                             </View>
-                        </View>
+
+                            <View style={styles.modalFooter}>
+                                <Button 
+                                    onPress={handleSaveChanges} 
+                                    style={styles.saveButton}
+                                    disabled={isSaving}
+                                    loading={isSaving}
+                                    title="Save Adjustments"
+                                />
+                            </View>
+                        </Card>
                     </View>
                 </Modal>
             </View>
@@ -311,9 +366,7 @@ const styles = StyleSheet.create({
             shadowOpacity: 0.05,
             shadowRadius: 10,
           },
-          native: {
-            elevation: 6,
-          },
+          native: { elevation: 6 },
         }),
     },
     pageHeader: {
@@ -331,10 +384,7 @@ const styles = StyleSheet.create({
         fontSize: theme.fontSizes.lg,
         color: theme.colors.bodyText,
     },
-    mainLayout: {
-        flex: 1,
-        flexDirection: 'row',
-    },
+    mainLayout: { flex: 1, flexDirection: 'row' },
     leftPanel: {
         width: 280,
         backgroundColor: theme.colors.cardBackground,
@@ -362,9 +412,7 @@ const styles = StyleSheet.create({
         backgroundColor: theme.colors.pageBackground,
         color: theme.colors.headingText,
     },
-    workerListContent: {
-        paddingBottom: theme.spacing(2),
-    },
+    workerListContent: { paddingBottom: theme.spacing(2) },
     listItem: {
         borderBottomWidth: StyleSheet.hairlineWidth,
         borderColor: theme.colors.borderColor,
@@ -376,36 +424,15 @@ const styles = StyleSheet.create({
         borderRadius: theme.radius.md,
         flex: 1,
     },
-    selectedItem: {
-        backgroundColor: theme.colors.primaryMuted,
-    },
-    avatar: {
-        width: 40,
-        height: 40,
-        borderRadius: 20,
-        marginRight: theme.spacing(2),
-    },
-    avatarPlaceholder: {
-        width: 40,
-        height: 40,
-        marginRight: theme.spacing(2),
-        textAlign: 'center',
-        lineHeight: 40,
-    },
-    itemInfo: {
-        flex: 1,
-    },
-    itemName: {
-        color: theme.colors.headingText,
-    },
-    itemSubtitle: {
-        fontSize: theme.fontSizes.sm,
-        color: theme.colors.bodyText,
-    },
+    selectedItem: { backgroundColor: theme.colors.primaryMuted },
+    avatar: { width: 40, height: 40, borderRadius: 20, marginRight: theme.spacing(2) },
+    itemInfo: { flex: 1 },
+    itemName: { color: theme.colors.headingText },
+    itemSubtitle: { fontSize: theme.fontSizes.sm, color: theme.colors.bodyText },
     sessionHeaderControls: {
         flexDirection: 'row',
         alignItems: 'center',
-        justifyContent: 'center', // Center the new navigator
+        justifyContent: 'center',
         marginBottom: theme.spacing(2),
     },
     monthNavigator: {
@@ -419,9 +446,7 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         borderColor: theme.colors.borderColor,
     },
-    monthNavButton: {
-        padding: theme.spacing(1),
-    },
+    monthNavButton: { padding: theme.spacing(1) },
     monthDisplayText: {
         fontSize: theme.fontSizes.md,
         color: theme.colors.headingText,
@@ -429,135 +454,106 @@ const styles = StyleSheet.create({
         width: 160,
         textAlign: 'center',
     },
-    placeholderStyle: { fontSize: theme.fontSizes.md, color: theme.colors.bodyText },
-    selectedTextStyle: { fontSize: theme.fontSizes.md, color: theme.colors.headingText },
-    tableWrapperCard: {
-        flex: 1,
-        overflow: 'hidden',
-    },
+    tableWrapperCard: { flex: 1, overflow: 'hidden' },
     noSessionsContainer: {
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
         padding: theme.spacing(2),
     },
-    noSessionsText: {
-        fontSize: theme.fontSizes.md,
-        color: theme.colors.bodyText,
-        textAlign: 'center',
-    },
+    noSessionsText: { fontSize: theme.fontSizes.md, color: theme.colors.bodyText, textAlign: 'center' },
     tableHeaderRow: {
         flexDirection: 'row',
-        backgroundColor: theme.colors.cardBackground,
+        backgroundColor: theme.colors.pageBackground,
         borderBottomWidth: 1,
         borderBottomColor: theme.colors.borderColor,
     },
     tableHeaderCell: {
         padding: theme.spacing(2),
-        color: theme.colors.headingText,
+        color: theme.colors.bodyText,
         textAlign: 'center',
         flex: 1,
+        fontSize: theme.fontSizes.xs,
+        textTransform: 'uppercase',
+        letterSpacing: 1,
     },
-    tableHeaderCellActions: {
-        width: 100, // Matching the width for the actions column
-        padding: theme.spacing(2),
-    },
+    tableHeaderCellActions: { width: 100, padding: theme.spacing(2) },
     tableRow: {
         flexDirection: 'row',
         alignItems: 'center',
         borderBottomWidth: 1,
         borderBottomColor: theme.colors.borderColor,
         backgroundColor: theme.colors.cardBackground,
+        paddingVertical: theme.spacing(1),
     },
-    tableCellText: {
-        padding: theme.spacing(2),
-        color: theme.colors.bodyText,
-        textAlign: 'center',
-        flex: 1,
-        fontSize: theme.fontSizes.md,
+    tableCell: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+    tableCellTextMain: { color: theme.colors.headingText, fontSize: 15 },
+    tableCellTextSmall: { color: theme.colors.bodyText, fontSize: 13, marginTop: 2 },
+    tableCellActions: { width: 100, alignItems: 'center', justifyContent: 'center' },
+    sessionsListContent: { paddingBottom: theme.spacing(1) },
+    activeBadge: {
+        backgroundColor: theme.colors.success + '20',
+        paddingHorizontal: 8,
+        paddingVertical: 2,
+        borderRadius: 4,
+        marginTop: 4,
     },
-    tableCellActions: {
-        width: 100,
+    activeBadgeText: { color: theme.colors.success, fontSize: 10, letterSpacing: 0.5 },
+    checkOutButton: {
+        backgroundColor: theme.colors.danger,
         flexDirection: 'row',
-        justifyContent: 'space-around',
         alignItems: 'center',
-        padding: theme.spacing(1),
+        paddingHorizontal: 10,
+        paddingVertical: 6,
+        borderRadius: theme.radius.md,
     },
-    sessionsListContent: {
-        paddingBottom: theme.spacing(1), // Ensure content is not cut off at the bottom
+    checkOutButtonText: { color: 'white', fontSize: 11, marginLeft: 4 },
+    actionButton: {
+        padding: 8,
+        borderRadius: 20,
+        backgroundColor: theme.colors.pageBackground,
     },
     centeredView: {
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
-        backgroundColor: 'rgba(0, 0, 0, 0.6)',
+        backgroundColor: 'rgba(0, 0, 0, 0.4)',
     },
-    modalView: {
-        margin: 20,
-        backgroundColor: 'white',
-        borderRadius: 20,
-        padding: 25,
-        alignItems: 'stretch',
-        shadowColor: '#000',
-        shadowOffset: {
-            width: 0,
-            height: 2,
-        },
-        shadowOpacity: 0.25,
-        shadowRadius: 4,
-        elevation: 5,
+    modalCard: {
         width: '90%',
-        maxWidth: 600,
+        maxWidth: 450,
+        padding: 0,
+        borderRadius: theme.radius.xl,
+        overflow: 'hidden',
     },
-    modalText: {
-        marginBottom: 25,
-        textAlign: 'center',
-        fontSize: theme.fontSizes.xl,
-    },
-    closeButton: {
-        position: 'absolute',
-        top: 15,
-        right: 15,
-        zIndex: 1,
-    },
-    fieldRow: {
+    modalHeader: {
         flexDirection: 'row',
+        justifyContent: 'space-between',
         alignItems: 'center',
-        marginBottom: 15,
+        padding: theme.spacing(3),
+        borderBottomWidth: 1,
+        borderBottomColor: theme.colors.borderColor,
     },
-    label: {
-        width: 100, // Adjusted width for labels in modal
-        fontSize: theme.fontSizes.md,
-        color: theme.colors.bodyText,
-        marginRight: theme.spacing(1),
+    modalTitle: { fontSize: 18, color: theme.colors.headingText },
+    sessionSummary: {
+        backgroundColor: theme.colors.pageBackground,
+        padding: theme.spacing(2),
+        margin: theme.spacing(3),
+        borderRadius: theme.radius.lg,
     },
-    input: {
-        flex: 1,
-        height: 45,
-        borderColor: '#ddd',
-        borderWidth: 1,
-        borderRadius: 10,
-        paddingHorizontal: 15,
-        fontSize: 16,
-        backgroundColor: '#f9f9f9',
-        color: theme.colors.headingText,
+    summaryLabel: { fontSize: 12, color: theme.colors.bodyText, textTransform: 'uppercase' },
+    summaryValue: { fontSize: 16, color: theme.colors.headingText, marginTop: 4 },
+    fieldRow: { paddingHorizontal: theme.spacing(3), marginBottom: theme.spacing(3) },
+    fieldContainer: { width: '100%' },
+    label: { fontSize: 14, color: theme.colors.bodyText, marginBottom: 8 },
+    modalInput: { height: 50, backgroundColor: theme.colors.pageBackground, borderRadius: theme.radius.md },
+    fieldHint: { fontSize: 12, color: theme.colors.disabledText, marginTop: 6 },
+    modalFooter: {
+        padding: theme.spacing(3),
+        borderTopWidth: 1,
+        borderTopColor: theme.colors.borderColor,
     },
-    buttonContainer: {
-        flexDirection: 'row',
-        justifyContent: 'flex-end',
-        marginTop: 20,
-    },
-    saveButton: {
-        backgroundColor: theme.colors.primary,
-        paddingVertical: 12,
-        borderRadius: 10,
-        marginLeft: theme.spacing(1),
-    },
-    buttonText: {
-        color: 'white',
-        fontSize: theme.fontSizes.md,
-        textAlign: 'center',
-    },
+    saveButton: { height: 52, backgroundColor: theme.colors.primary },
 });
 
 export default CorrectionsPage;

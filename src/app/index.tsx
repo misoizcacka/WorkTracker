@@ -19,7 +19,7 @@ export default function Index() {
     // User is logged in and role is determined, redirect based on role
     return <Redirect href={userRole === 'worker' ? "/(worker)/home" : "/(manager)/dashboard"} />;
   } else {
-    // Not logged in or role not determined, redirect to guest login (or landing page if desired)
-    return <Redirect href="/(guest)/login" />;
+    // Not logged in or role not determined, redirect to landing page
+    return <Redirect href="/(guest)" />;
   }
 }

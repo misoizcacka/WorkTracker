@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, TextInput, StyleSheet, ActivityIndicator, ScrollView, Platform, Dimensions, Image, Pressable, TouchableOpacity } from 'react-native';
+import { View, TextInput, StyleSheet, ActivityIndicator, ScrollView, Platform, Dimensions, Image, Pressable, TouchableOpacity, Linking } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useRouter, Link } from 'expo-router';
 import { Button } from '../../components/Button';
@@ -7,7 +7,7 @@ import { Card } from '../../components/Card';
 import { Text } from '../../components/Themed';
 import { theme } from '../../theme';
 import AnimatedScreen from '../../components/AnimatedScreen';
-import Logo from '../../../assets/koordlogoblack1.svg';
+import Logo from '../../../assets/koordlogoblack1.png';
 import { supabase } from '../../utils/supabase';
 import { useSession } from '../../context/AuthContext';
 import { useTranslation } from 'react-i18next';
@@ -63,16 +63,29 @@ export default function Login() {
     }
   };
 
+  const handleSignUp = () => {
+    if (Platform.OS === 'web') {
+      router.push('/(guest)/pricing');
+    } else {
+      // On mobile, redirect to browser signup page
+      Linking.openURL('https://work-tracker-ji0vqcxsb-misoizcackas-projects.vercel.app/auth/signup');
+    }
+  };
+
   return (
     <AnimatedScreen>
       <View style={styles.container}>
         {/* Header with Logo in top left */}
         <View style={styles.header}>
-          <Link href="/(guest)" asChild>
-            <TouchableOpacity activeOpacity={0.7}>
-              <Image source={Logo} style={styles.logo} resizeMode="contain" />
-            </TouchableOpacity>
-          </Link>
+          {Platform.OS === 'web' ? (
+            <Link href="/(guest)" asChild>
+              <TouchableOpacity activeOpacity={0.7}>
+                <Image source={Logo} style={styles.logo} resizeMode="contain" />
+              </TouchableOpacity>
+            </Link>
+          ) : (
+            <Image source={Logo} style={styles.logo} resizeMode="contain" />
+          )}
         </View>
 
         <ScrollView contentContainerStyle={styles.scrollContent}>
@@ -122,18 +135,20 @@ export default function Login() {
               {errors.password && <Text style={styles.fieldError} fontType="regular">{errors.password}</Text>}
             </View>
 
-            <View style={styles.forgotPasswordContainer}>
-              <Link href="/(guest)/forgot-password" asChild>
-                <TouchableOpacity>
-                  <Text style={styles.forgotPasswordLink} fontType="regular">{t('login.forgotPassword')}</Text>
-                </TouchableOpacity>
-              </Link>
-            </View>
+            {Platform.OS === 'web' && (
+              <View style={styles.forgotPasswordContainer}>
+                <Link href="/(guest)/forgot-password" asChild>
+                  <TouchableOpacity>
+                    <Text style={styles.forgotPasswordLink} fontType="regular">{t('login.forgotPassword')}</Text>
+                  </TouchableOpacity>
+                </Link>
+              </View>
+            )}
 
             <Button
               onPress={handleLogin}
               disabled={isSubmitting}
-              style={styles.loginButton}
+              style={[styles.loginButton, Platform.OS !== 'web' && { marginTop: theme.spacing(2) }]}
             >
               {isSubmitting ? (
                 <ActivityIndicator color="#fff" />
@@ -150,16 +165,16 @@ export default function Login() {
 
             <Button
               title={t('login.signUpButton')}
-              onPress={() => router.push('/auth/signup')}
+              onPress={handleSignUp}
               style={styles.signUpButton}
               textStyle={styles.signUpButtonText}
-              />
-              </Card>
-              </ScrollView>
-              </View>
-              </AnimatedScreen>
-              );
-              }
+            />
+          </Card>
+        </ScrollView>
+      </View>
+    </AnimatedScreen>
+  );
+}
 
               const styles = StyleSheet.create({
 

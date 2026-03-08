@@ -2,6 +2,7 @@ import React, { createContext, useState, useMemo, useCallback, useEffect } from 
 import { supabase } from '../utils/supabase';
 import { Employee } from '../types';
 import { useSession } from './AuthContext'; // Import useSession
+import { getAvatarPublicUrl } from '../services/profile';
 
 export interface EmployeesContextType {
   employees: Employee[];
@@ -15,7 +16,7 @@ export interface EmployeesContextType {
 export const EmployeesContext = createContext<EmployeesContextType | null>(null);
 
 export function EmployeesProvider({ children }: { children: React.ReactNode }) {
-  const { userCompanyId, isCompanyIdLoading } = useSession(); 
+  const { userCompanyId, isCompanyIdLoading, userRole } = useSession(); 
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [loading, setLoading] = useState(true);
   const [seatLimit, setSeatLimit] = useState(0);
@@ -25,9 +26,15 @@ export function EmployeesProvider({ children }: { children: React.ReactNode }) {
       setLoading(true);
       return;
     }
-    if (!userCompanyId) {
+    if (!userCompanyId || !userRole) {
       setEmployees([]);
       setSeatLimit(0);
+      setLoading(false);
+      return;
+    }
+
+    // Workers shouldn't fetch all employees or company seats
+    if (userRole === 'worker') {
       setLoading(false);
       return;
     }
@@ -35,25 +42,35 @@ export function EmployeesProvider({ children }: { children: React.ReactNode }) {
     const fetchData = async () => {
       setLoading(true);
       
-      // Fetch Employees and Company seat limit in parallel
-      const [empRes, compRes] = await Promise.all([
-        supabase.from('employees')
-          .select('*')
-          .eq('company_id', userCompanyId)
-          .order('created_at', { ascending: false }),
-        supabase.from('companies')
-          .select('worker_seats')
-          .eq('id', userCompanyId)
-          .single()
-      ]);
+      try {
+        // Fetch Employees and Company seat limit in parallel
+        const [empRes, compRes] = await Promise.all([
+          supabase.from('employees')
+            .select('*')
+            .eq('company_id', userCompanyId)
+            .order('created_at', { ascending: false }),
+          supabase.from('companies')
+            .select('worker_seats')
+            .eq('id', userCompanyId)
+            .single()
+        ]);
 
-      if (empRes.error) console.error('Error fetching employees:', empRes.error);
-      else setEmployees(empRes.data as Employee[]);
+        if (empRes.error) console.error('Error fetching employees:', empRes.error);
+        else {
+          const enriched = (empRes.data || []).map(emp => ({
+            ...emp,
+            public_avatar_url: getAvatarPublicUrl(emp.avatar_url)
+          }));
+          setEmployees(enriched as Employee[]);
+        }
 
-      if (compRes.error) console.error('Error fetching company seats:', compRes.error);
-      else setSeatLimit(compRes.data?.worker_seats || 0);
-
-      setLoading(false);
+        if (compRes.error) console.error('Error fetching company seats:', compRes.error);
+        else setSeatLimit(compRes.data?.worker_seats || 0);
+      } catch (error) {
+        console.error('Error in fetchData:', error);
+      } finally {
+        setLoading(false);
+      }
     };
 
     fetchData();
@@ -68,10 +85,18 @@ export function EmployeesProvider({ children }: { children: React.ReactNode }) {
           console.log('Employee Change received!', payload);
           setEmployees(prevEmployees => {
             if (payload.eventType === 'INSERT') {
-              return [...prevEmployees, payload.new as Employee];
+              const enriched = { 
+                ...payload.new, 
+                public_avatar_url: getAvatarPublicUrl((payload.new as any).avatar_url) 
+              };
+              return [...prevEmployees, enriched as Employee];
             } else if (payload.eventType === 'UPDATE') {
+              const enriched = { 
+                ...payload.new, 
+                public_avatar_url: getAvatarPublicUrl((payload.new as any).avatar_url) 
+              };
               return prevEmployees.map(emp =>
-                emp.id === payload.old.id ? (payload.new as Employee) : emp
+                emp.id === payload.old.id ? (enriched as Employee) : emp
               );
             } else if (payload.eventType === 'DELETE') {
               return prevEmployees.filter(emp => emp.id !== payload.old.id);
@@ -85,7 +110,7 @@ export function EmployeesProvider({ children }: { children: React.ReactNode }) {
     return () => {
       supabase.removeChannel(employeeSubscription);
     };
-  }, [userCompanyId, isCompanyIdLoading]); // Re-run effect when company ID or its loading state changes
+  }, [userCompanyId, isCompanyIdLoading, userRole]); // Re-run effect when company ID, loading state, or role changes
 
   const seatsUsed = useMemo(() => employees.filter(e => e.role === 'worker').length, [employees]);
 
@@ -110,9 +135,13 @@ export function EmployeesProvider({ children }: { children: React.ReactNode }) {
     }
 
     if (data) {
+      const enriched = {
+        ...data,
+        public_avatar_url: getAvatarPublicUrl(data.avatar_url)
+      };
       setEmployees(prevEmployees =>
         prevEmployees.map(employee =>
-          employee.id === data.id ? (data as Employee) : employee
+          employee.id === data.id ? (enriched as Employee) : employee
         )
       );
     }
