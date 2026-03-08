@@ -39,15 +39,12 @@ export const Button: React.FC<ButtonProps> = ({
 
   const buttonStyle = [
     styles.button,
-    { backgroundColor: disabled ? theme.colors.bodyText : backgroundColor },
+    { backgroundColor: disabled ? theme.colors.borderColor : backgroundColor },
     type === "secondary" && styles.secondaryButton,
     style,
   ];
 
-  const textColor =
-    type === "secondary"
-      ? theme.colors.pageBackground
-      : theme.colors.pageBackground;
+  const textColor = theme.colors.pageBackground;
 
   return (
     <TouchableOpacity
@@ -62,7 +59,7 @@ export const Button: React.FC<ButtonProps> = ({
           fontType={fontType} // Use the prop, which defaults to 'regular'
           style={[
             styles.text,
-            { color: disabled ? theme.colors.bodyText : textColor },
+            { color: disabled ? theme.colors.disabledText : textColor },
             textStyle,
           ]}
         >

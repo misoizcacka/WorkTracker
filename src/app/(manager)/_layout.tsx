@@ -23,9 +23,10 @@ export const BottomTabs = withLayoutContext(Navigator);
 import { StatusBar } from "expo-status-bar";
 
 import { ProfileProvider } from "../../context/ProfileContext";
+import { SubscriptionLockScreen } from "../../components/SubscriptionLockScreen";
 
 function ManagerProviders({ children }: { children: React.ReactNode }) {
-  const { user, isLoading, userRole } = useSession();
+  const { user, isLoading, userRole, isSubscriptionExpired } = useSession();
   const router = useRouter();
   const segments = useSegments();
 
@@ -42,13 +43,16 @@ function ManagerProviders({ children }: { children: React.ReactNode }) {
     }
   }, [user, segments, router, isLoading, userRole]);
 
+  const inSubscriptionFlow = segments.includes('subscription');
+  const showLock = isSubscriptionExpired && !inSubscriptionFlow;
+
   return (
     <ProfileProvider>
       <EmployeesProvider>
         <ProjectsProvider>
           <AssignmentsProvider>
             <InvitesProvider>
-              {children}
+              {showLock ? <SubscriptionLockScreen /> : children}
             </InvitesProvider>
           </AssignmentsProvider>
         </ProjectsProvider>

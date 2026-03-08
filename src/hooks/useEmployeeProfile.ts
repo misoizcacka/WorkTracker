@@ -8,7 +8,7 @@ export interface EmployeeProfile {
   id: string;
   company_id: string;
   full_name: string;
-  phone: string | null;
+  phone_number: string | null;
   role: 'owner' | 'manager' | 'worker';
   avatar_url: string | null; // The raw path from storage
   public_avatar_url: string | null; // The full public URL for rendering
@@ -50,6 +50,8 @@ export function useEmployeeProfile() {
         const publicUrl = getAvatarPublicUrl(data.avatar_url);
         setProfile({
             ...data,
+            // Standardize to phone_number if DB returns phone_number but hook expects phone_number
+            // The table definitely has phone_number
             public_avatar_url: publicUrl
         });
       } else {

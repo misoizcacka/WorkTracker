@@ -9,10 +9,9 @@ import AnimatedScreen from '../../../components/AnimatedScreen';
 import { useSession } from '../../../context/AuthContext';
 import { Text } from '../../../components/Themed';
 import { useTranslation } from 'react-i18next';
-import Logo from '../../../../assets/koordlogoblack1.svg';
+import Logo from '../../../../assets/koordlogoblack1.png';
 
 const { width } = Dimensions.get('window');
-const isLargeScreen = width > 900;
 
 export default function PaymentSuccess() {
   const { session_id } = useLocalSearchParams();
@@ -21,6 +20,7 @@ export default function PaymentSuccess() {
   const { t } = useTranslation();
 
   const [status, setStatus] = useState('verifying');
+  const [successType, setSuccessType] = useState<'new' | 'update'>('new');
   const [error, setError] = useState('');
 
   useEffect(() => {
@@ -48,8 +48,13 @@ export default function PaymentSuccess() {
       }
 
       if (data.status === 'success') {
+        // Essential: Refresh the local session state to see new worker_seats immediately
         await refreshUser();
+        
+        const isUpdate = data.type === 'seat_increase';
+        setSuccessType(isUpdate ? 'update' : 'new');
         setStatus('success');
+
         if (Platform.OS === 'web') {
           localStorage.removeItem('pendingSubscription');
         }
@@ -58,6 +63,7 @@ export default function PaymentSuccess() {
         setError(data.message || t('payment.verificationFailed', 'Payment verification failed.'));
       }
     } catch (err: any) {
+      console.error("Verification Error:", err);
       setStatus('failed');
       const errorMessage = err.message || t('payment.verificationError', 'An unexpected error occurred during verification.');
       
@@ -80,18 +86,24 @@ export default function PaymentSuccess() {
           </>
         );
       case 'success':
+        const isUpdate = successType === 'update';
         return (
           <>
             <View style={styles.iconCircle}>
                 <Text style={styles.statusIcon}>✅</Text>
             </View>
-            <Text style={styles.title} fontType='bold'>{t('payment.successTitle', 'Payment Successful!')}</Text>
+            <Text style={styles.title} fontType='bold'>
+                {isUpdate ? 'Capacity Updated!' : t('payment.successTitle', 'Payment Successful!')}
+            </Text>
             <Text style={styles.description} fontType='regular'>
-                {t('payment.successDescription', 'Your payment was successful. Click below to continue to your company setup.')}
+                {isUpdate 
+                    ? 'Your new worker seats are now active and ready to use.'
+                    : t('payment.successDescription', 'Your payment was successful. Click below to continue to your company setup.')
+                }
             </Text>
             <Button
-              title={t('payment.continueToSetup', 'Continue to Company Setup')}
-              onPress={() => router.replace('/(manager)/company-setup')}
+              title={isUpdate ? 'Back to Account' : t('payment.continueToSetup', 'Continue to Company Setup')}
+              onPress={() => router.replace(isUpdate ? '/(manager)/account' : '/(manager)/company-setup')}
               style={styles.ctaButton}
             />
           </>
@@ -108,7 +120,7 @@ export default function PaymentSuccess() {
             </View>
             <Button
               title={t('payment.tryAgain', 'Try Again')}
-              onPress={() => router.replace('/subscription/setup')}
+              onPress={() => router.replace(isUpdate ? '/(manager)/account' : '/subscription/setup')}
               style={styles.ctaButton}
             />
           </>

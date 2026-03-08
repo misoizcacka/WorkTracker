@@ -6,12 +6,13 @@ import { theme } from "../../theme";
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { withLayoutContext } from 'expo-router';
 import { Text } from "../../components/Themed";
+import { SubscriptionLockScreen } from "../../components/SubscriptionLockScreen";
 
 const { Navigator } = createBottomTabNavigator();
 export const BottomTabs = withLayoutContext(Navigator);
 
 function ProtectedWorkerLayout() {
-  const { user, isLoading, userRole } = useSession();
+  const { user, isLoading, userRole, isSubscriptionExpired } = useSession();
   const router = useRouter();
 
   useEffect(() => {
@@ -29,6 +30,10 @@ function ProtectedWorkerLayout() {
 
   if (userRole !== 'worker') {
     return null;
+  }
+
+  if (isSubscriptionExpired) {
+    return <SubscriptionLockScreen />;
   }
 
   // This is the tab navigator from the old tabs/_layout.tsx
