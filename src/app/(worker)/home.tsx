@@ -50,6 +50,10 @@ export default function Home() {
   const isDataLoading = assignmentsLoading || projectsLoading;
   const ACCEPTABLE_DISTANCE = 150; // meters
 
+  const checkedIn = !!activeWorkSession;
+  const sessionStartTime = activeWorkSession ? new Date(activeWorkSession.start_time).getTime() : null;
+  const stableCheckedIn = pendingAction === 'checking_in' ? true : (pendingAction === 'checking_out' ? false : checkedIn);
+
   const fetchHomeData = useCallback(async (forceFetchFromSupabase = false) => {
     if (user?.id) {
       if (activeWorkSession && activeWorkSession.worker_assignments) {
@@ -72,6 +76,17 @@ export default function Home() {
     setIsRefreshing(false);
   }, [fetchHomeData, loadInitialProjects]);
 
+  const requestPermissionAgain = async () => {
+    const { status: foregroundStatus } = await Location.requestForegroundPermissionsAsync();
+    setLocationPermission(foregroundStatus);
+    if (foregroundStatus === 'granted') {
+      const { status: backgroundStatus } = await Location.requestBackgroundPermissionsAsync();
+      if (backgroundStatus !== 'granted') Linking.openSettings();
+    } else {
+      Linking.openSettings();
+    }
+  };
+
   useEffect(() => {
     const interval = setInterval(() => {
       const today = moment().format('YYYY-MM-DD');
@@ -93,24 +108,23 @@ export default function Home() {
       }
     })();
   }, []);
-  
-  const requestPermissionAgain = async () => {
-    const { status: foregroundStatus } = await Location.requestForegroundPermissionsAsync();
-    setLocationPermission(foregroundStatus);
-    if (foregroundStatus === 'granted') {
-      const { status: backgroundStatus } = await Location.requestBackgroundPermissionsAsync();
-      if (backgroundStatus !== 'granted') Linking.openSettings();
-    } else {
-      Linking.openSettings();
-    }
-  };
-
-  const checkedIn = !!activeWorkSession;
-  const sessionStartTime = activeWorkSession ? new Date(activeWorkSession.start_time).getTime() : null;
 
   const currentWorkersAssignments = useMemo(() => {
     return user?.id ? processedAssignments[user.id] || [] : [];
   }, [user?.id, processedAssignments]);
+
+  const assignmentAtCurrentLocation = useMemo(() => {
+    if (!workerMapLocation || currentWorkersAssignments.length === 0) return null;
+    return currentWorkersAssignments.find(assign => {
+      const loc = (assign as any).project?.location || (assign as any).location;
+      if (!loc) return false;
+      const d = getDistance(
+        { latitude: workerMapLocation.latitude, longitude: workerMapLocation.longitude },
+        { latitude: loc.latitude, longitude: loc.longitude }
+      );
+      return d < ACCEPTABLE_DISTANCE;
+    }) || null;
+  }, [workerMapLocation, currentWorkersAssignments]);
 
   const { currentActiveAssignment, nextAssignableAssignment } = useMemo(() => {
     if (!user?.id || currentWorkersAssignments.length === 0) return { currentActiveAssignment: null, nextAssignableAssignment: null };
@@ -120,41 +134,56 @@ export default function Home() {
   }, [user?.id, currentWorkersAssignments]);
 
   const { relevantAssignment, isSelectionLocked } = useMemo(() => {
-    if (checkedIn) return { relevantAssignment: currentActiveAssignment, isSelectionLocked: true };
+    if (checkedIn) {
+      return { 
+        relevantAssignment: assignmentAtCurrentLocation || currentActiveAssignment, 
+        isSelectionLocked: true 
+      };
+    }
     
+    if (assignmentAtCurrentLocation) {
+      return { relevantAssignment: assignmentAtCurrentLocation, isSelectionLocked: false };
+    }
+
     const lastCheckoutAss = currentWorkersAssignments.find((assign: ProcessedAssignmentStepWithStatus) => assign.id === lastCheckoutAssignmentId);
     let assignmentToDisplay = selectedNextAssignmentId 
       ? currentWorkersAssignments.find(a => a.id === selectedNextAssignmentId) || null
       : lastCheckoutAss || nextAssignableAssignment;
 
     return { relevantAssignment: assignmentToDisplay, isSelectionLocked: false };
-  }, [checkedIn, lastCheckoutAssignmentId, selectedNextAssignmentId, currentActiveAssignment, nextAssignableAssignment, currentWorkersAssignments]);
+  }, [checkedIn, currentActiveAssignment, assignmentAtCurrentLocation, currentWorkersAssignments, lastCheckoutAssignmentId, selectedNextAssignmentId, nextAssignableAssignment]);
 
   const targetProjectLocation = useMemo(() => {
-    if (relevantAssignment?.type === 'project' && relevantAssignment.project) {
-      return { lat: relevantAssignment.project.location.latitude, lon: relevantAssignment.project.location.longitude };
+    const ass = relevantAssignment as any;
+    if (ass?.type === 'project' && ass.project) {
+      return { lat: ass.project.location.latitude, lon: ass.project.location.longitude };
     }
-    if (relevantAssignment?.type === 'common_location' && relevantAssignment.location) {
-      return { lat: relevantAssignment.location.latitude ?? 0, lon: relevantAssignment.location.longitude ?? 0 };
+    if (ass?.type === 'common_location' && ass.location) {
+      return { lat: ass.location.latitude ?? 0, lon: ass.location.longitude ?? 0 };
     }
     return null;
   }, [relevantAssignment]);
 
-  const markerCoord = useMemo(() => {
-    if (!targetProjectLocation) return null;
-    return {
-      latitude: targetProjectLocation.lat,
-      longitude: targetProjectLocation.lon
-    };
-  }, [targetProjectLocation]);
-
   const projectLocationName = useMemo(() => {
-    if (relevantAssignment?.type === 'project' && relevantAssignment.project) return relevantAssignment.project.name;
-    if (relevantAssignment?.type === 'common_location' && relevantAssignment.location) return relevantAssignment.location.name;
+    const ass = relevantAssignment as any;
+    if (ass?.type === 'project' && ass.project) return ass.project.name;
+    if (ass?.type === 'common_location' && ass.location) return ass.location.name;
     return "Project Site";
   }, [relevantAssignment]);
 
   const isNearby = distance !== null && distance < ACCEPTABLE_DISTANCE;
+
+  const statusBadgeInfo = useMemo(() => {
+    if (stableCheckedIn) {
+      if (isNearby) return { label: "WORKING", type: 'active' };
+      return { label: "OFF-SITE", type: 'warning' };
+    }
+    if (relevantAssignment) {
+      if (isNearby) return { label: "READY", type: 'success' };
+      return { label: "AWAY", type: 'warning' };
+    }
+    return null;
+  }, [stableCheckedIn, isNearby, relevantAssignment]);
 
   const locationStatusText = useMemo(() => {
     if (!relevantAssignment) return "No scheduled assignments today.";
@@ -170,7 +199,7 @@ export default function Home() {
   useEffect(() => { fetchHomeData(); }, [fetchHomeData]);
 
   useEffect(() => {
-    let timer: number;
+    let timer: any;
     if (checkedIn && sessionStartTime) {
       timer = setInterval(() => {
         setElapsedTime(Math.floor((Date.now() - sessionStartTime) / 1000));
@@ -180,7 +209,7 @@ export default function Home() {
   }, [checkedIn, sessionStartTime]);
 
   useEffect(() => {
-    let intervalId: number | undefined;
+    let intervalId: any;
     let isMounted = true;
 
     const fetchAndSetLocation = async () => {
@@ -205,12 +234,12 @@ export default function Home() {
       }
     };
 
-    if (!checkedIn && locationPermission === 'granted') {
+    if (locationPermission === 'granted') {
       fetchAndSetLocation();
       intervalId = setInterval(fetchAndSetLocation, 10000);
     }
     return () => { isMounted = false; if (intervalId) clearInterval(intervalId); };
-  }, [checkedIn, locationPermission, targetProjectLocation]);
+  }, [locationPermission, targetProjectLocation]);
 
   const handleCheckIn = async () => {
     if (checkedIn || !relevantAssignment || !targetProjectLocation) return;
@@ -239,7 +268,7 @@ export default function Home() {
         latitude: targetProjectLocation.lat,
         longitude: targetProjectLocation.lon,
         radius: ACCEPTABLE_DISTANCE,
-        type: relevantAssignment.type,
+        type: (relevantAssignment as any).type,
         status: 'active',
       }];
 
@@ -279,7 +308,6 @@ export default function Home() {
     }
   };
 
-  const stableCheckedIn = pendingAction === 'checking_in' ? true : (pendingAction === 'checking_out' ? false : checkedIn);
   const isActuallyProcessing = isProcessingCheckInOut || pendingAction !== null;
   const buttonDisabled = isDataLoading || (stableCheckedIn ? false : (!isNearby || !relevantAssignment || !targetProjectLocation));
   const buttonTitle = stableCheckedIn ? "Check Out" : (relevantAssignment ? "Check In" : "No Next Assignment");
@@ -346,14 +374,18 @@ export default function Home() {
               <Text style={styles.sectionTitle} fontType="bold">
                 {stableCheckedIn ? "Current Assignment" : "Today's Schedule"}
               </Text>
-              {(stableCheckedIn || relevantAssignment) && (
+              {statusBadgeInfo && (
                 <View style={[styles.statusBadge, { 
-                  backgroundColor: stableCheckedIn ? theme.statusColors.activeBackground : (isNearby ? theme.statusColors.successBackground : theme.statusColors.warningBackground)
+                  backgroundColor: statusBadgeInfo.type === 'active' ? theme.statusColors.activeBackground : 
+                                   statusBadgeInfo.type === 'success' ? theme.statusColors.successBackground : 
+                                   theme.statusColors.warningBackground
                 }]}>
                   <Text style={[styles.statusBadgeText, { 
-                    color: stableCheckedIn ? theme.statusColors.activeText : (isNearby ? theme.statusColors.successText : theme.statusColors.warningText)
+                    color: statusBadgeInfo.type === 'active' ? theme.statusColors.activeText : 
+                           statusBadgeInfo.type === 'success' ? theme.statusColors.successText : 
+                           theme.statusColors.warningText
                   }]} fontType="bold">
-                    {stableCheckedIn ? "WORKING" : (isNearby ? "READY" : "AWAY")}
+                    {statusBadgeInfo.label}
                   </Text>
                 </View>
               )}
@@ -373,12 +405,12 @@ export default function Home() {
                   onPress={() => setIsAssignmentSelectionModalVisible(true)}
                   disabled={isSelectionLocked}
                 >
-                  <View style={[styles.projectIconContainer, { backgroundColor: relevantAssignment.project?.color || theme.colors.primary + '20' }]}>
+                  <View style={[styles.projectIconContainer, { backgroundColor: (relevantAssignment as any).project?.color || theme.colors.primary + '20' }]}>
                     <Ionicons name="business-outline" size={20} color="white" />
                   </View>
                   <View style={styles.projectInfo}>
                     <Text style={styles.projectName} fontType="bold">{projectLocationName}</Text>
-                    <Text style={styles.projectAddress} numberOfLines={1}>{relevantAssignment.project?.address || 'Site assignment'}</Text>
+                    <Text style={styles.projectAddress} numberOfLines={1}>{(relevantAssignment as any).project?.address || 'Site assignment'}</Text>
                   </View>
                   {!isSelectionLocked && <Ionicons name="chevron-forward" size={20} color={theme.colors.disabledText} />}
                 </TouchableOpacity>

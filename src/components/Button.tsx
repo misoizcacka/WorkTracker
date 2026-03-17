@@ -1,10 +1,12 @@
+import React from "react";
 import {
   TouchableOpacity,
   StyleSheet,
   GestureResponderEvent,
   ViewStyle,
   TextStyle,
-  Text as DefaultText, // Renamed native Text
+  ActivityIndicator,
+  View,
 } from "react-native";
 import { Text } from "../components/Themed"; // Import custom Text
 import { theme } from "../theme";
@@ -14,10 +16,12 @@ interface ButtonProps {
   onPress?: (event: GestureResponderEvent) => void;
   type?: "primary" | "danger" | "secondary";
   disabled?: boolean;
-  style?: ViewStyle | ViewStyle[];
-  textStyle?: TextStyle;
+  style?: ViewStyle | ViewStyle[] | any;
+  textStyle?: TextStyle | any;
   children?: React.ReactNode;
   fontType?: keyof typeof theme.font;
+  loading?: boolean;
+  icon?: React.ReactNode;
 }
 
 export const Button: React.FC<ButtonProps> = ({
@@ -29,6 +33,8 @@ export const Button: React.FC<ButtonProps> = ({
   textStyle,
   children,
   fontType = "regular", // Default to regular fontType for buttons
+  loading = false,
+  icon,
 }) => {
   const backgroundColor =
     type === "primary"
@@ -39,7 +45,7 @@ export const Button: React.FC<ButtonProps> = ({
 
   const buttonStyle = [
     styles.button,
-    { backgroundColor: disabled ? theme.colors.borderColor : backgroundColor },
+    { backgroundColor: (disabled || loading) ? theme.colors.borderColor : backgroundColor },
     type === "secondary" && styles.secondaryButton,
     style,
   ];
@@ -48,23 +54,28 @@ export const Button: React.FC<ButtonProps> = ({
 
   return (
     <TouchableOpacity
-      onPress={!disabled ? onPress : undefined}
+      onPress={!(disabled || loading) ? onPress : undefined}
       style={buttonStyle}
-      activeOpacity={disabled ? 1 : 0.7}
+      activeOpacity={(disabled || loading) ? 1 : 0.7}
     >
-      {children ? (
+      {loading ? (
+        <ActivityIndicator color={textColor} />
+      ) : children ? (
         children
       ) : (
-        <Text
-          fontType={fontType} // Use the prop, which defaults to 'regular'
-          style={[
-            styles.text,
-            { color: disabled ? theme.colors.disabledText : textColor },
-            textStyle,
-          ]}
-        >
-          {title}
-        </Text>
+        <View style={styles.contentContainer}>
+          {icon && <View style={styles.iconContainer}>{icon}</View>}
+          <Text
+            fontType={fontType} // Use the prop, which defaults to 'regular'
+            style={[
+              styles.text,
+              { color: (disabled || loading) ? theme.colors.disabledText : textColor },
+              textStyle,
+            ]}
+          >
+            {title}
+          </Text>
+        </View>
       )}
     </TouchableOpacity>
   );
@@ -89,6 +100,14 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: theme.colors.borderColor, // Light gray border
     borderRadius: theme.radius.md,
+  },
+  contentContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  iconContainer: {
+    marginRight: 8,
   },
   text: {
     // fontWeight removed, fontType handled by Themed.Text

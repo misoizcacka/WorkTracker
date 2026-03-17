@@ -12,6 +12,12 @@ export interface Assignment {
   sortKey: number;
   name: string; // Assuming name is needed for point properties
   address?: string;
+  totalDurationMinutes?: number;
+  visits?: {
+    startTime: string;
+    endTime: string;
+    isStillThere?: boolean;
+  }[];
 }
 
 export interface LocationEvent {

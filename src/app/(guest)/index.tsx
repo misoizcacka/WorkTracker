@@ -39,7 +39,7 @@ const FeatureItem = ({ title, description, asset, isVideo, reverse, initialRatio
           <Video
             source={asset}
             style={styles.fill}
-            videoStyle={{ width: '100%', height: '100%', objectFit: 'contain' }}
+            videoStyle={{ width: '100%', height: '100%' }}
             resizeMode={ResizeMode.CONTAIN}
             shouldPlay
             isLooping

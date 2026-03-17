@@ -541,6 +541,9 @@ const styles = StyleSheet.create({
         margin: theme.spacing(3),
         borderRadius: theme.radius.lg,
     },
+    summaryItem: {
+        marginBottom: theme.spacing(1),
+    },
     summaryLabel: { fontSize: 12, color: theme.colors.bodyText, textTransform: 'uppercase' },
     summaryValue: { fontSize: 16, color: theme.colors.headingText, marginTop: 4 },
     fieldRow: { paddingHorizontal: theme.spacing(3), marginBottom: theme.spacing(3) },

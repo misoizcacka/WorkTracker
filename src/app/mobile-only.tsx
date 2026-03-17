@@ -82,7 +82,6 @@ const styles = StyleSheet.create({
         shadowOffset: { width: 0, height: 8 },
         shadowOpacity: 0.1,
         shadowRadius: 20,
-        outlineStyle: 'none',
       },
       native: {
         elevation: 10,

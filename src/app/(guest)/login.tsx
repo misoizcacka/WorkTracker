@@ -148,14 +148,11 @@ export default function Login() {
             <Button
               onPress={handleLogin}
               disabled={isSubmitting}
-              style={[styles.loginButton, Platform.OS !== 'web' && { marginTop: theme.spacing(2) }]}
-            >
-              {isSubmitting ? (
-                <ActivityIndicator color="#fff" />
-              ) : (
-                <Text style={styles.loginButtonText} fontType="regular">{t('login.loginButton')}</Text>
-              )}
-            </Button>
+              loading={isSubmitting}
+              title={t('login.loginButton')}
+              style={[styles.loginButton, Platform.OS !== 'web' ? { marginTop: theme.spacing(2) } : {}]}
+              textStyle={styles.loginButtonText}
+            />
 
             <View style={styles.separatorContainer}>
               <View style={styles.separatorLine} />

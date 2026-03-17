@@ -428,6 +428,7 @@ export function AssignmentsProvider({ children }: { children: React.ReactNode })
         start_time: now,
         end_time: null,
         total_break_minutes: 0,
+        correction_minutes: 0,
         synced: false,
       };
 

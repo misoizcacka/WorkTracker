@@ -21,44 +21,47 @@ const AssignmentSelectionModal: React.FC<AssignmentSelectionModalProps> = ({
   onSelectAssignment,
   currentSelectedId,
 }) => {
-  const renderItem = ({ item }: { item: ProcessedAssignmentStepWithStatus }) => (
-    <TouchableOpacity
-      style={[
-        styles.assignmentItem,
-        currentSelectedId === item.id && styles.selectedAssignmentItem,
-      ]}
-      onPress={() => onSelectAssignment(item.id)}
-    >
-      <View style={[styles.iconContainer, { backgroundColor: item.project?.color || theme.colors.primary + '20' }]}>
-        <Ionicons 
-          name={item.type === 'project' ? "business-outline" : "pin-outline"} 
-          size={20} 
-          color={currentSelectedId === item.id ? theme.colors.primary : theme.colors.bodyText} 
-        />
-      </View>
-      
-      <View style={styles.textContainer}>
-        <Text style={styles.assignmentTitle} fontType="bold">
-          {item.type === 'project' ? item.project?.name : item.location?.name}
-        </Text>
-        {item.type === 'project' && item.project?.address && (
-          <Text style={styles.assignmentAddress} numberOfLines={1}>{item.project.address}</Text>
-        )}
-        {item.start_time && (
-          <View style={styles.timeRow}>
-            <Ionicons name="time-outline" size={12} color={theme.colors.disabledText} />
-            <Text style={styles.assignmentTime}> {item.start_time}</Text>
-          </View>
-        )}
-      </View>
+  const renderItem = ({ item }: { item: ProcessedAssignmentStepWithStatus }) => {
+    const ass = item as any;
+    return (
+      <TouchableOpacity
+        style={[
+          styles.assignmentItem,
+          currentSelectedId === item.id && styles.selectedAssignmentItem,
+        ]}
+        onPress={() => onSelectAssignment(item.id)}
+      >
+        <View style={[styles.iconContainer, { backgroundColor: ass.project?.color || theme.colors.primary + '20' }]}>
+          <Ionicons 
+            name={ass.type === 'project' ? "business-outline" : "pin-outline"} 
+            size={20} 
+            color={currentSelectedId === item.id ? theme.colors.primary : theme.colors.bodyText} 
+          />
+        </View>
+        
+        <View style={styles.textContainer}>
+          <Text style={styles.assignmentTitle} fontType="bold">
+            {ass.type === 'project' ? ass.project?.name : ass.location?.name}
+          </Text>
+          {ass.type === 'project' && ass.project?.address && (
+            <Text style={styles.assignmentAddress} numberOfLines={1}>{ass.project.address}</Text>
+          )}
+          {ass.start_time && (
+            <View style={styles.timeRow}>
+              <Ionicons name="time-outline" size={12} color={theme.colors.disabledText} />
+              <Text style={styles.assignmentTime}> {ass.start_time}</Text>
+            </View>
+          )}
+        </View>
 
-      {currentSelectedId === item.id ? (
-        <Ionicons name="checkmark-circle" size={24} color={theme.colors.primary} />
-      ) : (
-        <Ionicons name="chevron-forward" size={18} color={theme.colors.disabledText} />
-      )}
-    </TouchableOpacity>
-  );
+        {currentSelectedId === item.id ? (
+          <Ionicons name="checkmark-circle" size={24} color={theme.colors.primary} />
+        ) : (
+          <Ionicons name="chevron-forward" size={18} color={theme.colors.disabledText} />
+        )}
+      </TouchableOpacity>
+    );
+  };
 
   return (
     <Modal

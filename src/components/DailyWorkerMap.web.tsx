@@ -212,7 +212,8 @@ const DailyWorkerMapWeb: React.FC<DailyWorkerMapProps & {
 
         {/* Permanent Popups for all project sites */}
         {assignments && assignments.map((site, idx) => {
-          const durationStr = `${Math.floor(site.totalDurationMinutes / 60)}h ${site.totalDurationMinutes % 60}m`;
+          const duration = site.totalDurationMinutes || 0;
+          const durationStr = `${Math.floor(duration / 60)}h ${duration % 60}m`;
           
           return (
             <Popup
@@ -231,7 +232,7 @@ const DailyWorkerMapWeb: React.FC<DailyWorkerMapProps & {
                 
                 <View style={styles.cardDivider} />
                 
-                {site.visits.map((visit: any, vIdx: number) => (
+                {site.visits?.map((visit: any, vIdx: number) => (
                   <View key={vIdx} style={styles.visitRow}>
                     <View style={styles.cardRow}>
                       <Text style={styles.cardLabel}>Entered:</Text>
@@ -243,7 +244,7 @@ const DailyWorkerMapWeb: React.FC<DailyWorkerMapProps & {
                         {visit.isStillThere ? 'N/A' : moment(visit.endTime).format('hh:mm A')}
                       </Text>
                     </View>
-                    {vIdx < site.visits.length - 1 && <View style={styles.visitDivider} />}
+                    {site.visits && vIdx < site.visits.length - 1 && <View style={styles.visitDivider} />}
                   </View>
                 ))}
                 

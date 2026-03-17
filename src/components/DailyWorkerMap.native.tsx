@@ -7,13 +7,6 @@ import moment from 'moment';
 import { Assignment, LocationEvent } from '~/hooks/useMapGeoJSON';
 import { theme } from '~/theme';
 
-export interface LocationEvent {
-  lat: number;
-  lng: number;
-  timestamp: string; // ISO string
-  type: string;
-}
-
 export interface DailyWorkerMapProps {
   assignments: Assignment[];
   locationEvents: LocationEvent[];
