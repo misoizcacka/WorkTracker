@@ -308,6 +308,18 @@ export default function Home() {
     }
   };
 
+  const handleNavigate = () => {
+    if (!targetProjectLocation) return;
+    const { lat, lon } = targetProjectLocation;
+    const label = encodeURIComponent(projectLocationName);
+    const url = Platform.select({
+      ios: `maps:0,0?q=${label}@${lat},${lon}`,
+      android: `geo:0,0?q=${lat},${lon}(${label})`,
+      default: `https://www.google.com/maps/search/?api=1&query=${lat},${lon}`
+    });
+    Linking.openURL(url);
+  };
+
   const isActuallyProcessing = isProcessingCheckInOut || pendingAction !== null;
   const buttonDisabled = isDataLoading || (stableCheckedIn ? false : (!isNearby || !relevantAssignment || !targetProjectLocation));
   const buttonTitle = stableCheckedIn ? "Check Out" : (relevantAssignment ? "Check In" : "No Next Assignment");
@@ -400,20 +412,31 @@ export default function Home() {
               </View>
             ) : (
               <View>
-                <TouchableOpacity 
-                  style={styles.assignmentItem} 
-                  onPress={() => setIsAssignmentSelectionModalVisible(true)}
-                  disabled={isSelectionLocked}
-                >
-                  <View style={[styles.projectIconContainer, { backgroundColor: (relevantAssignment as any).project?.color || theme.colors.primary + '20' }]}>
-                    <Ionicons name="business-outline" size={20} color="white" />
-                  </View>
-                  <View style={styles.projectInfo}>
-                    <Text style={styles.projectName} fontType="bold">{projectLocationName}</Text>
-                    <Text style={styles.projectAddress} numberOfLines={1}>{(relevantAssignment as any).project?.address || 'Site assignment'}</Text>
-                  </View>
-                  {!isSelectionLocked && <Ionicons name="chevron-forward" size={20} color={theme.colors.disabledText} />}
-                </TouchableOpacity>
+                <View style={styles.assignmentInfoRow}>
+                  <TouchableOpacity 
+                    style={styles.assignmentItem} 
+                    onPress={() => setIsAssignmentSelectionModalVisible(true)}
+                    disabled={isSelectionLocked}
+                  >
+                    <View style={[styles.projectIconContainer, { backgroundColor: (relevantAssignment as any).project?.color || theme.colors.primary + '20' }]}>
+                      <Ionicons name="business-outline" size={20} color="white" />
+                    </View>
+                    <View style={styles.projectInfo}>
+                      <Text style={styles.projectName} fontType="bold">{projectLocationName}</Text>
+                      <Text style={styles.projectAddress} numberOfLines={1}>{(relevantAssignment as any).project?.address || 'Site assignment'}</Text>
+                    </View>
+                    {!isSelectionLocked && <Ionicons name="chevron-forward" size={20} color={theme.colors.disabledText} />}
+                  </TouchableOpacity>
+
+                  {!stableCheckedIn && (
+                    <TouchableOpacity style={styles.navigateButton} onPress={handleNavigate}>
+                      <View style={styles.navigateIconCircle}>
+                        <Ionicons name="navigate" size={20} color="white" />
+                      </View>
+                      <Text style={styles.navigateText} fontType="bold">NAV</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
 
                 <View style={styles.statusDetailRow}>
                   <Ionicons 
@@ -586,6 +609,31 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: theme.spacing(1),
+    flex: 1,
+  },
+  assignmentInfoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  navigateButton: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: theme.spacing(2),
+    paddingHorizontal: theme.spacing(1),
+  },
+  navigateIconCircle: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: theme.colors.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 2,
+  },
+  navigateText: {
+    fontSize: 10,
+    color: theme.colors.primary,
   },
   projectIconContainer: {
     width: 40,
@@ -672,6 +720,11 @@ const styles = StyleSheet.create({
     height: 56,
     borderRadius: theme.radius.lg,
     width: '100%',
+    shadowColor: 'transparent',
+    shadowOpacity: 0,
+    shadowRadius: 0,
+    elevation: 0,
+    overflow: 'hidden',
   },
   checkInBtn: {
     backgroundColor: theme.colors.primary,

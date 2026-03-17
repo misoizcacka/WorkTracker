@@ -12,14 +12,14 @@ export default function GuestLayout() {
 
   useEffect(() => {
     // Restrict access to guest pages on native platforms (iOS/Android)
-    // Only allow 'login'
+    // Only allow 'login' and 'auth' flows
     if (Platform.OS !== 'web') {
       const currentSegment = segments[segments.length - 1];
+      const isAuthFlow = segments.includes('auth') || segments.includes('signup');
       
-      // If we are in the guest group but not on the login page
-      // segments usually looks like ["(guest)", "index"] or ["(guest)", "pricing"]
-      if (segments[0] === '(guest)' && currentSegment !== 'login') {
-        console.log(`Restricting access to ${currentSegment} on mobile. Redirecting to login.`);
+      // If we are in the guest group but not on the login page or in an allowed flow
+      if (segments[0] === '(guest)' && currentSegment !== 'login' && !isAuthFlow) {
+        console.log(`Restricting access to ${currentSegment} on mobile app. Redirecting to login.`);
         router.replace('/(guest)/login');
       }
     }

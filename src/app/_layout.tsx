@@ -182,6 +182,21 @@ export default function RootLayout() {
     useEffect(() => {
       if (isLoading) return;
 
+      const inAuthGroup = segments[0] === '(guest)' || segments[0] === 'auth' || segments[0] === 'onboarding';
+      
+      if (!user) {
+        if (!inAuthGroup) {
+          console.log("Not authenticated, redirecting to guest group");
+          // On mobile, we prefer going straight to login instead of the landing page
+          if (Platform.OS !== 'web') {
+            router.replace('/(guest)/login');
+          } else {
+            router.replace('/(guest)/');
+          }
+        }
+        return;
+      }
+
       if (user && (user.user_metadata?.role === 'manager' || user.user_metadata?.role === 'owner')) {
         if (isCompanyIdLoading || userCompanyId === null) {
           const currentPath = segments.join('/');
@@ -196,14 +211,6 @@ export default function RootLayout() {
           router.replace('/mobile-only');
           return;
         }
-      }
-
-      const inAuthGroup = segments[0] === '(guest)' || segments[0] === 'auth';
-      if (!user) {
-        if (!inAuthGroup) {
-          router.replace('/(guest)/');
-        }
-        return;
       }
 
       const inApp = segments[0] === '(manager)' || segments[0] === '(worker)';

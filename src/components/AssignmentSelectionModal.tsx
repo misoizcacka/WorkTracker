@@ -116,9 +116,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   modalView: {
-    width: '90%',
-    maxWidth: 500,
+    width: '95%',
+    maxWidth: 600,
+    height: '75%',
     maxHeight: '80%',
+    minHeight: 400,
     padding: 0, // Managed by internal views
     borderRadius: theme.radius.xl,
     overflow: 'hidden',

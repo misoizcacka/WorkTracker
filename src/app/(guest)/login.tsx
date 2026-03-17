@@ -211,9 +211,6 @@ export default function Login() {
         shadowOffset: { width: 0, height: 10 },
         shadowOpacity: 0.1,
         shadowRadius: 20,
-      },
-      native: {
-        elevation: 10,
       }
     }),
   },
@@ -298,6 +295,8 @@ export default function Login() {
     borderRadius: theme.radius.lg,
     height: 52,
     justifyContent: 'center',
+    elevation: 0,
+    shadowOpacity: 0,
   },
   loginButtonText: {
     color: 'white',
@@ -319,12 +318,14 @@ export default function Login() {
     fontSize: 14,
   },
   signUpButton: {
-    backgroundColor: 'transparent',
+    backgroundColor: theme.colors.cardBackground,
     borderWidth: 1.5,
     borderColor: theme.colors.primary,
     borderRadius: theme.radius.lg,
     height: 52,
     justifyContent: 'center',
+    elevation: 0,
+    shadowOpacity: 0,
   },
   signUpButtonText: {
     color: theme.colors.primary,

@@ -43,6 +43,10 @@ function ManagerProviders({ children }: { children: React.ReactNode }) {
     }
   }, [user, segments, router, isLoading, userRole]);
 
+  if (isLoading || !user || (userRole !== 'manager' && userRole !== 'owner')) {
+    return null;
+  }
+
   const inSubscriptionFlow = segments.includes('subscription');
   const showLock = isSubscriptionExpired && !inSubscriptionFlow;
 
@@ -67,6 +71,7 @@ export default function TabsLayout() {
   const isLargeScreen = width >= 900;
   const router = useRouter();
   const segments = useSegments();
+  const { user, isLoading, userRole } = useSession();
 
   // Redirect to mobile-only if a manager tries to access via a small screen (mobile web)
   useEffect(() => {
@@ -78,7 +83,10 @@ export default function TabsLayout() {
     }
   }, [width, isLargeScreen, segments, router]);
 
-  const { user, userRole } = useSession();
+  if (isLoading || !user || (userRole !== 'manager' && userRole !== 'owner')) {
+    return null;
+  }
+
   const getLogoHref = () => {
     if (!user) {
       return '/(guest)';
