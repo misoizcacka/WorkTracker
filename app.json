@@ -1,17 +1,17 @@
 {
   "expo": {
-    "name": "koord",
-    "slug": "koord",
-    "scheme": "koord",
+    "name": "Koord",
+    "slug": "Koord",
+    "scheme": "Koord",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "icon": "./assets/koordappicon.png",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "splash": {
-      "image": "./assets/splash-icon.png",
+      "image": "./assets/koordsplashscreen.png",
       "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
+      "backgroundColor": "#e0e0e0"
     },
         "ios": {
           "supportsTablet": true,
@@ -27,8 +27,8 @@
         },
         "android": {
           "adaptiveIcon": {
-            "foregroundImage": "./assets/adaptive-icon.png",
-            "backgroundColor": "#ffffff"
+            "foregroundImage": "./assets/koordappicon.png",
+            "backgroundColor": "#000000"
           },
           "edgeToEdgeEnabled": true,
           "predictiveBackGestureEnabled": false,

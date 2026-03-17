@@ -346,15 +346,17 @@ export default function Home() {
               <Text style={styles.sectionTitle} fontType="bold">
                 {stableCheckedIn ? "Current Assignment" : "Today's Schedule"}
               </Text>
-              <View style={[styles.statusBadge, { 
-                backgroundColor: stableCheckedIn ? theme.statusColors.activeBackground : (isNearby ? theme.statusColors.successBackground : theme.statusColors.warningBackground)
-              }]}>
-                <Text style={[styles.statusBadgeText, { 
-                  color: stableCheckedIn ? theme.statusColors.activeText : (isNearby ? theme.statusColors.successText : theme.statusColors.warningText)
-                }]} fontType="bold">
-                  {stableCheckedIn ? "WORKING" : (isNearby ? "READY" : "AWAY")}
-                </Text>
-              </View>
+              {(stableCheckedIn || relevantAssignment) && (
+                <View style={[styles.statusBadge, { 
+                  backgroundColor: stableCheckedIn ? theme.statusColors.activeBackground : (isNearby ? theme.statusColors.successBackground : theme.statusColors.warningBackground)
+                }]}>
+                  <Text style={[styles.statusBadgeText, { 
+                    color: stableCheckedIn ? theme.statusColors.activeText : (isNearby ? theme.statusColors.successText : theme.statusColors.warningText)
+                  }]} fontType="bold">
+                    {stableCheckedIn ? "WORKING" : (isNearby ? "READY" : "AWAY")}
+                  </Text>
+                </View>
+              )}
             </View>
             
             {isDataLoading ? (
@@ -398,44 +400,46 @@ export default function Home() {
           </Card>
 
           {/* 2. Focus Section: Timer or Map */}
-          <Card style={styles.sectionCard}>
-            <Text style={styles.sectionTitle} fontType="bold">
-              {stableCheckedIn ? "Active Session" : "Location Overview"}
-            </Text>
-            <View style={styles.focusContainer}>
-              {stableCheckedIn ? (
-                <CircularTimer elapsedTime={elapsedTime} size={240} strokeWidth={12} />
-              ) : (
-                <View style={styles.mapWrapper}>
-                  {locationReady && workerMapLocation && targetProjectLocation ? (
-                    <MapView
-                      ref={mapRef}
-                      style={styles.map}
-                      scrollEnabled={false}
-                      zoomEnabled={false}
-                      showsUserLocation={true}
-                      region={mapRegion}
-                    >
-                      <Marker 
-                        coordinate={{ latitude: targetProjectLocation.lat, longitude: targetProjectLocation.lon }}
-                        anchor={{ x: 0.5, y: 0.5 }}
+          {(stableCheckedIn || relevantAssignment) && (
+            <Card style={styles.sectionCard}>
+              <Text style={styles.sectionTitle} fontType="bold">
+                {stableCheckedIn ? "Active Session" : "Location Overview"}
+              </Text>
+              <View style={styles.focusContainer}>
+                {stableCheckedIn ? (
+                  <CircularTimer elapsedTime={elapsedTime} size={240} strokeWidth={12} />
+                ) : (
+                  <View style={styles.mapWrapper}>
+                    {locationReady && workerMapLocation && targetProjectLocation ? (
+                      <MapView
+                        ref={mapRef}
+                        style={styles.map}
+                        scrollEnabled={false}
+                        zoomEnabled={false}
+                        showsUserLocation={true}
+                        region={mapRegion}
                       >
-                        <View style={styles.markerContainer}>
-                          <Ionicons name="briefcase" size={16} color="white" />
-                        </View>
-                      </Marker>
-                      <Circle center={{ latitude: targetProjectLocation.lat, longitude: targetProjectLocation.lon }} radius={ACCEPTABLE_DISTANCE} strokeWidth={2} strokeColor={theme.colors.primary} fillColor={theme.colors.primary + '20'} />
-                    </MapView>
-                  ) : (
-                    <View style={styles.mapLoading}>
-                      <ActivityIndicator color={theme.colors.primary} />
-                      <Text style={styles.mapLoadingText}>Preparing map...</Text>
-                    </View>
-                  )}
-                </View>
-              )}
-            </View>
-          </Card>
+                        <Marker 
+                          coordinate={{ latitude: targetProjectLocation.lat, longitude: targetProjectLocation.lon }}
+                          anchor={{ x: 0.5, y: 0.5 }}
+                        >
+                          <View style={styles.markerContainer}>
+                            <Ionicons name="briefcase" size={16} color="white" />
+                          </View>
+                        </Marker>
+                        <Circle center={{ latitude: targetProjectLocation.lat, longitude: targetProjectLocation.lon }} radius={ACCEPTABLE_DISTANCE} strokeWidth={2} strokeColor={theme.colors.primary} fillColor={theme.colors.primary + '20'} />
+                      </MapView>
+                    ) : (
+                      <View style={styles.mapLoading}>
+                        <ActivityIndicator color={theme.colors.primary} />
+                        <Text style={styles.mapLoadingText}>Preparing map...</Text>
+                      </View>
+                    )}
+                  </View>
+                )}
+              </View>
+            </Card>
+          )}
         </View>
       </ScrollView>
 
