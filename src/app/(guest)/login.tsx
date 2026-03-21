@@ -7,7 +7,7 @@ import { Card } from '../../components/Card';
 import { Text } from '../../components/Themed';
 import { theme } from '../../theme';
 import AnimatedScreen from '../../components/AnimatedScreen';
-import Logo from '../../../assets/koordlogoblack1.png';
+import { Logo } from '~/components/Logo';
 import { supabase } from '../../utils/supabase';
 import { useSession } from '../../context/AuthContext';
 import { useTranslation } from 'react-i18next';
@@ -80,11 +80,11 @@ export default function Login() {
           {Platform.OS === 'web' ? (
             <Link href="/(guest)" asChild>
               <TouchableOpacity activeOpacity={0.7}>
-                <Image source={Logo} style={styles.logo} resizeMode="contain" />
+                <Logo style={styles.logo} />
               </TouchableOpacity>
             </Link>
           ) : (
-            <Image source={Logo} style={styles.logo} resizeMode="contain" />
+            <Logo style={styles.logo} />
           )}
         </View>
 
@@ -187,8 +187,6 @@ export default function Login() {
     zIndex: 10,
   },
   logo: {
-    width: 120,
-    height: 36,
   },
   scrollContent: {
     flexGrow: 1,

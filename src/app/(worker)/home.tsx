@@ -19,6 +19,7 @@ import moment from 'moment';
 import Toast from 'react-native-toast-message';
 import AssignmentSelectionModal from '../../components/AssignmentSelectionModal';
 import { View, Text } from '../../components/Themed';
+import { Logo } from '~/components/Logo';
 
 import { GeofenceAssignment } from 'background-location';
 
@@ -373,11 +374,7 @@ export default function Home() {
         refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} colors={[theme.colors.primary]} />}
       >
         <View style={styles.pageHeader}>
-          <Image 
-            source={require('../../../assets/koordlogoblack1.png')} 
-            style={styles.logo} 
-            resizeMode="contain" 
-          />
+          <Logo style={styles.logo} />
         </View>
         <View style={styles.homeContent}>
           {/* 1. Combined Assignment & Status Card */}
@@ -548,8 +545,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   logo: {
-    width: 120,
-    height: 36,
   },
   pageTitle: {
     fontSize: theme.fontSizes.xl,

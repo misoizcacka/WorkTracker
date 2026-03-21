@@ -8,7 +8,7 @@ import { Card } from '../../components/Card';
 import { Text } from '../../components/Themed';
 import { theme } from '../../theme';
 import AnimatedScreen from '../../components/AnimatedScreen';
-import Logo from '../../../assets/koordlogoblack1.svg';
+import { Logo } from '~/components/Logo';
 import { supabase } from '../../utils/supabase';
 import { useTranslation } from 'react-i18next';
 
@@ -101,7 +101,7 @@ export default function Signup() {
         <View style={styles.header}>
           <Link href="/(guest)" asChild>
             <TouchableOpacity activeOpacity={0.7}>
-              <Image source={Logo} style={styles.logo} resizeMode="contain" />
+              <Logo style={styles.logo} />
             </TouchableOpacity>
           </Link>
         </View>
@@ -261,8 +261,6 @@ const styles = StyleSheet.create({
     zIndex: 10,
   },
   logo: {
-    width: 120,
-    height: 36,
   },
   scrollContent: {
     flexGrow: 1,

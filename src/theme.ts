@@ -25,6 +25,15 @@ export const theme = {
     background: "#E0E0E0",
   },
 
+  branding: {
+    logoWidth: 70,
+    logoHeight: 24,
+    logoWidthSmall: 60,
+    logoHeightSmall: 20,
+    logoWidthMedium: 70,
+    logoHeightMedium: 24,
+  },
+
   statusColors: {
     successBackground: '#E6F4EA',
     successText: '#16A34A', // Using success color

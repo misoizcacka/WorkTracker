@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useContext } from 'react';
-import { View, StyleSheet, ActivityIndicator, Platform, Dimensions, Image, ScrollView, Pressable } from 'react-native';
+import { View, StyleSheet, ActivityIndicator, Platform, Dimensions, Image, ScrollView, Pressable, TouchableOpacity } from 'react-native';
 import { useLocalSearchParams, useRouter, Link } from 'expo-router';
 import { InvitesContext } from '~/context/InvitesContext';
 import ThemedInput from '../../../components/ThemedInput';
@@ -9,7 +9,7 @@ import { supabase } from '../../../utils/supabase';
 import { Invite } from '../../../types';
 import { theme } from '../../../theme';
 import AnimatedScreen from '../../../components/AnimatedScreen';
-import Logo from '../../../../assets/koordlogoblack1.svg';
+import { Logo } from '~/components/Logo';
 import { useTranslation } from 'react-i18next';
 import { LanguageSelector } from '../../../components/LanguageSelector';
 import { Feather } from '@expo/vector-icons'; // For password toggle
@@ -177,7 +177,9 @@ const InviteSignUpScreen = () => {
         {isLargeScreen && (
           <View style={styles.marketingContainer}>
             <Link href="/" style={styles.marketingLogo} asChild>
-              <Image source={Logo} resizeMode="contain" />
+              <TouchableOpacity activeOpacity={0.7}>
+                <Logo />
+              </TouchableOpacity>
             </Link>
             <Text style={styles.marketingTitle} fontType="bold">{t('signup.marketingTitle')}</Text>
             <Text style={styles.marketingDescription} fontType="regular">{t('signup.marketingDescription')}</Text>
@@ -191,7 +193,9 @@ const InviteSignUpScreen = () => {
         {isLargeScreen && <View style={styles.separatorVertical} />}
         {!isLargeScreen && (
             <Link href="/" style={styles.smallScreenLogo} asChild>
-              <Image source={Logo} resizeMode="contain" />
+              <TouchableOpacity activeOpacity={0.7}>
+                <Logo />
+              </TouchableOpacity>
             </Link>
         )}
         <ScrollView contentContainerStyle={styles.scrollContent}>
@@ -290,15 +294,11 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: theme.spacing(4),
     left: theme.spacing(4),
-    width: 100,
-    height: 30,
   },
   smallScreenLogo: {
     position: 'absolute',
     top: theme.spacing(4),
     left: theme.spacing(4),
-    width: 100,
-    height: 30,
     zIndex: 10,
   },
   marketingTitle: {

@@ -6,7 +6,7 @@ import { Card } from '../../../components/Card';
 import { theme } from '../../../theme';
 import AnimatedScreen from '../../../components/AnimatedScreen';
 import { Text } from '../../../components/Themed';
-import Logo from '../../../../assets/koordlogoblack1.svg';
+import { Logo } from '~/components/Logo';
 
 const { width } = Dimensions.get('window');
 
@@ -18,7 +18,7 @@ export default function PaymentCancel() {
       <View style={styles.container}>
         {/* Header with Logo in top left */}
         <View style={styles.header}>
-          <Image source={Logo} style={styles.logo} resizeMode="contain" />
+          <Logo style={styles.logo} />
         </View>
 
         <ScrollView contentContainerStyle={styles.scrollContent}>
@@ -61,8 +61,6 @@ const styles = StyleSheet.create({
     zIndex: 10,
   },
   logo: {
-    width: 120,
-    height: 36,
   },
   scrollContent: {
     flexGrow: 1,

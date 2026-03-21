@@ -9,7 +9,7 @@ import AnimatedScreen from '../../../components/AnimatedScreen';
 import { useSession } from '../../../context/AuthContext';
 import { Text } from '../../../components/Themed';
 import { useTranslation } from 'react-i18next';
-import Logo from '../../../../assets/koordlogoblack1.png';
+import { Logo } from '~/components/Logo';
 
 const { width } = Dimensions.get('window');
 
@@ -135,7 +135,7 @@ export default function PaymentSuccess() {
       <View style={styles.container}>
         {/* Header with Logo in top left */}
         <View style={styles.header}>
-          <Image source={Logo} style={styles.logo} resizeMode="contain" />
+          <Logo style={styles.logo} />
         </View>
 
         <ScrollView contentContainerStyle={styles.scrollContent}>
@@ -167,8 +167,6 @@ const styles = StyleSheet.create({
     zIndex: 10,
   },
   logo: {
-    width: 120,
-    height: 36,
   },
   scrollContent: {
     flexGrow: 1,

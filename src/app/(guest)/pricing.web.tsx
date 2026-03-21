@@ -7,7 +7,7 @@ import { Card } from '../../components/Card';
 import { theme } from '../../theme';
 import { useTranslation } from 'react-i18next';
 import AnimatedScreen from '../../components/AnimatedScreen';
-import Logo from '../../../assets/koordlogoblack1.svg';
+import { Logo } from '~/components/Logo';
 import { Ionicons } from '@expo/vector-icons';
 
 const { width } = Dimensions.get('window');
@@ -41,7 +41,7 @@ export default function PricingPage() {
         <View style={styles.header}>
           <Link href="/(guest)" asChild>
             <TouchableOpacity activeOpacity={0.7}>
-              <Image source={Logo} style={styles.logo} resizeMode="contain" />
+              <Logo style={styles.logo} />
             </TouchableOpacity>
           </Link>
           <View style={styles.navLinks}>
@@ -181,8 +181,6 @@ const styles = StyleSheet.create({
     }),
   },
   logo: {
-    width: 100,
-    height: 30,
   },
   navLinks: {
     flexDirection: 'row',

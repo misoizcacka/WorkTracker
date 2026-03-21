@@ -5,6 +5,7 @@ import { Link, usePathname } from 'expo-router';
 import { theme } from '../../../theme';
 import { useSession } from '../../../context/AuthContext';
 import { Text } from '../../../components/Themed';
+import { Logo } from '~/components/Logo';
 
 const SIDEBAR_COLLAPSED_WIDTH = 64;
 const SIDEBAR_EXPANDED_WIDTH = 240;
@@ -109,6 +110,8 @@ export const ManagerSidebar = () => {
     }
   };
 
+  const AnimatedLogo = Animated.createAnimatedComponent(Logo);
+
   return (
     <View style={{ width: SIDEBAR_COLLAPSED_WIDTH, zIndex: 100, backgroundColor: theme.colors.cardBackground }}>
       <Animated.View 
@@ -135,22 +138,16 @@ export const ManagerSidebar = () => {
           <Link href="/(manager)/dashboard" asChild>
             <Pressable style={StyleSheet.flatten([styles.logoContainer, !isExpanded && styles.collapsedLogo])}>
                 <View style={{ height: 24, width: '100%', alignItems: 'flex-start', justifyContent: 'center' }}>
-                  <Animated.Image
-                      source={require('../../../../assets/klogoblack1.svg')}
+                  <AnimatedLogo
+                      variant="icon"
                       style={{ 
-                        width: 16, 
-                        height: 24, 
-                        resizeMode: 'contain', 
                         opacity: kLogoOpacity,
                         position: 'absolute'
                       }}
                   />
-                  <Animated.Image
-                      source={require('../../../../assets/koordlogoblack1.svg')}
+                  <AnimatedLogo
+                      size="small"
                       style={{ 
-                        width: 70, 
-                        height: 24, 
-                        resizeMode: 'contain', 
                         opacity: fullLogoOpacity,
                       }}
                   />

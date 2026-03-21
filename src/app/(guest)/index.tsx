@@ -6,7 +6,7 @@ import { Button } from '../../components/Button';
 import { Card } from '../../components/Card';
 import { theme } from '../../theme';
 import AnimatedScreen from '../../components/AnimatedScreen';
-import Logo from '../../../assets/koordlogoblack1.svg';
+import { Logo } from '~/components/Logo';
 import { Video, ResizeMode } from 'expo-av';
 import { LinearGradient } from 'expo-linear-gradient';
 
@@ -90,7 +90,7 @@ export default function LandingPage() {
         <View style={styles.header}>
           <Link href="/(guest)" asChild>
             <TouchableOpacity activeOpacity={0.7}>
-              <Image source={Logo} style={styles.logo} resizeMode="contain" />
+              <Logo style={styles.logo} />
             </TouchableOpacity>
           </Link>
           <View style={styles.navLinks}>
@@ -234,8 +234,6 @@ const styles = StyleSheet.create({
     }),
   },
   logo: {
-    width: 100,
-    height: 30,
   },
   navLinks: {
     flexDirection: 'row',
