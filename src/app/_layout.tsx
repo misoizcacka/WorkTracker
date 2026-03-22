@@ -183,6 +183,7 @@ export default function RootLayout() {
       if (isLoading) return;
 
       const inAuthGroup = segments[0] === '(guest)' || segments[0] === 'auth' || segments[0] === 'onboarding';
+      const inMobileOnly = segments[0] === 'mobile-only';
       
       if (!user) {
         if (!inAuthGroup) {
@@ -207,7 +208,7 @@ export default function RootLayout() {
       }
 
       if (Platform.OS === 'web' && user) {
-        if (userRole === 'worker') {
+        if (userRole === 'worker' && !inMobileOnly) {
           router.replace('/mobile-only');
           return;
         }
@@ -230,7 +231,7 @@ export default function RootLayout() {
           router.replace('/(manager)/company-setup');
         }
       } else if (user && userRole) {
-        if (!inApp) {
+        if (!inApp && !inMobileOnly) {
           router.replace(userRole === 'worker' ? '/(worker)/home' : '/(manager)/dashboard');
         }
       }

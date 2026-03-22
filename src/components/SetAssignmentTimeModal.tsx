@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Modal, View, Text, TouchableOpacity, TextInput, StyleSheet, Alert } from 'react-native';
+import { Modal, View, TouchableOpacity, TextInput, StyleSheet, Alert } from 'react-native';
 import { theme } from '~/theme';
 import { Ionicons } from '@expo/vector-icons';
+import { Button } from './Button';
+import { Text } from './Themed';
 
 interface SetAssignmentTimeModalProps {
   isVisible: boolean;
@@ -82,48 +84,55 @@ const SetAssignmentTimeModal: React.FC<SetAssignmentTimeModalProps> = ({
           <TouchableOpacity style={styles.closeButton} onPress={onClose}>
             <Ionicons name="close-circle-outline" size={24} color={theme.colors.bodyText} />
           </TouchableOpacity>
-          <Text style={styles.modalTitle}>Set Arrival Time (Optional)</Text>
+          <Text style={styles.modalTitle} fontType="bold">Set Arrival Time</Text>
 
-          <Text style={styles.infoText}>
+          <Text style={styles.infoText} fontType="regular">
             Order defines flow. Set a time only if a specific arrival is critical. 
             If no time is set, the worker goes here after the previous project.
           </Text>
 
           <View style={styles.timeRow}>
-            <TextInput
-              value={hour}
-              onChangeText={enforceHH}
-              maxLength={2}
-              keyboardType="numeric"
-              style={styles.timeBox}
-              placeholder="HH"
-              placeholderTextColor={theme.colors.bodyText}
-            />
-            <Text style={styles.colon}>:</Text>
-            <TextInput
-              value={minute}
-              onChangeText={enforceMM}
-              maxLength={2}
-              keyboardType="numeric"
-              style={styles.timeBox}
-              placeholder="MM"
-              placeholderTextColor={theme.colors.bodyText}
-            />
+            <View style={styles.timeInputGroup}>
+              <Text style={styles.timeLabel} fontType="medium">Hour</Text>
+              <TextInput
+                value={hour}
+                onChangeText={enforceHH}
+                maxLength={2}
+                keyboardType="numeric"
+                style={styles.timeBox}
+                placeholder="HH"
+                placeholderTextColor={theme.colors.disabledText}
+              />
+            </View>
+            <Text style={styles.colon} fontType="bold">:</Text>
+            <View style={styles.timeInputGroup}>
+              <Text style={styles.timeLabel} fontType="medium">Minute</Text>
+              <TextInput
+                value={minute}
+                onChangeText={enforceMM}
+                maxLength={2}
+                keyboardType="numeric"
+                style={styles.timeBox}
+                placeholder="MM"
+                placeholderTextColor={theme.colors.disabledText}
+              />
+            </View>
           </View>
 
           <View style={styles.buttonContainer}>
-            <TouchableOpacity
-              style={[styles.actionButton, styles.clearButton]}
+            <Button
               onPress={handleClear}
-            >
-              <Text style={[styles.actionButtonText, styles.clearButtonText]}>Clear Time</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.actionButton, styles.saveButton]}
+              title="Clear"
+              type="secondary"
+              style={styles.clearButton}
+              textStyle={styles.clearButtonText}
+            />
+            <Button
               onPress={handleSave}
-            >
-              <Text style={styles.actionButtonText}>Save</Text>
-            </TouchableOpacity>
+              title="Save"
+              style={styles.saveButton}
+              textStyle={styles.saveButtonText}
+            />
           </View>
         </View>
       </View>
@@ -151,7 +160,6 @@ const styles = StyleSheet.create({
         marginBottom: 10,
         textAlign: 'center',
         fontSize: 22,
-        fontWeight: '600',
         color: theme.colors.headingText,
       },
       infoText: {
@@ -171,25 +179,34 @@ const styles = StyleSheet.create({
       timeRow: {
         flexDirection: 'row',
         justifyContent: 'center',
-        alignItems: 'center',
+        alignItems: 'flex-end',
         marginBottom: 25,
       },
+      timeInputGroup: {
+        alignItems: 'center',
+      },
+      timeLabel: {
+        fontSize: 12,
+        color: theme.colors.bodyText,
+        marginBottom: theme.spacing(1),
+        textTransform: 'uppercase',
+        letterSpacing: 0.5,
+      },
       timeBox: {
-        width: 75,
-        height: 65,
-        backgroundColor: theme.colors.accent,
+        width: 72,
+        height: 52,
+        backgroundColor: theme.colors.pageBackground,
         borderRadius: theme.radius.md,
         textAlign: 'center',
-        fontSize: 30,
-        fontWeight: 'bold',
+        fontSize: 22,
         borderWidth: 1,
         borderColor: theme.colors.borderColor,
         color: theme.colors.headingText,
       },
       colon: {
-        fontSize: 32,
-        fontWeight: 'bold',
-        marginHorizontal: 10,
+        fontSize: 24,
+        marginHorizontal: 12,
+        marginBottom: 10,
         color: theme.colors.headingText,
       },
       buttonContainer: {
@@ -197,29 +214,29 @@ const styles = StyleSheet.create({
         justifyContent: 'space-between',
         width: '100%',
         marginTop: 10,
-      },
-      actionButton: {
-        paddingVertical: 12,
-        borderRadius: theme.radius.md,
-        flex: 1,
-        alignItems: 'center',
-        marginHorizontal: 5,
+        gap: theme.spacing(1.5),
       },
       saveButton: {
+        flex: 1,
+        minHeight: 44,
+        borderRadius: theme.radius.md,
         backgroundColor: theme.colors.primary,
+        paddingVertical: 10,
+        paddingHorizontal: theme.spacing(2),
       },
       clearButton: {
-        backgroundColor: 'transparent',
-        borderWidth: 1,
-        borderColor: theme.colors.danger,
+        flex: 1,
+        minHeight: 44,
+        borderRadius: theme.radius.md,
+        paddingVertical: 10,
+        paddingHorizontal: theme.spacing(2),
       },
-      actionButtonText: {
-        color: 'white',
-        fontSize: 16,
-        fontWeight: 'bold',
+      saveButtonText: {
+        fontSize: 15,
       },
       clearButtonText: {
         color: theme.colors.danger,
+        fontSize: 15,
       }
 });
 

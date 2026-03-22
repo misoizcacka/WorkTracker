@@ -1,9 +1,10 @@
 import React from 'react';
-import { Modal, View, Text, StyleSheet, ActivityIndicator, TouchableOpacity } from 'react-native';
+import { Modal, View, StyleSheet, TouchableOpacity } from 'react-native';
 import { Button } from './Button';
 import { theme } from '../theme';
 import { Employee } from '../types';
 import { Ionicons } from '@expo/vector-icons';
+import { Text } from './Themed';
 
 interface RemovePersonModalProps {
   visible: boolean;
@@ -32,16 +33,22 @@ const RemovePersonModal: React.FC<RemovePersonModalProps> = ({ visible, onClose,
           <TouchableOpacity style={styles.closeButton} onPress={onClose}>
             <Ionicons name="close-circle-outline" size={24} color={theme.colors.bodyText} />
           </TouchableOpacity>
-          <Text style={styles.modalText}>Remove Employee</Text>
+          <Text style={styles.modalText} fontType="bold">Remove Employee</Text>
 
-          <Text style={styles.confirmationText}>
+          <Text style={styles.confirmationText} fontType="regular">
             Are you sure you want to remove {employee?.full_name}? This action cannot be undone.
           </Text>
           
           <View style={styles.buttonContainer}>
-            <Button onPress={handleConfirm} disabled={loading} style={{flex: 1, backgroundColor: theme.colors.danger}}>
-              {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Remove</Text>}
-            </Button>
+            <Button
+              onPress={handleConfirm}
+              disabled={loading}
+              loading={loading}
+              title="Remove Employee"
+              type="danger"
+              style={styles.dangerButton}
+              textStyle={styles.dangerButtonText}
+            />
           </View>
         </View>
       </View>
@@ -58,8 +65,8 @@ const styles = StyleSheet.create({
   },
   modalView: {
     margin: 20,
-    backgroundColor: 'white',
-    borderRadius: 20,
+    backgroundColor: theme.colors.cardBackground,
+    borderRadius: theme.radius.lg,
     padding: 35,
     alignItems: 'center',
     shadowColor: '#000',
@@ -72,12 +79,14 @@ const styles = StyleSheet.create({
     elevation: 5,
     width: '90%',
     maxWidth: 400,
+    borderWidth: 1,
+    borderColor: theme.colors.borderColor,
   },
   modalText: {
-    marginBottom: 25,
+    marginBottom: theme.spacing(3),
     textAlign: 'center',
-    fontSize: 24,
-    fontWeight: 'bold',
+    fontSize: theme.fontSizes.xl,
+    color: theme.colors.headingText,
   },
   closeButton: {
     position: 'absolute',
@@ -87,21 +96,22 @@ const styles = StyleSheet.create({
     padding: 5,
   },
   confirmationText: {
-    marginBottom: 25,
+    marginBottom: theme.spacing(3),
     textAlign: 'center',
-    fontSize: 16,
+    fontSize: theme.fontSizes.md,
     color: theme.colors.bodyText,
   },
   buttonContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
     width: '100%',
-    marginTop: 10,
+    marginTop: theme.spacing(2),
   },
-  buttonText: {
-    color: 'white',
-    fontWeight: 'bold',
-    fontSize: 16,
+  dangerButton: {
+    width: '100%',
+    minHeight: 52,
+    borderRadius: theme.radius.lg,
+  },
+  dangerButtonText: {
+    fontSize: theme.fontSizes.md,
   },
 });
 

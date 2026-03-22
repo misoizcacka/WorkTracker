@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Modal, View, Text, TextInput, StyleSheet, ActivityIndicator, TouchableOpacity, ScrollView, Animated, Platform, Dimensions, Easing } from 'react-native';
+import { Modal, View, TextInput, StyleSheet, TouchableOpacity, ScrollView, Animated, Platform, Dimensions, Easing, ActivityIndicator } from 'react-native';
 import { addCommonLocation } from '../services/commonLocations';
 import { Button } from './Button';
 import { theme } from '../theme';
@@ -8,6 +8,7 @@ import ThemedInput from './ThemedInput';
 import { debounce, fetchGeoapifySuggestions, GeoapifyFeature } from '~/utils/geocoding';
 import { MapView } from './MapView';
 import { EmbedMapView } from './EmbedMapView.web';
+import { Text } from './Themed';
 
 interface CreateCommonLocationModalProps {
   visible: boolean;
@@ -221,9 +222,14 @@ export const CreateCommonLocationModal: React.FC<CreateCommonLocationModalProps>
             )}
 
             <View style={styles.buttonContainer}>
-              <Button onPress={handleCreate} disabled={isCreateButtonDisabled} style={styles.createButton}>
-                {isLoading ? <ActivityIndicator color="#fff" /> : <Text style={styles.createButtonText}>Add Location</Text>}
-              </Button>
+              <Button
+                onPress={handleCreate}
+                disabled={isCreateButtonDisabled}
+                loading={isLoading}
+                title="Add Location"
+                style={styles.createButton}
+                textStyle={styles.createButtonText}
+              />
             </View>
           </ScrollView>
         </Animated.View>
@@ -286,8 +292,6 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.primary,
   },
   createButtonText: {
-    color: 'white',
-    fontWeight: 'bold',
     fontSize: 16,
   },
   errorText: {

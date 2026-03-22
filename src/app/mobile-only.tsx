@@ -1,155 +1,194 @@
 import React from 'react';
-import { View, StyleSheet, Image, Platform, Dimensions } from 'react-native';
+import { View, StyleSheet, Image, Platform, Pressable, ScrollView } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import { StoreButtons } from '../components/StoreButtons';
 import { Text } from '../components/Themed';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { useSession } from '../context/AuthContext';
 import { theme } from '../theme';
 import AnimatedScreen from '../components/AnimatedScreen';
+import { Card } from '../components/Card';
 import Logo from '../../assets/koordlogoblack1.svg';
 
-const { width } = Dimensions.get('window');
-
 export default function MobileOnlyScreen() {
+  const router = useRouter();
   const { userRole } = useSession();
   const isManager = userRole === 'manager' || userRole === 'owner';
 
+  const handleLogoPress = () => {
+    if (isManager) {
+      router.replace('/(manager)/dashboard');
+    }
+  };
+
   return (
     <AnimatedScreen>
-      <View style={styles.container}>
-        <View style={styles.card}>
-          <Image source={Logo} style={styles.logo} resizeMode="contain" />
-          
-          <View style={styles.iconContainer}>
-            <Text style={styles.icon}>{isManager ? '🖥️' : '📱'}</Text>
-          </View>
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={styles.container}>
+          <Pressable
+            onPress={handleLogoPress}
+            disabled={!isManager}
+            style={({ pressed }) => [
+              styles.logoButton,
+              isManager && pressed ? styles.logoButtonPressed : null,
+            ]}
+          >
+            <Image source={Logo} style={styles.logo} resizeMode="contain" />
+          </Pressable>
 
-          <Text style={styles.title} fontType="bold">
-            {isManager ? 'Desktop Only Dashboard' : 'Mobile App Required'}
-          </Text>
-          
-          <Text style={styles.subtitle} fontType="regular">
-            {isManager 
-              ? 'The Manager Dashboard is optimized for larger screens to handle complex scheduling and map tools. Please log in from a desktop browser.'
-              : 'Your account is restricted to the mobile app for tracking and daily operations.'}
-          </Text>
+          <Card style={styles.card}>
+            <View style={styles.iconContainer}>
+              <Ionicons
+                name={isManager ? 'desktop-outline' : 'phone-portrait-outline'}
+                size={34}
+                color={isManager ? theme.colors.primary : theme.colors.secondary}
+              />
+            </View>
 
-          {!isManager ? (
-            <View style={styles.storeContainer}>
-              <Text style={styles.storeTitle} fontType="medium">Download the app</Text>
-              <StoreButtons />
-            </View>
-          ) : (
-            <View style={styles.desktopInfo}>
-              <View style={styles.bulletRow}>
-                <Text style={styles.bullet}>✅</Text>
-                <Text style={styles.bulletText} fontType="regular">Advanced Scheduling</Text>
+            <Text style={styles.title} fontType="bold">
+              {isManager ? 'Desktop Access Required' : 'Mobile App Required'}
+            </Text>
+
+            <Text style={styles.subtitle} fontType="regular">
+              {isManager
+                ? 'Scheduling, maps, reports, and other manager tools need more screen space than this viewport currently provides.'
+                : 'Use the app to clock in, track work, and handle daily operations on the go.'}
+            </Text>
+
+            {!isManager ? (
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle} fontType="medium">Download the app</Text>
+                <StoreButtons />
               </View>
-              <View style={styles.bulletRow}>
-                <Text style={styles.bullet}>✅</Text>
-                <Text style={styles.bulletText} fontType="regular">Real-time Map Overview</Text>
+            ) : (
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle} fontType="medium">Manager tools available on desktop</Text>
+                <View style={styles.featureList}>
+                  <View style={styles.featureRow}>
+                    <Ionicons name="checkmark-circle" size={18} color={theme.colors.primary} />
+                    <Text style={styles.featureText} fontType="regular">Advanced scheduling and assignments</Text>
+                  </View>
+                  <View style={styles.featureRow}>
+                    <Ionicons name="checkmark-circle" size={18} color={theme.colors.primary} />
+                    <Text style={styles.featureText} fontType="regular">Real-time map overview and replay tools</Text>
+                  </View>
+                  <View style={styles.featureRow}>
+                    <Ionicons name="checkmark-circle" size={18} color={theme.colors.primary} />
+                    <Text style={styles.featureText} fontType="regular">Reports, payroll review, and account controls</Text>
+                  </View>
+                </View>
+
+                <Text style={styles.helperText} fontType="regular">
+                  Zoom back out and click the Koord logo to return to your dashboard.
+                </Text>
               </View>
-              <View style={styles.bulletRow}>
-                <Text style={styles.bullet}>✅</Text>
-                <Text style={styles.bulletText} fontType="regular">Detailed Reports & Analytics</Text>
-              </View>
-            </View>
-          )}
+            )}
+          </Card>
         </View>
-      </View>
+      </ScrollView>
     </AnimatedScreen>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  scrollView: {
     flex: 1,
-    backgroundColor: theme.colors.pageBackground,
+    backgroundColor: theme.colors.background,
+  },
+  scrollContent: {
+    flexGrow: 1,
+  },
+  container: {
+    flexGrow: 1,
+    backgroundColor: theme.colors.background,
     alignItems: 'center',
     justifyContent: 'center',
-    padding: theme.spacing(3),
+    paddingHorizontal: theme.spacing(3),
+    paddingVertical: theme.spacing(4),
   },
-  card: {
-    backgroundColor: theme.colors.cardBackground,
-    borderRadius: theme.radius.lg,
-    padding: theme.spacing(5),
-    width: '100%',
-    maxWidth: 450,
-    alignItems: 'center',
-    ...Platform.select({
-      web: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 8 },
-        shadowOpacity: 0.1,
-        shadowRadius: 20,
-      },
-      native: {
-        elevation: 10,
-      }
-    }),
+  logoButton: {
+    marginBottom: theme.spacing(3),
+    borderRadius: theme.radius.md,
+  },
+  logoButtonPressed: {
+    opacity: 0.75,
   },
   logo: {
-    width: 140,
-    height: 40,
-    marginBottom: theme.spacing(4),
+    width: 160,
+    height: 46,
+  },
+  card: {
+    width: '100%',
+    maxWidth: 520,
+    padding: theme.spacing(4),
+    alignItems: 'center',
+    borderRadius: theme.radius.xl,
+    ...Platform.select({
+      web: {
+        boxShadow: '0px 12px 32px rgba(17, 24, 39, 0.08)',
+      },
+      native: {
+        elevation: 8,
+      },
+    }),
   },
   iconContainer: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
+    width: 96,
+    height: 96,
+    borderRadius: 48,
     backgroundColor: theme.colors.primaryMuted,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: theme.spacing(3),
   },
-  icon: {
-    fontSize: 40,
-  },
   title: {
     fontSize: 24,
     color: theme.colors.headingText,
-    textAlign: 'center',
     marginBottom: theme.spacing(2),
+    textAlign: 'center',
   },
   subtitle: {
     fontSize: 16,
     color: theme.colors.bodyText,
     textAlign: 'center',
     lineHeight: 24,
-    marginBottom: theme.spacing(4),
   },
-  storeContainer: {
+  section: {
     width: '100%',
-    alignItems: 'center',
-    marginTop: theme.spacing(2),
+    marginTop: theme.spacing(4),
     paddingTop: theme.spacing(3),
     borderTopWidth: 1,
     borderTopColor: theme.colors.borderColor,
   },
-  storeTitle: {
+  sectionTitle: {
     fontSize: 14,
     color: theme.colors.disabledText,
-    marginBottom: theme.spacing(1),
+    marginBottom: theme.spacing(2),
     textTransform: 'uppercase',
     letterSpacing: 1,
   },
-  desktopInfo: {
-    width: '100%',
-    paddingTop: theme.spacing(3),
-    borderTopWidth: 1,
-    borderTopColor: theme.colors.borderColor,
+  featureList: {
+    gap: theme.spacing(1.5),
   },
-  bulletRow: {
+  featureRow: {
     flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: theme.spacing(1.5),
+    alignItems: 'flex-start',
+    gap: theme.spacing(1.5),
   },
-  bullet: {
-    fontSize: 16,
-    marginRight: theme.spacing(2),
-  },
-  bulletText: {
+  featureText: {
+    flex: 1,
     fontSize: 16,
     color: theme.colors.bodyText,
+  },
+  helperText: {
+    marginTop: theme.spacing(3),
+    fontSize: 14,
+    lineHeight: 22,
+    color: theme.colors.disabledText,
+    textAlign: 'center',
   },
 });

@@ -1,11 +1,12 @@
 import React, { useState, useContext, useEffect } from 'react';
-import { Modal, View, Text, TextInput, StyleSheet, ActivityIndicator, TouchableOpacity } from 'react-native';
+import { Modal, View, TextInput, StyleSheet, TouchableOpacity } from 'react-native';
 import { InvitesContext } from '../context/InvitesContext';
 import { Button } from './Button';
 import { theme } from '../theme';
 import { Ionicons } from '@expo/vector-icons';
 import { Dropdown } from 'react-native-element-dropdown';
 import Toast from 'react-native-toast-message';
+import { Text } from './Themed';
 
 interface InvitePersonModalProps {
   visible: boolean;
@@ -122,9 +123,14 @@ const InvitePersonModal: React.FC<InvitePersonModalProps> = ({ visible, onClose 
           />
           
           <View style={styles.buttonContainer}>
-            <Button onPress={handleInvite} disabled={loading} style={{flex: 1}}>
-              {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Send Invite</Text>}
-            </Button>
+            <Button
+              onPress={handleInvite}
+              disabled={loading}
+              loading={loading}
+              title="Send Invite"
+              style={styles.primaryButton}
+              textStyle={styles.primaryButtonText}
+            />
           </View>
         </View>
       </View>
@@ -184,18 +190,19 @@ const styles = StyleSheet.create({
     color: theme.colors.bodyText, // Ensure text color is readable
   },
   buttonContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
     width: '100%',
     marginTop: theme.spacing(2), // Changed from 10
   },
-  buttonText: {
-    color: 'white',
-    fontWeight: 'bold',
-    fontSize: theme.fontSizes.md, // Changed from 16
+  primaryButton: {
+    width: '100%',
+    minHeight: 52,
+    borderRadius: theme.radius.lg,
+  },
+  primaryButtonText: {
+    fontSize: theme.fontSizes.md,
   },
   errorText: {
-    color: 'red',
+    color: theme.colors.danger,
     marginBottom: theme.spacing(2), // Changed from 10
     textAlign: 'center',
   },

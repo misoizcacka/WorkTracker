@@ -9,6 +9,7 @@ import { theme } from '../../theme'; // Corrected import path
 import AnimatedScreen from '../../components/AnimatedScreen'; // Corrected import path
 import { Ionicons } from '@expo/vector-icons'; 
 import UserAvatar from '../../components/UserAvatar';
+import { Card } from '../../components/Card';
 
 import { Employee } from '../../types';
 import { fetchLatestLocationForWorkers, LatestLocation } from '~/services/locationEvents';
@@ -213,6 +214,21 @@ export default function MapOverviewScreen() {
     }));
   }, [selectedProjects]);
 
+  const mapInitialRegion = useMemo(() => {
+    const firstWorkerWithLocation = mapViewSelectedWorkers.find(worker => worker.location);
+    const firstProjectWithLocation = mapViewSelectedProjects.find(project => project.location);
+    const initialLocation = firstWorkerWithLocation?.location || firstProjectWithLocation?.location;
+
+    return {
+      latitude: initialLocation?.latitude ?? 52.5200,
+      longitude: initialLocation?.longitude ?? 13.4050,
+      latitudeDelta: 0.2,
+      longitudeDelta: 0.2,
+    };
+  }, [mapViewSelectedWorkers, mapViewSelectedProjects]);
+
+  const mapRegionKey = `${mapInitialRegion.latitude}-${mapInitialRegion.longitude}`;
+
 
   return (
     <AnimatedScreen>
@@ -240,16 +256,20 @@ export default function MapOverviewScreen() {
           </View>
 
           <View style={styles.centerPanel}>
-            <MapView
-              initialRegion={{
-                latitude: 52.5200,
-                longitude: 13.4050,
-                latitudeDelta: 0.2,
-                longitudeDelta: 0.2,
-              }}
-              selectedWorkers={mapViewSelectedWorkers}
-              selectedProjects={mapViewSelectedProjects}
-            />
+            {selectedWorkers.length === 0 ? (
+              <Card style={styles.emptyMapCard}>
+                <Text style={styles.emptyMapText} fontType="regular">
+                  Select one or more workers to view their locations on the map.
+                </Text>
+              </Card>
+            ) : (
+              <MapView
+                key={mapRegionKey}
+                initialRegion={mapInitialRegion}
+                selectedWorkers={mapViewSelectedWorkers}
+                selectedProjects={mapViewSelectedProjects}
+              />
+            )}
           </View>
 
           <View style={styles.rightPanel}>
@@ -325,6 +345,19 @@ const styles = StyleSheet.create({
   centerPanel: {
     flex: 1,
     backgroundColor: theme.colors.cardBackground, 
+  },
+  emptyMapCard: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    margin: theme.spacing(3),
+    padding: theme.spacing(3),
+  },
+  emptyMapText: {
+    color: theme.colors.bodyText,
+    fontSize: 18,
+    textAlign: 'center',
+    maxWidth: 320,
   },
   rightPanel: {
     width: 280,

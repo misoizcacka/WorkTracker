@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { View, StyleSheet, Pressable, Animated, Image, Platform } from 'react-native';
+import { View, StyleSheet, Pressable, Animated, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Link, usePathname } from 'expo-router';
 import { theme } from '../../../theme';
@@ -86,18 +86,6 @@ export const ManagerSidebar = () => {
     { icon: 'person-circle-outline', label: 'Account', href: '/(manager)/account' },
   ];
 
-  const kLogoOpacity = animation.interpolate({
-    inputRange: [SIDEBAR_COLLAPSED_WIDTH, SIDEBAR_COLLAPSED_WIDTH + 40],
-    outputRange: [1, 0],
-    extrapolate: 'clamp',
-  });
-
-  const fullLogoOpacity = animation.interpolate({
-    inputRange: [SIDEBAR_COLLAPSED_WIDTH + 60, SIDEBAR_EXPANDED_WIDTH - 40],
-    outputRange: [0, 1],
-    extrapolate: 'clamp',
-  });
-
   const handleMouseEnter = () => {
     if (Platform.OS === 'web') {
       toggleSidebar(true);
@@ -109,8 +97,6 @@ export const ManagerSidebar = () => {
       toggleSidebar(false);
     }
   };
-
-  const AnimatedLogo = Animated.createAnimatedComponent(Logo);
 
   return (
     <View style={{ width: SIDEBAR_COLLAPSED_WIDTH, zIndex: 100, backgroundColor: theme.colors.cardBackground }}>
@@ -137,20 +123,12 @@ export const ManagerSidebar = () => {
         <View style={styles.topSection}>
           <Link href="/(manager)/dashboard" asChild>
             <Pressable style={StyleSheet.flatten([styles.logoContainer, !isExpanded && styles.collapsedLogo])}>
-                <View style={{ height: 24, width: '100%', alignItems: 'flex-start', justifyContent: 'center' }}>
-                  <AnimatedLogo
-                      variant="icon"
-                      style={{ 
-                        opacity: kLogoOpacity,
-                        position: 'absolute'
-                      }}
-                  />
-                  <AnimatedLogo
-                      size="small"
-                      style={{ 
-                        opacity: fullLogoOpacity,
-                      }}
-                  />
+                <View style={styles.logoFrame}>
+                  {isExpanded ? (
+                    <Logo variant="full" size="small" style={styles.fullLogo} />
+                  ) : (
+                    <Logo variant="icon" style={styles.iconLogo} />
+                  )}
                 </View>
             </Pressable>
           </Link>
@@ -225,6 +203,20 @@ const styles = StyleSheet.create({
   collapsedLogo: {
     paddingLeft: 24,
     justifyContent: 'flex-start',
+  },
+  logoFrame: {
+    height: 22,
+    width: 66,
+    alignItems: 'flex-start',
+    justifyContent: 'center',
+  },
+  fullLogo: {
+    height: 22,
+    width: 66,
+  },
+  iconLogo: {
+    height: theme.branding.logoHeightSmall,
+    width: theme.branding.logoHeightSmall,
   },
   navContainer: {
     flex: 1,

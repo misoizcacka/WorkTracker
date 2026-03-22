@@ -1,5 +1,5 @@
 import React, { useState, useContext, useEffect, useRef, useCallback } from 'react';
-import { Modal, View, Text, TextInput, StyleSheet, ActivityIndicator, TouchableOpacity, ScrollView, Animated, Platform, Dimensions, Image, Easing } from 'react-native';
+import { Modal, View, TextInput, StyleSheet, TouchableOpacity, ScrollView, Animated, Platform, Dimensions, Image, Easing, ActivityIndicator } from 'react-native';
 import { ProjectsContext, ProjectsContextType } from '../context/ProjectsContext';
 import { Button } from './Button';
 import { theme } from '../theme';
@@ -11,6 +11,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { MediaType } from 'expo-image-picker';
 import { MapView } from './MapView'; // Import MapView
 import { EmbedMapView } from './EmbedMapView.web'; // Import EmbedMapView
+import { Text } from './Themed';
 
 interface CreateProjectModalProps {
   visible: boolean;
@@ -282,9 +283,14 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({ visible,
             )}
             
             <View style={styles.buttonContainer}>
-              <Button onPress={handleCreate} disabled={isCreateButtonDisabled} style={styles.createButton}>
-                {isLoading ? <ActivityIndicator color="#fff" /> : <Text style={styles.createButtonText}>Create Project</Text>}
-              </Button>
+              <Button
+                onPress={handleCreate}
+                disabled={isCreateButtonDisabled}
+                loading={isLoading}
+                title="Create Project"
+                style={styles.createButton}
+                textStyle={styles.createButtonText}
+              />
             </View>
           </ScrollView>
         </Animated.View>
@@ -360,8 +366,6 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.primary,
   },
   createButtonText: {
-    color: 'white',
-    fontWeight: 'bold',
     fontSize: 16,
   },
   errorText: {
