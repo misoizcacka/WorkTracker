@@ -1,5 +1,5 @@
 import React, { useState, useContext, useMemo, useEffect } from "react";
-import { View, StyleSheet, ScrollView, useWindowDimensions, TextInput, TouchableOpacity, Image, Platform, ActivityIndicator, Animated } from "react-native";
+import { View, StyleSheet, useWindowDimensions, TextInput, TouchableOpacity, Image, Platform, ActivityIndicator, Animated, ScrollView } from "react-native";
 import { Text } from "~/components/Themed";
 import { Card } from "~/components/Card";
 import AnimatedScreen from "~/components/AnimatedScreen";
@@ -46,6 +46,8 @@ export default function ManagerProjects() {
   const [searchTerm, setSearchTerm] = useState('');
   const [sortBy, setSortBy] = useState('newest');
   const [isModalVisible, setModalVisible] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [gridWidth, setGridWidth] = useState(0);
 
   useEffect(() => {
     loadInitialProjects();
@@ -59,16 +61,17 @@ export default function ManagerProjects() {
   };
 
   const numColumns = getNumColumns();
-  const cardWidth = useMemo(() => {
-    const totalHorizontalPadding = theme.spacing(1) * 2;
-    const gutter = theme.spacing(2);
-    const containerPadding = theme.spacing(3) * 2;
-
-    const availableWidth = width - containerPadding;
-    const itemWidth = (availableWidth - (gutter * (numColumns - 1))) / numColumns;
-    
-    return itemWidth;
-  }, [width, numColumns]);
+  const gridGap = theme.spacing(2);
+  const itemsPerPage = useMemo(() => {
+    if (numColumns >= 4) return 12;
+    if (numColumns === 3) return 9;
+    if (numColumns === 2) return 8;
+    return 6;
+  }, [numColumns]);
+  const projectCardWidth = useMemo(() => {
+    if (gridWidth <= 0) return undefined;
+    return Math.max(0, (gridWidth - gridGap * (numColumns - 1)) / numColumns);
+  }, [gridWidth, gridGap, numColumns]);
 
 
   const getWorkerCountForProject = (projectId: string) => {
@@ -99,6 +102,27 @@ export default function ManagerProjects() {
     return currentProjects;
   }, [projects, searchTerm, sortBy]);
 
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, sortBy, numColumns]);
+
+  const totalPages = Math.max(1, Math.ceil(sortedAndFilteredProjects.length / itemsPerPage));
+  const paginatedProjects = useMemo(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    return sortedAndFilteredProjects.slice(startIndex, startIndex + itemsPerPage);
+  }, [sortedAndFilteredProjects, currentPage, itemsPerPage]);
+  const gridStyle = useMemo(() => (
+    Platform.OS === 'web'
+      ? {
+          display: 'grid',
+          gridTemplateColumns: `repeat(${numColumns}, minmax(0, 1fr))`,
+          columnGap: theme.spacing(2),
+          rowGap: theme.spacing(2),
+          alignContent: 'start',
+        }
+      : null
+  ), [numColumns]);
+
   const handleProjectPress = (projectId: string) => {
     router.push(`/(manager)/projects/${projectId}`);
   };
@@ -109,9 +133,12 @@ export default function ManagerProjects() {
 
   const ProjectCardItem = ({ item }: { item: Project }) => {
     const workerCount = getWorkerCountForProject(item.id as string);
+    const cardWidthStyle = Platform.OS === 'web'
+      ? ({ width: '100%' } as const)
+      : (projectCardWidth ? { width: projectCardWidth } : null);
 
     return (
-      <View style={[styles.cardContainer, { width: cardWidth }]}>
+      <View style={[styles.cardContainer, cardWidthStyle]}>
         <TouchableOpacity 
           onPress={() => handleProjectPress(item.id)} 
           style={styles.projectCardWrapper}
@@ -169,17 +196,52 @@ export default function ManagerProjects() {
           <Button title="Create Project" onPress={handleCreateProject} style={styles.createButton} textStyle={styles.createButtonText} />
         </View>
 
-        {projectsLoading && projects.length === 0 ? (
-          <ActivityIndicator size="large" color={theme.colors.primary} style={{ marginTop: theme.spacing(4) }} />
-        ) : sortedAndFilteredProjects.length === 0 ? (
-          <Text style={styles.noProjectsText} fontType="regular">No projects found matching your criteria.</Text>
-        ) : (
-          <View style={[styles.grid, { marginHorizontal: -theme.spacing(1) }]}>
-            {sortedAndFilteredProjects.map((item) => (
-              <ProjectCardItem key={item.id} item={item} />
-            ))}
-          </View>
-        )}
+        <View
+          style={styles.contentArea}
+          onLayout={(event) => setGridWidth(event.nativeEvent.layout.width)}
+        >
+          {projectsLoading && projects.length === 0 ? (
+            <ActivityIndicator size="large" color={theme.colors.primary} style={{ marginTop: theme.spacing(4) }} />
+          ) : sortedAndFilteredProjects.length === 0 ? (
+            <Text style={styles.noProjectsText} fontType="regular">No projects found matching your criteria.</Text>
+          ) : (
+            <>
+              <ScrollView style={styles.projectsScrollView} contentContainerStyle={styles.projectsScrollContent}>
+                <View style={[styles.grid, gridStyle as any]}>
+                  {paginatedProjects.map((item) => (
+                    <ProjectCardItem key={item.id} item={item} />
+                  ))}
+                </View>
+              </ScrollView>
+
+              {totalPages > 1 && (
+                <View style={styles.paginationBar}>
+                  <Text style={styles.paginationText} fontType="regular">
+                    Page {currentPage} of {totalPages}
+                  </Text>
+                  <View style={styles.paginationActions}>
+                    <Button
+                      title="Previous"
+                      onPress={() => setCurrentPage(page => Math.max(1, page - 1))}
+                      disabled={currentPage === 1}
+                      type="secondary"
+                      style={styles.paginationButton}
+                      textStyle={styles.paginationButtonText}
+                    />
+                    <Button
+                      title="Next"
+                      onPress={() => setCurrentPage(page => Math.min(totalPages, page + 1))}
+                      disabled={currentPage === totalPages}
+                      type="secondary"
+                      style={styles.paginationButton}
+                      textStyle={styles.paginationButtonText}
+                    />
+                  </View>
+                </View>
+              )}
+            </>
+          )}
+        </View>
       </View>
       <CreateProjectModal visible={isModalVisible} onClose={() => setModalVisible(false)} />     
     </AnimatedScreen>
@@ -273,13 +335,28 @@ const styles = StyleSheet.create({
     fontSize: 18,
   },
   grid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    // Removed marginHorizontal: -theme.spacing(1), mainContentCard handles padding
+    width: '100%',
+    ...Platform.select({
+      native: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        alignContent: 'flex-start',
+        gap: theme.spacing(2),
+      },
+    }),
+  },
+  contentArea: {
+    flex: 1,
+    minHeight: 0,
+  },
+  projectsScrollView: {
+    flex: 1,
+  },
+  projectsScrollContent: {
+    paddingBottom: theme.spacing(1),
   },
   cardContainer: {
-    paddingHorizontal: theme.spacing(1),
-    marginBottom: theme.spacing(2),
+    ...(Platform.OS !== 'web' ? { marginBottom: theme.spacing(2) } : null),
   },
   projectCardWrapper: {
     borderRadius: theme.radius.lg,
@@ -361,5 +438,34 @@ const styles = StyleSheet.create({
     fontSize: theme.fontSizes.md, // Adjusted
     color: theme.colors.bodyText,
     marginTop: theme.spacing(4),
+  },
+  paginationBar: {
+    marginTop: theme.spacing(2),
+    paddingTop: theme.spacing(2),
+    borderTopWidth: 1,
+    borderTopColor: theme.colors.borderColor,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: theme.spacing(2),
+  },
+  paginationText: {
+    fontSize: theme.fontSizes.sm,
+    color: theme.colors.bodyText,
+  },
+  paginationActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing(1),
+  },
+  paginationButton: {
+    minHeight: 40,
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    borderRadius: theme.radius.md,
+  },
+  paginationButtonText: {
+    fontSize: theme.fontSizes.sm,
+    color: theme.colors.headingText,
   },
 });

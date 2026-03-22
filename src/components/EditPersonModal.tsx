@@ -10,6 +10,7 @@ import { Card } from './Card';
 import * as ImagePicker from 'expo-image-picker';
 import { uploadAvatar } from '../services/profile';
 import UserAvatar from './UserAvatar';
+import Toast from 'react-native-toast-message';
 
 interface EditPersonModalProps {
   visible: boolean;
@@ -40,6 +41,28 @@ const EditPersonModal: React.FC<EditPersonModalProps> = ({ visible, onClose, emp
       setAvatarUrl(employee.avatar_url);
     }
   }, [employee]);
+
+  const validatePersonForm = () => {
+    const trimmedName = fullName.trim();
+    const trimmedEmail = email.trim().toLowerCase();
+    const trimmedPhone = phone.trim();
+    const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const phonePattern = /^[0-9+\-()\/\s]*$/;
+
+    if (trimmedName.length < 2) {
+      return 'Please enter a valid full name.';
+    }
+
+    if (!emailPattern.test(trimmedEmail)) {
+      return 'Please enter a valid email address.';
+    }
+
+    if (trimmedPhone && !phonePattern.test(trimmedPhone)) {
+      return 'Please enter a valid phone number.';
+    }
+
+    return null;
+  };
 
   const handleImagePickAndUpload = async () => {
     if (!employee) return;
@@ -73,8 +96,9 @@ const EditPersonModal: React.FC<EditPersonModalProps> = ({ visible, onClose, emp
   };
 
   const handleSave = async () => {
-    if (!fullName) {
-      setError('Full name is required.');
+    const validationError = validatePersonForm();
+    if (validationError) {
+      setError(validationError);
       return;
     }
     if (!employee) {
@@ -86,17 +110,21 @@ const EditPersonModal: React.FC<EditPersonModalProps> = ({ visible, onClose, emp
     try {
       await onSave({
         ...employee,
-        full_name: fullName,
-        email,
-        phone_number: phone,
+        full_name: fullName.trim(),
+        email: email.trim().toLowerCase(),
+        phone_number: phone.trim() || null,
         reporting_to: reportingTo,
         avatar_url: avatarUrl,
       });
       setLoading(false);
       onClose();
-    } catch (e) {
+    } catch (e: any) {
       setLoading(false);
-      setError('Failed to save changes. Please try again.');
+      Toast.show({
+        type: 'error',
+        text1: 'Could Not Save Changes',
+        text2: e?.message || 'Please try again.'
+      });
     }
   };
 
@@ -119,8 +147,6 @@ const EditPersonModal: React.FC<EditPersonModalProps> = ({ visible, onClose, emp
                 <Ionicons name="close" size={24} color={theme.colors.bodyText} />
               </TouchableOpacity>
             </View>
-
-            {error ? <Text style={styles.errorText} fontType="medium">{error}</Text> : null}
 
             <View style={styles.content}>
               <View style={styles.avatarSection}>
@@ -345,11 +371,6 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.primary,
     height: 52,
     borderRadius: theme.radius.lg,
-  },
-  errorText: {
-    color: theme.colors.danger,
-    margin: theme.spacing(2),
-    textAlign: 'center',
   },
   placeholderStyle: {
     fontSize: 16,

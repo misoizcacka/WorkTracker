@@ -108,6 +108,12 @@ const AssignmentBlock = React.memo(function AssignmentBlock({
         <View style={styles.assignmentInfo}>
           <Text style={styles.assignmentName} numberOfLines={1} fontType="medium">{assignment.project.name}</Text>   
           <Text style={styles.assignmentAddress} numberOfLines={1} fontType="regular">{assignment.project.address}</Text>
+          {assignment.start_time && (
+            <View style={styles.timeBadge}>
+              <Ionicons name="time-outline" size={12} color={theme.colors.primary} style={styles.timeIcon} />
+              <Text style={styles.assignmentTime} fontType="medium">{assignment.start_time}</Text>
+            </View>
+          )}
         </View>
       </View>
     ) : (
@@ -124,6 +130,12 @@ const AssignmentBlock = React.memo(function AssignmentBlock({
           <Text style={styles.assignmentName} numberOfLines={1} fontType="medium">{assignment.location.name}</Text>  
           {assignment.location.address && (
             <Text style={styles.assignmentAddress} numberOfLines={1} fontType="regular">{assignment.location.address}</Text>
+          )}
+          {assignment.start_time && (
+            <View style={styles.timeBadge}>
+              <Ionicons name="time-outline" size={12} color={theme.colors.primary} style={styles.timeIcon} />
+              <Text style={styles.assignmentTime} fontType="medium">{assignment.start_time}</Text>
+            </View>
           )}
         </View>
       </View>
@@ -160,12 +172,6 @@ const AssignmentBlock = React.memo(function AssignmentBlock({
           >
             <View>
               {content}
-              {assignment.start_time && (
-                <View style={styles.timeInfoContainer}>
-                    <Ionicons name="time-outline" size={14} color={theme.colors.bodyText} style={styles.timeIcon} />
-                    <Text style={styles.assignmentTime} fontType="bold">Be there at: {assignment.start_time}</Text>
-                </View>
-              )}
             </View>
               {!isPastDate && (
                 <TouchableOpacity style={styles.deleteButton} onPress={() => onDeleteAssignment(workerId, assignment.id)}>
@@ -381,17 +387,22 @@ const styles = StyleSheet.create({
     fontSize: theme.fontSizes.xs,
     color: theme.colors.bodyText,
   },
-  timeInfoContainer: {
+  timeBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 2,
+    alignSelf: 'flex-start',
+    marginTop: theme.spacing(1),
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    borderRadius: theme.radius.pill,
+    backgroundColor: 'rgba(255,255,255,0.7)',
   },
   timeIcon: {
     marginRight: 4,
   },
   assignmentTime: {
     fontSize: theme.fontSizes.xs,
-    color: theme.colors.bodyText,
+    color: theme.colors.headingText,
   },
   deleteButton: {
     position: 'absolute',

@@ -157,9 +157,10 @@ export function EmployeesProvider({ children }: { children: React.ReactNode }) {
 
   const updateEmployee = useCallback(async (updatedEmployee: Employee) => {
     if (!userCompanyId) throw new Error("Company ID not available.");
+    const { public_avatar_url, ...employeePayload } = updatedEmployee as Employee & { public_avatar_url?: string | null };
     const { data, error } = await supabase
       .from('employees')
-      .update(updatedEmployee)
+      .update(employeePayload)
       .eq('id', updatedEmployee.id)
       .eq('company_id', userCompanyId) // Ensure update is scoped to company
       .select()

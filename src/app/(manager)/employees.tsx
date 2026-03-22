@@ -12,11 +12,9 @@ import InvitePersonModal from "../../components/InvitePersonModal";
 import { Card } from "../../components/Card";
 import EditPersonModal from "../../components/EditPersonModal";
 import RemovePersonModal from "../../components/RemovePersonModal";
-import EditInviteModal from "../../components/EditInviteModal"; // NEW
 import { Employee, Invite } from "../../types";
 import { Ionicons } from '@expo/vector-icons';
 import { Dropdown } from "react-native-element-dropdown";
-import { uploadAvatar, updateEmployeeProfile, getAvatarPublicUrl } from "../../services/profile";
 import UserAvatar from "../../components/UserAvatar";
 
 
@@ -35,11 +33,8 @@ export default function ManagerEmployees() {
   const [editModalVisible, setEditModalVisible] = useState(false);
   const [removeModalVisible, setRemoveModalVisible] = useState(false);
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
-  const [editInviteModalVisible, setEditInviteModalVisible] = useState(false); // NEW
-  const [selectedInvite, setSelectedInvite] = useState<Invite | null>(null); // NEW
   const [loading, setLoading] = useState(false); // Used for general loading states, e.g., invite cancellation
   const [isCancellingInvite, setIsCancellingInvite] = useState<string | null>(null); // To track which invite is being cancelled
-  const [isSavingInvite, setIsSavingInvite] = useState(false); // NEW: for EditInviteModal saving state
 
   const fixedColumnWidths = {
     avatar: 60,
@@ -66,7 +61,7 @@ export default function ManagerEmployees() {
   }
 
   const { employees, seatsUsed, seatLimit, updateEmployee, deleteEmployee, getEmployeeById } = employeesContext;
-  const { invites, deleteInvite, updateInvite } = invitesContext; // Destructure invites, deleteInvite, and NEW updateInvite from InvitesContext
+  const { invites, deleteInvite } = invitesContext;
 
   const combinedList = useMemo(() => {
     const pendingInvites = invites.map(invite => ({
@@ -96,25 +91,6 @@ export default function ManagerEmployees() {
       } finally {
         setIsCancellingInvite(null);
       }
-    }
-  };
-
-  const handleEditInvite = (invite: Invite) => { // NEW
-    setSelectedInvite(invite);
-    setEditInviteModalVisible(true);
-  };
-
-  const handleSaveInvite = async (updatedInvite: Invite) => { // NEW
-    setIsSavingInvite(true);
-    try {
-      await updateInvite(updatedInvite);
-      Toast.show({ type: 'success', text1: 'Invite Updated', text2: `Invitation for ${updatedInvite.full_name} has been updated.` });
-      setEditInviteModalVisible(false);
-    } catch (error) {
-      console.error("Failed to save invite", error);
-      Toast.show({ type: 'error', text1: 'Error', text2: 'Failed to update invitation.' });
-    } finally {
-      setIsSavingInvite(false);
     }
   };
 
@@ -187,18 +163,17 @@ export default function ManagerEmployees() {
         </Text>
         <View style={[styles.tableCellActions, { width: fixedColumnWidths.actions }]}>
           {isPendingInvite ? (
-            <>
-              <TouchableOpacity onPress={() => handleEditInvite(item as Invite)} style={styles.actionButton}>
-                <Ionicons name="pencil-outline" size={24} color={theme.colors.primary} />
-              </TouchableOpacity>
-              <TouchableOpacity onPress={() => handleCancelPending(item)} style={[styles.actionButton, { flexDirection: 'column', alignItems: 'center' }]} disabled={isCancellingInvite === item.id}>
-                {isCancellingInvite === item.id ? (
-                  <ActivityIndicator size="small" color={theme.colors.danger} />
-                ) : (
-                  <Ionicons name="close-circle-outline" size={24} color={theme.colors.danger} />
-                )}
-              </TouchableOpacity>
-            </>
+            <TouchableOpacity
+              onPress={() => handleCancelPending(item)}
+              style={[styles.actionButton, { flexDirection: 'column', alignItems: 'center' }]}
+              disabled={isCancellingInvite === item.id}
+            >
+              {isCancellingInvite === item.id ? (
+                <ActivityIndicator size="small" color={theme.colors.danger} />
+              ) : (
+                <Ionicons name="close-circle-outline" size={24} color={theme.colors.danger} />
+              )}
+            </TouchableOpacity>
           ) : (
             <>
               <TouchableOpacity onPress={() => handleEdit(item as Employee)} style={styles.actionButton}>
@@ -294,13 +269,6 @@ export default function ManagerEmployees() {
         employee={selectedEmployee}
         onConfirm={handleConfirmRemoveEmployee}
         loading={loading}
-      />
-      <EditInviteModal // NEW
-        visible={editInviteModalVisible}
-        onClose={() => setEditInviteModalVisible(false)}
-        invite={selectedInvite}
-        onSave={handleSaveInvite}
-        loading={isSavingInvite}
       />
     </AnimatedScreen>
   );

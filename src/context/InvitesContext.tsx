@@ -10,6 +10,7 @@ interface Company {
 interface InvitesContextType {
   invites: Invite[];
   sendEmailInvite: (inviteData: { full_name: string; email: string; role: 'worker' | 'manager' }) => Promise<Invite | undefined>;
+  refreshInvites: () => Promise<void>;
   getInviteByToken: (token: string) => Promise<Invite | undefined>;
   updateInviteStatus: (token: string, status: 'pending' | 'accepted' | 'expired') => Promise<void>;
   updateInvite: (updatedInvite: Invite) => Promise<Invite>; // NEW: Function to update an invite
@@ -21,6 +22,23 @@ export const InvitesContext = createContext<InvitesContextType | null>(null);
 export function InvitesProvider({ children }: { children: React.ReactNode }) {
   const [invites, setInvites] = useState<Invite[]>([]);
   const [userCompanyId, setUserCompanyId] = useState<string | null>(null); // New state for company ID
+
+  const refreshInvites = useCallback(async () => {
+    if (!userCompanyId) return;
+
+    const { data, error } = await supabase
+      .from('invites')
+      .select('*')
+      .eq('status', 'pending')
+      .eq('company_id', userCompanyId);
+
+    if (error) {
+      console.error('Error fetching invites:', error);
+      throw error;
+    }
+
+    setInvites((data || []) as Invite[]);
+  }, [userCompanyId]);
 
   useEffect(() => {
     const getCompanyId = async () => {
@@ -59,21 +77,9 @@ export function InvitesProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!userCompanyId) return; // Don't fetch invites until company ID is available
 
-    const fetchInvites = async () => {
-      const { data, error } = await supabase
-        .from('invites')
-        .select('*')
-        .eq('status', 'pending')
-        .eq('company_id', userCompanyId); // Filter by company ID
-
-      if (error) {
-        console.error('Error fetching invites:', error);
-      } else {
-        setInvites(data as Invite[]);
-      }
-    };
-
-    fetchInvites();
+    refreshInvites().catch(error => {
+      console.error('Error refreshing invites:', error);
+    });
 
     // Setup real-time subscription for the specific company
     const inviteSubscription = supabase
@@ -111,7 +117,7 @@ export function InvitesProvider({ children }: { children: React.ReactNode }) {
     return () => {
       supabase.removeChannel(inviteSubscription);
     };
-  }, [userCompanyId]); // Re-run effect when company ID changes
+  }, [userCompanyId, refreshInvites]); // Re-run effect when company ID changes
 
   const sendEmailInvite = useCallback(async (inviteData: { full_name: string; email: string; role: 'worker' | 'manager' }): Promise<Invite | undefined> => {
     // Get the current user's session to pass the access token and company_id to the Edge Function
@@ -246,11 +252,12 @@ export function InvitesProvider({ children }: { children: React.ReactNode }) {
   const value = useMemo(() => ({
     invites,
     sendEmailInvite,
+    refreshInvites,
     getInviteByToken,
     updateInviteStatus,
     updateInvite, // NEW: Add updateInvite to the context value
     deleteInvite,
-  }), [invites, sendEmailInvite, getInviteByToken, updateInviteStatus, updateInvite, deleteInvite]);
+  }), [invites, sendEmailInvite, refreshInvites, getInviteByToken, updateInviteStatus, updateInvite, deleteInvite]);
 
   return (
     <InvitesContext.Provider value={value}>

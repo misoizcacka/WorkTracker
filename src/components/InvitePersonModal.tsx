@@ -33,9 +33,26 @@ const InvitePersonModal: React.FC<InvitePersonModalProps> = ({ visible, onClose 
     }
   }, [visible]);
 
+  const validateInviteForm = () => {
+    const trimmedName = fullName.trim();
+    const trimmedEmail = email.trim().toLowerCase();
+    const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+    if (trimmedName.length < 2) {
+      return 'Please enter a valid full name.';
+    }
+
+    if (!emailPattern.test(trimmedEmail)) {
+      return 'Please enter a valid email address.';
+    }
+
+    return null;
+  };
+
   const handleInvite = async () => {
-    if (!fullName || !email) {
-      setError('Full name and email are required.');
+    const validationError = validateInviteForm();
+    if (validationError) {
+      setError(validationError);
       return;
     }
 
@@ -43,24 +60,26 @@ const InvitePersonModal: React.FC<InvitePersonModalProps> = ({ visible, onClose 
     setLoading(true);
     try {
       await invitesContext?.sendEmailInvite({
-        full_name: fullName,
-        email,
+        full_name: fullName.trim(),
+        email: email.trim().toLowerCase(),
         role,
       });
+      await invitesContext?.refreshInvites();
       
       Toast.show({
         type: 'success',
         text1: 'Invite Sent',
-        text2: `An invitation has been sent to ${email}.`
+        text2: `An invitation has been sent to ${email.trim().toLowerCase()}.`
       });
       
       onClose(); // Close modal on success
-    } catch (e) {
-      setError('Failed to send invite. Please try again.');
+    } catch (e: any) {
+      console.error('InvitePersonModal: failed to send invite', e);
+      setError('We could not send the invitation. Please check the email address and try again.');
       Toast.show({
         type: 'error',
         text1: 'Invite Failed',
-        text2: 'Could not send an invitation. Please try again.'
+        text2: 'We could not send the invitation. Please check the email address and try again.'
       });
     } finally {
       setLoading(false);
