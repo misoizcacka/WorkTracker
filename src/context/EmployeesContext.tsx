@@ -8,9 +8,13 @@ export interface EmployeesContextType {
   employees: Employee[];
   seatLimit: number;
   seatsUsed: number;
+  scheduledSeatLimit: number | null;
+  scheduledSeatEffectiveAt: string | null;
   updateEmployee: (employee: Employee) => Promise<void>;
   deleteEmployee: (employeeId: string) => Promise<void>;
   getEmployeeById: (employeeId: string) => Employee | undefined;
+  loading: boolean;
+  userCompanyId: string | null;
 }
 
 export const EmployeesContext = createContext<EmployeesContextType | null>(null);
@@ -20,6 +24,8 @@ export function EmployeesProvider({ children }: { children: React.ReactNode }) {
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [loading, setLoading] = useState(true);
   const [seatLimit, setSeatLimit] = useState(0);
+  const [scheduledSeatLimit, setScheduledSeatLimit] = useState<number | null>(null);
+  const [scheduledSeatEffectiveAt, setScheduledSeatEffectiveAt] = useState<string | null>(null);
 
   useEffect(() => {
     if (isCompanyIdLoading) {
@@ -29,12 +35,18 @@ export function EmployeesProvider({ children }: { children: React.ReactNode }) {
     if (!userCompanyId || !userRole) {
       setEmployees([]);
       setSeatLimit(0);
+      setScheduledSeatLimit(null);
+      setScheduledSeatEffectiveAt(null);
       setLoading(false);
       return;
     }
 
     // Workers shouldn't fetch all employees or company seats
     if (userRole === 'worker') {
+      setEmployees([]);
+      setSeatLimit(0);
+      setScheduledSeatLimit(null);
+      setScheduledSeatEffectiveAt(null);
       setLoading(false);
       return;
     }
@@ -50,7 +62,7 @@ export function EmployeesProvider({ children }: { children: React.ReactNode }) {
             .eq('company_id', userCompanyId)
             .order('created_at', { ascending: false }),
           supabase.from('companies')
-            .select('worker_seats')
+            .select('worker_seats, scheduled_worker_seats, scheduled_change_effective_at')
             .eq('id', userCompanyId)
             .single()
         ]);
@@ -65,7 +77,11 @@ export function EmployeesProvider({ children }: { children: React.ReactNode }) {
         }
 
         if (compRes.error) console.error('Error fetching company seats:', compRes.error);
-        else setSeatLimit(compRes.data?.worker_seats || 0);
+        else {
+          setSeatLimit(compRes.data?.worker_seats || 0);
+          setScheduledSeatLimit(compRes.data?.scheduled_worker_seats ?? null);
+          setScheduledSeatEffectiveAt(compRes.data?.scheduled_change_effective_at ?? null);
+        }
       } catch (error) {
         console.error('Error in fetchData:', error);
       } finally {
@@ -107,8 +123,28 @@ export function EmployeesProvider({ children }: { children: React.ReactNode }) {
       )
       .subscribe();
 
+    const companySubscription = supabase
+      .channel(`company_subscription_${userCompanyId}`)
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'companies', filter: `id=eq.${userCompanyId}` },
+        payload => {
+          const nextCompany = payload.new as {
+            worker_seats?: number;
+            scheduled_worker_seats?: number | null;
+            scheduled_change_effective_at?: string | null;
+          };
+
+          setSeatLimit(nextCompany.worker_seats || 0);
+          setScheduledSeatLimit(nextCompany.scheduled_worker_seats ?? null);
+          setScheduledSeatEffectiveAt(nextCompany.scheduled_change_effective_at ?? null);
+        }
+      )
+      .subscribe();
+
     return () => {
       supabase.removeChannel(employeeSubscription);
+      supabase.removeChannel(companySubscription);
     };
   }, [userCompanyId, isCompanyIdLoading, userRole]); // Re-run effect when company ID, loading state, or role changes
 
@@ -169,12 +205,14 @@ export function EmployeesProvider({ children }: { children: React.ReactNode }) {
     employees,
     seatLimit,
     seatsUsed,
+    scheduledSeatLimit,
+    scheduledSeatEffectiveAt,
     updateEmployee,
     deleteEmployee,
     getEmployeeById,
     loading,
     userCompanyId, // New: Add userCompanyId to the context value
-  }), [employees, seatLimit, seatsUsed, updateEmployee, deleteEmployee, getEmployeeById, loading, userCompanyId]); // Add userCompanyId to dependencies
+  }), [employees, seatLimit, seatsUsed, scheduledSeatLimit, scheduledSeatEffectiveAt, updateEmployee, deleteEmployee, getEmployeeById, loading, userCompanyId]); // Add userCompanyId to dependencies
 
   return (
     <EmployeesContext.Provider value={value}>

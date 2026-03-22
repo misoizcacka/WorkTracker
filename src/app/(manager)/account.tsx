@@ -20,7 +20,16 @@ import { supabase } from "../../utils/supabase";
 export default function ManagerAccount() {
   const { width } = useWindowDimensions();
   const isLargeScreen = width >= 900;
-  const { signOut, user, userCompanyName, userCompanyId, userSubscriptionPeriodEnd, refreshUser } = useSession()!;
+  const {
+    signOut,
+    user,
+    userCompanyName,
+    userCompanyId,
+    userSubscriptionPeriodEnd,
+    userScheduledWorkerSeats,
+    userScheduledChangeEffectiveAt,
+    refreshUser,
+  } = useSession()!;
   const { profile, isLoading: isProfileLoading, refetchProfile } = useProfile();
   const employeesContext = useContext(EmployeesContext) as EmployeesContextType;
   const router = useRouter();
@@ -298,6 +307,16 @@ export default function ManagerAccount() {
                   <Ionicons name="time-outline" size={16} color={theme.colors.bodyText} />
                   <Text style={styles.periodEndText}>
                     Next renewal: <Text fontType="bold" style={{ color: theme.colors.headingText }}>{moment(userSubscriptionPeriodEnd).format('MMMM D, YYYY')}</Text>
+                  </Text>
+                </View>
+              )}
+
+              {userScheduledWorkerSeats !== null && userScheduledWorkerSeats !== undefined && (
+                <View style={styles.periodContainer}>
+                  <Ionicons name="arrow-down-circle-outline" size={16} color={theme.colors.primary} />
+                  <Text style={styles.periodEndText}>
+                    Scheduled seats next cycle: <Text fontType="bold" style={{ color: theme.colors.headingText }}>{userScheduledWorkerSeats}</Text>
+                    {userScheduledChangeEffectiveAt ? ` on ${moment(userScheduledChangeEffectiveAt).format('MMMM D, YYYY')}` : ''}
                   </Text>
                 </View>
               )}

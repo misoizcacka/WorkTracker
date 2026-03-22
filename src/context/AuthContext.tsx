@@ -19,6 +19,8 @@ interface AuthContextType {
   userCompanyName: string | null;
   userCompanyCountry: string | null;
   userSubscriptionPeriodEnd: string | null;
+  userScheduledWorkerSeats: number | null;
+  userScheduledChangeEffectiveAt: string | null;
   isSubscriptionExpired: boolean; // NEW
   isCompanyDetailsComplete: boolean;
   userRole: string | null;
@@ -46,6 +48,8 @@ export function SessionProvider(props: React.PropsWithChildren<{}>) {
   const [userCompanyName, setUserCompanyName] = useState<string | null>(null);
   const [userCompanyCountry, setUserCompanyCountry] = useState<string | null>(null);
   const [userSubscriptionPeriodEnd, setUserSubscriptionPeriodEnd] = useState<string | null>(null);
+  const [userScheduledWorkerSeats, setUserScheduledWorkerSeats] = useState<number | null>(null);
+  const [userScheduledChangeEffectiveAt, setUserScheduledChangeEffectiveAt] = useState<string | null>(null);
   const [isSubscriptionExpired, setIsSubscriptionExpired] = useState(false); // NEW
   const [isCompanyDetailsComplete, setIsCompanyDetailsComplete] = useState(false);
   const [userRole, setUserRole] = useState<string | null>(null);
@@ -57,6 +61,8 @@ export function SessionProvider(props: React.PropsWithChildren<{}>) {
     setUserCompanyName(null);
     setUserCompanyCountry(null);
     setUserSubscriptionPeriodEnd(null);
+    setUserScheduledWorkerSeats(null);
+    setUserScheduledChangeEffectiveAt(null);
     setIsSubscriptionExpired(false);
     setIsCompanyDetailsComplete(false);
     setUserRole(null);
@@ -84,17 +90,19 @@ export function SessionProvider(props: React.PropsWithChildren<{}>) {
     setUserRole(currentRole);
 
     if (currentCompanyId) {
-      const { data: companyDetails, error: companyDetailsError } = await supabase
-        .from('companies')
-        .select('name, country, subscription_period_end')
-        .eq('id', currentCompanyId)
-        .maybeSingle();
+        const { data: companyDetails, error: companyDetailsError } = await supabase
+          .from('companies')
+          .select('name, country, subscription_period_end, scheduled_worker_seats, scheduled_change_effective_at')
+          .eq('id', currentCompanyId)
+          .maybeSingle();
       
       if (companyDetailsError) {
         console.error('Error fetching company details in AuthContext:', companyDetailsError);
       } else if (companyDetails) {
         setUserCompanyName(companyDetails.name);
         setUserCompanyCountry(companyDetails.country);
+        setUserScheduledWorkerSeats(companyDetails.scheduled_worker_seats ?? null);
+        setUserScheduledChangeEffectiveAt(companyDetails.scheduled_change_effective_at ?? null);
         
         let finalPeriodEnd = companyDetails.subscription_period_end;
 
@@ -107,6 +115,10 @@ export function SessionProvider(props: React.PropsWithChildren<{}>) {
             });
             if (!syncError && syncData) {
               finalPeriodEnd = syncData.periodEnd;
+              if (syncData.clearedScheduledDowngrade) {
+                setUserScheduledWorkerSeats(null);
+                setUserScheduledChangeEffectiveAt(null);
+              }
             }
           } catch (err) {
             console.error('Error syncing subscription:', err);
@@ -222,6 +234,8 @@ export function SessionProvider(props: React.PropsWithChildren<{}>) {
       setUserCompanyName(null);
       setUserCompanyCountry(null);
       setUserSubscriptionPeriodEnd(null);
+      setUserScheduledWorkerSeats(null);
+      setUserScheduledChangeEffectiveAt(null);
       setIsSubscriptionExpired(false);
       setIsCompanyDetailsComplete(false);
       setUserRole(null);
@@ -235,6 +249,8 @@ export function SessionProvider(props: React.PropsWithChildren<{}>) {
     userCompanyName,
     userCompanyCountry,
     userSubscriptionPeriodEnd,
+    userScheduledWorkerSeats,
+    userScheduledChangeEffectiveAt,
     isSubscriptionExpired,
     isCompanyDetailsComplete,
     userRole,

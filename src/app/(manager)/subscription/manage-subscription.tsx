@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useContext, useMemo } from 'react';
-import { View, StyleSheet, TouchableOpacity, ActivityIndicator, Alert, ScrollView, Platform, Linking } from 'react-native';
+import React, { useState, useEffect, useContext } from 'react';
+import { View, StyleSheet, TouchableOpacity, ActivityIndicator, Alert, ScrollView, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import AnimatedScreen from '../../../components/AnimatedScreen';
 import { Card } from '../../../components/Card';
@@ -11,58 +11,49 @@ import { useSession } from '../../../context/AuthContext';
 import { EmployeesContext, EmployeesContextType } from '../../../context/EmployeesContext';
 import { supabase } from '../../../utils/supabase';
 import moment from 'moment';
+import Toast from 'react-native-toast-message';
 
 const BASE_MONTHLY_FEE = 10;
 const PRICE_PER_WORKER = 6;
 
 export default function ManageSubscriptionScreen() {
   const router = useRouter();
-  const { user, userCompanyId, userCompanyName, userSubscriptionPeriodEnd } = useSession();
+  const { userCompanyId, userCompanyName, userSubscriptionPeriodEnd, refreshUser } = useSession();
   const employeesContext = useContext(EmployeesContext) as EmployeesContextType;
 
   const currentSeats = employeesContext?.seatLimit || 0;
   const activeWorkers = employeesContext?.seatsUsed || 0;
+  const scheduledSeats = employeesContext?.scheduledSeatLimit ?? null;
+  const scheduledEffectiveAt = employeesContext?.scheduledSeatEffectiveAt || userSubscriptionPeriodEnd || null;
+  const hasScheduledDowngrade = scheduledSeats !== null && scheduledSeats < currentSeats;
+  const configuredSeats = hasScheduledDowngrade ? scheduledSeats : currentSeats;
 
-  const [newSlotCount, setNewSlotCount] = useState(currentSeats);
+  const [newSlotCount, setNewSlotCount] = useState(configuredSeats);
   const [isSaving, setIsSaving] = useState(false);
   const [isInitialLoading, setIsInitialLoading] = useState(true);
 
   useEffect(() => {
-    if (currentSeats > 0) {
-      setNewSlotCount(currentSeats);
-      setIsInitialLoading(false);
-    }
-  }, [currentSeats]);
+    setNewSlotCount(configuredSeats);
+    setIsInitialLoading(false);
+  }, [configuredSeats]);
 
   const handleIncrement = () => setNewSlotCount(prev => prev + 1);
   const handleDecrement = () => {
     if (newSlotCount > activeWorkers) {
       setNewSlotCount(prev => prev - 1);
     } else {
-      Alert.alert("Limit Reached", `You cannot have fewer seats than your current active workers (${activeWorkers}).`);
+      Toast.show({
+        type: 'error',
+        text1: 'Action Not Allowed',
+        text2: `You cannot have fewer seats than your current number of active workers (${activeWorkers}).`,
+      });
     }
   };
 
-  const hasChanges = newSlotCount !== currentSeats;
+  const hasChanges = newSlotCount !== configuredSeats;
   const isIncrease = newSlotCount > currentSeats;
-
-  // Calculate Proration Estimate Locally
-  const prorationEstimate = useMemo(() => {
-    if (!isIncrease || !userSubscriptionPeriodEnd) return 0;
-
-    const end = moment(userSubscriptionPeriodEnd);
-    const start = moment(userSubscriptionPeriodEnd).subtract(1, 'month');
-    const now = moment();
-
-    const totalDays = end.diff(start, 'days') || 30;
-    const remainingDays = Math.max(0, end.diff(now, 'days'));
-    
-    // Safety check: if remaining days is 0 (last day), assume at least a small portion or 0
-    const ratio = remainingDays / totalDays;
-    const diff = (newSlotCount - currentSeats) * PRICE_PER_WORKER;
-    
-    return diff * ratio;
-  }, [newSlotCount, currentSeats, isIncrease, userSubscriptionPeriodEnd]);
+  const isCancellation = hasScheduledDowngrade && newSlotCount === currentSeats;
+  const nextCycleDate = scheduledEffectiveAt ? moment(scheduledEffectiveAt).format('MMMM D, YYYY') : null;
 
   const handleSaveChanges = async () => {
     if (!hasChanges || isSaving) return;
@@ -73,36 +64,40 @@ export default function ManageSubscriptionScreen() {
         body: {
           companyId: userCompanyId,
           newWorkerCount: newSlotCount,
-          userId: user?.id,
         }
       });
 
       if (invokeError) throw invokeError;
       if (data?.error) throw new Error(data.error);
 
-      if (data?.checkoutUrl) {
-        // Redirection for Increase
-        if (Platform.OS === 'web') {
-          window.location.href = data.checkoutUrl;
-        } else {
-          Linking.openURL(data.checkoutUrl);
-        }
-      } else if (data?.status === 'success') {
-        // Confirmation for Decrease or Direct Update
-        Alert.alert("Success", "Subscription updated successfully.");
-        router.back();
-      } else {
-        throw new Error("Unexpected response from server.");
-      }
+      const successMessage = data?.action === 'scheduled_decrease'
+        ? `You will keep ${currentSeats} seat(s) until ${nextCycleDate || 'the next renewal'}, then move to ${newSlotCount}.`
+        : data?.action === 'cancel_scheduled_decrease'
+          ? 'Your scheduled downgrade has been canceled.'
+          : 'Your subscription has been updated.';
+
+      Toast.show({
+        type: 'success',
+        text1: data?.action === 'scheduled_decrease' ? 'Downgrade Scheduled' : 'Subscription Updated',
+        text2: successMessage,
+      });
+
+      await refreshUser(); // Refresh user/company data
+      router.back();
+
     } catch (err: any) {
       console.error("Update Error:", err);
-      Alert.alert("Update Failed", err.message || "Failed to update subscription.");
+      Toast.show({
+        type: 'error',
+        text1: 'Update Failed',
+        text2: 'We could not update your subscription. Please try again or check your payment method.',
+      });
     } finally {
       setIsSaving(false);
     }
   };
 
-  if (isInitialLoading && currentSeats === 0) {
+  if (isInitialLoading || employeesContext?.loading) {
     return (
       <AnimatedScreen>
         <View style={styles.centered}>
@@ -114,6 +109,11 @@ export default function ManageSubscriptionScreen() {
 
   const currentMonthly = BASE_MONTHLY_FEE + (currentSeats * PRICE_PER_WORKER);
   const newMonthly = BASE_MONTHLY_FEE + (newSlotCount * PRICE_PER_WORKER);
+  const pricingTitle = isCancellation
+    ? 'New Monthly Total'
+    : (newSlotCount < currentSeats || hasScheduledDowngrade)
+      ? 'Next Renewal Total'
+      : 'New Monthly Total';
 
   return (
     <AnimatedScreen>
@@ -153,7 +153,7 @@ export default function ManageSubscriptionScreen() {
           <Card style={styles.sectionCard}>
             <Text style={styles.sectionTitle} fontType="bold">Adjust Capacity</Text>
             <Text style={styles.adjusterDescription}>
-              Add or remove worker seats. Each seat allows one active worker to use the app.
+              Add seats immediately with prorated billing. Downgrades are scheduled for the next billing cycle, so you keep your current paid seats until renewal.
             </Text>
             
             <View style={styles.stepperContainer}>
@@ -174,27 +174,20 @@ export default function ManageSubscriptionScreen() {
                 <Ionicons name="add" size={24} color="white" />
               </TouchableOpacity>
             </View>
-
-            {isIncrease && (
-              <View style={styles.prorationNotice}>
-                <Ionicons name="information-circle-outline" size={18} color={theme.colors.primary} />
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.prorationText}>
-                    You will be charged a prorated amount for the remaining billing period today.
-                  </Text>
-                  {prorationEstimate > 0 && (
-                    <Text style={styles.dueTodayText} fontType="bold">
-                      Estimated Due Today: €{prorationEstimate.toFixed(2)}
-                    </Text>
-                  )}
-                </View>
-              </View>
-            )}
           </Card>
+
+          {hasScheduledDowngrade && (
+            <Card style={styles.sectionCard}>
+              <Text style={styles.sectionTitle} fontType="bold">Scheduled Downgrade</Text>
+              <Text style={styles.adjusterDescription}>
+                Your plan currently includes {currentSeats} live seats. It is scheduled to move to {scheduledSeats} seats on {nextCycleDate || 'the next renewal'}.
+              </Text>
+            </Card>
+          )}
 
           {/* 3. Pricing Summary */}
           <Card style={styles.sectionCard}>
-            <Text style={styles.sectionTitle} fontType="bold">New Monthly Total</Text>
+            <Text style={styles.sectionTitle} fontType="bold">{pricingTitle}</Text>
             <View style={styles.pricingRow}>
               <Text style={styles.pricingLabel}>Base Platform Fee</Text>
               <Text style={styles.pricingValue}>€{BASE_MONTHLY_FEE.toFixed(2)}</Text>
@@ -205,7 +198,7 @@ export default function ManageSubscriptionScreen() {
             </View>
             <View style={styles.divider} />
             <View style={styles.totalRow}>
-              <Text style={styles.totalLabel} fontType="bold">New Monthly Total</Text>
+              <Text style={styles.totalLabel} fontType="bold">{pricingTitle}</Text>
               <Text style={styles.totalValue} fontType="bold">€{newMonthly.toFixed(2)}</Text>
             </View>
             
@@ -220,7 +213,7 @@ export default function ManageSubscriptionScreen() {
           </Card>
 
           <Button 
-            title={isIncrease ? "Proceed to Payment" : "Update Subscription"}
+            title={isCancellation ? "Cancel Scheduled Downgrade" : "Confirm Changes"}
             onPress={handleSaveChanges}
             disabled={!hasChanges || isSaving}
             loading={isSaving}
@@ -228,7 +221,7 @@ export default function ManageSubscriptionScreen() {
           />
           
           <Text style={styles.footerNote}>
-            All prices include VAT where applicable. Proration is calculated automatically by Stripe.
+            All prices include VAT where applicable. Stripe prorates upgrades immediately, while downgrades apply on the next renewal.
           </Text>
         </View>
       </ScrollView>

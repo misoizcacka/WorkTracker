@@ -79,6 +79,7 @@ const EmployeeHoursReport = () => {
     };
 
     const totalHoursAllWorkers = reportData.reduce((sum, entry) => sum + entry.payable_hours, 0);
+    const tableMinWidth = 760;
 
     const renderWorkerItem = ({ item }: { item: any }) => {
         const isSelected = selectedWorkerIds.includes(item.id);
@@ -178,45 +179,58 @@ const EmployeeHoursReport = () => {
 
                                 {/* --- Hours Table --- */}
                                 <View style={styles.tableContainer}>
-                                    <View style={styles.tableHeader}>
-                                        <Text style={[styles.tableHeaderText, styles.colWorker]} fontType="bold">Worker Name</Text>
-                                        <Text style={[styles.tableHeaderText, styles.colHours]} fontType="bold">Worked</Text>
-                                        <Text style={[styles.tableHeaderText, styles.colBreaks]} fontType="bold">Break/Corr</Text>
-                                        <Text style={[styles.tableHeaderText, styles.colPayable]} fontType="bold">Payable</Text>
-                                    </View>
+                                    <ScrollView
+                                        horizontal
+                                        showsHorizontalScrollIndicator={true}
+                                        contentContainerStyle={{ flexGrow: 1 }}
+                                    >
+                                        <View style={{ minWidth: tableMinWidth, flex: 1 }}>
+                                            <View style={styles.tableHeader}>
+                                                <View style={[styles.headerCell, styles.colWorker]}>
+                                                    <Text style={styles.tableHeaderText} fontType="bold">Worker Name</Text>
+                                                </View>
+                                                <View style={[styles.headerCell, styles.colHours]}>
+                                                    <Text style={[styles.tableHeaderText, styles.numericHeader]} fontType="bold">Worked</Text>
+                                                </View>
+                                                <View style={[styles.headerCell, styles.colBreaks]}>
+                                                    <Text style={[styles.tableHeaderText, styles.numericHeader]} fontType="bold">Break/Corr</Text>
+                                                </View>
+                                                <View style={[styles.headerCell, styles.colPayable]}>
+                                                    <Text style={[styles.tableHeaderText, styles.numericHeader]} fontType="bold">Payable</Text>
+                                                </View>
+                                            </View>
 
-                                    {loading ? (
-                                        <ActivityIndicator size="large" color={theme.colors.primary} style={{ marginVertical: theme.spacing(4) }} />
-                                    ) : reportData.length === 0 ? (
-                                        <Text style={styles.noDataText} fontType="regular">No work data found for the selected criteria.</Text>
-                                    ) : (
+                                            {loading ? (
+                                                <ActivityIndicator size="large" color={theme.colors.primary} style={{ marginVertical: theme.spacing(4) }} />
+                                            ) : reportData.length === 0 ? (
+                                                <Text style={styles.noDataText} fontType="regular">No work data found for the selected criteria.</Text>
+                                            ) : (
                                         reportData.map((row) => (
-                                            <TouchableOpacity 
-                                                key={row.worker_id} 
-                                                style={styles.tableRow}
-                                                onPress={() => router.push({
-                                                    pathname: `/reports/daily-detailed-report/${row.worker_id}`,
-                                                    params: { startDate: startDate.toISOString(), endDate: endDate.toISOString() }
-                                                })}
-                                            >
-                                                <Text style={[styles.tableCell, styles.colWorker]} fontType="medium">{row.worker_full_name}</Text>
-                                                <View style={[styles.tableCell, styles.colHours]}>
-                                                    <Text style={styles.tableCellText} fontType="regular">{row.total_work_hours.toFixed(2)}h</Text>
-                                                </View>
-                                                <View style={[styles.tableCell, styles.colBreaks]}>
-                                                    <Text style={styles.smallLabel} fontType="regular">B: {row.total_break_minutes}m</Text>
-                                                    <Text style={[styles.smallLabel, { color: row.total_correction_minutes >= 0 ? theme.colors.success : theme.colors.danger }]} fontType="medium">
-                                                        C: {row.total_correction_minutes >= 0 ? '+' : ''}{row.total_correction_minutes}m
-                                                    </Text>
-                                                </View>
-                                                <View style={[styles.tableCell, styles.colPayable]}>
-                                                    <View style={styles.hoursBadge}>
-                                                        <Text style={styles.hoursBadgeText} fontType="bold">{row.payable_hours.toFixed(2)}h</Text>
+                                                    <View key={row.worker_id} style={styles.tableRow}>
+                                                        <View style={[styles.tableCell, styles.colWorker]}>
+                                                            <Text style={styles.workerCellText} fontType="medium" numberOfLines={1}>
+                                                                {row.worker_full_name}
+                                                            </Text>
+                                                        </View>
+                                                        <View style={[styles.tableCell, styles.colHours]}>
+                                                            <Text style={styles.tableCellText} fontType="regular">{row.total_work_hours.toFixed(2)}h</Text>
+                                                        </View>
+                                                        <View style={[styles.tableCell, styles.colBreaks]}>
+                                                            <Text style={styles.smallLabel} fontType="regular">B: {row.total_break_minutes}m</Text>
+                                                            <Text style={[styles.smallLabel, { color: row.total_correction_minutes >= 0 ? theme.colors.success : theme.colors.danger }]} fontType="medium">
+                                                                C: {row.total_correction_minutes >= 0 ? '+' : ''}{row.total_correction_minutes}m
+                                                            </Text>
+                                                        </View>
+                                                        <View style={[styles.tableCell, styles.colPayable]}>
+                                                            <View style={styles.hoursBadge}>
+                                                                <Text style={styles.hoursBadgeText} fontType="bold">{row.payable_hours.toFixed(2)}h</Text>
+                                                            </View>
+                                                        </View>
                                                     </View>
-                                                </View>
-                                            </TouchableOpacity>
-                                        ))
-                                    )}
+                                                ))
+                                            )}
+                                        </View>
+                                    </ScrollView>
                                 </View>
                             </ScrollView>
                         ) : (
@@ -416,10 +430,16 @@ const styles = StyleSheet.create({
         borderTopLeftRadius: theme.radius.md,
         borderTopRightRadius: theme.radius.md,
     },
+    headerCell: {
+        paddingHorizontal: theme.spacing(2),
+        justifyContent: 'center',
+    },
     tableHeaderText: {
         fontSize: theme.fontSizes.sm,
         color: theme.colors.headingText,
-        paddingHorizontal: theme.spacing(2),
+    },
+    numericHeader: {
+        textAlign: 'right',
     },
     tableRow: {
         flexDirection: 'row',
@@ -429,32 +449,37 @@ const styles = StyleSheet.create({
         paddingVertical: theme.spacing(2),
     },
     tableCell: {
-        fontSize: theme.fontSizes.md,
-        color: theme.colors.bodyText,
         paddingHorizontal: theme.spacing(2),
+        justifyContent: 'center',
     },
     tableCellText: {
         fontSize: theme.fontSizes.md,
         color: theme.colors.bodyText,
+        textAlign: 'right',
+    },
+    workerCellText: {
+        fontSize: theme.fontSizes.md,
+        color: theme.colors.bodyText,
     },
     colWorker: {
-        flex: 3,
+        flex: 3.2,
     },
     colHours: {
-        flex: 1.5,
+        flex: 1.4,
         alignItems: 'flex-end',
     },
     colBreaks: {
-        flex: 1.5,
-        alignItems: 'center',
+        flex: 1.8,
+        alignItems: 'flex-end',
     },
     colPayable: {
-        flex: 1.5,
+        flex: 1.4,
         alignItems: 'flex-end',
     },
     smallLabel: {
         fontSize: 11,
         color: theme.colors.bodyText,
+        textAlign: 'right',
     },
     hoursBadge: {
         backgroundColor: theme.colors.primaryMuted,
