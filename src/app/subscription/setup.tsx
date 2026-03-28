@@ -27,6 +27,7 @@ export default function SubscriptionSetupPage() {
   const localCompanyId = localSearchParams.companyId as string | undefined;
 
   const currentCompanyId = localCompanyId || userCompanyId;
+  const isResolvingCompanyContext = !!user && (!currentCompanyId || isCompanyIdLoading);
   
   const [numWorkers, setNumWorkers] = useState('1');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -51,10 +52,10 @@ export default function SubscriptionSetupPage() {
       // Call the cleanup Edge Function to delete the user and company
       const { error: cleanupError } = await supabase.functions.invoke('cleanup-user-on-cancel');
       if (cleanupError) {
-        console.error('Error during cleanup:', cleanupError);
+        console.error('cleanup-user-on-cancel failed:', cleanupError);
       }
     } catch (err) {
-      console.error('Unexpected error during cleanup:', err);
+      console.error('cleanup-user-on-cancel threw unexpectedly:', err);
     } finally {
       await setStorageItemAsync('pendingSubscription', null);
       signOut();
@@ -101,10 +102,17 @@ export default function SubscriptionSetupPage() {
       });
 
       if (funcError) {
+        console.error('create-checkout-session failed:', funcError);
         throw funcError;
       }
 
-      const { checkoutUrl } = data;
+      const parsedData = typeof data === 'string' ? JSON.parse(data) : data;
+
+      if (parsedData?.error) {
+        throw new Error(parsedData.error);
+      }
+
+      const checkoutUrl = typeof parsedData?.checkoutUrl === 'string' ? parsedData.checkoutUrl : null;
       if (checkoutUrl) {
         if (Platform.OS === 'web') {
           window.location.assign(checkoutUrl);
@@ -113,20 +121,20 @@ export default function SubscriptionSetupPage() {
           console.log("Stripe Checkout URL:", checkoutUrl);
         }
       } else {
-        setError(t('errors.paymentInitiationFailed'));
+        throw new Error('Checkout session did not return a payment URL.');
       }
     } catch (err: any) {
+      console.error('create-checkout-session threw unexpectedly:', err);
       setError(err.message || t('errors.unexpectedError'));
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  if (isCompanyIdLoading && !localCompanyId) {
+  if (isResolvingCompanyContext) {
     return (
       <View style={styles.fullscreenLoading}>
         <ActivityIndicator size="large" color={theme.colors.primary} />
-        <Text style={styles.loadingText}>{t('loading.companyInfo')}</Text>
       </View>
     );
   }

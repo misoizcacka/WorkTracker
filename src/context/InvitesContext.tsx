@@ -60,7 +60,7 @@ export function InvitesProvider({ children }: { children: React.ReactNode }) {
           .from('employees')
           .select('company_id')
           .eq('id', session.user.id) // Use session.user.id directly
-          .single();
+          .maybeSingle();
         
         if (employeeData?.company_id) {
             setUserCompanyId(employeeData.company_id);

@@ -143,6 +143,8 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     height: 40, // Adjusted height
     borderColor: theme.colors.borderColor,
+    borderWidth: 1,
+    borderRadius: theme.radius.md,
     paddingHorizontal: theme.spacing(2),
     backgroundColor: theme.colors.pageBackground, // Lighter background
   },

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useContext } from 'react';
-import { View, StyleSheet, ScrollView, ActivityIndicator, FlatList, TouchableOpacity, Image, TextInput, Platform } from 'react-native';
+import { View, StyleSheet, ScrollView, ActivityIndicator, FlatList, TouchableOpacity, TextInput, Platform } from 'react-native';
 import { Text } from '../../../components/Themed';
 import { Ionicons } from '@expo/vector-icons';
 import moment from 'moment';
@@ -11,6 +11,7 @@ import { EmployeesContext, EmployeesContextType } from '../../../context/Employe
 import CrossPlatformDatePicker from '../../../components/CrossPlatformDatePicker';
 import { supabase } from '../../../utils/supabase';
 import { useSession } from '~/context/AuthContext';
+import UserAvatar from '~/components/UserAvatar';
 
 interface MonthlyPayrollReportEntry {
     worker_id: string;
@@ -94,9 +95,13 @@ const EmployeeHoursReport = () => {
                     color={isSelected ? theme.colors.primary : theme.colors.bodyText}
                     style={styles.workerIcon}
                 />
+                <UserAvatar avatarUrl={item.avatar_url} size={40} style={styles.workerAvatar} />
                 <View style={styles.workerInfo}>
                     <Text style={[styles.workerName, isSelected && styles.selectedWorkerText]} fontType="medium" numberOfLines={1}>
                         {item.full_name}
+                    </Text>
+                    <Text style={styles.workerEmail} fontType="regular" numberOfLines={1}>
+                        {item.email}
                     </Text>
                 </View>
                 {isSelected && <Ionicons name="chevron-forward" size={16} color={theme.colors.primary} />}
@@ -358,6 +363,12 @@ const styles = StyleSheet.create({
     workerIcon: {
         marginRight: theme.spacing(1.5),
     },
+    workerAvatar: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        marginRight: theme.spacing(1.5),
+    },
     workerInfo: {
         flex: 1,
     },
@@ -367,6 +378,11 @@ const styles = StyleSheet.create({
     },
     selectedWorkerText: {
         color: theme.colors.primary,
+    },
+    workerEmail: {
+        fontSize: 11,
+        color: theme.colors.bodyText,
+        marginTop: 2,
     },
     rightPanel: {
         flex: 1,

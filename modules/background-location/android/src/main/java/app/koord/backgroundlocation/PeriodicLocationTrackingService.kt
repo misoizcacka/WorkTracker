@@ -122,7 +122,11 @@ class PeriodicLocationTrackingService : Service() {
                 }
 
                 // 2. PERIODIC TRACKING LOGIC
-                val interval = if (isTrackingActive) 30000L else 60000L
+                val interval = if (isTrackingActive) {
+                    Constants.ACTIVE_TRACKING_INTERVAL_MS
+                } else {
+                    Constants.PASSIVE_TRACKING_INTERVAL_MS
+                }
                 if (currentTime - lastLocationSentTime < interval - 5000L) {
                     Log.d("PeriodicLocationTrackingService", "Skipping periodic update - event recently sent. Mode: ${if (isTrackingActive) "ACTIVE" else "PASSIVE"}")
                     return
@@ -250,9 +254,13 @@ class PeriodicLocationTrackingService : Service() {
         isTrackingActive = active
         fusedLocationClient.removeLocationUpdates(locationCallback)
         
-        val interval = if (active) 30000L else 60000L
+        val interval = if (active) {
+            Constants.ACTIVE_TRACKING_INTERVAL_MS
+        } else {
+            Constants.PASSIVE_TRACKING_INTERVAL_MS
+        }
         val request = LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, interval)
-            .setMinUpdateIntervalMillis(15000L)
+            .setMinUpdateIntervalMillis(interval)
             .build()
 
         try {

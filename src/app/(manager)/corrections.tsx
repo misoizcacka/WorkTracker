@@ -146,19 +146,21 @@ const CorrectionsPage = () => {
 
     const _renderWorkerItem = ({ item }: { item: Employee }) => {
         const isSelected = selectedWorker?.id === item.id;
-        const itemNameColor = isSelected ? theme.colors.primary : styles.itemName.color;
-        const itemSubtitleColor = isSelected ? theme.colors.bodyText : styles.itemSubtitle.color;
 
         return (
-            <TouchableOpacity onPress={() => setSelectedWorker(item)} style={styles.listItem}>
-                <View style={[styles.itemContent, isSelected && styles.selectedItem]}>
+            <TouchableOpacity onPress={() => setSelectedWorker(item)} style={[styles.workerItem, isSelected && styles.selectedWorkerItem]}>
+                    <Ionicons
+                        name={isSelected ? "checkbox" : "square-outline"}
+                        size={20}
+                        color={isSelected ? theme.colors.primary : theme.colors.bodyText}
+                        style={styles.workerIcon}
+                    />
                     <UserAvatar avatarUrl={item.avatar_url} size={40} style={styles.avatar} />
                     <View style={styles.itemInfo}>
-                        <Text style={[styles.itemName, { color: itemNameColor }]} fontType="medium">{item.full_name}</Text>
-                        <Text style={[styles.itemSubtitle, { color: itemSubtitleColor }]} fontType="regular">{item.email}</Text>
+                        <Text style={[styles.itemName, isSelected && styles.selectedWorkerText]} fontType="medium">{item.full_name}</Text>
+                        <Text style={styles.itemSubtitle} fontType="regular">{item.email}</Text>
                     </View>
-                    {isSelected && <Ionicons name="checkmark-circle" size={20} color={theme.colors.primary} />}
-                </View>
+                    {isSelected && <Ionicons name="chevron-forward" size={16} color={theme.colors.primary} />}
             </TouchableOpacity>
         );
     };
@@ -413,22 +415,29 @@ const styles = StyleSheet.create({
         color: theme.colors.headingText,
     },
     workerListContent: { paddingBottom: theme.spacing(2) },
-    listItem: {
-        borderBottomWidth: StyleSheet.hairlineWidth,
-        borderColor: theme.colors.borderColor,
-    },
-    itemContent: {
+    workerItem: {
         flexDirection: 'row',
         alignItems: 'center',
         padding: theme.spacing(1.5),
         borderRadius: theme.radius.md,
-        flex: 1,
+        marginBottom: theme.spacing(1),
+        backgroundColor: theme.colors.pageBackground,
     },
-    selectedItem: { backgroundColor: theme.colors.primaryMuted },
-    avatar: { width: 40, height: 40, borderRadius: 20, marginRight: theme.spacing(2) },
+    selectedWorkerItem: {
+        backgroundColor: theme.colors.primaryMuted,
+        borderColor: theme.colors.primary,
+        borderWidth: 1,
+    },
+    workerIcon: {
+        marginRight: theme.spacing(1.5),
+    },
+    avatar: { width: 40, height: 40, borderRadius: 20, marginRight: theme.spacing(1.5) },
     itemInfo: { flex: 1 },
     itemName: { color: theme.colors.headingText },
-    itemSubtitle: { fontSize: theme.fontSizes.sm, color: theme.colors.bodyText },
+    selectedWorkerText: {
+        color: theme.colors.primary,
+    },
+    itemSubtitle: { fontSize: 11, color: theme.colors.bodyText, marginTop: 2 },
     sessionHeaderControls: {
         flexDirection: 'row',
         alignItems: 'center',

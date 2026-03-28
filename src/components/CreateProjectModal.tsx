@@ -1,6 +1,6 @@
 import React, { useState, useContext, useEffect, useRef, useCallback } from 'react';
 import { Modal, View, TextInput, StyleSheet, TouchableOpacity, ScrollView, Animated, Platform, Dimensions, Image, Easing, ActivityIndicator } from 'react-native';
-import { ProjectsContext, ProjectsContextType } from '../context/ProjectsContext';
+import { ProjectsContext, ProjectsContextType, Project } from '../context/ProjectsContext';
 import { Button } from './Button';
 import { theme } from '../theme';
 import { Ionicons } from '@expo/vector-icons';
@@ -16,6 +16,8 @@ import { Text } from './Themed';
 interface CreateProjectModalProps {
   visible: boolean;
   onClose: () => void;
+  mode?: 'create' | 'edit';
+  project?: Project | null;
 }
 
 interface DropdownOption {
@@ -24,21 +26,25 @@ interface DropdownOption {
 }
 
 const PREDEFINED_COLORS = ['#FF6347', '#4682B4', '#32CD32', '#DAA520', '#6A5ACD', '#FF69B4', '#FFD700', '#ADFF2F', '#87CEEB', '#FF69B4'];
+const PROJECT_STATUS_OPTIONS: DropdownOption[] = [
+  { label: 'Active', value: 'active' },
+  { label: 'Closed', value: 'closed' },
+];
 
 const MAX_MODAL_WIDTH = 500;
 const MOBILE_MAX_WIDTH = 420;
 
-export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({ visible, onClose }) => {
+export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({ visible, onClose, mode = 'create', project = null }) => {
   const { width } = Dimensions.get('window');
   const isMobile = width < MOBILE_MAX_WIDTH;
 
-  const { createProject, isLoading, error: contextError } = useContext(ProjectsContext) as ProjectsContextType;
+  const { createProject, updateProject, isLoading, error: contextError } = useContext(ProjectsContext) as ProjectsContextType;
 
   const [name, setName] = useState('');
   const [address, setAddress] = useState('');
   const [addressSearchTerm, setAddressSearchTerm] = useState('');
   const [explanation, setExplanation] = useState('');
-  const [notes, setNotes] = useState('');
+  const [status, setStatus] = useState<'active' | 'closed'>('active');
   const [formError, setFormError] = useState('');
 
   const [suggestions, setSuggestions] = useState<GeoapifyFeature[]>([]);
@@ -50,20 +56,34 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({ visible,
   const addressInputRef = useRef<TextInput>(null);
   const modalAnimatedValue = useRef(new Animated.Value(0)).current;
 
+  const isEditMode = mode === 'edit' && !!project;
+
   useEffect(() => {
+    if (visible && isEditMode && project) {
+      setName(project.name);
+      setAddress(project.address);
+      setAddressSearchTerm(project.address);
+      setExplanation(project.explanation || '');
+      setStatus(project.status || 'active');
+      setSelectedAddressLocation(project.location);
+      setSelectedImages(project.photos.map((uri) => ({ uri } as ImagePicker.ImagePickerAsset)));
+      setFormError('');
+      return;
+    }
+
     if (!visible) {
       setTimeout(() => {
         setName('');
         setAddress('');
         setAddressSearchTerm('');
         setExplanation('');
-        setNotes('');
+        setStatus('active');
         setSelectedAddressLocation(null);
         setSelectedImages([]);
         setFormError('');
       }, 300);
     }
-  }, [visible]);
+  }, [visible, isEditMode, project]);
 
   useEffect(() => {
     Animated.timing(modalAnimatedValue, {
@@ -147,23 +167,31 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({ visible,
     setSelectedImages(prev => prev.filter(image => image.uri !== uri));
   };
 
-  const handleCreate = async () => {
+  const handleSubmit = async () => {
     if (!name.trim() || !address.trim() || !selectedAddressLocation) {
       setFormError('Project name, address, and a valid location are required.');
       return;
     }
     setFormError('');
-    const randomColor = PREDEFINED_COLORS[Math.floor(Math.random() * PREDEFINED_COLORS.length)];
-    const createdProject = await createProject({
+    const projectColor = project?.color || PREDEFINED_COLORS[Math.floor(Math.random() * PREDEFINED_COLORS.length)];
+    const savedProject = await (isEditMode && project ? updateProject(project.id, {
       name: name.trim(),
       address: address.trim(),
       explanation: explanation.trim(),
-      color: randomColor,
-      notes: notes.trim(),
+      status,
+      color: projectColor,
       location: selectedAddressLocation,
       photos: selectedImages.map(img => img.uri),
-    });
-    if (createdProject) {
+    }) : createProject({
+      name: name.trim(),
+      address: address.trim(),
+      explanation: explanation.trim(),
+      status,
+      color: projectColor,
+      location: selectedAddressLocation,
+      photos: selectedImages.map(img => img.uri),
+    }));
+    if (savedProject) {
       onClose();
     }
   };
@@ -187,7 +215,7 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({ visible,
           <TouchableOpacity style={styles.closeButton} onPress={onClose}>
             <Ionicons name="close-circle-outline" size={24} color={theme.colors.bodyText} />
           </TouchableOpacity>
-          <Text style={styles.modalTitle}>Create New Project</Text>
+          <Text style={styles.modalTitle}>{isEditMode ? 'Edit Project' : 'Create New Project'}</Text>
           
           <ScrollView 
             style={styles.scrollContainer} 
@@ -262,6 +290,16 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({ visible,
               onChangeText={setExplanation}
               multiline
             />
+
+            <View style={styles.statusField}>
+              <Text style={styles.inputLabel}>Status</Text>
+              <CustomDropdown
+                data={PROJECT_STATUS_OPTIONS}
+                value={status}
+                onChange={(item: DropdownOption) => setStatus(item.value as 'active' | 'closed')}
+                placeholder="Select status"
+              />
+            </View>
             
             <Text style={styles.inputLabel}>Upload Photos (up to 10)</Text>
             <TouchableOpacity style={styles.uploadButton} onPress={handlePickImage}>
@@ -284,10 +322,10 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({ visible,
             
             <View style={styles.buttonContainer}>
               <Button
-                onPress={handleCreate}
+                onPress={handleSubmit}
                 disabled={isCreateButtonDisabled}
                 loading={isLoading}
-                title="Create Project"
+                title={isEditMode ? 'Save Changes' : 'Create Project'}
                 style={styles.createButton}
                 textStyle={styles.createButtonText}
               />
@@ -349,11 +387,15 @@ const styles = StyleSheet.create({
   },
   inputLabel: {
     alignSelf: 'flex-start',
-    marginLeft: theme.spacing(1),
     marginBottom: theme.spacing(1),
     fontSize: 15,
     color: theme.colors.bodyText,
     fontWeight: '500',
+  },
+  statusField: {
+    width: '100%',
+    marginBottom: theme.spacing(2),
+    zIndex: 10,
   },
   buttonContainer: {
     flexDirection: 'row',

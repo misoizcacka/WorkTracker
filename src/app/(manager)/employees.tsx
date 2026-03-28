@@ -191,7 +191,7 @@ export default function ManagerEmployees() {
 
   const TableHeader = () => (
     <View style={styles.tableHeaderRow}>
-      <Text style={[styles.tableHeaderCell, { width: fixedColumnWidths.avatar }]}></Text> {/* Avatar column */}
+      <View style={[styles.tableHeaderSpacer, { width: fixedColumnWidths.avatar }]} />
       <Text style={[styles.tableHeaderCell, { flex: 1, minWidth: flexibleColumnMinLengths.name }]} fontType="bold">Name</Text>
       <Text style={[styles.tableHeaderCell, { flex: 1, minWidth: flexibleColumnMinLengths.email }]} fontType="bold">Email</Text>
       <Text style={[styles.tableHeaderCell, { width: fixedColumnWidths.phone }]} fontType="bold">Phone</Text>
@@ -199,7 +199,7 @@ export default function ManagerEmployees() {
       <Text style={[styles.tableHeaderCell, { width: fixedColumnWidths.role }]} fontType="bold">Role</Text>
       <Text style={[styles.tableHeaderCell, { width: fixedColumnWidths.joined }]} fontType="bold">Joined</Text>
       <Text style={[styles.tableHeaderCell, { flex: 1, minWidth: flexibleColumnMinLengths.reportingTo }]} fontType="bold">Reporting To</Text>
-      <Text style={[styles.tableHeaderCell, { width: fixedColumnWidths.actions }]}></Text> {/* Actions column */}
+      <View style={[styles.tableHeaderSpacer, { width: fixedColumnWidths.actions }]} />
     </View>
   );
 
@@ -381,6 +381,9 @@ const styles = StyleSheet.create({
     color: theme.colors.headingText,
     textAlign: 'center',
   },
+  tableHeaderSpacer: {
+    padding: theme.spacing(2),
+  },
   // tableHeaderCellAvatar removed
   // tableHeaderCellActions removed
   tableRow: {
@@ -423,7 +426,6 @@ const styles = StyleSheet.create({
   statusText: {
     color: 'white',
     fontSize: 12,
-    fontWeight: 'bold',
     textTransform: 'capitalize',
   },
   actionButton: { padding: theme.spacing(0.5) },

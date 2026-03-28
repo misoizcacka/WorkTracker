@@ -157,14 +157,41 @@ export function EmployeesProvider({ children }: { children: React.ReactNode }) {
 
   const updateEmployee = useCallback(async (updatedEmployee: Employee) => {
     if (!userCompanyId) throw new Error("Company ID not available.");
-    const { public_avatar_url, ...employeePayload } = updatedEmployee as Employee & { public_avatar_url?: string | null };
-    const { data, error } = await supabase
+    const existingEmployee = employees.find((employee) => employee.id === updatedEmployee.id);
+    const normalizedEmail = updatedEmployee.email.trim().toLowerCase();
+    let data: Employee | null = null;
+    let error: any = null;
+
+    if (existingEmployee && existingEmployee.email.trim().toLowerCase() !== normalizedEmail) {
+      const { data: emailUpdatedEmployee, error: emailUpdateError } = await supabase.rpc('update_employee_email', {
+        p_employee_id: updatedEmployee.id,
+        p_email: normalizedEmail,
+      });
+
+      if (emailUpdateError) {
+        console.error('Error updating employee email via RPC:', emailUpdateError);
+        throw emailUpdateError;
+      }
+
+      data = emailUpdatedEmployee as Employee | null;
+    }
+
+    const {
+      public_avatar_url,
+      email: _ignoredEmail,
+      ...employeePayload
+    } = updatedEmployee as Employee & { public_avatar_url?: string | null };
+
+    const { data: updatedRow, error: updateError } = await supabase
       .from('employees')
       .update(employeePayload)
       .eq('id', updatedEmployee.id)
       .eq('company_id', userCompanyId) // Ensure update is scoped to company
       .select()
       .single();
+
+    data = updatedRow;
+    error = updateError;
 
     if (error) {
       console.error('Error updating employee:', error);
@@ -174,7 +201,7 @@ export function EmployeesProvider({ children }: { children: React.ReactNode }) {
     if (data) {
       const enriched = {
         ...data,
-        public_avatar_url: getAvatarPublicUrl(data.avatar_url)
+        public_avatar_url: data.avatar_url ? getAvatarPublicUrl(data.avatar_url) : null
       };
       setEmployees(prevEmployees =>
         prevEmployees.map(employee =>
@@ -182,7 +209,7 @@ export function EmployeesProvider({ children }: { children: React.ReactNode }) {
         )
       );
     }
-  }, [userCompanyId]);
+  }, [userCompanyId, employees]);
 
   const deleteEmployee = useCallback(async (employeeId: string) => {
     if (!userCompanyId) throw new Error("Company ID not available.");

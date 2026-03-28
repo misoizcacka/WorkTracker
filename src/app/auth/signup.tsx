@@ -82,8 +82,10 @@ export default function Signup() {
         }
         
         const { company } = edgeFunctionData;
-        await refreshUser();
-        router.push({ pathname: '/subscription/setup', params: { companyId: company.id } });
+        router.replace({ pathname: '/subscription/setup', params: { companyId: company.id } });
+        refreshUser().catch((refreshError) => {
+          console.error('Failed to refresh user after signup:', refreshError);
+        });
       } else {
         setErrors({ general: t('signup.checkEmailConfirmation') });
       }

@@ -28,6 +28,7 @@ export interface Project {
   id: string;
   name: string;
   address: string;
+  status: 'active' | 'closed';
   location: {
     latitude: number;
     longitude: number;
@@ -35,7 +36,6 @@ export interface Project {
   lastModified: string;
   photos: string[]; // Supabase URLs
   explanation: string;
-  notes: string;
   color: string;
 }
 

@@ -11,6 +11,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { uploadAvatar } from '../services/profile';
 import UserAvatar from './UserAvatar';
 import Toast from 'react-native-toast-message';
+import { useSession } from '~/context/AuthContext';
 
 interface EditPersonModalProps {
   visible: boolean;
@@ -21,6 +22,7 @@ interface EditPersonModalProps {
 }
 
 const EditPersonModal: React.FC<EditPersonModalProps> = ({ visible, onClose, employee, onSave, allEmployees }) => {
+  const { userRole } = useSession();
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
@@ -30,7 +32,9 @@ const EditPersonModal: React.FC<EditPersonModalProps> = ({ visible, onClose, emp
   const [error, setError] = useState('');
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
 
-  const managers = allEmployees.filter(e => e.role === 'manager' && e.id !== employee?.id);
+  const supervisors = allEmployees.filter(
+    (e) => (e.role === 'manager' || e.role === 'owner') && e.id !== employee?.id
+  );
 
   useEffect(() => {
     if (employee) {
@@ -189,10 +193,14 @@ const EditPersonModal: React.FC<EditPersonModalProps> = ({ visible, onClose, emp
                     placeholder="Enter email address"
                     value={email}
                     onChangeText={setEmail}
+                    editable={userRole === 'owner'}
                     keyboardType="email-address"
                     autoCapitalize="none"
                     placeholderTextColor={theme.colors.disabledText}
                   />
+                  {userRole !== 'owner' && (
+                    <Text style={styles.fieldHint}>Only owners can change employee email addresses.</Text>
+                  )}
                 </View>
 
                 <View style={styles.inputGroup}>
@@ -216,12 +224,12 @@ const EditPersonModal: React.FC<EditPersonModalProps> = ({ visible, onClose, emp
                       selectedTextStyle={styles.selectedTextStyle}
                       inputSearchStyle={styles.inputSearchStyle}
                       iconStyle={styles.iconStyle}
-                      data={managers.map(m => ({ label: m.full_name, value: m.id }))}
+                      data={supervisors.map(person => ({ label: person.full_name, value: person.id }))}
                       search
                       maxHeight={300}
                       labelField="label"
                       valueField="value"
-                      placeholder="Select manager"
+                      placeholder="Select supervisor"
                       searchPlaceholder="Search..."
                       value={reportingTo}
                       onChange={item => setReportingTo(item.value)}
@@ -387,6 +395,11 @@ const styles = StyleSheet.create({
   inputSearchStyle: {
     height: 40,
     fontSize: 16,
+  },
+  fieldHint: {
+    fontSize: 12,
+    color: theme.colors.disabledText,
+    marginTop: 6,
   },
 });
 

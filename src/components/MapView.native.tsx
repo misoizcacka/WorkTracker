@@ -126,8 +126,13 @@ export const MapView = React.forwardRef<MapViewHandle, NativeMapViewProps>(
       {clusteredMarkers.map(marker => (
         marker.location ? (
           <Marker
-            key={marker.id}
+            key={
+              marker.isCluster
+                ? marker.id
+                : `${marker.id}-${marker.location.latitude}-${marker.location.longitude}-${marker.type === 'worker' ? ((marker as WorkerLocation).lastSeen || '') : ''}`
+            }
             coordinate={marker.location}
+            tracksViewChanges={!marker.isCluster && marker.type === 'worker'}
             onPress={() => {
               if (marker.isCluster) {
                 const expansionZoom = supercluster.getClusterExpansionZoom((marker as ClusterRenderableMarker).clusterId);

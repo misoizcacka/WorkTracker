@@ -16,8 +16,22 @@ export default function Index() {
   }
 
   if (user && userRole) {
-    // User is logged in and role is determined, redirect based on role
-    return <Redirect href={userRole === 'worker' ? "/(worker)/home" : "/(manager)/dashboard"} />;
+    if (userRole === 'worker') {
+      return <Redirect href="/(worker)/home" />;
+    }
+
+    const subscriptionStatus = user.app_metadata?.subscription_status;
+    const companySetupComplete = user.user_metadata?.company_setup_complete || false;
+
+    if (subscriptionStatus !== 'active') {
+      return <Redirect href="/subscription/setup" />;
+    }
+
+    if (!companySetupComplete) {
+      return <Redirect href="/(manager)/company-setup" />;
+    }
+
+    return <Redirect href="/(manager)/dashboard" />;
   } else {
     // Not logged in or role not determined, redirect to landing page
     return <Redirect href="/(guest)" />;

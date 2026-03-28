@@ -64,6 +64,10 @@ const LocationReplayWorkerSelector = ({ onSelectionChange, initialWorkerId, init
         );
     }, [workers, searchTerm]);
 
+    const employeeEmailById = useMemo(() => {
+        return new Map(employees.map((employee: Employee) => [employee.id, employee.email]));
+    }, [employees]);
+
     useEffect(() => {
         // When initialWorkerId or initialDate changes from props, update internal state
         // Only update if they actually differ to avoid infinite loops
@@ -87,20 +91,22 @@ const LocationReplayWorkerSelector = ({ onSelectionChange, initialWorkerId, init
 
     const renderWorkerItem = ({ item }: { item: Worker }) => { // Changed type to Worker
         const isSelected = selectedWorkerId === item.worker_id; // Changed to item.worker_id
-        const iconColor = isSelected ? theme.colors.primary : theme.colors.bodyText;
-        const checkmarkColor = isSelected ? theme.colors.primary : theme.colors.primary;
+        const email = employeeEmailById.get(item.worker_id);
 
         return (
-            <TouchableOpacity onPress={() => handleWorkerPress(item)} style={styles.listItem}>
-                <View style={[styles.itemContent, isSelected && styles.selectedItem]}>
+            <TouchableOpacity onPress={() => handleWorkerPress(item)} style={[styles.workerItem, isSelected && styles.selectedWorkerItem]}>
+                    <Ionicons
+                        name={isSelected ? "checkbox" : "square-outline"}
+                        size={20}
+                        color={isSelected ? theme.colors.primary : theme.colors.bodyText}
+                        style={styles.workerIcon}
+                    />
                     <UserAvatar avatarUrl={item.avatar_url} size={40} style={styles.avatar} />
                     <View style={styles.itemInfo}>
-                        <Text style={styles.itemName} fontType="medium">{item.full_name}</Text>
-                        {/* Assuming worker object from RPC has an email, if needed */}
-                        {/* <Text style={styles.itemSubtitle}>{item.email}</Text> */}
+                        <Text style={[styles.itemName, isSelected && styles.selectedWorkerText]} fontType="medium">{item.full_name}</Text>
+                        {!!email && <Text style={styles.itemSubtitle} fontType="regular">{email}</Text>}
                     </View>
-                    {isSelected && <Ionicons name="checkmark-circle" size={20} color={checkmarkColor} />}
-                </View>
+                    {isSelected && <Ionicons name="chevron-forward" size={16} color={theme.colors.primary} />}
             </TouchableOpacity>
         );
     };
@@ -176,25 +182,27 @@ const styles = StyleSheet.create({
     workerListContent: {
         paddingBottom: theme.spacing(2),
     },
-    listItem: {
-        borderBottomWidth: StyleSheet.hairlineWidth,
-        borderColor: theme.colors.borderColor,
-    },
-    itemContent: {
+    workerItem: {
         flexDirection: 'row',
         alignItems: 'center',
         padding: theme.spacing(1.5),
         borderRadius: theme.radius.md,
-        flex: 1,
+        marginBottom: theme.spacing(1),
+        backgroundColor: theme.colors.pageBackground,
     },
-    selectedItem: {
+    selectedWorkerItem: {
         backgroundColor: theme.colors.primaryMuted,
+        borderColor: theme.colors.primary,
+        borderWidth: 1,
+    },
+    workerIcon: {
+        marginRight: theme.spacing(1.5),
     },
     avatar: {
         width: 40,
         height: 40,
         borderRadius: 20,
-        marginRight: theme.spacing(2),
+        marginRight: theme.spacing(1.5),
     },
     avatarPlaceholder: {
         width: 40,
@@ -209,9 +217,13 @@ const styles = StyleSheet.create({
     itemName: {
         color: theme.colors.headingText,
     },
+    selectedWorkerText: {
+        color: theme.colors.primary,
+    },
     itemSubtitle: {
-        fontSize: 12,
+        fontSize: 11,
         color: theme.colors.bodyText,
+        marginTop: 2,
     },
     noWorkersText: {
         textAlign: 'center',

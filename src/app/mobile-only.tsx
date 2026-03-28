@@ -6,91 +6,102 @@ import { StoreButtons } from '../components/StoreButtons';
 import { Text } from '../components/Themed';
 import { useSession } from '../context/AuthContext';
 import { theme } from '../theme';
-import AnimatedScreen from '../components/AnimatedScreen';
 import { Card } from '../components/Card';
 import Logo from '../../assets/koordlogoblack1.svg';
 
 export default function MobileOnlyScreen() {
   const router = useRouter();
-  const { userRole } = useSession();
+  const { userRole, user, signOut } = useSession();
   const isManager = userRole === 'manager' || userRole === 'owner';
+  const isSignedInWorkerOnWeb = Platform.OS === 'web' && !!user && userRole === 'worker';
 
-  const handleLogoPress = () => {
-    if (isManager) {
-      router.replace('/(manager)/dashboard');
+  const handleLogoPress = async () => {
+    if (isSignedInWorkerOnWeb) {
+      await signOut();
+      router.replace('/(guest)/login');
+      return;
     }
+
+    router.replace('/');
+  };
+
+  const handleSignOut = async () => {
+    await signOut();
+    router.replace('/(guest)/login');
   };
 
   return (
-    <AnimatedScreen>
-      <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-      >
-        <View style={styles.container}>
-          <Pressable
-            onPress={handleLogoPress}
-            disabled={!isManager}
-            style={({ pressed }) => [
-              styles.logoButton,
-              isManager && pressed ? styles.logoButtonPressed : null,
-            ]}
-          >
-            <Image source={Logo} style={styles.logo} resizeMode="contain" />
-          </Pressable>
+    <ScrollView
+      style={styles.scrollView}
+      contentContainerStyle={styles.scrollContent}
+      showsVerticalScrollIndicator={false}
+    >
+      <View style={styles.container}>
+        <Pressable
+          onPress={handleLogoPress}
+          style={({ pressed }) => [
+            styles.logoButton,
+            pressed ? styles.logoButtonPressed : null,
+          ]}
+        >
+          <Image source={Logo} style={styles.logo} resizeMode="contain" />
+        </Pressable>
 
-          <Card style={styles.card}>
-            <View style={styles.iconContainer}>
-              <Ionicons
-                name={isManager ? 'desktop-outline' : 'phone-portrait-outline'}
-                size={34}
-                color={isManager ? theme.colors.primary : theme.colors.secondary}
-              />
+        <Card style={styles.card}>
+          <View style={styles.iconContainer}>
+            <Ionicons
+              name={isManager ? 'desktop-outline' : 'phone-portrait-outline'}
+              size={34}
+              color={isManager ? theme.colors.primary : theme.colors.secondary}
+            />
+          </View>
+
+          <Text style={styles.title} fontType="bold">
+            {isManager ? 'Desktop Access Required' : 'Mobile App Required'}
+          </Text>
+
+          <Text style={styles.subtitle} fontType="regular">
+            {isManager
+              ? 'Scheduling, maps, reports, and other manager tools need more screen space than this viewport currently provides.'
+              : 'Use the app to clock in, track work, and handle daily operations on the go.'}
+          </Text>
+
+          {!isManager ? (
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle} fontType="medium">Download the app</Text>
+              <StoreButtons />
+              {isSignedInWorkerOnWeb ? (
+                <Pressable onPress={handleSignOut} style={({ pressed }) => [styles.signOutButton, pressed ? styles.signOutButtonPressed : null]}>
+                  <Text style={styles.signOutButtonText} fontType="medium">Sign out</Text>
+                </Pressable>
+              ) : null}
             </View>
-
-            <Text style={styles.title} fontType="bold">
-              {isManager ? 'Desktop Access Required' : 'Mobile App Required'}
-            </Text>
-
-            <Text style={styles.subtitle} fontType="regular">
-              {isManager
-                ? 'Scheduling, maps, reports, and other manager tools need more screen space than this viewport currently provides.'
-                : 'Use the app to clock in, track work, and handle daily operations on the go.'}
-            </Text>
-
-            {!isManager ? (
-              <View style={styles.section}>
-                <Text style={styles.sectionTitle} fontType="medium">Download the app</Text>
-                <StoreButtons />
-              </View>
-            ) : (
-              <View style={styles.section}>
-                <Text style={styles.sectionTitle} fontType="medium">Manager tools available on desktop</Text>
-                <View style={styles.featureList}>
-                  <View style={styles.featureRow}>
-                    <Ionicons name="checkmark-circle" size={18} color={theme.colors.primary} />
-                    <Text style={styles.featureText} fontType="regular">Advanced scheduling and assignments</Text>
-                  </View>
-                  <View style={styles.featureRow}>
-                    <Ionicons name="checkmark-circle" size={18} color={theme.colors.primary} />
-                    <Text style={styles.featureText} fontType="regular">Real-time map overview and replay tools</Text>
-                  </View>
-                  <View style={styles.featureRow}>
-                    <Ionicons name="checkmark-circle" size={18} color={theme.colors.primary} />
-                    <Text style={styles.featureText} fontType="regular">Reports, payroll review, and account controls</Text>
-                  </View>
+          ) : (
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle} fontType="medium">Manager tools available on desktop</Text>
+              <View style={styles.featureList}>
+                <View style={styles.featureRow}>
+                  <Ionicons name="checkmark-circle" size={18} color={theme.colors.primary} />
+                  <Text style={styles.featureText} fontType="regular">Advanced scheduling and assignments</Text>
                 </View>
-
-                <Text style={styles.helperText} fontType="regular">
-                  Zoom back out and click the Koord logo to return to your dashboard.
-                </Text>
+                <View style={styles.featureRow}>
+                  <Ionicons name="checkmark-circle" size={18} color={theme.colors.primary} />
+                  <Text style={styles.featureText} fontType="regular">Real-time map overview and replay tools</Text>
+                </View>
+                <View style={styles.featureRow}>
+                  <Ionicons name="checkmark-circle" size={18} color={theme.colors.primary} />
+                  <Text style={styles.featureText} fontType="regular">Reports, payroll review, and account controls</Text>
+                </View>
               </View>
-            )}
-          </Card>
-        </View>
-      </ScrollView>
-    </AnimatedScreen>
+
+              <Text style={styles.helperText} fontType="regular">
+                Zoom back out or click the Koord logo to return to the default page.
+              </Text>
+            </View>
+          )}
+        </Card>
+      </View>
+    </ScrollView>
   );
 }
 
@@ -190,5 +201,23 @@ const styles = StyleSheet.create({
     lineHeight: 22,
     color: theme.colors.disabledText,
     textAlign: 'center',
+  },
+  signOutButton: {
+    marginTop: theme.spacing(3),
+    alignSelf: 'stretch',
+    minHeight: 48,
+    borderRadius: theme.radius.lg,
+    borderWidth: 1,
+    borderColor: theme.colors.borderColor,
+    backgroundColor: theme.colors.background,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  signOutButtonPressed: {
+    opacity: 0.8,
+  },
+  signOutButtonText: {
+    fontSize: 15,
+    color: theme.colors.headingText,
   },
 });

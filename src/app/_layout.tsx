@@ -198,36 +198,37 @@ export default function RootLayout() {
         return;
       }
 
-      if (user && (user.user_metadata?.role === 'manager' || user.user_metadata?.role === 'owner')) {
-        if (isCompanyIdLoading || userCompanyId === null) {
-          const currentPath = segments.join('/');
-          if (!currentPath.startsWith('subscription/setup')) {
-            return;
-          }
-        }
-      }
-
-      if (Platform.OS === 'web' && user) {
-        if (userRole === 'worker' && !inMobileOnly) {
-          router.replace('/mobile-only');
-          return;
-        }
+      if (Platform.OS === 'web' && user && userRole === 'worker' && !inMobileOnly) {
+        router.replace('/mobile-only');
+        return;
       }
 
       const inApp = segments[0] === '(manager)' || segments[0] === '(worker)';
       const subscriptionStatus = user.app_metadata?.subscription_status;
       const inPaymentFlow = segments.includes('payment');
+      const currentPath = segments.join('/');
 
       const companySetupComplete = user.user_metadata?.company_setup_complete || false;
 
       const isOnCompanySetupPage = segments[0] === '(manager)' && segments.length > 1 && (segments as any)[1] === 'company-setup';
+
+      if ((userRole === 'manager' || userRole === 'owner') && isCompanyIdLoading) {
+        return;
+      }
+
+      if ((userRole === 'manager' || userRole === 'owner') && !inPaymentFlow && userCompanyId === null) {
+        if (!currentPath.startsWith('subscription/setup')) {
+          router.replace('/subscription/setup');
+        }
+        return;
+      }
 
       if ((userRole === 'manager' || userRole === 'owner') && subscriptionStatus !== 'active') {
         if (segments[0] !== 'subscription' && segments[0] !== 'onboarding' && !inPaymentFlow) {
           router.replace('/subscription/setup');
         }
       } else if ((userRole === 'manager' || userRole === 'owner') && subscriptionStatus === 'active' && !companySetupComplete) {
-        if (!isOnCompanySetupPage) {
+        if (!isOnCompanySetupPage && !inPaymentFlow) {
           router.replace('/(manager)/company-setup');
         }
       } else if (user && userRole) {

@@ -90,10 +90,11 @@ export default function ProjectAssignmentScreen() {
     employee.id !== user?.id
   );
 
-  const filteredProjects = React.useMemo(() => 
+  const filteredProjects = React.useMemo(() =>
     projects.filter(project =>
+      project.status === 'active' &&
       project.name.toLowerCase().includes(searchTermProject.toLowerCase())
-    ), 
+    ),
     [projects, searchTermProject]
   );
   
@@ -136,21 +137,21 @@ export default function ProjectAssignmentScreen() {
   // renderWorkerItem (from old project-assignment.tsx, uses Image)
   const renderWorkerItem = ({ item }: { item: Employee }) => {
     const isSelected = selectedWorkers.some(e => e.id === item.id);
-    const itemNameColor = isSelected ? theme.colors.primary : styles.itemName.color;
-    const itemSubtitleColor = isSelected ? theme.colors.bodyText : styles.itemSubtitle.color; // Keep bodyText or adjust if needed
-    const iconColor = isSelected ? theme.colors.primary : theme.colors.bodyText; // For person placeholder
-    const checkmarkColor = isSelected ? theme.colors.primary : theme.colors.primary; // For checkmark icon
 
     return (
-      <TouchableOpacity onPress={() => handleWorkerPress(item)} style={styles.listItem}>
-        <View style={[styles.workerItemContent, isSelected && styles.selectedItem]}>
+      <TouchableOpacity onPress={() => handleWorkerPress(item)} style={[styles.workerItem, isSelected && styles.selectedWorkerItem]}>
+          <Ionicons
+            name={isSelected ? "checkbox" : "square-outline"}
+            size={20}
+            color={isSelected ? theme.colors.primary : theme.colors.bodyText}
+            style={styles.workerIcon}
+          />
           <UserAvatar avatarUrl={item.avatar_url} size={40} style={styles.avatar} />
           <View style={styles.workerInfo}>
-            <Text style={[styles.itemName, { color: itemNameColor }]} fontType="medium">{item.full_name}</Text>
-            <Text style={[styles.itemSubtitle, { color: itemSubtitleColor }]} fontType="regular">{item.email}</Text>
+            <Text style={[styles.itemName, isSelected && styles.selectedWorkerText]} fontType="medium">{item.full_name}</Text>
+            <Text style={styles.itemSubtitle} fontType="regular">{item.email}</Text>
           </View>
-          {isSelected && <Ionicons name="checkmark-circle" size={20} color={checkmarkColor} />}
-        </View>
+          {isSelected && <Ionicons name="chevron-forward" size={16} color={theme.colors.primary} />}
       </TouchableOpacity>
     );
   };
@@ -589,24 +590,27 @@ const styles = StyleSheet.create({
   projectListContent: { // From old file (project-assignment.tsx)
     paddingBottom: theme.spacing(2),
   },
-  listItem: {
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderColor: theme.colors.borderColor,
-  },
-  workerItemContent: {
+  workerItem: {
     flexDirection: 'row',
     alignItems: 'center',
     padding: theme.spacing(1.5),
     borderRadius: theme.radius.md,
+    marginBottom: theme.spacing(1),
+    backgroundColor: theme.colors.pageBackground,
   },
-  selectedItem: {
+  selectedWorkerItem: {
     backgroundColor: theme.colors.primaryMuted,
+    borderColor: theme.colors.primary,
+    borderWidth: 1,
+  },
+  workerIcon: {
+    marginRight: theme.spacing(1.5),
   },
   avatar: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    marginRight: theme.spacing(2),
+    marginRight: theme.spacing(1.5),
   },
   workerInfo: {
     flex: 1,
@@ -614,9 +618,13 @@ const styles = StyleSheet.create({
   itemName: {
     color: theme.colors.headingText,
   },
+  selectedWorkerText: {
+    color: theme.colors.primary,
+  },
   itemSubtitle: {
-    fontSize: theme.fontSizes.xs,
+    fontSize: 11,
     color: theme.colors.bodyText,
+    marginTop: 2,
   },
   avatarPlaceholder: {
     width: 40,

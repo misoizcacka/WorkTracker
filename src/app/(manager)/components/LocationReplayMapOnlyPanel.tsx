@@ -258,6 +258,8 @@ const LocationReplayMapOnlyPanel = ({ workerId, date }: LocationReplayMapOnlyPan
                               selectedWorkers={mapWorker}
                               zoom={mapZoom}
                               onWebZoomChange={setMapZoom}
+                              disableWorkerHover
+                              disableWorkerPopup
                           >
                           </MapView>
                       </View>

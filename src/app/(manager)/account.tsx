@@ -35,12 +35,16 @@ export default function ManagerAccount() {
   const router = useRouter();
 
   const [name, setName] = useState(profile?.full_name || '');
+  const [email, setEmail] = useState(user?.email || '');
   const [phone, setPhone] = useState(profile?.phone_number || '');
   const [companyName, setCompanyName] = useState(userCompanyName || '');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   
   const [isSavingProfile, setIsSavingProfile] = useState(false);
   const [isSavingCompany, setIsSavingCompany] = useState(false);
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
+  const [isSavingPassword, setIsSavingPassword] = useState(false);
 
   useEffect(() => {
     if (profile) {
@@ -54,6 +58,12 @@ export default function ManagerAccount() {
       setCompanyName(userCompanyName);
     }
   }, [userCompanyName]);
+
+  useEffect(() => {
+    if (user?.email) {
+      setEmail(user.email);
+    }
+  }, [user?.email]);
 
   const handleImagePickAndUpload = async () => {
     if (!user?.id) {
@@ -96,14 +106,44 @@ export default function ManagerAccount() {
         Alert.alert("Error", "User not logged in or profile not loaded.");
         return;
     }
-    if (name === profile.full_name && phone === profile.phone_number) {
+    const trimmedName = name.trim();
+    const trimmedEmail = email.trim().toLowerCase();
+    const trimmedPhone = phone.trim();
+    const normalizedCurrentEmail = (profile.email || user.email || '').trim().toLowerCase();
+    const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+    if (trimmedName.length < 2) {
+        Alert.alert("Invalid Name", "Please enter a valid full name.");
+        return;
+    }
+
+    if (!emailPattern.test(trimmedEmail)) {
+        Alert.alert("Invalid Email", "Please enter a valid email address.");
+        return;
+    }
+
+    if (
+      trimmedName === (profile.full_name || '').trim() &&
+      trimmedPhone === (profile.phone_number || '').trim() &&
+      trimmedEmail === normalizedCurrentEmail
+    ) {
         Toast.show({ type: 'info', text1: 'No Changes', text2: 'No profile changes to save.' });
         return;
     }
 
     setIsSavingProfile(true);
     try {
-        await updateEmployeeProfile(user.id, { full_name: name, phone_number: phone });
+        if (employeesContext?.updateEmployee) {
+          await employeesContext.updateEmployee({
+            ...profile,
+            full_name: trimmedName,
+            email: trimmedEmail,
+            phone_number: trimmedPhone || null,
+          });
+        } else {
+          await updateEmployeeProfile(user.id, { full_name: trimmedName, phone_number: trimmedPhone || null });
+        }
+        await refreshUser();
         await refetchProfile();
         Toast.show({ type: 'success', text1: 'Profile Saved', text2: 'Your profile details have been updated.' });
     } catch (error: any) {
@@ -111,6 +151,39 @@ export default function ManagerAccount() {
         Alert.alert("Save Failed", error.message || "Failed to save profile changes.");
     } finally {
         setIsSavingProfile(false);
+    }
+  };
+
+  const handleUpdatePassword = async () => {
+    if (!newPassword) {
+      Alert.alert("Password Required", "Please enter a new password.");
+      return;
+    }
+
+    if (newPassword.length < 6) {
+      Alert.alert("Password Too Short", "Password must be at least 6 characters long.");
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      Alert.alert("Passwords Do Not Match", "Please make sure both password fields match.");
+      return;
+    }
+
+    setIsSavingPassword(true);
+    try {
+      const { error } = await supabase.auth.updateUser({ password: newPassword });
+
+      if (error) throw error;
+
+      setNewPassword('');
+      setConfirmPassword('');
+      Toast.show({ type: 'success', text1: 'Password Updated', text2: 'Your password has been changed.' });
+    } catch (error: any) {
+      console.error("Error updating password:", error);
+      Alert.alert("Update Failed", error.message || "Failed to update password.");
+    } finally {
+      setIsSavingPassword(false);
     }
   };
 
@@ -197,7 +270,7 @@ export default function ManagerAccount() {
                 </View>
                 <View style={styles.profileMainInfo}>
                   <Text style={styles.userName} fontType="bold">{profile?.full_name}</Text>
-                  <Text style={styles.userEmail}>{user?.email}</Text>
+                  <Text style={styles.userEmail}>{email}</Text>
                 </View>
               </View>
 
@@ -226,11 +299,14 @@ export default function ManagerAccount() {
                 <View style={styles.inputGroup}>
                   <Text style={styles.label} fontType="bold">Email Address</Text>
                   <TextInput 
-                    style={[styles.input, styles.disabledInput]} 
-                    value={user?.email} 
-                    editable={false}
+                    style={styles.input}
+                    value={email}
+                    onChangeText={setEmail}
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                    placeholder="Enter your email address"
+                    placeholderTextColor={theme.colors.disabledText}
                   />
-                  <Text style={styles.inputHint}>Email cannot be changed from the app.</Text>
                 </View>
                 
                 <Button 
@@ -338,12 +414,40 @@ export default function ManagerAccount() {
                   </View>
                   <View>
                     <Text style={styles.securityTitle} fontType="medium">Password</Text>
-                    <Text style={styles.securitySubtitle}>Last changed long ago</Text>
+                    <Text style={styles.securitySubtitle}>Choose a new password for this account</Text>
                   </View>
                 </View>
-                <TouchableOpacity style={styles.securityAction}>
-                  <Text style={styles.securityActionText} fontType="bold">UPDATE</Text>
-                </TouchableOpacity>
+              </View>
+              <View style={styles.form}>
+                <View style={styles.inputGroup}>
+                  <Text style={styles.label} fontType="bold">New Password</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={newPassword}
+                    onChangeText={setNewPassword}
+                    secureTextEntry
+                    placeholder="Enter new password"
+                    placeholderTextColor={theme.colors.disabledText}
+                  />
+                </View>
+                <View style={styles.inputGroup}>
+                  <Text style={styles.label} fontType="bold">Confirm Password</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={confirmPassword}
+                    onChangeText={setConfirmPassword}
+                    secureTextEntry
+                    placeholder="Re-enter new password"
+                    placeholderTextColor={theme.colors.disabledText}
+                  />
+                </View>
+                <Button
+                  title="Update Password"
+                  onPress={handleUpdatePassword}
+                  disabled={isSavingPassword}
+                  style={styles.primaryButton}
+                  loading={isSavingPassword}
+                />
               </View>
             </Card>
 

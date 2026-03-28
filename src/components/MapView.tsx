@@ -44,6 +44,8 @@ interface CommonMapViewProps extends RNMapViewProps {
   };
   zoom?: number; // New prop
   onWebZoomChange?: (zoom: number) => void; // New prop
+  disableWorkerHover?: boolean;
+  disableWorkerPopup?: boolean;
   // Add children prop as MapView might render markers/circles as children
   children?: React.ReactNode;
 }

@@ -22,6 +22,12 @@ const sortOptions: DropdownOption[] = [
   { label: 'Alphabetical (A-Z)', value: 'alphabetical' },
 ];
 
+const statusFilterOptions: DropdownOption[] = [
+  { label: 'Active', value: 'active' },
+  { label: 'All Projects', value: 'all' },
+  { label: 'Closed', value: 'closed' },
+];
+
 function hexToRgba(hex: string, alpha: number) {
   if (!/^#([A-Fa-f0-9]{3}){1,2}$/.test(hex)) {
     return `rgba(0,0,0,${alpha})`;
@@ -45,7 +51,9 @@ export default function ManagerProjects() {
   
   const [searchTerm, setSearchTerm] = useState('');
   const [sortBy, setSortBy] = useState('newest');
+  const [statusFilter, setStatusFilter] = useState<'active' | 'closed' | 'all'>('active');
   const [isModalVisible, setModalVisible] = useState(false);
+  const [editingProject, setEditingProject] = useState<Project | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [gridWidth, setGridWidth] = useState(0);
 
@@ -93,6 +101,10 @@ export default function ManagerProjects() {
       );
     }
 
+    if (statusFilter !== 'all') {
+      currentProjects = currentProjects.filter(project => project.status === statusFilter);
+    }
+
     if (sortBy === 'newest') {
       currentProjects.sort((a, b) => new Date(b.lastModified).getTime() - new Date(a.lastModified).getTime());
     } else if (sortBy === 'alphabetical') {
@@ -100,11 +112,11 @@ export default function ManagerProjects() {
     }
 
     return currentProjects;
-  }, [projects, searchTerm, sortBy]);
+  }, [projects, searchTerm, sortBy, statusFilter]);
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, sortBy, numColumns]);
+  }, [searchTerm, sortBy, statusFilter, numColumns]);
 
   const totalPages = Math.max(1, Math.ceil(sortedAndFilteredProjects.length / itemsPerPage));
   const paginatedProjects = useMemo(() => {
@@ -128,6 +140,12 @@ export default function ManagerProjects() {
   };
 
   const handleCreateProject = () => {
+    setEditingProject(null);
+    setModalVisible(true);
+  };
+
+  const handleEditProject = (project: Project) => {
+    setEditingProject(project);
     setModalVisible(true);
   };
 
@@ -144,6 +162,15 @@ export default function ManagerProjects() {
           style={styles.projectCardWrapper}
         >
           <Animated.View style={styles.projectCard}>
+            <TouchableOpacity
+              onPress={(event) => {
+                event.stopPropagation();
+                handleEditProject(item);
+              }}
+              style={styles.editProjectButton}
+            >
+              <Ionicons name="pencil-outline" size={16} color={theme.colors.headingText} />
+            </TouchableOpacity>
             {item.photos && item.photos.length > 0 ? (
               <Image source={{ uri: item.photos[0] }} style={styles.projectImage} resizeMode="cover" />
             ) : (
@@ -154,13 +181,18 @@ export default function ManagerProjects() {
             <View style={[styles.cardContent, { backgroundColor: theme.colors.cardBackground }]}>
               <View style={[styles.colorAccent, { backgroundColor: item.color || theme.colors.primary }]} />
               <Text style={styles.projectName} numberOfLines={2} fontType="regular">{item.name}</Text>
-              <Text style={styles.projectAddress} numberOfLines={1} fontType="regular">{item.address}</Text>        
+              <Text style={styles.projectAddress} numberOfLines={1} fontType="regular">{item.address}</Text>
               <View style={styles.cardFooter}>
                 <View style={styles.footerStat}>
-                  <Ionicons name="people-outline" size={16} color={theme.colors.bodyText} />     
+                  <Ionicons name="people-outline" size={16} color={theme.colors.bodyText} />
                   <Text style={styles.footerStatText} fontType="medium">{workerCount} {workerCount === 1 ? 'worker' : 'workers'}</Text>
                 </View>
-                <Text style={styles.lastModified} fontType="medium">{new Date(item.lastModified).toLocaleDateString()}</Text>
+                <View style={styles.cardMeta}>
+                  <Text style={[styles.statusPill, item.status === 'closed' ? styles.statusPillClosed : styles.statusPillActive]} fontType="medium">
+                    {item.status === 'closed' ? 'Closed' : 'Active'}
+                  </Text>
+                  <Text style={styles.lastModified} fontType="medium">{new Date(item.lastModified).toLocaleDateString()}</Text>
+                </View>
               </View>
             </View>
           </Animated.View>
@@ -191,6 +223,13 @@ export default function ManagerProjects() {
               onChange={(item: DropdownOption) => setSortBy(item.value)}
               placeholder="Sort By"
               style={styles.dropdownSort}
+            />
+            <CustomDropdown
+              data={statusFilterOptions}
+              value={statusFilter}
+              onChange={(item: DropdownOption) => setStatusFilter(item.value as 'active' | 'closed' | 'all')}
+              placeholder="Status"
+              style={styles.dropdownStatus}
             />
           </View>
           <Button title="Create Project" onPress={handleCreateProject} style={styles.createButton} textStyle={styles.createButtonText} />
@@ -243,7 +282,15 @@ export default function ManagerProjects() {
           )}
         </View>
       </View>
-      <CreateProjectModal visible={isModalVisible} onClose={() => setModalVisible(false)} />     
+      <CreateProjectModal
+        visible={isModalVisible}
+        onClose={() => {
+          setModalVisible(false);
+          setEditingProject(null);
+        }}
+        mode={editingProject ? 'edit' : 'create'}
+        project={editingProject}
+      />
     </AnimatedScreen>
   );
 }
@@ -274,12 +321,14 @@ const styles = StyleSheet.create({
     padding: theme.spacing(3), // Add padding within the card
     marginHorizontal: theme.spacing(2), // Match dashboard's column margin
     marginBottom: theme.spacing(2),
+    overflow: 'visible',
     ...Platform.select({
       web: {
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.05,
         shadowRadius: 10,
+        zIndex: 1,
       },
       native: {
 
@@ -292,11 +341,15 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between', // Aligned with employees.tsx
     alignItems: 'center',
     flexWrap: 'wrap', // Keep for responsiveness of controls
+    zIndex: 20,
+    overflow: 'visible',
   },
   filterSortRow: {
     flexDirection: 'row',
     alignItems: 'center', // Aligned with employees.tsx
     flexWrap: 'wrap', // Keep for responsiveness of controls
+    zIndex: 30,
+    overflow: 'visible',
     // Removed flex: 1 and marginBottom: theme.spacing(2) as it's handled by main headerControls
   },
   searchInput: {
@@ -313,14 +366,16 @@ const styles = StyleSheet.create({
     // Removed flex: 1 and minWidth: 180
   },
   dropdownSort: {
-    width: 200, // Adjusted width from 130 to 200
+    width: 230,
     height: 40, // Adjusted height
-    zIndex: 10,
-    backgroundColor: theme.colors.pageBackground, // Lighter background
-    borderColor: theme.colors.borderColor,
-    borderWidth: 1,
-    borderRadius: theme.radius.md,
-    paddingHorizontal: theme.spacing(1), // Added for consistency
+    zIndex: 40,
+    paddingHorizontal: theme.spacing(1),
+  },
+  dropdownStatus: {
+    width: 180,
+    height: 40,
+    zIndex: 35,
+    paddingHorizontal: theme.spacing(1),
   },
   createButton: {
     // Removed height: 45, Button component handles its own height
@@ -348,6 +403,7 @@ const styles = StyleSheet.create({
   contentArea: {
     flex: 1,
     minHeight: 0,
+    zIndex: 1,
   },
   projectsScrollView: {
     flex: 1,
@@ -378,6 +434,21 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     flexDirection: 'column',
     minHeight: 230,
+    position: 'relative',
+  },
+  editProjectButton: {
+    position: 'absolute',
+    top: theme.spacing(1),
+    right: theme.spacing(1),
+    zIndex: 5,
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: 'rgba(255,255,255,0.92)',
+    borderWidth: 1,
+    borderColor: theme.colors.borderColor,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   projectImage: {
     width: '100%',
@@ -420,6 +491,10 @@ const styles = StyleSheet.create({
     paddingTop: theme.spacing(1.5),
     marginTop: 'auto', // Pushes footer to the bottom
   },
+  cardMeta: {
+    alignItems: 'flex-end',
+    gap: theme.spacing(0.75),
+  },
   footerStat: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -431,6 +506,21 @@ const styles = StyleSheet.create({
   },
   lastModified: {
     fontSize: theme.fontSizes.sm, // Adjusted
+    color: theme.colors.bodyText,
+  },
+  statusPill: {
+    fontSize: theme.fontSizes.xs,
+    paddingHorizontal: theme.spacing(1),
+    paddingVertical: theme.spacing(0.5),
+    borderRadius: theme.radius.pill,
+    overflow: 'hidden',
+  },
+  statusPillActive: {
+    backgroundColor: theme.statusColors.successBackground,
+    color: theme.statusColors.successText,
+  },
+  statusPillClosed: {
+    backgroundColor: theme.colors.pageBackground,
     color: theme.colors.bodyText,
   },
   noProjectsText: {

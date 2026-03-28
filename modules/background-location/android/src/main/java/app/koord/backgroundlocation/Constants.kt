@@ -1,6 +1,9 @@
 package app.koord.backgroundlocation
 
 object Constants {
+    const val PASSIVE_TRACKING_INTERVAL_MS = 15 * 60 * 1000L
+    const val ACTIVE_TRACKING_INTERVAL_MS = 5 * 60 * 1000L
+
     const val SHARED_PREFS_NAME = "location_tracking_prefs"
     const val KEY_WORKER_ID = "worker_id"
     const val KEY_ASSIGNMENT_ID = "assignment_id" // Current active assignment ID (not for geofence)

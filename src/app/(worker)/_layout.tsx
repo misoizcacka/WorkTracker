@@ -1,5 +1,5 @@
 import React, { useEffect } from "react";
-import { useRouter } from "expo-router";
+import { Redirect, useRouter } from "expo-router";
 import { useSession } from "../../context/AuthContext";
 import { Ionicons } from "@expo/vector-icons";
 import { theme } from "../../theme";
@@ -7,6 +7,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { withLayoutContext } from 'expo-router';
 import { Text } from "../../components/Themed";
 import { SubscriptionLockScreen } from "../../components/SubscriptionLockScreen";
+import { Platform } from "react-native";
 
 const { Navigator } = createBottomTabNavigator();
 export const BottomTabs = withLayoutContext(Navigator);
@@ -30,6 +31,10 @@ function ProtectedWorkerLayout() {
 
   if (userRole !== 'worker') {
     return null;
+  }
+
+  if (Platform.OS === 'web') {
+    return <Redirect href="/mobile-only" />;
   }
 
   if (isSubscriptionExpired) {

@@ -40,6 +40,7 @@ export interface Project {
   id: string;
   name: string;
   address: string;
+  status: 'active' | 'closed';
   location: {
     latitude: number;
     longitude: number;
@@ -47,7 +48,6 @@ export interface Project {
   lastModified: string;
   photos: string[]; // Supabase URLs
   explanation: string;
-  notes: string;
   color: string;
 }
 
@@ -69,6 +69,7 @@ export interface ProjectsContextType {
   projects: Project[];
   loadInitialProjects: () => Promise<void>;
   createProject: (projectData: Omit<Project, 'id' | 'lastModified' | 'photos'> & { photos: string[] }) => Promise<Project | undefined>;
+  updateProject: (projectId: string, projectData: Omit<Project, 'id' | 'lastModified' | 'photos'> & { photos: string[] }) => Promise<Project | undefined>;
   getProjectMessages: (projectId: string, limit: number, beforeTimestamp?: string) => Promise<{ messages: ProjectMessage[]; hasMore: boolean; }>;
   sendTextMessage: (projectId: string, text: string) => Promise<ProjectMessage | undefined>;
   sendImageMessage: (projectId: string, imageUri: string) => Promise<ProjectMessage | undefined>;
@@ -79,6 +80,15 @@ export interface ProjectsContextType {
 export const ProjectsContext = createContext<ProjectsContextType | null>(null);
 
 const PAGE_SIZE = 50;
+type ProjectPayload = Omit<Project, 'id' | 'lastModified' | 'photos'> & { photos: string[] };
+
+const mapProjectRecord = (projectRecord: any): Project => ({
+  ...projectRecord,
+  status: projectRecord.status === 'closed' ? 'closed' : 'active',
+  photos: (projectRecord.project_photos || []).map((photo: { url: string }) => photo.url),
+  lastModified: projectRecord.updated_at || projectRecord.created_at,
+  location: { latitude: projectRecord.latitude, longitude: projectRecord.longitude },
+});
 
 // --------- PROVIDER COMPONENT --------- //
 
@@ -86,6 +96,32 @@ export function ProjectsProvider({ children }: { children: React.ReactNode }) {
   const [projects, setProjects] = useState<Project[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+
+  const uploadProjectPhotos = useCallback(async (projectId: string, photoUris: string[]) => {
+    if (photoUris.length > 10) throw new Error('You can only upload a maximum of 10 photos.');
+
+    const uploadedPhotoUrls: string[] = await Promise.all(
+      photoUris.map(async (photoUri) => {
+        if (/^https?:\/\//i.test(photoUri)) {
+          return photoUri;
+        }
+
+        const compressedUri = await compressImageAsync(photoUri);
+        const base64 = await readAsBase64(compressedUri);
+        const filePath = `${projectId}/${Date.now()}-${uuidv4()}.jpeg`;
+        const { data, error: uploadError } = await supabase.storage
+          .from('project-images')
+          .upload(filePath, decode(base64), { contentType: 'image/jpeg' });
+
+        if (uploadError) throw new Error(`Image upload failed: ${uploadError.message}`);
+
+        const { data: urlData } = supabase.storage.from('project-images').getPublicUrl(data.path);
+        return urlData.publicUrl;
+      })
+    );
+
+    return uploadedPhotoUrls;
+  }, []);
 
 
   const loadInitialProjects = useCallback(async () => {
@@ -100,12 +136,7 @@ export function ProjectsProvider({ children }: { children: React.ReactNode }) {
 
       if (fetchError) throw new Error(`Failed to fetch projects: ${fetchError.message}`);
       
-      const mappedProjects: Project[] = data.map((p: any) => ({
-        ...p,
-        photos: p.project_photos.map((photo: { url: string }) => photo.url),
-        lastModified: p.created_at,
-        location: { latitude: p.latitude, longitude: p.longitude },
-      }));
+      const mappedProjects: Project[] = data.map(mapProjectRecord);
 
       setProjects(mappedProjects);
 
@@ -117,32 +148,19 @@ export function ProjectsProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const createProject = async (
-    projectData: Omit<Project, 'id' | 'lastModified' | 'photos'> & { photos: string[] }
+    projectData: ProjectPayload
   ): Promise<Project | undefined> => {
     setIsLoading(true);
     setError(null);
     const newProjectId = uuidv4();
     try {
-      if (projectData.photos.length > 10) throw new Error('You can only upload a maximum of 10 photos.');
-      const uploadedPhotoUrls: string[] = await Promise.all(
-        projectData.photos.map(async (photoUri) => {
-          const compressedUri = await compressImageAsync(photoUri);
-          const base64 = await readAsBase64(compressedUri);
-          const filePath = `${newProjectId}/${Date.now()}.jpeg`;
-          const { data, error: uploadError } = await supabase.storage
-            .from('project-images')
-            .upload(filePath, decode(base64), { contentType: 'image/jpeg' });
-          if (uploadError) throw new Error(`Image upload failed: ${uploadError.message}`);
-                      const { data: urlData } = supabase.storage.from('project-images').getPublicUrl(data.path);
-                      console.log('Uploaded image public URL:', urlData.publicUrl); // DEBUG LOG
-                      return urlData.publicUrl;        })
-      );
+      const uploadedPhotoUrls = await uploadProjectPhotos(newProjectId, projectData.photos);
       const { error: rpcError } = await supabase.rpc('create_project_with_photos', {
         project_id_in: newProjectId,
         name_in: projectData.name,
         address_in: projectData.address,
         explanation_in: projectData.explanation,
-        notes_in: projectData.notes,
+        status_in: projectData.status,
         color_in: projectData.color,
         latitude_in: projectData.location.latitude,
         longitude_in: projectData.location.longitude,
@@ -159,6 +177,62 @@ export function ProjectsProvider({ children }: { children: React.ReactNode }) {
       setIsLoading(false);
     }
   };
+
+  const updateProject = useCallback(async (
+    projectId: string,
+    projectData: ProjectPayload
+  ): Promise<Project | undefined> => {
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const uploadedPhotoUrls = await uploadProjectPhotos(projectId, projectData.photos);
+
+      const { error: updateError } = await supabase
+        .from('projects')
+        .update({
+          name: projectData.name,
+          address: projectData.address,
+          explanation: projectData.explanation,
+          status: projectData.status,
+          color: projectData.color,
+          latitude: projectData.location.latitude,
+          longitude: projectData.location.longitude,
+        })
+        .eq('id', projectId);
+
+      if (updateError) throw new Error(`Failed to update project: ${updateError.message}`);
+
+      const { error: deletePhotosError } = await supabase
+        .from('project_photos')
+        .delete()
+        .eq('project_id', projectId);
+
+      if (deletePhotosError) throw new Error(`Failed to update project photos: ${deletePhotosError.message}`);
+
+      if (uploadedPhotoUrls.length > 0) {
+        const { error: insertPhotosError } = await supabase
+          .from('project_photos')
+          .insert(uploadedPhotoUrls.map((url) => ({ project_id: projectId, url })));
+
+        if (insertPhotosError) throw new Error(`Failed to save project photos: ${insertPhotosError.message}`);
+      }
+
+      await loadInitialProjects();
+
+      return {
+        ...projectData,
+        id: projectId,
+        photos: uploadedPhotoUrls,
+        lastModified: new Date().toISOString(),
+      };
+    } catch (e: any) {
+      setError(e.message);
+      return undefined;
+    } finally {
+      setIsLoading(false);
+    }
+  }, [loadInitialProjects, uploadProjectPhotos]);
 
   const getProjectMessages = async (projectId: string, limit: number, beforeTimestamp?: string): Promise<{ messages: ProjectMessage[]; hasMore: boolean; }> => {
     if (!projectId) return { messages: [], hasMore: false };
@@ -213,7 +287,7 @@ export function ProjectsProvider({ children }: { children: React.ReactNode }) {
   }, [loadInitialProjects]);
 
   return (
-    <ProjectsContext.Provider value={{ projects, loadInitialProjects, createProject, getProjectMessages, sendTextMessage, sendImageMessage, isLoading, error }}>
+    <ProjectsContext.Provider value={{ projects, loadInitialProjects, createProject, updateProject, getProjectMessages, sendTextMessage, sendImageMessage, isLoading, error }}>
       {children}
     </ProjectsContext.Provider>
   );

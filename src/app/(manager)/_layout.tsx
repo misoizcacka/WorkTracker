@@ -25,10 +25,16 @@ function ManagerProviders({ children }: { children: React.ReactNode }) {
     if (isLoading) return;
     if (user && (userRole === 'manager' || userRole === 'owner')) {
       const companySetupComplete = user.user_metadata?.company_setup_complete || false;
+      const subscriptionStatus = user.app_metadata?.subscription_status;
       const inCompanySetup = segments.includes('company-setup');
       const inSubscriptionFlow = segments.includes('subscription');
 
-      if (!companySetupComplete && !inCompanySetup && !inSubscriptionFlow) {
+      if (
+        subscriptionStatus === 'active' &&
+        !companySetupComplete &&
+        !inCompanySetup &&
+        !inSubscriptionFlow
+      ) {
         router.replace('/(manager)/company-setup');
       }
     }

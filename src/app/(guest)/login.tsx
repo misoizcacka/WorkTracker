@@ -48,11 +48,18 @@ export default function Login() {
 
     setIsSubmitting(true);
     try {
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) {
         setErrors({ general: t('login.errors.invalidCredentials') });
         console.error('Login error:', error.message);
       } else {
+        const signedInRole = data.user?.app_metadata?.role ?? data.user?.user_metadata?.role;
+
+        if (Platform.OS === 'web' && signedInRole === 'worker') {
+          router.replace('/mobile-only');
+          return;
+        }
+
         await refreshUser();
       }
     } catch (error: any) {

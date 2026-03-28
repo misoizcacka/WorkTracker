@@ -32,6 +32,8 @@ interface MapViewProps {
   onRegionChangeComplete?: (region: { latitude: number; longitude: number; latitudeDelta: number; longitudeDelta: number; zoom: number; }) => void;
   onWebZoomChange?: (zoom: number) => void; // New callback for explicit zoom changes
   showNameTag?: boolean;
+  disableWorkerHover?: boolean;
+  disableWorkerPopup?: boolean;
 }
 
 // --- MARKERS ---
@@ -200,6 +202,8 @@ export const MapView = React.forwardRef<any, MapViewProps>(({
   onRegionChangeComplete,
   onWebZoomChange, // New prop
   showNameTag = true,
+  disableWorkerHover = false,
+  disableWorkerPopup = false,
 }, ref) => {
   const mapRef = useRef<any>(null);
 
@@ -264,6 +268,14 @@ export const MapView = React.forwardRef<any, MapViewProps>(({
       }));
     }
   }, [initialRegion, region]);
+
+  useEffect(() => {
+    if (!region || !isMapLoaded || !mapRef.current) return;
+
+    const map = mapRef.current;
+    const bounds = map.getBounds();
+    setBounds([bounds.getWest(), bounds.getSouth(), bounds.getEast(), bounds.getNorth()]);
+  }, [region, isMapLoaded, effectiveViewState.latitude, effectiveViewState.longitude, effectiveViewState.zoom]);
 
 
   const features = useMemo(() => [
@@ -372,6 +384,7 @@ export const MapView = React.forwardRef<any, MapViewProps>(({
     setSpiderfiedParentId(null); // Ensure immediate clear
     setPopupInfo(null);
     setHoverInfo(null);
+    if (disableWorkerPopup && item.properties?.type === 'worker') return;
     setPopupInfo(item.properties as ItemInCluster);
   };
 
@@ -496,7 +509,9 @@ export const MapView = React.forwardRef<any, MapViewProps>(({
                       handleSpiderfy(item);
                     }}
                     onMouseEnter={() => {
-                      if (!popupInfo && mainItem) setHoverInfo(mainItem as ItemInCluster);
+                      if (!popupInfo && mainItem && (!disableWorkerHover || mainItem.type === 'project')) {
+                        setHoverInfo(mainItem as ItemInCluster);
+                      }
                     }}
                     onMouseLeave={() => setHoverInfo(null)}
                   >
@@ -513,7 +528,9 @@ export const MapView = React.forwardRef<any, MapViewProps>(({
                       handleSpiderfy(item);
                     }}
                     onMouseEnter={() => {
-                      if (!popupInfo && item.properties.mainItem) setHoverInfo(item.properties.mainItem as ItemInCluster);
+                      if (!popupInfo && item.properties.mainItem && (!disableWorkerHover || item.properties.mainItem.type === 'project')) {
+                        setHoverInfo(item.properties.mainItem as ItemInCluster);
+                      }
                     }}
                     onMouseLeave={() => setHoverInfo(null)}
                   >
@@ -523,14 +540,24 @@ export const MapView = React.forwardRef<any, MapViewProps>(({
               );
             } else {
               return (
-                <MapLibreMarker key={item.id} latitude={item.geometry.coordinates[1]} longitude={item.geometry.coordinates[0]}>
+                <MapLibreMarker
+                  key={
+                    item.properties.type === 'worker'
+                      ? `${item.id}-${item.geometry.coordinates[1]}-${item.geometry.coordinates[0]}-${item.properties.lastSeen || ''}`
+                      : item.id
+                  }
+                  latitude={item.geometry.coordinates[1]}
+                  longitude={item.geometry.coordinates[0]}
+                >
                   <div
                     onClick={e => {
                       e.stopPropagation();
                       handleSingleMarkerClick(item);
                     }}
                     onMouseEnter={() => {
-                      if (!popupInfo) setHoverInfo(item.properties as ItemInCluster);
+                      if (!popupInfo && (!disableWorkerHover || item.properties.type === 'project')) {
+                        setHoverInfo(item.properties as ItemInCluster);
+                      }
                     }}
                     onMouseLeave={() => setHoverInfo(null)}
                   >
@@ -546,14 +573,25 @@ export const MapView = React.forwardRef<any, MapViewProps>(({
           })}
 
         {spiderfiedMarkers.map(marker => (
-          <MapLibreMarker key={marker.id} latitude={marker.properties.location.latitude} longitude={marker.properties.location.longitude} style={{ zIndex: 100 }}>
+          <MapLibreMarker
+            key={
+              marker.properties.type === 'worker'
+                ? `${marker.id}-${marker.properties.location.latitude}-${marker.properties.location.longitude}-${marker.properties.lastSeen || ''}`
+                : marker.id
+            }
+            latitude={marker.properties.location.latitude}
+            longitude={marker.properties.location.longitude}
+            style={{ zIndex: 100 }}
+          >
             <div
               onClick={e => {
                 e.stopPropagation();
                 handleSingleMarkerClick(marker);
               }}
               onMouseEnter={() => {
-                if (!popupInfo) setHoverInfo(marker.properties as ItemInCluster);
+                if (!popupInfo && (!disableWorkerHover || marker.properties.type === 'project')) {
+                  setHoverInfo(marker.properties as ItemInCluster);
+                }
               }}
               onMouseLeave={() => setHoverInfo(null)}
             >

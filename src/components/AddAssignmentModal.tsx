@@ -31,7 +31,9 @@ const AddAssignmentModal: React.FC<AddAssignmentModalProps> = ({
   const [selectedItem, setSelectedItem] = useState<{label: string, value: string} | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
-  const projectOptions = projects.map(p => ({ label: p.name, value: p.id }));
+  const projectOptions = projects
+    .filter((project) => project.status === 'active')
+    .map(p => ({ label: p.name, value: p.id }));
   const locationOptions = commonLocations.map((l: { name: string; id: string; }) => ({ label: l.name, value: l.id }));
 
   const handleSave = async () => {

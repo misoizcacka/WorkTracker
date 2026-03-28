@@ -1,21 +1,21 @@
 import React, { useState, useEffect, useContext } from 'react';
-import { View, StyleSheet, ActivityIndicator, Platform, Dimensions, Image, ScrollView, Pressable, TouchableOpacity } from 'react-native';
+import { View, StyleSheet, ActivityIndicator, Dimensions, ScrollView, Pressable, TouchableOpacity } from 'react-native';
 import { useLocalSearchParams, useRouter, Link } from 'expo-router';
+import { Feather, Ionicons } from '@expo/vector-icons';
 import { InvitesContext } from '~/context/InvitesContext';
 import ThemedInput from '../../../components/ThemedInput';
 import { Button } from '../../../components/Button';
-import { Text } from '../../../components/Themed'; // Import Themed Text
+import { Text } from '../../../components/Themed';
 import { supabase } from '../../../utils/supabase';
 import { Invite } from '../../../types';
 import { theme } from '../../../theme';
 import AnimatedScreen from '../../../components/AnimatedScreen';
+import { Card } from '../../../components/Card';
 import { Logo } from '~/components/Logo';
 import { useTranslation } from 'react-i18next';
-import { LanguageSelector } from '../../../components/LanguageSelector';
-import { Feather } from '@expo/vector-icons'; // For password toggle
 
 const { width } = Dimensions.get('window');
-const isLargeScreen = width > 768;
+const isLargeScreen = width > 900;
 
 const InviteSignUpScreen = () => {
   const { token } = useLocalSearchParams<{ token: string }>();
@@ -28,7 +28,7 @@ const InviteSignUpScreen = () => {
   const [error, setError] = useState<string | null>(null);
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [passwordVisible, setPasswordVisible] = useState(false); // Added for password toggle
+  const [passwordVisible, setPasswordVisible] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -92,13 +92,13 @@ const InviteSignUpScreen = () => {
     try {
       const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
         email: invite.email,
-        password: password,
+        password,
         options: {
           data: {
             full_name: invite.full_name,
             role: invite.role,
-          }
-        }
+          },
+        },
       });
 
       if (signUpError) {
@@ -107,40 +107,32 @@ const InviteSignUpScreen = () => {
         return;
       }
 
-      // Ensure user was created successfully
       if (!signUpData.user) {
         setFormError(t('signup.userSignupFailed'));
         setIsSubmitting(false);
         return;
       }
 
-      // Call the Edge Function to create the employee and update invite status
-      const { data: employeeCreationData, error: employeeCreationError } = await supabase.functions.invoke('create-employee-from-invite', {
+      const { error: employeeCreationError } = await supabase.functions.invoke('create-employee-from-invite', {
         body: {
           userId: signUpData.user.id,
-          inviteId: invite.id,       // Pass invite ID
-          inviteToken: invite.token,  // Pass invite token for verification
+          inviteId: invite.id,
+          inviteToken: invite.token,
           fullName: invite.full_name,
           email: invite.email,
           role: invite.role,
           companyId: invite.company_id,
-        }
+        },
       });
 
       if (employeeCreationError) {
-        console.error("Error calling create-employee-from-invite Edge Function:", employeeCreationError);
         setFormError(employeeCreationError.message || t('signup.failedToFinalizeSetup'));
         setIsSubmitting(false);
-        // Consider rolling back the auth.user creation here if this is critical
         return;
       }
 
-      // IMPORTANT: Sign out the user immediately after signup to prevent auto-login on web
       await supabase.auth.signOut();
-
-      // Redirect to the signup success page
       router.replace(`/(guest)/signup-success?role=${invite.role}`);
-
     } catch (e: any) {
       setFormError(e.message || t('signup.unexpectedError'));
     } finally {
@@ -150,22 +142,31 @@ const InviteSignUpScreen = () => {
 
   if (loading) {
     return (
-      <View style={styles.centered}>
-        <ActivityIndicator size="large" color={theme.colors.primary} />
-        <Text style={styles.infoText} fontType="regular">{t('signup.verifyingInvitation')}</Text>
-      </View>
+      <AnimatedScreen>
+        <View style={styles.stateScreen}>
+          <ActivityIndicator size="large" color={theme.colors.primary} />
+          <Text style={styles.stateText} fontType="regular">{t('signup.verifyingInvitation')}</Text>
+        </View>
+      </AnimatedScreen>
     );
   }
 
   if (error) {
     return (
-      <View style={styles.centered}>
-        <Text style={styles.errorTitle} fontType="bold">{t('signup.invitationError')}</Text>
-        <Text style={styles.errorText} fontType="regular">{error}</Text>
-        <Button onPress={() => router.push('/')} textStyle={{ color: theme.colors.primary }} type="secondary">
-          <Text fontType="regular">{t('signup.returnHome')}</Text>
-        </Button>
-      </View>
+      <AnimatedScreen>
+        <View style={styles.stateScreen}>
+          <Card style={styles.stateCard}>
+            <View style={styles.stateIcon}>
+              <Ionicons name="alert-circle-outline" size={28} color={theme.colors.danger} />
+            </View>
+            <Text style={styles.errorTitle} fontType="bold">{t('signup.invitationError')}</Text>
+            <Text style={styles.errorText} fontType="regular">{error}</Text>
+            <Button onPress={() => router.push('/')} type="secondary" style={styles.secondaryButton} textStyle={styles.secondaryButtonText}>
+              {t('signup.returnHome')}
+            </Button>
+          </Card>
+        </View>
+      </AnimatedScreen>
     );
   }
 
@@ -173,176 +174,356 @@ const InviteSignUpScreen = () => {
 
   return (
     <AnimatedScreen>
-      <View style={styles.outerContainer}>
-        {isLargeScreen && (
-          <View style={styles.marketingContainer}>
-            <Link href="/" style={styles.marketingLogo} asChild>
-              <TouchableOpacity activeOpacity={0.7}>
-                <Logo />
-              </TouchableOpacity>
-            </Link>
-            <Text style={styles.marketingTitle} fontType="bold">{t('signup.marketingTitle')}</Text>
-            <Text style={styles.marketingDescription} fontType="regular">{t('signup.marketingDescription')}</Text>
-            <Text style={styles.marketingBullet} fontType="regular">✅ {t('signup.marketingBullet1')}</Text>
-            <Text style={styles.marketingBullet} fontType="regular">✅ {t('signup.marketingBullet2')}</Text>
-            <Text style={styles.marketingBullet} fontType="regular">✅ {t('signup.marketingBullet3')}</Text>
-            <Text style={styles.marketingBullet} fontType="regular">✅ {t('signup.marketingBullet4')}</Text>
-            <Text style={styles.marketingDescription} fontType="regular">{t('signup.marketingDescription2')}</Text>
-          </View>
-        )}
-        {isLargeScreen && <View style={styles.separatorVertical} />}
-        {!isLargeScreen && (
-            <Link href="/" style={styles.smallScreenLogo} asChild>
-              <TouchableOpacity activeOpacity={0.7}>
-                <Logo />
-              </TouchableOpacity>
-            </Link>
-        )}
-        <ScrollView contentContainerStyle={styles.scrollContent}>
-          <View style={styles.content}>
-            <Text style={styles.title} fontType="bold">🎉 {t('signup.welcomeToCompany')} {invite.company_name}!</Text>
-            <Text style={styles.subtitle} fontType="regular">
-              {t('signup.invitedToJoin')} {invite.role}.
-            </Text>
+      <View style={styles.screen}>
+        <View style={styles.header}>
+          <Link href="/" asChild>
+            <TouchableOpacity activeOpacity={0.8}>
+              <Logo />
+            </TouchableOpacity>
+          </Link>
+          <Link href="/(guest)/login" asChild>
+            <TouchableOpacity style={styles.headerLink}>
+              <Text style={styles.headerLinkText} fontType="medium">Sign In</Text>
+            </TouchableOpacity>
+          </Link>
+        </View>
 
-            <View style={styles.inputGroup}>
-              <Text style={styles.label} fontType="regular">{t('signup.fullNameLabel')}</Text>
-              <ThemedInput value={invite.full_name} editable={false} />
-            </View>
-
-            <View style={styles.inputGroup}>
-              <Text style={styles.label} fontType="regular">{t('signup.emailLabel')}</Text>
-              <ThemedInput value={invite.email} editable={false} />
-            </View>
-
-            <View style={styles.inputGroup}>
-              <Text style={styles.label} fontType="regular">{t('signup.passwordLabel')}</Text>
-              <View style={styles.passwordInputContainer}>
-                <ThemedInput
-                  value={password}
-                  onChangeText={setPassword}
-                  secureTextEntry={!passwordVisible}
-                  placeholder={t('signup.createPasswordPlaceholder')}
-                  style={styles.themedInputFlex} // To allow passwordToggle to sit next to it
-                />
-                <Pressable onPress={() => setPasswordVisible(!passwordVisible)} style={styles.passwordToggle}>
-                  <Feather
-                    name={passwordVisible ? 'eye' : 'eye-off'}
-                    size={20}
-                    color={theme.colors.iconColor}
-                  />
-                </Pressable>
+        <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+          <View style={styles.layout}>
+            {isLargeScreen && (
+              <View style={styles.infoPanel}>
+                <View style={styles.infoBadge}>
+                  <Text style={styles.infoBadgeText} fontType="medium">TEAM INVITE</Text>
+                </View>
+                <Text style={styles.infoTitle} fontType="bold">
+                  Join {invite.company_name} and finish your account setup.
+                </Text>
+                <Text style={styles.infoDescription} fontType="regular">
+                  Your invite is ready. Confirm your details, choose a secure password, and complete signup in one step.
+                </Text>
+                <View style={styles.infoList}>
+                  <View style={styles.infoListItem}>
+                    <Ionicons name="checkmark-circle" size={18} color={theme.colors.primary} />
+                    <Text style={styles.infoListText} fontType="regular">Your role and company are already linked to this invitation.</Text>
+                  </View>
+                  <View style={styles.infoListItem}>
+                    <Ionicons name="checkmark-circle" size={18} color={theme.colors.primary} />
+                    <Text style={styles.infoListText} fontType="regular">Set your password once and you are ready to start.</Text>
+                  </View>
+                  <View style={styles.infoListItem}>
+                    <Ionicons name="checkmark-circle" size={18} color={theme.colors.primary} />
+                    <Text style={styles.infoListText} fontType="regular">After signup, the account setup is completed automatically.</Text>
+                  </View>
+                </View>
               </View>
-            </View>
+            )}
 
-            <View style={styles.inputGroup}>
-              <Text style={styles.label} fontType="regular">{t('signup.confirmPasswordLabel')}</Text>
-              <View style={styles.passwordInputContainer}>
-                <ThemedInput
-                  value={confirmPassword}
-                  onChangeText={setConfirmPassword}
-                  secureTextEntry={!passwordVisible}
-                  placeholder={t('signup.reEnterPasswordPlaceholder')}
-                  style={styles.themedInputFlex} // To allow passwordToggle to sit next to it
-                />
-                <Pressable onPress={() => setPasswordVisible(!passwordVisible)} style={styles.passwordToggle}>
-                  <Feather
-                    name={passwordVisible ? 'eye' : 'eye-off'}
-                    size={20}
-                    color={theme.colors.iconColor}
-                  />
-                </Pressable>
+            <Card style={styles.formCard}>
+              <View style={styles.formIntro}>
+                <View style={styles.formIntroBadge}>
+                  <Ionicons name="mail-open-outline" size={18} color={theme.colors.primary} />
+                </View>
+                <Text style={styles.title} fontType="bold">
+                  {t('signup.welcomeToCompany')} {invite.company_name}
+                </Text>
+                <Text style={styles.subtitle} fontType="regular">
+                  {t('signup.invitedToJoin')} {invite.role}. Finish setup below.
+                </Text>
               </View>
-            </View>
 
-            {formError && <Text style={styles.formErrorText} fontType="regular">{formError}</Text>}
+              <View style={styles.readonlyCard}>
+                <View style={styles.readonlyRow}>
+                  <Text style={styles.readonlyLabel} fontType="bold">{t('signup.fullNameLabel')}</Text>
+                  <Text style={styles.readonlyValue} fontType="regular">{invite.full_name}</Text>
+                </View>
+                <View style={styles.readonlyDivider} />
+                <View style={styles.readonlyRow}>
+                  <Text style={styles.readonlyLabel} fontType="bold">{t('signup.emailLabel')}</Text>
+                  <Text style={styles.readonlyValue} fontType="regular">{invite.email}</Text>
+                </View>
+              </View>
 
-            <Button
-              onPress={handleSignUp}
-              disabled={isSubmitting}
-              style={styles.signupButton}
-            >
-              {isSubmitting ? (
-                <ActivityIndicator color="#fff" />
-              ) : (
-                <Text style={styles.signupButtonText} fontType="regular">{t('signup.createAccount')}</Text>
-              )}
-            </Button>
+              <View style={styles.inputGroup}>
+                <Text style={styles.label} fontType="bold">{t('signup.passwordLabel')}</Text>
+                <View style={styles.passwordInputContainer}>
+                  <ThemedInput
+                    value={password}
+                    onChangeText={setPassword}
+                    secureTextEntry={!passwordVisible}
+                    placeholder={t('signup.createPasswordPlaceholder')}
+                    style={styles.themedInputFlex}
+                  />
+                  <Pressable onPress={() => setPasswordVisible(!passwordVisible)} style={styles.passwordToggle}>
+                    <Feather
+                      name={passwordVisible ? 'eye' : 'eye-off'}
+                      size={20}
+                      color={theme.colors.iconColor}
+                    />
+                  </Pressable>
+                </View>
+              </View>
+
+              <View style={styles.inputGroup}>
+                <Text style={styles.label} fontType="bold">{t('signup.confirmPasswordLabel')}</Text>
+                <View style={styles.passwordInputContainer}>
+                  <ThemedInput
+                    value={confirmPassword}
+                    onChangeText={setConfirmPassword}
+                    secureTextEntry={!passwordVisible}
+                    placeholder={t('signup.reEnterPasswordPlaceholder')}
+                    style={styles.themedInputFlex}
+                  />
+                  <Pressable onPress={() => setPasswordVisible(!passwordVisible)} style={styles.passwordToggle}>
+                    <Feather
+                      name={passwordVisible ? 'eye' : 'eye-off'}
+                      size={20}
+                      color={theme.colors.iconColor}
+                    />
+                  </Pressable>
+                </View>
+              </View>
+
+              {formError && <Text style={styles.formErrorText} fontType="regular">{formError}</Text>}
+
+              <Button
+                onPress={handleSignUp}
+                disabled={isSubmitting}
+                style={styles.signupButton}
+              >
+                {isSubmitting ? (
+                  <ActivityIndicator color="#fff" />
+                ) : (
+                  <Text style={styles.signupButtonText} fontType="regular">{t('signup.createAccount')}</Text>
+                )}
+              </Button>
+            </Card>
           </View>
         </ScrollView>
-      </View>
-      <View style={styles.languageSelectorContainer}>
-        <LanguageSelector />
       </View>
     </AnimatedScreen>
   );
 };
 
 const styles = StyleSheet.create({
-  outerContainer: {
+  screen: {
     flex: 1,
-    flexDirection: isLargeScreen ? 'row' : 'column',
+    backgroundColor: theme.colors.pageBackground,
   },
-  marketingContainer: {
-    flex: 1,
-    backgroundColor: theme.colors.background, // Consistent with overall background
-    justifyContent: 'center',
-    padding: theme.spacing(8),
-    paddingTop: theme.spacing(8),
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: theme.spacing(4),
+    paddingVertical: theme.spacing(3),
+    backgroundColor: theme.colors.cardBackground,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.borderColor,
   },
-  marketingLogo: {
-    position: 'absolute',
-    top: theme.spacing(4),
-    left: theme.spacing(4),
+  headerLink: {
+    backgroundColor: theme.colors.pageBackground,
+    borderWidth: 1,
+    borderColor: theme.colors.borderColor,
+    borderRadius: theme.radius.md,
+    paddingHorizontal: theme.spacing(2),
+    paddingVertical: theme.spacing(1.25),
   },
-  smallScreenLogo: {
-    position: 'absolute',
-    top: theme.spacing(4),
-    left: theme.spacing(4),
-    zIndex: 10,
-  },
-  marketingTitle: {
-    fontSize: 40,
+  headerLinkText: {
     color: theme.colors.headingText,
-    marginBottom: theme.spacing(4),
-    lineHeight: 48,
-  },
-  marketingDescription: {
-    fontSize: 18,
-    color: theme.colors.bodyText,
-    marginBottom: theme.spacing(4),
-    lineHeight: 28,
-  },
-  marketingBullet: {
-    fontSize: 16,
-    color: theme.colors.bodyText,
-    marginBottom: theme.spacing(1),
-  },
-  separatorVertical: {
-    width: 1,
-    backgroundColor: theme.colors.borderColor,
-    height: '100%', // Take full height
+    fontSize: theme.fontSizes.sm,
   },
   scrollContent: {
     flexGrow: 1,
+    paddingHorizontal: theme.spacing(3),
+    paddingVertical: theme.spacing(4),
+  },
+  layout: {
+    width: '100%',
+    maxWidth: 1180,
+    alignSelf: 'center',
+    flexDirection: isLargeScreen ? 'row' : 'column',
+    gap: theme.spacing(3),
+    alignItems: 'stretch',
+  },
+  infoPanel: {
+    flex: 1,
+    backgroundColor: theme.colors.background,
+    borderRadius: theme.radius.xl,
+    borderWidth: 1,
+    borderColor: theme.colors.borderColor,
+    padding: theme.spacing(5),
     justifyContent: 'center',
+  },
+  infoBadge: {
+    alignSelf: 'flex-start',
+    backgroundColor: theme.colors.primary + '15',
+    borderRadius: theme.radius.pill,
+    paddingHorizontal: theme.spacing(1.5),
+    paddingVertical: theme.spacing(0.75),
+    marginBottom: theme.spacing(3),
+  },
+  infoBadgeText: {
+    color: theme.colors.primary,
+    fontSize: theme.fontSizes.xs,
+    letterSpacing: 0.6,
+  },
+  infoTitle: {
+    fontSize: 36,
+    lineHeight: 42,
+    color: theme.colors.headingText,
+    marginBottom: theme.spacing(2),
+  },
+  infoDescription: {
+    fontSize: 17,
+    color: theme.colors.bodyText,
+    lineHeight: 27,
+    marginBottom: theme.spacing(3),
+  },
+  infoList: {
+    gap: theme.spacing(2),
+  },
+  infoListItem: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: theme.spacing(1.5),
+  },
+  infoListText: {
+    flex: 1,
+    color: theme.colors.bodyText,
+    fontSize: 15,
+    lineHeight: 23,
+  },
+  formCard: {
+    flex: isLargeScreen ? 0.92 : undefined,
+    width: '100%',
+    maxWidth: isLargeScreen ? undefined : 680,
+    alignSelf: 'center',
+    padding: theme.spacing(4),
+    borderRadius: theme.radius.xl,
+    borderWidth: 1,
+    borderColor: theme.colors.borderColor,
+  },
+  formIntro: {
+    alignItems: 'flex-start',
+    marginBottom: theme.spacing(3),
+  },
+  formIntroBadge: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: theme.colors.primary + '12',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: theme.spacing(2),
+  },
+  title: {
+    fontSize: 28,
+    color: theme.colors.headingText,
+    marginBottom: theme.spacing(1),
+  },
+  subtitle: {
+    fontSize: 16,
+    color: theme.colors.bodyText,
+    lineHeight: 24,
+  },
+  readonlyCard: {
+    backgroundColor: theme.colors.background,
+    borderWidth: 1,
+    borderColor: theme.colors.borderColor,
+    borderRadius: theme.radius.lg,
+    marginBottom: theme.spacing(3),
+    overflow: 'hidden',
+  },
+  readonlyRow: {
+    paddingHorizontal: theme.spacing(2.5),
+    paddingVertical: theme.spacing(2),
+  },
+  readonlyLabel: {
+    fontSize: theme.fontSizes.xs,
+    color: theme.colors.bodyText,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: 4,
+  },
+  readonlyValue: {
+    color: theme.colors.headingText,
+    fontSize: theme.fontSizes.md,
+  },
+  readonlyDivider: {
+    height: 1,
+    backgroundColor: theme.colors.borderColor,
+  },
+  inputGroup: {
+    marginBottom: theme.spacing(2),
+  },
+  label: {
+    fontSize: theme.fontSizes.xs,
+    color: theme.colors.bodyText,
+    marginBottom: theme.spacing(1),
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  passwordInputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderColor: theme.colors.borderColor,
+    borderWidth: 1,
+    borderRadius: theme.radius.md,
+    backgroundColor: theme.colors.pageBackground,
+  },
+  themedInputFlex: {
+    flex: 1,
+    borderWidth: 0,
+  },
+  passwordToggle: {
     padding: theme.spacing(2),
   },
-  centered: {
+  formErrorText: {
+    color: theme.colors.errorText,
+    textAlign: 'left',
+    marginBottom: theme.spacing(2),
+  },
+  signupButton: {
+    backgroundColor: theme.colors.primary,
+    borderRadius: theme.radius.lg,
+    marginTop: theme.spacing(1),
+    height: 52,
+    justifyContent: 'center',
+  },
+  signupButtonText: {
+    color: 'white',
+    fontSize: 16,
+  },
+  stateScreen: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: theme.spacing(2),
-    backgroundColor: theme.colors.background, // Consistent background
+    padding: theme.spacing(3),
+    backgroundColor: theme.colors.pageBackground,
   },
-  infoText: {
-    marginTop: 10,
+  stateCard: {
+    width: '100%',
+    maxWidth: 460,
+    padding: theme.spacing(4),
+    alignItems: 'center',
+    borderRadius: theme.radius.xl,
+  },
+  stateIcon: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: theme.colors.danger + '14',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: theme.spacing(2),
+  },
+  stateText: {
+    marginTop: theme.spacing(2),
     fontSize: 16,
     color: theme.colors.bodyText,
   },
   errorTitle: {
     fontSize: 22,
-    color: theme.colors.errorText, // Consistent error text color
+    color: theme.colors.errorText,
     marginBottom: 8,
     textAlign: 'center',
   },
@@ -352,83 +533,12 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: 20,
   },
-  content: {
-    justifyContent: 'center',
-    padding: theme.spacing(4),
-    backgroundColor: theme.colors.cardBackground, // Consistent card background
-    marginHorizontal: 'auto',
-    maxWidth: 500,
-    width: '100%',
-    borderRadius: theme.radius.lg,
-    ...Platform.select({
-      web: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.1,
-        shadowRadius: 12,
-      },
-      native: {
-        elevation: 8,
-      },
-    }),
-  },
-  title: {
-    fontSize: 26,
-    color: theme.colors.headingText,
-    textAlign: 'center',
-    marginBottom: theme.spacing(1),
-  },
-  subtitle: {
-    fontSize: 16,
-    color: theme.colors.bodyText,
-    textAlign: 'center',
-    marginBottom: theme.spacing(4),
-  },
-  label: {
-    fontSize: 15,
-    color: theme.colors.bodyText,
-    marginBottom: 6,
-  },
-  inputGroup: {
-    marginBottom: theme.spacing(2),
-  },
-  passwordInputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderColor: theme.colors.borderColor,
-    borderWidth: 1,
+  secondaryButton: {
     borderRadius: theme.radius.md,
-    // ThemedInput handles its own background, but this container might need one too if it wraps
-    backgroundColor: theme.colors.background,
+    minHeight: 46,
   },
-  themedInputFlex: { // Style for ThemedInput to take flex: 1
-    flex: 1,
-    borderWidth: 0, // ThemedInput already has border, remove from wrapper
-  },
-  passwordToggle: {
-    padding: theme.spacing(2),
-  },
-  formErrorText: {
-    color: theme.colors.errorText, // Consistent error text color
-    textAlign: 'center',
-    marginBottom: theme.spacing(2),
-  },
-  signupButton: {
-    backgroundColor: theme.colors.primary,
-    borderRadius: theme.radius.md,
-    marginTop: theme.spacing(2),
-    height: 50,
-    justifyContent: 'center',
-  },
-  signupButtonText: {
-    color: 'white',
-    fontSize: 16,
-  },
-  languageSelectorContainer: {
-    position: 'absolute',
-    top: Platform.OS === 'web' ? theme.spacing(4) : theme.spacing(6), // Adjust for notch on native
-    right: theme.spacing(4),
-    zIndex: 100, // Ensure it's above other content
+  secondaryButtonText: {
+    color: theme.colors.primary,
   },
 });
 
