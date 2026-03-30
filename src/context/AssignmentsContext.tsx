@@ -198,8 +198,26 @@ export function AssignmentsProvider({ children }: { children: React.ReactNode })
       const unsyncedEvents = await getUnsyncedLocationEvents();
       if (unsyncedEvents.length > 0) {
         console.log(`Found ${unsyncedEvents.length} unsynced location events. Syncing...`);
-        await supabase.from('location_events').upsert(unsyncedEvents.map(({ id, synced, ...rest }) => rest));
-        const successfullySyncedEventIds = unsyncedEvents.map(e => e.id);
+        const eventsToSync = unsyncedEvents
+          .filter(event => event.id && event.timestamp && event.company_id && event.worker_id && event.assignment_id)
+          .map(({ id, timestamp, company_id, worker_id, assignment_id, type, latitude, longitude, notes }) => ({
+            id,
+            created_at: timestamp,
+            company_id,
+            worker_id,
+            assignment_id,
+            type,
+            latitude,
+            longitude,
+            notes,
+          }));
+        if (eventsToSync.length !== unsyncedEvents.length) {
+          console.warn(`Skipping ${unsyncedEvents.length - eventsToSync.length} malformed local location events during sync.`);
+        }
+        if (eventsToSync.length > 0) {
+          await supabase.from('location_events').upsert(eventsToSync);
+        }
+        const successfullySyncedEventIds = eventsToSync.map(e => e.id);
         await markLocationEventsAsSynced(successfullySyncedEventIds);
         console.log(`Synced ${successfullySyncedEventIds.length} local location events.`);
       }

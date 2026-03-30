@@ -37,6 +37,7 @@ const CREATE_LOCAL_LOCATION_EVENTS_TABLE_SQL = `
 CREATE TABLE IF NOT EXISTS local_location_events (
     id TEXT PRIMARY KEY NOT NULL,
     timestamp TEXT NOT NULL,
+    company_id TEXT NOT NULL,
     type TEXT NOT NULL,
     assignment_id TEXT NOT NULL,
     worker_id TEXT NOT NULL,
@@ -57,6 +58,30 @@ async function initializeDb(): Promise<SQLite.SQLiteDatabase> {
     CREATE_LOCAL_WORK_SESSIONS_TABLE_SQL + '\n' +
     CREATE_LOCAL_LOCATION_EVENTS_TABLE_SQL
   );
+  const locationEventColumns = await db.getAllAsync<{ name: string; notnull: number }>(`PRAGMA table_info(local_location_events);`);
+  const hasCompanyIdColumn = locationEventColumns.some(column => column.name === 'company_id');
+  const companyIdIsRequired = locationEventColumns.some(column => column.name === 'company_id' && column.notnull === 1);
+  if (!hasCompanyIdColumn) {
+    await db.execAsync(`
+      BEGIN TRANSACTION;
+      ALTER TABLE local_location_events RENAME TO local_location_events_legacy;
+      ${CREATE_LOCAL_LOCATION_EVENTS_TABLE_SQL}
+      DROP TABLE local_location_events_legacy;
+      COMMIT;
+    `);
+  } else if (!companyIdIsRequired) {
+    await db.execAsync(`
+      BEGIN TRANSACTION;
+      ALTER TABLE local_location_events RENAME TO local_location_events_legacy;
+      ${CREATE_LOCAL_LOCATION_EVENTS_TABLE_SQL}
+      INSERT INTO local_location_events (id, timestamp, company_id, type, assignment_id, worker_id, latitude, longitude, notes, synced)
+      SELECT id, timestamp, company_id, type, assignment_id, worker_id, latitude, longitude, notes, synced
+      FROM local_location_events_legacy
+      WHERE company_id IS NOT NULL;
+      DROP TABLE local_location_events_legacy;
+      COMMIT;
+    `);
+  }
   return db;
 }
 
@@ -118,9 +143,12 @@ export async function getLocalWorkSessions(workerId: string, assignedDate: strin
 
 export async function insertLocalLocationEvent(event: any) {
   const db = await getDb();
+  if (!event.companyId) {
+    throw new Error('insertLocalLocationEvent requires companyId');
+  }
   return db.runAsync(
-    `INSERT INTO local_location_events (id, timestamp, type, assignment_id, worker_id, latitude, longitude, notes, synced) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    event.id, event.timestamp, event.type, event.assignmentId, event.workerId, event.latitude, event.longitude, event.notes, event.synced ? 1 : 0
+    `INSERT OR IGNORE INTO local_location_events (id, timestamp, company_id, type, assignment_id, worker_id, latitude, longitude, notes, synced) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    event.id, event.timestamp, event.companyId, event.type, event.assignmentId, event.workerId, event.latitude, event.longitude, event.notes, event.synced ? 1 : 0
   );
 }
 
@@ -129,7 +157,7 @@ export async function getUnsyncedLocationEvents(): Promise<any[]> {
   return await db.getAllAsync(`SELECT * FROM local_location_events WHERE synced = 0`);
 }
 
-export async function markLocationEventsAsSynced(eventIds: number[]) {
+export async function markLocationEventsAsSynced(eventIds: string[]) {
   if (eventIds.length === 0) return;
   const db = await getDb();
   const placeholders = eventIds.map(() => '?').join(',');

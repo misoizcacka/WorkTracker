@@ -189,14 +189,12 @@ export default function ProjectAssignmentScreen() {
     }
 
     const getWorkerAssignments = (workerId: string) => {
-      return processedAssignments[workerId] || [];
+      return [...(processedAssignments[workerId] || [])].sort((a, b) => a.sort_key.localeCompare(b.sort_key));
     };
 
     const calculateNewSortKey = (destIndex: number, currentAssignments: (ProcessedAssignmentStep | AssignmentRecord)[]) => {
         const prevAssignment = destIndex > 0 ? currentAssignments[destIndex - 1] : null;
-              console.log(`prevassignment = ${prevAssignment}`)
         const nextAssignment = destIndex < currentAssignments.length ? currentAssignments[destIndex] : null;
-                      console.log(`next = ${nextAssignment}`)
         return generateKeyBetween(prevAssignment?.sort_key || null, nextAssignment?.sort_key || null);
     };
 
@@ -205,7 +203,6 @@ export default function ProjectAssignmentScreen() {
       const workerId = destination.droppableId.replace('worker-', '');
       const currentWorkerAssignments = getWorkerAssignments(workerId);
       
-      console.log(currentWorkerAssignments)
       if (currentWorkerAssignments.some((assign: ProcessedAssignmentStep) => assign.ref_id === draggedItemRefId)) { 
         Toast.show({ type: 'info', text1: 'Assignment Exists', text2: 'This item is already assigned to this worker on this day.' });
         return;

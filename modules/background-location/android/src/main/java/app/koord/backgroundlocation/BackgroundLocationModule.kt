@@ -32,18 +32,21 @@ data class SupabaseConfig(
 class BackgroundLocationModule : Module() {
     
     private fun getGeofencePendingIntent(context: Context): PendingIntent {
-        val intent = Intent(context, PeriodicLocationTrackingService::class.java)
+        val intent = Intent(context, GeofenceBroadcastReceiver::class.java).apply {
+            setPackage(context.packageName)
+        }
         val flags = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_MUTABLE
         } else {
             PendingIntent.FLAG_UPDATE_CURRENT
         }
         
-        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            PendingIntent.getForegroundService(context, Constants.GEOFENCE_PENDING_INTENT_REQUEST_CODE, intent, flags)
-        } else {
-            PendingIntent.getService(context, Constants.GEOFENCE_PENDING_INTENT_REQUEST_CODE, intent, flags)
-        }
+        return PendingIntent.getBroadcast(
+            context,
+            Constants.GEOFENCE_PENDING_INTENT_REQUEST_CODE,
+            intent,
+            flags
+        )
     }
 
     override fun definition() = ModuleDefinition {

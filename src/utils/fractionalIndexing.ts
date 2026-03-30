@@ -1,50 +1,70 @@
-// Using the alphabet 'a' through 'z' for simplicity.
-const min = 'a'.charCodeAt(0);
-const max = 'z'.charCodeAt(0);
+const ALPHABET = 'abcdefghijklmnopqrstuvwxyz';
+const LOWER_SENTINEL = ALPHABET[0];
+const UPPER_SENTINEL = ALPHABET[ALPHABET.length - 1];
+const MIDPOINT_CHAR = ALPHABET[Math.floor(ALPHABET.length / 2)];
 
 /**
- * Generates a string key that sorts lexicographically between two other keys.
- * This is a common implementation of fractional indexing.
- * @param key1 The key before the new key (or null if inserting at the beginning).
- * @param key2 The key after the new key (or null if inserting at the end).
- * @returns A new key that sorts between key1 and key2.
+ * Generates a lexicographically ordered key between two existing keys.
+ *
+ * Keys are dense: if there is no room at the current character, the algorithm
+ * recurses deeper and produces longer keys such as `am`, `ag`, `aam`, etc.
  */
 export function generateKeyBetween(key1: string | null, key2: string | null): string {
   if (key1 !== null && key2 !== null && key1 >= key2) {
     throw new Error('key2 must be greater than key1.');
   }
 
-  // Handle null inputs, treating them as the boundaries of the alphabet.
-  if (key1 === null || key1 === '') { // Added key1 === ''
-    key1 = '';
-  }
-  if (key2 === null || key2 === '') { // Added key2 === ''
-    key2 = '';
-  }
+  validateKey(key1);
+  validateKey(key2);
 
-  // If both keys are empty, it means we are inserting into an empty list.
-  // Return a default midpoint character.
-  if (key1 === '' && key2 === '') {
-    return String.fromCharCode(Math.round((min + max) / 2)); // Returns 'm'
+  return generateBetween(key1 ?? '', key2 ?? '');
+}
+
+function validateKey(key: string | null) {
+  if (!key) return;
+  for (const char of key) {
+    if (char < LOWER_SENTINEL || char > UPPER_SENTINEL) {
+      throw new Error(`Unsupported sort key character: ${char}`);
+    }
   }
+}
 
-  let i = 0;
-  // Find the first differing character
-  while (key1[i] === key2[i]) {
-    i++;
-  }
-
-  const prefix = key1.slice(0, i);
-  const char1 = i < key1.length ? key1.charCodeAt(i) : min - 1;
-  const char2 = i < key2.length ? key2.charCodeAt(i) : max + 1;
-
-  if (char1 + 1 === char2) {
-    // The characters are adjacent (e.g., 'a' and 'b').
-    // We need to go deeper by appending a character to key1.
-    return key1 + generateKeyBetween(key1.slice(i + 1), null);
+function generateBetween(left: string, right: string): string {
+  if (left === '' && right === '') {
+    return MIDPOINT_CHAR;
   }
 
-  // The characters have a gap, so we can find a midpoint.
-  const mid = Math.round((char1 + char2) / 2);
-  return prefix + String.fromCharCode(mid);
+  let index = 0;
+  while (
+    index < left.length &&
+    index < right.length &&
+    left[index] === right[index]
+  ) {
+    index++;
+  }
+
+  const prefix = left.slice(0, index);
+  const leftHasChar = index < left.length;
+  const rightHasChar = index < right.length;
+
+  const leftChar = leftHasChar ? left[index] : LOWER_SENTINEL;
+  const rightChar = rightHasChar ? right[index] : UPPER_SENTINEL;
+
+  if (leftChar === rightChar) {
+    return prefix + leftChar + generateBetween(left.slice(index + 1), right.slice(index + 1));
+  }
+
+  const leftCode = leftChar.charCodeAt(0);
+  const rightCode = rightChar.charCodeAt(0);
+
+  if (rightCode - leftCode > 1) {
+    const midCode = Math.floor((leftCode + rightCode) / 2);
+    return prefix + String.fromCharCode(midCode);
+  }
+
+  if (leftHasChar) {
+    return prefix + leftChar + generateBetween(left.slice(index + 1), '');
+  }
+
+  return prefix + leftChar + generateBetween('', right.slice(index + 1));
 }

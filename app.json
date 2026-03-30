@@ -13,45 +13,48 @@
       "resizeMode": "contain",
       "backgroundColor": "#e0e0e0"
     },
-        "ios": {
-          "supportsTablet": true,
-          "infoPlist": {
-            "UIViewControllerBasedStatusBarAppearance": true,
-            "NSLocationWhenInUseUsageDescription": "This app uses your location to track your work hours when you are checked in.",
-            "NSLocationAlwaysAndWhenInUseUsageDescription": "This app uses your location in the background to track your work hours and send periodic updates even when the app is closed.",
-            "NSLocationAlwaysUsageDescription": "This app uses your location in the background to track your work hours and send periodic updates.",
-            "UIBackgroundModes": [
-              "location"
-            ]
-          }
-        },
-        "android": {
-          "adaptiveIcon": {
-            "foregroundImage": "./assets/koordappicon.png",
-            "backgroundColor": "#000000"
-          },
-          "edgeToEdgeEnabled": true,
-          "predictiveBackGestureEnabled": false,
-          "permissions": [
-            "android.permission.RECORD_AUDIO",
-            "android.permission.MODIFY_AUDIO_SETTINGS",
-            "android.permission.ACCESS_COARSE_LOCATION",
-            "android.permission.ACCESS_FINE_LOCATION",
-            "android.permission.ACCESS_BACKGROUND_LOCATION"
-          ],
-          "foregroundServices": [
-            {
-              "taskName": "LocationTracking",
-              "serviceType": "location"
-            }
-          ],
-          "package": "app.koord",
-          "config": {
-            "googleMaps": {
-              "apiKey": "AIzaSyDE81zzchDXalQuGapH-E8tBBjnN9fT304"
-            }
-          }
-        },
+    "ios": {
+      "supportsTablet": true,
+      "infoPlist": {
+        "UIViewControllerBasedStatusBarAppearance": true,
+        "NSLocationWhenInUseUsageDescription": "This app uses your location to track your work hours when you are checked in.",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "This app uses your location in the background to track your work hours and send periodic updates even when the app is closed.",
+        "NSLocationAlwaysUsageDescription": "This app uses your location in the background to track your work hours and send periodic updates.",
+        "UIBackgroundModes": [
+          "location",
+          "location"
+        ],
+        "ITSAppUsesNonExemptEncryption": false
+      },
+      "bundleIdentifier": "app.koord"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/koordappicon.png",
+        "backgroundColor": "#000000"
+      },
+      "edgeToEdgeEnabled": true,
+      "predictiveBackGestureEnabled": false,
+      "permissions": [
+        "android.permission.RECORD_AUDIO",
+        "android.permission.MODIFY_AUDIO_SETTINGS",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.ACCESS_BACKGROUND_LOCATION"
+      ],
+      "foregroundServices": [
+        {
+          "taskName": "LocationTracking",
+          "serviceType": "location"
+        }
+      ],
+      "package": "app.koord",
+      "config": {
+        "googleMaps": {
+          "apiKey": "AIzaSyDE81zzchDXalQuGapH-E8tBBjnN9fT304"
+        }
+      }
+    },
     "web": {
       "favicon": "./assets/favicon.png",
       "bundler": "metro"
@@ -62,6 +65,12 @@
       "expo-font",
       "expo-asset",
       "./plugins/with-background-location.js"
-    ]
+    ],
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "f0925d88-bdef-40da-b492-7c0f4f18a55d"
+      }
+    }
   }
 }

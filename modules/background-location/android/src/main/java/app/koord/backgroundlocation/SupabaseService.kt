@@ -24,6 +24,7 @@ class SupabaseService(
 ) {
 
     private val client = OkHttpClient()
+    private val locationDbHelper = LocationDbHelper(context)
     private val JSON = "application/json; charset=utf-8".toMediaTypeOrNull()
     private val RPC_PATH = "/rest/v1/rpc/insert_location_event" // NEW: Path for RPC endpoint
 
@@ -50,6 +51,23 @@ class SupabaseService(
         longitude: Double,
         notes: String?
     ): Boolean = withContext(Dispatchers.IO) {
+        val inserted = locationDbHelper.insertLocationEvent(
+            id = id,
+            timestamp = timestamp,
+            companyId = companyId,
+            type = type,
+            assignmentId = assignmentId,
+            workerId = workerId,
+            latitude = latitude,
+            longitude = longitude,
+            notes = notes,
+            synced = 0
+        )
+        if (!inserted) {
+            Log.d("SupabaseService", "Skipping location event $id because it was not inserted locally.")
+            return@withContext false
+        }
+
         if (!isOnline()) {
             Log.d("SupabaseService", "Device is offline. Location event $id will be saved locally and synced later.")
             return@withContext false
@@ -102,6 +120,7 @@ class SupabaseService(
             val response = client.newCall(request).execute()
             val responseBody = response.body?.string() // Read body once
             if (response.isSuccessful) {
+                locationDbHelper.updateLocationEventSyncedStatus(id, 1)
                 Log.d("SupabaseService", "Location event $id successfully pushed to Supabase via RPC. Code: ${response.code}")
                 true
             } else {
@@ -124,6 +143,23 @@ class SupabaseService(
         latitude: Double,
         longitude: Double
     ): Boolean = withContext(Dispatchers.IO) {
+        val inserted = locationDbHelper.insertLocationEvent(
+            id = id,
+            timestamp = timestamp,
+            companyId = companyId,
+            type = type,
+            assignmentId = assignmentId,
+            workerId = workerId,
+            latitude = latitude,
+            longitude = longitude,
+            notes = "Geofence Transition: $type",
+            synced = 0
+        )
+        if (!inserted) {
+            Log.d("SupabaseService", "Skipping geofence event $id because it was deduplicated locally.")
+            return@withContext false
+        }
+
         if (!isOnline()) {
             Log.d("SupabaseService", "Device is offline. Geofence event $id will be saved locally and synced later.")
             return@withContext false
@@ -175,6 +211,7 @@ class SupabaseService(
             val response = client.newCall(request).execute()
             val responseBody = response.body?.string()
             if (response.isSuccessful) {
+                locationDbHelper.updateLocationEventSyncedStatus(id, 1)
                 Log.d("SupabaseService", "Geofence event $id ($type) successfully pushed to Supabase via RPC. Code: ${response.code}")
                 true
             } else {

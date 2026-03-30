@@ -33,7 +33,7 @@ export async function getUnsyncedLocationEvents(): Promise<any[]> {
   return [];
 }
 
-export async function markLocationEventsAsSynced(eventIds: number[]) {
+export async function markLocationEventsAsSynced(eventIds: string[]) {
   return null;
 }
 

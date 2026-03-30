@@ -10,6 +10,14 @@ import moment from 'moment';
 import { WorkerLocation, ProjectLocation, ItemInCluster } from './map-types';
 
 const TILE_PROVIDER_STYLE = 'https://tiles.stadiamaps.com/styles/osm_bright.json';
+const PROJECT_ADDRESS_PREVIEW_LIMIT = 48;
+
+function truncateProjectAddress(address?: string) {
+  if (!address) return 'No address available';
+  return address.length > PROJECT_ADDRESS_PREVIEW_LIMIT
+    ? `${address.slice(0, PROJECT_ADDRESS_PREVIEW_LIMIT).trim()}...`
+    : address;
+}
 
 interface MapViewProps {
   selectedWorkers?: WorkerLocation[];
@@ -137,7 +145,7 @@ const CustomPopup = ({ popupInfo, map }: { popupInfo: ItemInCluster | null; map:
               Last seen: {moment((popupInfo as WorkerLocation).lastSeen).fromNow()}
             </Text>
           )}
-          {!isWorker && <Text style={styles.popupText}>{(popupInfo as ProjectLocation)?.address || 'No address available'}</Text>}
+          {!isWorker && <Text style={styles.popupText}>{truncateProjectAddress((popupInfo as ProjectLocation)?.address)}</Text>}
         </View>
       </View>
     </View>
@@ -182,7 +190,7 @@ const HoverPopup = ({ hoverInfo, map }: { hoverInfo: ItemInCluster | null; map: 
               Last seen: {moment((hoverInfo as WorkerLocation).lastSeen).fromNow()}
             </Text>
           )}
-          {!isWorker && <Text style={styles.popupText}>{(hoverInfo as ProjectLocation).address || 'No address available'}</Text>}
+          {!isWorker && <Text style={styles.popupText}>{truncateProjectAddress((hoverInfo as ProjectLocation).address)}</Text>}
         </View>
       </View>
     </View>

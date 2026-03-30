@@ -273,7 +273,7 @@ export default function Home() {
         status: 'active',
       }];
 
-      BackgroundLocation.start(user!.id, relevantAssignment.id, userCompanyId!, JSON.stringify({ url: supabaseUrl, key: supabaseKey }), deviceToken!, deviceSecret!, JSON.stringify(currentGeofenceAssignments));
+      await BackgroundLocation.start(user!.id, relevantAssignment.id, userCompanyId!, JSON.stringify({ url: supabaseUrl, key: supabaseKey }), deviceToken!, deviceSecret!, JSON.stringify(currentGeofenceAssignments));
       Toast.show({ type: 'success', text1: 'Checked In', text2: `Working on ${projectLocationName}` });
       setSelectedNextAssignmentId(null);
     } catch (err: any) {

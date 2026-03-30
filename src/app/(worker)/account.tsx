@@ -1,5 +1,5 @@
 import React from "react";
-import { StyleSheet, View, ScrollView } from "react-native";
+import { StyleSheet, View, ScrollView, Image } from "react-native";
 import { Text } from "../../components/Themed";
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { Card } from "../../components/Card";
@@ -8,12 +8,14 @@ import { theme } from "../../theme";
 import AnimatedScreen from "../../components/AnimatedScreen";
 import { useSession } from "../../context/AuthContext";
 import { Ionicons } from "@expo/vector-icons";
+import { useEmployeeProfile } from "../../hooks/useEmployeeProfile";
 
 export default function WorkerAccountScreen() {
   const tabBarHeight = useBottomTabBarHeight();
   const { signOut, user, userRole, userCompanyName } = useSession()!;
+  const { profile } = useEmployeeProfile();
 
-  const fullName = user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Member';
+  const fullName = profile?.full_name || user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Member';
   const email = user?.email || "N/A";
   const displayRole = userRole ? userRole.charAt(0).toUpperCase() + userRole.slice(1) : 'Worker';
 
@@ -34,7 +36,11 @@ export default function WorkerAccountScreen() {
             <Card style={styles.profileCard}>
               <View style={styles.profileHeader}>
                 <View style={styles.avatarContainer}>
-                  <Ionicons name="person" size={40} color="white" />
+                  {profile?.public_avatar_url ? (
+                    <Image source={{ uri: profile.public_avatar_url }} style={styles.avatarImage} />
+                  ) : (
+                    <Ionicons name="person" size={40} color="white" />
+                  )}
                 </View>
                 <View style={styles.profileInfo}>
                   <Text style={styles.userName} fontType="bold">{fullName}</Text>
@@ -129,6 +135,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: theme.spacing(2),
+    overflow: 'hidden',
+  },
+  avatarImage: {
+    width: '100%',
+    height: '100%',
   },
   profileInfo: {
     flex: 1,

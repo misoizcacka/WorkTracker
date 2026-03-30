@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { View, StyleSheet, Image, Dimensions, Platform, ScrollView, TouchableOpacity } from 'react-native';
 import { Text } from '../../components/Themed';
 import { Link, useRouter } from 'expo-router';
@@ -7,78 +7,38 @@ import { Card } from '../../components/Card';
 import { theme } from '../../theme';
 import AnimatedScreen from '../../components/AnimatedScreen';
 import { Logo } from '~/components/Logo';
-import { Video, ResizeMode } from 'expo-av';
-import { LinearGradient } from 'expo-linear-gradient';
 
 const { width } = Dimensions.get('window');
 const isLargeScreen = width > 900;
+const isWeb = Platform.OS === 'web';
 
-interface FeatureItemProps {
+const constructionWorkersIllustration = isWeb ? require('../../../assets/landing/undraw_construction-workers_z99i.svg') : null;
+const scrumBoardIllustration = isWeb ? require('../../../assets/landing/undraw_scrum-board_7bgh.svg') : null;
+const destinationIllustration = isWeb ? require('../../../assets/landing/undraw_destination_fkst.svg') : null;
+const timeManagementIllustration = isWeb ? require('../../../assets/landing/undraw_time-management_4ss6.svg') : null;
+const fallbackImage = require('../../../assets/landing/locationreplay.png');
+
+type BenefitCardProps = {
   title: string;
   description: string;
   asset: any;
-  isVideo?: boolean;
-  reverse?: boolean;
-  initialRatio?: number;
-}
-
-const FeatureItem = ({ title, description, asset, isVideo, reverse, initialRatio = 1.77 }: FeatureItemProps) => {
-  const [aspectRatio, setAspectRatio] = useState(initialRatio);
-
-  const textContent = (
-    <View style={styles.featureTextContent}>
-      <Text style={styles.featureTitle} fontType="bold">{title}</Text>
-      <Text style={styles.featureDescription} fontType="regular">{description}</Text>
-    </View>
-  );
-
-  const visualContent = (
-    <View style={styles.featureVisualContainer}>
-      <View style={[styles.visualWrapper, { aspectRatio }]}>
-        {isVideo ? (
-          <Video
-            source={asset}
-            style={styles.fill}
-            videoStyle={{ width: '100%', height: '100%' }}
-            resizeMode={ResizeMode.CONTAIN}
-            shouldPlay
-            isLooping
-            isMuted
-            onReadyForDisplay={(e: any) => {
-              if (e?.naturalSize?.height > 0) {
-                setAspectRatio(e.naturalSize.width / e.naturalSize.height);
-              }
-            }}
-          />
-        ) : (
-          <Image
-            source={asset}
-            style={styles.fill}
-            resizeMode="contain"
-            onLoad={(e: any) => {
-              const source = e?.nativeEvent?.source || e?.nativeEvent;
-              if (source?.width && source?.height) {
-                setAspectRatio(source.width / source.height);
-              }
-            }}
-          />
-        )}
-        <LinearGradient
-          colors={['transparent', 'rgba(224, 224, 224, 0.1)', theme.colors.pageBackground]}
-          style={styles.visualGradient}
-          locations={[0, 0.9, 1]}
-        />
-      </View>
-    </View>
-  );
-
-  return (
-    <View style={[styles.featureRow, reverse && isLargeScreen && styles.featureRowReverse]}>
-      {textContent}
-      {visualContent}
-    </View>
-  );
 };
+
+function BenefitCard({ title, description, asset }: BenefitCardProps) {
+  return (
+    <Card style={styles.benefitCard}>
+      <View style={styles.benefitArt}>
+        {isWeb && asset ? (
+          <Image source={asset} style={styles.benefitImage} resizeMode="contain" />
+        ) : (
+          <View style={styles.benefitFallback} />
+        )}
+      </View>
+      <Text style={styles.benefitTitle} fontType="bold">{title}</Text>
+      <Text style={styles.benefitDescription} fontType="regular">{description}</Text>
+    </Card>
+  );
+}
 
 export default function LandingPage() {
   const router = useRouter();
@@ -86,7 +46,6 @@ export default function LandingPage() {
   return (
     <AnimatedScreen>
       <View style={styles.container}>
-        {/* Header */}
         <View style={styles.header}>
           <Link href="/(guest)" asChild>
             <TouchableOpacity activeOpacity={0.7}>
@@ -108,90 +67,73 @@ export default function LandingPage() {
         </View>
 
         <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-          {/* Hero Section */}
           <View style={styles.heroSection}>
-            <Text style={styles.heroSubtitle} fontType="medium">MODERN FIELD MANAGEMENT</Text>
-            <Text style={styles.heroTitle} fontType="bold">
-              The Operating System for Your Field Workforce
-            </Text>
-            <Text style={styles.heroDescription} fontType="regular">
-              Koord bridges the gap between the office and the field. Real-time location tracking, 
-              automated assignments, and intelligent reporting in one seamless platform.
-            </Text>
-            <View style={styles.heroButtons}>
-              <Button
-                title="Get Started Now"
-                onPress={() => router.push('/auth/signup')}
-                style={styles.heroButton}
+            <View style={styles.heroCopy}>
+              <View style={styles.heroBadge}>
+                <Text style={styles.heroBadgeText} fontType="bold">CONSTRUCTION CREW MANAGEMENT</Text>
+              </View>
+              <Text style={styles.heroTitle} fontType="bold">
+                Assign jobs, track crews, and keep every project day organized.
+              </Text>
+              <Text style={styles.heroDescription} fontType="regular">
+                Koord helps construction companies schedule workers, verify site activity,
+                and track time in the field without spreadsheets, whiteboards, or constant phone calls.
+              </Text>
+              <View style={styles.heroButtons}>
+                <Button
+                  title="Start Free"
+                  onPress={() => router.push('/auth/signup')}
+                  style={styles.heroButton}
+                />
+                <TouchableOpacity style={styles.secondaryButton} onPress={() => router.push('/(guest)/pricing')}>
+                  <Text style={styles.secondaryButtonText} fontType="medium">See Pricing</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            <View style={styles.heroVisual}>
+              <Card style={styles.heroVisualCard}>
+                {isWeb && constructionWorkersIllustration ? (
+                  <Image source={constructionWorkersIllustration} style={styles.heroIllustration} resizeMode="contain" />
+                ) : (
+                  <Image source={fallbackImage} style={styles.heroIllustration} resizeMode="contain" />
+                )}
+              </Card>
+            </View>
+          </View>
+
+          <View style={styles.benefitsSection}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionEyebrow} fontType="bold">WHAT KOORD HELPS WITH</Text>
+              <Text style={styles.sectionTitle} fontType="bold">
+                Three things that matter on busy job days.
+              </Text>
+            </View>
+
+            <View style={styles.benefitsGrid}>
+              <BenefitCard
+                title="Scheduling"
+                description="Plan the day clearly and assign the right workers to the right jobs in the right order."
+                asset={scrumBoardIllustration}
               />
-              <TouchableOpacity style={styles.demoButton} onPress={() => {}}>
-                <Text style={styles.demoButtonText} fontType="medium">Schedule Demo</Text>
-              </TouchableOpacity>
+              <BenefitCard
+                title="Location Tracking"
+                description="See when workers arrive on-site, leave, and move between project locations."
+                asset={destinationIllustration}
+              />
+              <BenefitCard
+                title="Time Visibility"
+                description="Keep a cleaner record of time spent in the field for payroll and project review."
+                asset={timeManagementIllustration}
+              />
             </View>
           </View>
 
-          {/* Feature Showcase */}
-          <View style={styles.featuresList}>
-            <FeatureItem 
-              title="Real-Time Map Overview"
-              description="Monitor your entire field operation from a single, high-fidelity map. Track worker movement, project sites, and live status updates as they happen."
-              asset={require('../../../assets/landing/mapoverview.mp4')}
-              isVideo
-            />
-
-            <FeatureItem 
-              title="Automated Assignments"
-              description="Eliminate the guesswork in scheduling. Assign workers to project sites with precision and ensure your team is always where they need to be."
-              asset={require('../../../assets/landing/assignments.mp4')}
-              isVideo
-              reverse
-            />
-
-            <FeatureItem 
-              title="Location History Replay"
-              description="Verify site visits and optimize routes with comprehensive location history. Replay any worker's path to ensure operational transparency and safety."
-              asset={require('../../../assets/landing/locationreplay.png')}
-            />
-
-            <FeatureItem 
-              title="Integrated Team Communication"
-              description="Connect your managers and workers with context-aware chat. Resolve issues instantly with real-time messaging built directly into the platform."
-              asset={require('../../../assets/landing/workermanagerchat.mp4')}
-              isVideo
-              reverse
-              initialRatio={0.56}
-            />
-
-            <FeatureItem 
-              title="Intelligent Reporting"
-              description="Transform operational data into actionable insights. Generate detailed payroll and project costing reports with one click."
-              asset={require('../../../assets/landing/report.png')}
-              initialRatio={1.4}
-            />
-          </View>
-
-          {/* Stats Bar */}
-          <View style={styles.statsBar}>
-            <View style={styles.statItem}>
-              <Text style={styles.statNumber} fontType="bold">10k+</Text>
-              <Text style={styles.statLabel}>Workers Managed</Text>
-            </View>
-            <View style={styles.statDivider} />
-            <View style={styles.statItem}>
-              <Text style={styles.statNumber} fontType="bold">99.9%</Text>
-              <Text style={styles.statLabel}>System Uptime</Text>
-            </View>
-            <View style={styles.statDivider} />
-            <View style={styles.statItem}>
-              <Text style={styles.statNumber} fontType="bold">24/7</Text>
-              <Text style={styles.statLabel}>Live Visibility</Text>
-            </View>
-          </View>
-
-          {/* CTA Section */}
           <View style={styles.ctaSection}>
             <Card style={styles.ctaCard}>
-              <Text style={styles.ctaTitle} fontType="bold">Ready to modernize your field operations?</Text>
+              <Text style={styles.ctaTitle} fontType="bold">
+                Built to make field operations simpler for managers and workers.
+              </Text>
               <Button
                 title="Create Your Account"
                 onPress={() => router.push('/auth/signup')}
@@ -224,7 +166,7 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.cardBackground,
     borderBottomWidth: 1,
     borderBottomColor: theme.colors.borderColor,
-    zIndex: 100,
+    zIndex: 10,
     ...Platform.select({
       web: {
         width: '100%',
@@ -233,8 +175,7 @@ const styles = StyleSheet.create({
       },
     }),
   },
-  logo: {
-  },
+  logo: {},
   navLinks: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -259,194 +200,200 @@ const styles = StyleSheet.create({
     paddingBottom: theme.spacing(10),
   },
   heroSection: {
-    paddingHorizontal: theme.spacing(4),
-    paddingTop: theme.spacing(16),
-    paddingBottom: theme.spacing(12),
+    padding: theme.spacing(8),
+    gap: theme.spacing(5),
     alignItems: 'center',
-    maxWidth: 1000,
-    alignSelf: 'center',
+    ...Platform.select({
+      web: {
+        width: '100%',
+        maxWidth: 1400,
+        alignSelf: 'center',
+        flexDirection: isLargeScreen ? 'row' : 'column',
+      },
+    }),
   },
-  heroSubtitle: {
+  heroCopy: {
+    flex: 1,
+    width: '100%',
+  },
+  heroBadge: {
+    alignSelf: 'flex-start',
+    backgroundColor: theme.colors.primaryMuted,
+    borderRadius: theme.radius.pill,
+    paddingHorizontal: theme.spacing(1.5),
+    paddingVertical: theme.spacing(0.75),
+    marginBottom: theme.spacing(2),
+  },
+  heroBadgeText: {
     color: theme.colors.primary,
-    letterSpacing: 2,
-    fontSize: 14,
-    marginBottom: 20,
+    fontSize: 11,
+    letterSpacing: 1,
   },
   heroTitle: {
-    fontSize: isLargeScreen ? 64 : 42,
+    fontSize: isLargeScreen ? 52 : 36,
+    lineHeight: isLargeScreen ? 60 : 42,
     color: theme.colors.headingText,
-    textAlign: 'center',
-    lineHeight: isLargeScreen ? 74 : 50,
-    marginBottom: 28,
-    letterSpacing: -1.5,
+    marginBottom: theme.spacing(2),
+    maxWidth: 720,
   },
   heroDescription: {
-    fontSize: 20,
+    fontSize: 18,
+    lineHeight: 28,
     color: theme.colors.bodyText,
-    textAlign: 'center',
-    lineHeight: 32,
-    marginBottom: 44,
-    opacity: 0.8,
-    maxWidth: 800,
+    marginBottom: theme.spacing(3),
+    maxWidth: 640,
   },
   heroButtons: {
     flexDirection: isLargeScreen ? 'row' : 'column',
-    gap: 20,
-    alignItems: 'center',
+    gap: theme.spacing(2),
+    alignItems: isLargeScreen ? 'center' : 'stretch',
   },
   heroButton: {
-    height: 60,
-    paddingHorizontal: 40,
+    height: 56,
+    paddingHorizontal: 34,
     borderRadius: theme.radius.lg,
-    minWidth: 220,
+    minWidth: 190,
   },
-  demoButton: {
-    height: 60,
-    paddingHorizontal: 40,
+  secondaryButton: {
+    height: 56,
+    paddingHorizontal: 28,
     borderRadius: theme.radius.lg,
-    borderWidth: 2,
+    borderWidth: 1,
     borderColor: theme.colors.borderColor,
     justifyContent: 'center',
-    minWidth: 220,
+    backgroundColor: theme.colors.cardBackground,
+    minWidth: 170,
   },
-  demoButtonText: {
+  secondaryButtonText: {
     color: theme.colors.headingText,
-    fontSize: 18,
+    fontSize: 17,
   },
-  featuresList: {
-    paddingHorizontal: theme.spacing(4),
-    maxWidth: 1200,
-    alignSelf: 'center',
-    width: '100%',
-  },
-  featureRow: {
-    flexDirection: isLargeScreen ? 'row' : 'column',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: theme.spacing(12),
-    gap: theme.spacing(8),
-  },
-  featureRowReverse: {
-    flexDirection: 'row-reverse',
-  },
-  featureTextContent: {
+  heroVisual: {
     flex: 1,
-    maxWidth: isLargeScreen ? 480 : '100%',
-  },
-  featureVisualContainer: {
-    flex: 1.2,
     width: '100%',
-    alignItems: 'center',
   },
-  visualWrapper: {
-    width: '100%',
+  heroVisualCard: {
     borderRadius: theme.radius.xl,
-    overflow: 'hidden',
-    backgroundColor: 'transparent',
+    borderWidth: 1,
+    borderColor: theme.colors.borderColor,
+    padding: theme.spacing(3),
+    backgroundColor: theme.colors.cardBackground,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: isLargeScreen ? 420 : 280,
+  },
+  heroIllustration: {
+    width: '100%',
+    height: isLargeScreen ? 340 : 220,
+  },
+  benefitsSection: {
+    paddingHorizontal: theme.spacing(8),
+    paddingBottom: theme.spacing(4),
     ...Platform.select({
       web: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 20 },
-        shadowOpacity: 0.05,
-        shadowRadius: 30,
-      }
-    })
+        width: '100%',
+        maxWidth: 1400,
+        alignSelf: 'center',
+      },
+    }),
   },
-  fill: {
+  sectionHeader: {
+    alignItems: 'center',
+    marginBottom: theme.spacing(4),
+  },
+  sectionEyebrow: {
+    fontSize: 12,
+    letterSpacing: 1.1,
+    color: theme.colors.primary,
+    marginBottom: theme.spacing(1),
+  },
+  sectionTitle: {
+    fontSize: isLargeScreen ? 34 : 28,
+    color: theme.colors.headingText,
+    textAlign: 'center',
+  },
+  benefitsGrid: {
+    flexDirection: isLargeScreen ? 'row' : 'column',
+    gap: theme.spacing(2),
+  },
+  benefitCard: {
+    flex: 1,
+    borderRadius: theme.radius.xl,
+    borderWidth: 1,
+    borderColor: theme.colors.borderColor,
+    padding: theme.spacing(3),
+    alignItems: 'center',
+    minHeight: 280,
+  },
+  benefitArt: {
+    width: '100%',
+    height: 120,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: theme.spacing(2),
+  },
+  benefitImage: {
     width: '100%',
     height: '100%',
   },
-  visualGradient: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    height: '15%',
-    zIndex: 1,
+  benefitFallback: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: theme.colors.primaryMuted,
   },
-  featureTitle: {
-    fontSize: isLargeScreen ? 36 : 28,
+  benefitTitle: {
+    fontSize: 22,
     color: theme.colors.headingText,
-    marginBottom: 20,
-    lineHeight: isLargeScreen ? 44 : 34,
+    marginBottom: theme.spacing(1),
+    textAlign: 'center',
   },
-  featureDescription: {
-    fontSize: 18,
+  benefitDescription: {
+    fontSize: 15,
+    lineHeight: 24,
     color: theme.colors.bodyText,
-    lineHeight: 28,
-    opacity: 0.8,
-  },
-  statsBar: {
-    flexDirection: isLargeScreen ? 'row' : 'column',
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: isLargeScreen ? 60 : 32,
-    paddingVertical: theme.spacing(12),
-    alignSelf: 'center',
-    borderTopWidth: 1,
-    borderBottomWidth: 1,
-    borderColor: theme.colors.borderColor,
-    width: '100%',
-    backgroundColor: theme.colors.cardBackground,
-    marginVertical: theme.spacing(8),
-  },
-  statItem: {
-    alignItems: 'center',
-  },
-  statNumber: {
-    fontSize: 36,
-    color: theme.colors.primary,
-    marginBottom: 8,
-  },
-  statLabel: {
-    fontSize: 14,
-    color: theme.colors.bodyText,
-    opacity: 0.6,
-  },
-  statDivider: {
-    width: 1,
-    height: 40,
-    backgroundColor: theme.colors.borderColor,
-    display: isLargeScreen ? 'flex' : 'none',
+    textAlign: 'center',
   },
   ctaSection: {
-    paddingHorizontal: theme.spacing(4),
-    paddingVertical: theme.spacing(12),
-    maxWidth: 1000,
-    width: '100%',
-    alignSelf: 'center',
+    padding: theme.spacing(8),
+    ...Platform.select({
+      web: {
+        width: '100%',
+        maxWidth: 1100,
+        alignSelf: 'center',
+      },
+    }),
   },
   ctaCard: {
-    backgroundColor: theme.colors.primary,
-    padding: theme.spacing(10),
     borderRadius: theme.radius.xl,
+    borderWidth: 1,
+    borderColor: theme.colors.borderColor,
+    padding: theme.spacing(5),
     alignItems: 'center',
-    gap: 40,
+    gap: theme.spacing(3),
   },
   ctaTitle: {
-    fontSize: isLargeScreen ? 42 : 30,
-    color: 'white',
+    fontSize: isLargeScreen ? 34 : 28,
+    color: theme.colors.headingText,
     textAlign: 'center',
-    lineHeight: isLargeScreen ? 52 : 38,
+    maxWidth: 720,
   },
   ctaButton: {
-    backgroundColor: 'white',
-    height: 60,
-    paddingHorizontal: 56,
+    backgroundColor: theme.colors.primary,
+    height: 56,
+    paddingHorizontal: 36,
     borderRadius: theme.radius.lg,
   },
   ctaButtonText: {
-    color: theme.colors.primary,
-    fontSize: 18,
+    color: 'white',
+    fontSize: 17,
   },
   footer: {
-    paddingVertical: 60,
+    padding: theme.spacing(5),
     alignItems: 'center',
-    borderTopWidth: 1,
-    borderTopColor: theme.colors.borderColor,
   },
   footerText: {
-    fontSize: 14,
+    fontSize: 12,
     color: theme.colors.disabledText,
   },
 });

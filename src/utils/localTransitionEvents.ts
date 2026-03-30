@@ -6,6 +6,7 @@ export type TransitionEventType = 'enter_geofence' | 'exit_geofence' | 'periodic
 interface TransitionEvent {
   timestamp: string;
   type: TransitionEventType;
+  companyId: string;
   assignmentId: string;
   workerId: string;
   location: { latitude: number; longitude: number };
@@ -19,9 +20,10 @@ export async function saveLocalTransitionEvent(event: TransitionEvent) {
     await insertLocalLocationEvent({
       id: id, // Pass the generated UUID
       timestamp: event.timestamp,
+      companyId: event.companyId,
       type: event.type,
-      assignment_id: event.assignmentId,
-      worker_id: event.workerId,
+      assignmentId: event.assignmentId,
+      workerId: event.workerId,
       latitude: event.location.latitude,
       longitude: event.location.longitude,
       notes: event.notes,

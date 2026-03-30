@@ -217,6 +217,7 @@ export default function MapOverviewScreen() {
     return selectedProjects.map(p => ({
       id: p.id,
       name: p.name,
+      address: p.address,
       location: p.location,
       color: p.color,
       lastModified: p.lastModified,

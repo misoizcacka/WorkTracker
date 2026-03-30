@@ -23,7 +23,6 @@ class PeriodicLocationPingWorker(appContext: Context, workerParams: WorkerParame
     }
 
     private lateinit var fusedLocationClient: FusedLocationProviderClient
-    private lateinit var locationDbHelper: LocationDbHelper
     private lateinit var supabaseService: SupabaseService
     private lateinit var deviceAuthenticator: DeviceAuthenticator // NEW: DeviceAuthenticator
 
@@ -32,7 +31,6 @@ class PeriodicLocationPingWorker(appContext: Context, workerParams: WorkerParame
 
         // Initialize components
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(applicationContext)
-        locationDbHelper = LocationDbHelper(applicationContext)
         deviceAuthenticator = DeviceAuthenticator(applicationContext) // NEW: Initialize DeviceAuthenticator
 
         // Retrieve data from SharedPreferences
@@ -77,21 +75,7 @@ class PeriodicLocationPingWorker(appContext: Context, workerParams: WorkerParame
                 val type = "ping"
                 val notes = "Periodic background location update via WorkManager"
 
-                // 1. Write to local SQLite FIRST
-                locationDbHelper.insertLocationEvent(
-                    id = locationEventId,
-                    timestamp = timestamp,
-                    type = type,
-                    assignmentId = assignmentId,
-                    workerId = workerId,
-                    latitude = it.latitude,
-                    longitude = it.longitude,
-                    notes = notes,
-                    synced = 0
-                )
-                Log.d("LocationUpdateWorker", "Location saved to SQLite: $locationEventId, Lat: ${it.latitude}, Lon: ${it.longitude}")
-
-                // 2. Then best-effort POST to backend
+                // Persist + send through SupabaseService so all native event paths share one queueing contract.
                 Log.d("LocationUpdateWorker", "Attempting to send location event to Supabase: $locationEventId")
                 val supabasePushSuccessful = supabaseService.sendLocationEvent(
                     id = locationEventId,
@@ -105,7 +89,6 @@ class PeriodicLocationPingWorker(appContext: Context, workerParams: WorkerParame
                     notes = notes
                 )
                 if (supabasePushSuccessful) {
-                    locationDbHelper.updateLocationEventSyncedStatus(locationEventId, 1)
                     Log.d("LocationUpdateWorker", "Location $locationEventId successfully pushed to Supabase and marked as synced.")
                 } else {
                     Log.w("LocationUpdateWorker", "Failed to push location $locationEventId to Supabase (best-effort). It remains marked as unsynced locally.")
