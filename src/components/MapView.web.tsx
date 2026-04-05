@@ -9,7 +9,7 @@ import { Button } from './Button';
 import moment from 'moment';
 import { WorkerLocation, ProjectLocation, ItemInCluster } from './map-types';
 
-const TILE_PROVIDER_STYLE = 'https://tiles.openfreemap.org/styles/liberty';
+const TILE_PROVIDER_STYLE = 'https://data.lfmaps.fr/styles/bright';
 const PROJECT_ADDRESS_PREVIEW_LIMIT = 48;
 
 function truncateProjectAddress(address?: string) {
