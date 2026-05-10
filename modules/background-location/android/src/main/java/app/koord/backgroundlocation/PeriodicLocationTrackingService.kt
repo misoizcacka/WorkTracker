@@ -166,7 +166,7 @@ class PeriodicLocationTrackingService : Service() {
             if (json != null) {
                 val type = object : TypeToken<List<GeofenceAssignment>>() {}.type
                 val assignments: List<GeofenceAssignment> = Gson().fromJson(json, type)
-                activeAssignments = assignments.filter { it.status == "active" || it.status == "next" }
+                activeAssignments = assignments.filter { it.status != "completed" }
                 Log.d("PeriodicLocationTrackingService", "Loaded ${activeAssignments.size} fences.")
             }
         } catch (e: Exception) {

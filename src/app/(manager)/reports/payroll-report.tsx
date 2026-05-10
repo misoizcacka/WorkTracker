@@ -1,15 +1,16 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext, useMemo } from 'react';
 import { View, StyleSheet, ScrollView, ActivityIndicator, TouchableOpacity, Platform } from 'react-native';
 import { Text } from '../../../components/Themed';
 import AnimatedScreen from '../../../components/AnimatedScreen';
-import { Card } from '../../../components/Card';
 import { theme } from '../../../theme';
-import { Button } from '../../../components/Button';
 import { supabase } from '../../../utils/supabase';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import moment from 'moment';
-import { exportToExcel, exportToPDF } from '../../../utils/exportHelpers';
+import * as XLSX from 'xlsx-js-style';
+import { exportWorkbookToExcel } from '../../../utils/exportHelpers';
+import { EmployeesContext, EmployeesContextType } from '../../../context/EmployeesContext';
+import { useSession } from '../../../context/AuthContext';
 
 interface PayrollReportItem {
   worker_id: string;
@@ -22,6 +23,9 @@ interface PayrollReportItem {
 
 const PayrollReport = () => {
   const router = useRouter();
+  const { employees } = useContext(EmployeesContext) as EmployeesContextType;
+  const { userCompanyName } = useSession();
+  const visibleWorkerIds = useMemo(() => new Set(employees.filter(employee => employee.role === 'worker').map(employee => employee.id)), [employees]);
   const [selectedMonth, setSelectedMonth] = useState(moment().month() + 1);
   const [selectedYear, setSelectedYear] = useState(moment().year());
   const [reportData, setReportData] = useState<PayrollReportItem[]>([]);
@@ -39,13 +43,13 @@ const PayrollReport = () => {
         console.error('Error fetching payroll report:', error);
         setReportData([]);
       } else {
-        setReportData(data || []);
+        setReportData((data || []).filter((row: PayrollReportItem) => visibleWorkerIds.has(row.worker_id)));
       }
       setLoading(false);
     };
 
     fetchReportData();
-  }, [selectedMonth, selectedYear]);
+  }, [selectedMonth, selectedYear, visibleWorkerIds]);
 
   const handlePrevMonth = () => {
     const newDate = moment({ year: selectedYear, month: selectedMonth - 1 }).subtract(1, 'month');
@@ -63,99 +67,305 @@ const PayrollReport = () => {
   const totalBreakMinutes = reportData.reduce((sum: number, item) => sum + (item.total_break_minutes || 0), 0);
   const totalCorrectionMinutes = reportData.reduce((sum: number, item) => sum + (item.total_correction_minutes || 0), 0);
   const totalPayableHours = reportData.reduce((sum: number, item) => sum + (item.payable_hours || 0), 0);
+  const period = moment({ year: selectedYear, month: selectedMonth - 1 });
+  const periodLabel = period.format('MMMM YYYY');
+  const generatedAt = moment().format('MMM D, YYYY HH:mm');
+  const reportCompanyName = userCompanyName || 'Company';
+
+  const columnDefinitions = [
+    ['Employee Name', 'Worker included in this payroll period.'],
+    ['Total Work Hours', 'Total clocked work time before break deductions and manual corrections.'],
+    ['Break Time (min)', 'Total unpaid break minutes recorded during the period.'],
+    ['Correction (min)', 'Manual adjustment minutes. Positive values add payable time; negative values remove payable time.'],
+    ['Payable Hours', 'Final payable hours after breaks and corrections. This is the main payroll figure.'],
+    ['Hourly Rate', 'Enter the hourly pay rate for this worker (manual entry).'],
+    ['Total Pay', 'Calculated total pay for the period (Payable Hours × Hourly Rate).'],
+  ];
+
+  const excelColors = {
+    primary: '1A1A1C',   // Deep charcoal (headingText)
+    primaryMuted: 'F3F4F6', // Very light gray for subtle headers
+    accent: 'BEBEBE',    // App border color
+    dark: '1A1A1C',      // Deep charcoal
+    slate: '3A3A3C',     // bodyText
+    border: 'D1D5DB',    // Standard clean border
+    page: 'F9FAFB',      // Near-white background
+    success: '16A34A',   // App success green
+    danger: 'DC2626',    // App danger red
+    white: 'FFFFFF',
+  };
+
+  const thinBorder = {
+    top: { style: 'thin', color: { rgb: excelColors.border } },
+    bottom: { style: 'thin', color: { rgb: excelColors.border } },
+    left: { style: 'thin', color: { rgb: excelColors.border } },
+    right: { style: 'thin', color: { rgb: excelColors.border } },
+  };
+
+  const mergeStyle = (...styles: any[]) => Object.assign({}, ...styles);
+
+  const solidFill = (rgb: string) => ({ patternType: 'solid', fgColor: { rgb } });
+
+  const setCellStyle = (sheet: XLSX.WorkSheet, address: string, style: any) => {
+    if (!sheet[address]) return;
+    sheet[address].s = mergeStyle(sheet[address].s || {}, style);
+  };
+
+  const styleRow = (sheet: XLSX.WorkSheet, rowIndex: number, fromCol: number, toCol: number, style: any) => {
+    for (let col = fromCol; col <= toCol; col += 1) {
+      setCellStyle(sheet, XLSX.utils.encode_cell({ r: rowIndex, c: col }), style);
+    }
+  };
+
+  const styleColumn = (sheet: XLSX.WorkSheet, colIndex: number, fromRow: number, toRow: number, style: any) => {
+    for (let row = fromRow; row <= toRow; row += 1) {
+      setCellStyle(sheet, XLSX.utils.encode_cell({ r: row, c: colIndex }), style);
+    }
+  };
+
+  const applyWorkbookStyling = (summarySheet: XLSX.WorkSheet, payrollSheet: XLSX.WorkSheet, definitionsSheet: XLSX.WorkSheet) => {
+    // Use a single standard system font to avoid file corruption
+    const fontName = 'Segoe UI';
+    
+    const titleStyle = {
+      font: { bold: true, sz: 20, color: { rgb: excelColors.primary }, name: fontName },
+      alignment: { horizontal: 'left', vertical: 'center' },
+    };
+    const labelStyle = {
+      font: { bold: true, color: { rgb: excelColors.slate }, sz: 10, name: fontName },
+      fill: solidFill(excelColors.page),
+      border: thinBorder,
+      alignment: { vertical: 'center', indent: 1 },
+    };
+    const valueStyle = {
+      font: { color: { rgb: excelColors.dark }, sz: 10, name: fontName },
+      border: thinBorder,
+      alignment: { vertical: 'center', indent: 1 },
+    };
+    const sectionHeaderStyle = {
+      font: { bold: true, color: { rgb: excelColors.primary }, sz: 11, name: fontName },
+      fill: solidFill(excelColors.primaryMuted),
+      border: {
+        bottom: { style: 'thin', color: { rgb: excelColors.primary } },
+      },
+      alignment: { vertical: 'center', indent: 1 },
+    };
+    const tableHeaderStyle = {
+      font: { bold: true, color: { rgb: excelColors.primary }, sz: 10, name: fontName },
+      fill: solidFill(excelColors.primaryMuted),
+      border: {
+        top: { style: 'thin', color: { rgb: excelColors.border } },
+        bottom: { style: 'medium', color: { rgb: excelColors.primary } },
+      },
+      alignment: { horizontal: 'center', vertical: 'center', wrapText: true },
+    };
+    const tableCellStyle = {
+      border: {
+        bottom: { style: 'thin', color: { rgb: excelColors.border } },
+      },
+      alignment: { vertical: 'center', indent: 1 },
+      font: { sz: 10, color: { rgb: excelColors.dark }, name: fontName },
+    };
+    const numericStyle = {
+      ...tableCellStyle,
+      alignment: { horizontal: 'right', vertical: 'center', indent: 1 },
+      numFmt: '0.00',
+    };
+    const integerStyle = {
+      ...tableCellStyle,
+      alignment: { horizontal: 'right', vertical: 'center', indent: 1 },
+      numFmt: '0',
+    };
+    const decimalStyle = {
+      ...numericStyle,
+      numFmt: '#,##0.00',
+    };
+
+    // --- Summary Sheet Styling ---
+    summarySheet['!rows'] = [
+      { hpt: 40 }, { hpt: 25 }, { hpt: 25 }, { hpt: 25 }, { hpt: 15 },
+      { hpt: 30 }, { hpt: 25 }, { hpt: 25 }, { hpt: 25 }, { hpt: 25 }, { hpt: 30 },
+      { hpt: 15 }, { hpt: 30 }, { hpt: 25 }, { hpt: 25 }, { hpt: 25 },
+    ];
+    styleRow(summarySheet, 0, 0, 1, titleStyle);
+    [1, 2, 3].forEach(row => {
+      setCellStyle(summarySheet, XLSX.utils.encode_cell({ r: row, c: 0 }), labelStyle);
+      setCellStyle(summarySheet, XLSX.utils.encode_cell({ r: row, c: 1 }), valueStyle);
+    });
+    styleRow(summarySheet, 5, 0, 1, sectionHeaderStyle);
+    [6, 7, 8, 9].forEach(row => {
+      setCellStyle(summarySheet, XLSX.utils.encode_cell({ r: row, c: 0 }), labelStyle);
+      setCellStyle(summarySheet, XLSX.utils.encode_cell({ r: row, c: 1 }), valueStyle);
+    });
+    // Totals in Summary
+    setCellStyle(summarySheet, XLSX.utils.encode_cell({ r: 10, c: 0 }), {
+      ...labelStyle,
+      fill: solidFill(excelColors.primary),
+      font: { bold: true, color: { rgb: excelColors.white }, name: fontName },
+    });
+    setCellStyle(summarySheet, XLSX.utils.encode_cell({ r: 10, c: 1 }), {
+      ...valueStyle,
+      font: { bold: true, sz: 12, color: { rgb: excelColors.primary }, name: fontName },
+      fill: solidFill(excelColors.primaryMuted),
+      numFmt: '#,##0.00',
+    });
+
+    styleRow(summarySheet, 12, 0, 1, sectionHeaderStyle);
+    [13, 14, 15].forEach(row => {
+      styleRow(summarySheet, row, 0, 1, {
+        font: { color: { rgb: excelColors.slate }, italic: true, sz: 9, name: fontName },
+        border: { bottom: { style: 'hair', color: { rgb: excelColors.border } } },
+        alignment: { wrapText: true, vertical: 'center', indent: 1 },
+      });
+    });
+
+    // --- Payroll Sheet Styling ---
+    if (!payrollSheet['!rows']) payrollSheet['!rows'] = [];
+    payrollSheet['!rows'][0] = { hpt: 35 };
+    styleRow(payrollSheet, 0, 0, 6, tableHeaderStyle);
+    const payrollRange = XLSX.utils.decode_range(payrollSheet['!ref'] || 'A1:G1');
+    
+    for (let row = 1; row <= payrollRange.e.r; row += 1) {
+      payrollSheet['!rows'][row] = { hpt: 28 };
+      
+      const cellAddress = XLSX.utils.encode_cell({ r: row, c: 0 });
+      const cellValue = payrollSheet[cellAddress]?.v;
+      const isSpacer = !cellValue;
+      const isTotals = cellValue === 'Totals';
+      if (isSpacer) continue;
+
+      const rowFill = isTotals 
+        ? solidFill(excelColors.primaryMuted) 
+        : (row % 2 === 0 ? solidFill(excelColors.white) : solidFill(excelColors.page));
+      
+      const rowFontColor = excelColors.dark;
+
+      styleRow(payrollSheet, row, 0, 6, {
+        ...tableCellStyle,
+        fill: rowFill,
+        font: { bold: isTotals, color: { rgb: rowFontColor }, sz: 10, name: fontName },
+        border: isTotals ? { top: { style: 'medium', color: { rgb: excelColors.primary } } } : tableCellStyle.border
+      });
+
+      styleColumn(payrollSheet, 1, row, row, { ...numericStyle, fill: rowFill });
+      styleColumn(payrollSheet, 2, row, row, { ...integerStyle, fill: rowFill });
+      styleColumn(payrollSheet, 3, row, row, { ...integerStyle, fill: rowFill });
+      styleColumn(payrollSheet, 4, row, row, { 
+        ...numericStyle, 
+        fill: isTotals ? rowFill : solidFill(excelColors.page),
+        font: { bold: true, color: { rgb: excelColors.primary }, name: fontName } 
+      });
+
+      styleColumn(payrollSheet, 5, row, row, { ...decimalStyle, fill: rowFill });
+      styleColumn(payrollSheet, 6, row, row, {
+        ...decimalStyle,
+        font: { bold: true, color: { rgb: isTotals ? excelColors.primary : excelColors.success }, name: fontName },
+        fill: rowFill
+      });
+
+      if (!isTotals) {
+        const correctionValue = Number(payrollSheet[XLSX.utils.encode_cell({ r: row, c: 3 })]?.v || 0);
+        setCellStyle(payrollSheet, XLSX.utils.encode_cell({ r: row, c: 3 }), {
+          ...integerStyle,
+          font: { color: { rgb: correctionValue < 0 ? excelColors.danger : excelColors.success }, name: fontName },
+          fill: rowFill
+        });
+      }
+    }
+    payrollSheet['!autofilter'] = { ref: 'A1:G1' };
+
+    // --- Column Guide Styling ---
+    styleRow(definitionsSheet, 0, 0, 1, tableHeaderStyle);
+    definitionsSheet['!rows'] = [{ hpt: 30 }];
+    const definitionsRange = XLSX.utils.decode_range(definitionsSheet['!ref'] || 'A1:B1');
+    for (let row = 1; row <= definitionsRange.e.r; row += 1) {
+      definitionsSheet['!rows'][row] = { hpt: 25 };
+      styleRow(definitionsSheet, row, 0, 1, {
+        ...tableCellStyle,
+        fill: solidFill(row % 2 === 0 ? excelColors.page : excelColors.white),
+        alignment: { wrapText: true, vertical: 'center', indent: 1 },
+      });
+      setCellStyle(definitionsSheet, XLSX.utils.encode_cell({ r: row, c: 0 }), {
+        ...tableCellStyle,
+        font: { bold: true, color: { rgb: excelColors.dark }, sz: 10, name: fontName },
+        fill: solidFill(row % 2 === 0 ? excelColors.page : excelColors.white),
+      });
+    }
+  };
 
   const handleExportExcel = async () => {
     if (reportData.length === 0) return;
-    
-    const excelData = reportData.map(item => ({
-      'Employee Name': item.worker_name,
-      'Total Work Hours': item.total_work_hours.toFixed(2),
-      'Break Time (min)': item.total_break_minutes,
-      'Correction (min)': item.total_correction_minutes,
-      'Payable Hours': item.payable_hours.toFixed(2),
-    }));
 
-    const fileName = `Payroll_Report_${moment({ year: selectedYear, month: selectedMonth - 1 }).format('MMMM_YYYY')}`;
-    await exportToExcel(excelData, fileName);
+    const wb = XLSX.utils.book_new();
+
+    const summaryRows = [
+      ['KOORD OFFICIAL PAYROLL REPORT'],
+      ['Organization', reportCompanyName],
+      ['Reporting Period', periodLabel],
+      ['Generated On', generatedAt],
+      [],
+      ['PAYROLL SUMMARY'],
+      ['Total Employees', reportData.length],
+      ['Total Cumulative Hours', Number(totalWorkHours.toFixed(2))],
+      ['Total Break Deductions (min)', totalBreakMinutes],
+      ['Total Manual Corrections (min)', totalCorrectionMinutes],
+      ['FINAL PAYABLE HOURS', Number(totalPayableHours.toFixed(2))],
+      [],
+      ['ADMINISTRATIVE NOTES'],
+      ['• Payable Hours = (Work Hours) - (Break Time) + (Corrections).'],
+      ['• Hourly Rate and Total Pay columns in the next sheet are for manual calculation and verification.'],
+      ['• Please ensure all entries comply with local labor regulations before processing payment.'],
+    ];
+    const summarySheet = XLSX.utils.aoa_to_sheet(summaryRows);
+    summarySheet['!cols'] = [{ wch: 28 }, { wch: 42 }];
+    summarySheet['!merges'] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: 1 } }];
+    XLSX.utils.book_append_sheet(wb, summarySheet, 'Summary');
+
+    const payrollRows = [
+      ['Employee Name', 'Total Work Hours', 'Break Time (min)', 'Correction (min)', 'Payable Hours', 'Hourly Rate', 'Total Pay'],
+      ...reportData.map((item, index) => {
+        const rowNum = index + 2; // Excel rows are 1-indexed, headers are row 1
+        return [
+          item.worker_name,
+          Number(item.total_work_hours.toFixed(2)),
+          item.total_break_minutes,
+          item.total_correction_minutes,
+          Number(item.payable_hours.toFixed(2)),
+          '', // Empty string instead of null for Hourly Rate (manual entry)
+          { f: `E${rowNum}*F${rowNum}`, t: 'n' }, // Total Pay formula with explicit numeric type
+        ];
+      }),
+      [],
+      [
+        'Totals', 
+        Number(totalWorkHours.toFixed(2)), 
+        totalBreakMinutes, 
+        totalCorrectionMinutes, 
+        Number(totalPayableHours.toFixed(2)),
+        '',
+        { f: `SUM(G2:G${reportData.length + 1})`, t: 'n' } // Totals with explicit numeric type
+      ],
+    ];
+    const payrollSheet = XLSX.utils.aoa_to_sheet(payrollRows);
+    payrollSheet['!cols'] = [{ wch: 28 }, { wch: 18 }, { wch: 18 }, { wch: 18 }, { wch: 16 }, { wch: 16 }, { wch: 18 }];
+    payrollSheet['!freeze'] = { xSplit: 0, ySplit: 1 };
+    XLSX.utils.book_append_sheet(wb, payrollSheet, 'Payroll');
+
+    const definitionsSheet = XLSX.utils.aoa_to_sheet([
+      ['Column', 'Meaning'],
+      ...columnDefinitions,
+    ]);
+    definitionsSheet['!cols'] = [{ wch: 24 }, { wch: 86 }];
+    definitionsSheet['!freeze'] = { xSplit: 0, ySplit: 1 };
+    XLSX.utils.book_append_sheet(wb, definitionsSheet, 'Column Guide');
+
+    applyWorkbookStyling(summarySheet, payrollSheet, definitionsSheet);
+
+    const fileName = `Koord_Payroll_Report_${period.format('MMMM_YYYY')}`;
+    await exportWorkbookToExcel(wb, fileName);
   };
 
-  const handleExportPDF = async () => {
-    if (reportData.length === 0) return;
-
-    const period = moment({ year: selectedYear, month: selectedMonth - 1 }).format('MMMM YYYY');
-    
-    const html = `
-      <html>
-        <head>
-          <style>
-            body { font-family: sans-serif; padding: 20px; color: #333; }
-            h1 { color: #000; margin-bottom: 5px; }
-            h2 { color: #666; font-weight: normal; margin-top: 0; margin-bottom: 30px; }
-            .stats-container { display: flex; justify-content: space-between; margin-bottom: 30px; background: #f4f4f4; padding: 15px; border-radius: 8px; }
-            .stat-box { text-align: center; flex: 1; }
-            .stat-label { font-size: 12px; text-transform: uppercase; color: #888; margin-bottom: 5px; }
-            .stat-value { font-size: 18px; font-weight: bold; color: #000; }
-            table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-            th { background-color: #f8f8f8; text-align: left; padding: 12px; border-bottom: 2px solid #eee; }
-            td { padding: 12px; border-bottom: 1px solid #eee; }
-            .numeric { text-align: right; }
-            .highlight { font-weight: bold; color: #000; }
-          </style>
-        </head>
-        <body>
-          <h1>Payroll Summary</h1>
-          <h2>Period: ${period}</h2>
-          
-          <div class="stats-container">
-            <div class="stat-box">
-              <div class="stat-label">Total Work Hours</div>
-              <div class="stat-value">${totalWorkHours.toFixed(2)}h</div>
-            </div>
-            <div class="stat-box" style="border-left: 1px solid #ddd;">
-              <div class="stat-label">Total Break Time</div>
-              <div class="stat-value">${totalBreakMinutes}m</div>
-            </div>
-            <div class="stat-box" style="border-left: 1px solid #ddd; border-right: 1px solid #ddd;">
-              <div class="stat-label">Total Correction</div>
-              <div class="stat-value">${totalCorrectionMinutes}m</div>
-            </div>
-            <div class="stat-box">
-              <div class="stat-label">Total Payable</div>
-              <div class="stat-value" style="color: #2563EB;">${totalPayableHours.toFixed(2)}h</div>
-            </div>
-          </div>
-
-          <table>
-            <thead>
-              <tr>
-                <th>Employee Name</th>
-                <th class="numeric">Total Work Hours</th>
-                <th class="numeric">Break Time (min)</th>
-                <th class="numeric">Correction (min)</th>
-                <th class="numeric">Payable Hours</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${reportData.map(item => `
-                <tr>
-                  <td>${item.worker_name}</td>
-                  <td class="numeric">${item.total_work_hours.toFixed(2)}</td>
-                  <td class="numeric">${item.total_break_minutes}</td>
-                  <td class="numeric">${item.total_correction_minutes}</td>
-                  <td class="numeric highlight">${item.payable_hours.toFixed(2)}</td>
-                </tr>
-              `).join('')}
-            </tbody>
-          </table>
-        </body>
-      </html>
-    `;
-
-    const fileName = `Payroll_Report_${period.replace(' ', '_')}`;
-    await exportToPDF(html, fileName);
-  };
-
-  const tableMinWidth = 900;
+  const tableMinWidth = 1200;
 
   return (
     <AnimatedScreen>
@@ -170,7 +380,7 @@ const PayrollReport = () => {
       </View>
 
       <View style={styles.mainContentCard}>
-        {/* --- Top Toolbar: Navigator & Exports --- */}
+        {/* --- Top Toolbar: Navigator & Export --- */}
         <View style={styles.headerControls}>
           <View style={styles.monthNavigator}>
             <TouchableOpacity style={styles.monthNavButton} onPress={handlePrevMonth}>
@@ -186,18 +396,15 @@ const PayrollReport = () => {
 
           <View style={styles.exportActions}>
             <TouchableOpacity 
-              style={[styles.iconActionButton, { backgroundColor: theme.colors.success }]}
+              style={[
+                styles.iconActionButton,
+                { backgroundColor: reportData.length === 0 ? theme.colors.borderColor : theme.colors.success },
+              ]}
               onPress={handleExportExcel}
+              disabled={reportData.length === 0}
             >
               <Ionicons name="download-outline" size={20} color="white" />
               <Text style={styles.iconActionText} fontType="bold">Excel</Text>
-            </TouchableOpacity>
-            <TouchableOpacity 
-              style={[styles.iconActionButton, { backgroundColor: theme.colors.danger }]}
-              onPress={handleExportPDF}
-            >
-              <Ionicons name="document-text-outline" size={20} color="white" />
-              <Text style={styles.iconActionText} fontType="bold">PDF</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -236,8 +443,9 @@ const PayrollReport = () => {
                 <Text style={[styles.tableHeaderText, styles.colNumeric]} fontType="bold">Break (min)</Text>
                 <Text style={[styles.tableHeaderText, styles.colNumeric]} fontType="bold">Correction (min)</Text>
                 <Text style={[styles.tableHeaderText, styles.colPayable]} fontType="bold">Payable Hours</Text>
+                <Text style={[styles.tableHeaderText, styles.colNumeric]} fontType="bold">Hourly Rate</Text>
+                <Text style={[styles.tableHeaderText, styles.colNumeric]} fontType="bold">Total Pay</Text>
                 </View>
-
                 {loading ? (
                 <ActivityIndicator size="large" color={theme.colors.primary} style={{ marginVertical: theme.spacing(4) }} />
                 ) : reportData.length === 0 ? (
@@ -260,6 +468,8 @@ const PayrollReport = () => {
                                 <Text style={styles.payableBadgeText} fontType="bold">{item.payable_hours.toFixed(2)}</Text>
                             </View>
                         </View>
+                        <Text style={[styles.tableCell, styles.colNumeric, { color: theme.colors.slate }]} fontType="italic">Manual Entry</Text>
+                        <Text style={[styles.tableCell, styles.colNumeric, { color: theme.colors.slate }]} fontType="italic">Manual Entry</Text>
                     </View>
                     ))}
                 </ScrollView>

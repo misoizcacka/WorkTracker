@@ -4,7 +4,7 @@ import { ActivityIndicator, View } from "react-native";
 import { theme } from "../theme";
 
 export default function Index() {
-  const { user, isLoading, userRole } = useSession();
+  const { user, isLoading, userRole, isCompanyDetailsComplete } = useSession();
 
   if (isLoading) {
     // Show a loading indicator while session is loading
@@ -21,13 +21,13 @@ export default function Index() {
     }
 
     const subscriptionStatus = user.app_metadata?.subscription_status;
-    const companySetupComplete = user.user_metadata?.company_setup_complete || false;
+    const companySetupComplete = isCompanyDetailsComplete || user.user_metadata?.company_setup_complete || false;
 
-    if (subscriptionStatus !== 'active') {
+    if (userRole === 'owner' && subscriptionStatus !== 'active') {
       return <Redirect href="/subscription/setup" />;
     }
 
-    if (!companySetupComplete) {
+    if (userRole === 'owner' && !companySetupComplete) {
       return <Redirect href="/(manager)/company-setup" />;
     }
 

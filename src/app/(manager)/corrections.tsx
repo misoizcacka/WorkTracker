@@ -158,7 +158,6 @@ const CorrectionsPage = () => {
                     <UserAvatar avatarUrl={item.avatar_url} size={40} style={styles.avatar} />
                     <View style={styles.itemInfo}>
                         <Text style={[styles.itemName, isSelected && styles.selectedWorkerText]} fontType="medium">{item.full_name}</Text>
-                        <Text style={styles.itemSubtitle} fontType="regular">{item.email}</Text>
                     </View>
                     {isSelected && <Ionicons name="chevron-forward" size={16} color={theme.colors.primary} />}
             </TouchableOpacity>

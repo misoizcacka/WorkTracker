@@ -1,7 +1,6 @@
-import * as XLSX from '@e965/xlsx';
+import * as XLSX from 'xlsx-js-style';
 import { Paths, File } from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
-import * as Print from 'expo-print';
 import { Platform } from 'react-native';
 
 export const exportToExcel = async (data: any[], fileName: string) => {
@@ -9,13 +8,22 @@ export const exportToExcel = async (data: any[], fileName: string) => {
     const ws = XLSX.utils.json_to_sheet(data);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Sheet1");
+    await exportWorkbookToExcel(wb, fileName);
+  } catch (error) {
+    console.error('Excel Export Error:', error);
+    throw error;
+  }
+};
 
+export const exportWorkbookToExcel = async (workbook: XLSX.WorkBook, fileName: string) => {
+  try {
     if (Platform.OS === 'web') {
-      XLSX.writeFile(wb, `${fileName}.xlsx`);
+      XLSX.writeFile(workbook, `${fileName}.xlsx`, { cellStyles: true } as any);
     } else {
-      const wbout = XLSX.write(wb, {
+      const wbout = XLSX.write(workbook, {
         type: 'base64',
         bookType: 'xlsx',
+        cellStyles: true,
       });
       
       const file = new File(Paths.cache, `${fileName}.xlsx`);
@@ -23,26 +31,12 @@ export const exportToExcel = async (data: any[], fileName: string) => {
         encoding: 'base64',
       });
       
-      await Sharing.shareAsync(file.uri);
+      await Sharing.shareAsync(file.uri, {
+        mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      });
     }
   } catch (error) {
     console.error('Excel Export Error:', error);
-    throw error;
-  }
-};
-
-export const exportToPDF = async (html: string, fileName: string) => {
-  try {
-    const { uri } = await Print.printToFileAsync({ html });
-    if (Platform.OS === 'web') {
-      // Print dialog usually opens on web. 
-      // If we want a direct download, we'd need more logic, 
-      // but expo-print usually handles it via window.print() or similar.
-    } else {
-      await Sharing.shareAsync(uri, { UTI: '.pdf', mimeType: 'application/pdf' });
-    }
-  } catch (error) {
-    console.error('PDF Export Error:', error);
     throw error;
   }
 };

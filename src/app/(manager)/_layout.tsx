@@ -17,14 +17,14 @@ import { ProfileProvider } from "../../context/ProfileContext";
 import { SubscriptionLockScreen } from "../../components/SubscriptionLockScreen";
 
 function ManagerProviders({ children }: { children: React.ReactNode }) {
-  const { user, isLoading, userRole, isSubscriptionExpired } = useSession();
+  const { user, isLoading, userRole, isSubscriptionExpired, isCompanyDetailsComplete } = useSession();
   const router = useRouter();
   const segments = useSegments();
 
   useEffect(() => {
     if (isLoading) return;
-    if (user && (userRole === 'manager' || userRole === 'owner')) {
-      const companySetupComplete = user.user_metadata?.company_setup_complete || false;
+    if (user && userRole === 'owner') {
+      const companySetupComplete = isCompanyDetailsComplete || user.user_metadata?.company_setup_complete || false;
       const subscriptionStatus = user.app_metadata?.subscription_status;
       const inCompanySetup = segments.includes('company-setup');
       const inSubscriptionFlow = segments.includes('subscription');
@@ -38,7 +38,7 @@ function ManagerProviders({ children }: { children: React.ReactNode }) {
         router.replace('/(manager)/company-setup');
       }
     }
-  }, [user, segments, router, isLoading, userRole]);
+  }, [user, segments, router, isLoading, userRole, isCompanyDetailsComplete]);
 
   if (isLoading || !user || (userRole !== 'manager' && userRole !== 'owner')) {
     return null;

@@ -20,7 +20,7 @@ export interface EmployeesContextType {
 export const EmployeesContext = createContext<EmployeesContextType | null>(null);
 
 export function EmployeesProvider({ children }: { children: React.ReactNode }) {
-  const { userCompanyId, isCompanyIdLoading, userRole } = useSession(); 
+  const { user, userCompanyId, isCompanyIdLoading, userRole } = useSession(); 
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [loading, setLoading] = useState(true);
   const [seatLimit, setSeatLimit] = useState(0);
@@ -55,16 +55,25 @@ export function EmployeesProvider({ children }: { children: React.ReactNode }) {
       setLoading(true);
       
       try {
-        // Fetch Employees and Company seat limit in parallel
-        const [empRes, compRes] = await Promise.all([
-          supabase.from('employees')
+        let employeesQuery = supabase.from('employees')
             .select('*')
             .eq('company_id', userCompanyId)
-            .order('created_at', { ascending: false }),
-          supabase.from('companies')
-            .select('worker_seats, scheduled_worker_seats, scheduled_change_effective_at')
-            .eq('id', userCompanyId)
-            .single()
+            .order('created_at', { ascending: false });
+
+        if (userRole === 'manager' && user?.id) {
+          employeesQuery = employeesQuery.or(`id.eq.${user.id},reporting_to.eq.${user.id}`);
+        }
+
+        const companySeatsQuery = userRole === 'owner'
+          ? supabase.from('companies')
+              .select('worker_seats, scheduled_worker_seats, scheduled_change_effective_at')
+              .eq('id', userCompanyId)
+              .maybeSingle()
+          : Promise.resolve({ data: null, error: null });
+
+        const [empRes, compRes] = await Promise.all([
+          employeesQuery,
+          companySeatsQuery,
         ]);
 
         if (empRes.error) console.error('Error fetching employees:', empRes.error);
@@ -77,10 +86,14 @@ export function EmployeesProvider({ children }: { children: React.ReactNode }) {
         }
 
         if (compRes.error) console.error('Error fetching company seats:', compRes.error);
-        else {
+        else if (compRes.data) {
           setSeatLimit(compRes.data?.worker_seats || 0);
           setScheduledSeatLimit(compRes.data?.scheduled_worker_seats ?? null);
           setScheduledSeatEffectiveAt(compRes.data?.scheduled_change_effective_at ?? null);
+        } else {
+          setSeatLimit(0);
+          setScheduledSeatLimit(null);
+          setScheduledSeatEffectiveAt(null);
         }
       } catch (error) {
         console.error('Error in fetchData:', error);
@@ -105,15 +118,23 @@ export function EmployeesProvider({ children }: { children: React.ReactNode }) {
                 ...payload.new, 
                 public_avatar_url: getAvatarPublicUrl((payload.new as any).avatar_url) 
               };
-              return [...prevEmployees, enriched as Employee];
+              const employee = enriched as Employee;
+              if (userRole === 'manager' && employee.id !== user?.id && employee.reporting_to !== user?.id) {
+                return prevEmployees;
+              }
+              return [...prevEmployees, employee];
             } else if (payload.eventType === 'UPDATE') {
               const enriched = { 
                 ...payload.new, 
                 public_avatar_url: getAvatarPublicUrl((payload.new as any).avatar_url) 
               };
-              return prevEmployees.map(emp =>
-                emp.id === payload.old.id ? (enriched as Employee) : emp
-              );
+              const employee = enriched as Employee;
+              if (userRole === 'manager' && employee.id !== user?.id && employee.reporting_to !== user?.id) {
+                return prevEmployees.filter(emp => emp.id !== payload.old.id);
+              }
+              return prevEmployees.some(emp => emp.id === payload.old.id)
+                ? prevEmployees.map(emp => emp.id === payload.old.id ? employee : emp)
+                : [...prevEmployees, employee];
             } else if (payload.eventType === 'DELETE') {
               return prevEmployees.filter(emp => emp.id !== payload.old.id);
             }
@@ -146,7 +167,7 @@ export function EmployeesProvider({ children }: { children: React.ReactNode }) {
       supabase.removeChannel(employeeSubscription);
       supabase.removeChannel(companySubscription);
     };
-  }, [userCompanyId, isCompanyIdLoading, userRole]); // Re-run effect when company ID, loading state, or role changes
+  }, [user?.id, userCompanyId, isCompanyIdLoading, userRole]); // Re-run effect when company ID, loading state, role, or user changes
 
   const seatsUsed = useMemo(() => employees.filter(e => e.role === 'worker').length, [employees]);
 
@@ -158,6 +179,9 @@ export function EmployeesProvider({ children }: { children: React.ReactNode }) {
   const updateEmployee = useCallback(async (updatedEmployee: Employee) => {
     if (!userCompanyId) throw new Error("Company ID not available.");
     const existingEmployee = employees.find((employee) => employee.id === updatedEmployee.id);
+    if (userRole === 'manager' && (!existingEmployee || (existingEmployee.id !== user?.id && existingEmployee.reporting_to !== user?.id))) {
+      throw new Error("You do not have permission to update this employee.");
+    }
     const normalizedEmail = updatedEmployee.email.trim().toLowerCase();
     let data: Employee | null = null;
     let error: any = null;
@@ -209,10 +233,14 @@ export function EmployeesProvider({ children }: { children: React.ReactNode }) {
         )
       );
     }
-  }, [userCompanyId, employees]);
+  }, [user?.id, userCompanyId, userRole, employees]);
 
   const deleteEmployee = useCallback(async (employeeId: string) => {
     if (!userCompanyId) throw new Error("Company ID not available.");
+    const existingEmployee = employees.find((employee) => employee.id === employeeId);
+    if (userRole === 'manager' && (!existingEmployee || existingEmployee.reporting_to !== user?.id || existingEmployee.role !== 'worker')) {
+      throw new Error("You do not have permission to remove this employee.");
+    }
     const { error } = await supabase
       .from('employees')
       .delete()
@@ -227,7 +255,7 @@ export function EmployeesProvider({ children }: { children: React.ReactNode }) {
     setEmployees(prevEmployees =>
       prevEmployees.filter(employee => employee.id !== employeeId)
     );
-  }, [userCompanyId]);
+  }, [user?.id, userCompanyId, userRole, employees]);
 
   const value = useMemo(() => ({
     employees,

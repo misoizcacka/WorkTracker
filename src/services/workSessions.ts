@@ -1,5 +1,6 @@
 import { supabase } from '../utils/supabase';
 import { WorkSession } from '../types';
+import moment from 'moment';
 
 /**
  * Fetches the currently active work session for a given worker.
@@ -137,12 +138,15 @@ export async function updateWorkSessionAssignment(
  * @returns An array of WorkSession objects.
  */
 export async function fetchWorkSessionsByDate(workerId: string, date: string): Promise<WorkSession[]> {
+  const startOfLocalDayUtc = moment(date, 'YYYY-MM-DD').startOf('day').toISOString();
+  const endOfLocalDayUtc = moment(date, 'YYYY-MM-DD').endOf('day').toISOString();
+
   const { data, error } = await supabase
     .from('work_sessions')
     .select('*, worker_assignments!inner(sort_key, ref_id, ref_type)')
     .eq('worker_id', workerId)
-    .gte('start_time', `${date}T00:00:00.000Z`)
-    .lte('start_time', `${date}T23:59:59.999Z`)
+    .gte('start_time', startOfLocalDayUtc)
+    .lte('start_time', endOfLocalDayUtc)
     .order('start_time', { ascending: true });
 
   if (error) {

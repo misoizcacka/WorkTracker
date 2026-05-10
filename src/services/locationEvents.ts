@@ -1,5 +1,4 @@
 import { supabase } from '../utils/supabase';
-import { WorkSession } from '../types'; // Assuming WorkSession type is needed for context
 
 export interface LocationEventRecord {
   id: string; // Supabase UUID
@@ -19,6 +18,44 @@ export interface LatestLocation {
   longitude: number;
   timestamp: string;
   full_name: string;
+}
+
+export async function fetchLocationEventsForWorkerInRange(
+  workerId: string,
+  startIso: string,
+  endIso: string
+): Promise<LocationEventRecord[]> {
+  const { data, error } = await supabase
+    .from('location_events')
+    .select('*')
+    .eq('worker_id', workerId)
+    .gte('created_at', startIso)
+    .lte('created_at', endIso)
+    .order('created_at', { ascending: true });
+
+  if (error) {
+    console.error('Error fetching location events in range:', error);
+    throw error;
+  }
+
+  return (data ?? []) as LocationEventRecord[];
+}
+
+export async function upsertLocationEvents(events: LocationEventRecord[]): Promise<LocationEventRecord[]> {
+  if (events.length === 0) {
+    return [];
+  }
+
+  const { error } = await supabase.rpc('insert_location_events_from_app', {
+    p_events: events,
+  });
+
+  if (error) {
+    console.error('Error inserting location events via RPC:', error);
+    throw error;
+  }
+
+  return events;
 }
 
 /**

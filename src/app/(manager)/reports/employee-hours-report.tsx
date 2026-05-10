@@ -100,9 +100,6 @@ const EmployeeHoursReport = () => {
                     <Text style={[styles.workerName, isSelected && styles.selectedWorkerText]} fontType="medium" numberOfLines={1}>
                         {item.full_name}
                     </Text>
-                    <Text style={styles.workerEmail} fontType="regular" numberOfLines={1}>
-                        {item.email}
-                    </Text>
                 </View>
                 {isSelected && <Ionicons name="chevron-forward" size={16} color={theme.colors.primary} />}
             </TouchableOpacity>
@@ -378,11 +375,6 @@ const styles = StyleSheet.create({
     },
     selectedWorkerText: {
         color: theme.colors.primary,
-    },
-    workerEmail: {
-        fontSize: 11,
-        color: theme.colors.bodyText,
-        marginTop: 2,
     },
     rightPanel: {
         flex: 1,

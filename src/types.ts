@@ -19,9 +19,15 @@ export interface Invite {
   role: 'worker' | 'manager';
   status: 'pending' | 'accepted' | 'expired';
   token: string; // Re-added token
+  invite_code?: string | null;
   created_at: string;
+  expires_at?: string | null;
+  used?: boolean;
   company_id: string; // New: Add company_id
   company_name: string; // NEW: Add company_name
+  employee_id?: string | null;
+  accepted_at?: string | null;
+  reporting_to?: string | null;
 }
 
 export interface Project {

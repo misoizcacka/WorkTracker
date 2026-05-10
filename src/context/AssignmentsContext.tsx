@@ -22,7 +22,10 @@ import {
   fetchWorkSessionsByDate,
   upsertWorkSessions,
 } from '../services/workSessions';
-import { insertLocationEvent } from '../services/locationEvents';
+import {
+  fetchLocationEventsForWorkerInRange,
+  upsertLocationEvents,
+} from '../services/locationEvents';
 import { useSession } from '~/context/AuthContext';
 import { useProjects } from '~/context/ProjectsContext';
 
@@ -40,6 +43,10 @@ import * as SQLite from 'expo-sqlite'; // Import SQLite for typing (though no lo
 import AsyncStorage from '@react-native-async-storage/async-storage'; // Import AsyncStorage
 import moment from 'moment';
 import { v4 as randomUUID } from 'uuid';
+import {
+  AssignmentGeofenceTarget,
+  deriveMissingGeofenceEvents,
+} from '~/utils/locationEventReconciliation';
 
 export type AssignmentStatus = 'active' | 'completed' | 'next' | 'pending';
 
@@ -126,6 +133,96 @@ export function AssignmentsProvider({ children }: { children: React.ReactNode })
       setIsLoading(false);
     }
   }, []);
+
+  const buildGeofenceTargets = useCallback((assignmentRecords: AssignmentRecord[]): AssignmentGeofenceTarget[] => {
+    return assignmentRecords.flatMap((assignment) => {
+      if (assignment.ref_type === 'project') {
+        const project = allProjects.find((item) => item.id === assignment.ref_id);
+        const latitude = project?.location?.latitude;
+        const longitude = project?.location?.longitude;
+        if (latitude == null || longitude == null) {
+          return [];
+        }
+        return [{
+          assignmentId: assignment.id,
+          latitude,
+          longitude,
+          radius: 150,
+        }];
+      }
+
+      const commonLocation = commonLocations.find((item) => item.id === assignment.ref_id);
+      if (commonLocation?.latitude == null || commonLocation?.longitude == null) {
+        return [];
+      }
+
+      return [{
+        assignmentId: assignment.id,
+        latitude: commonLocation.latitude,
+        longitude: commonLocation.longitude,
+        radius: 150,
+      }];
+    });
+  }, [allProjects, commonLocations]);
+
+  const reconcileSessionGeofenceEvents = useCallback(async (
+    session: WorkSession,
+    assignmentRecords: AssignmentRecord[],
+    checkoutLocation?: { latitude: number; longitude: number }
+  ) => {
+    if (!session.end_time) {
+      return;
+    }
+
+    const geofences = buildGeofenceTargets(assignmentRecords);
+    if (geofences.length === 0) {
+      return;
+    }
+
+    const timelineEvents = await fetchLocationEventsForWorkerInRange(
+      session.worker_id,
+      session.start_time,
+      session.end_time
+    );
+
+    const derivedEvents = deriveMissingGeofenceEvents({
+      workerId: session.worker_id,
+      companyId: session.company_id,
+      geofences,
+      timelineEvents,
+      checkoutPoint: checkoutLocation ? {
+        latitude: checkoutLocation.latitude,
+        longitude: checkoutLocation.longitude,
+        timestamp: session.end_time,
+      } : undefined,
+    });
+
+    if (derivedEvents.length === 0) {
+      return;
+    }
+
+    await upsertLocationEvents(derivedEvents);
+  }, [buildGeofenceTargets]);
+
+  const reconcileCompletedWorkerDay = useCallback(async (workerId: string, assignedDate: string) => {
+    if (!userCompanyId) {
+      return;
+    }
+
+    const [assignmentRecords, sessions] = await Promise.all([
+      fetchAssignmentsForWorkers(userCompanyId, assignedDate, [workerId]),
+      fetchWorkSessionsByDate(workerId, assignedDate),
+    ]);
+
+    const completedSessions = sessions.filter((session) => !!session.end_time);
+    if (completedSessions.length === 0 || assignmentRecords.length === 0) {
+      return;
+    }
+
+    for (const session of completedSessions) {
+      await reconcileSessionGeofenceEvents(session, assignmentRecords);
+    }
+  }, [reconcileSessionGeofenceEvents, userCompanyId]);
 
   // Initialize SQLite DB and listen for network changes, ONLY for workers.
   useEffect(() => {
@@ -215,7 +312,7 @@ export function AssignmentsProvider({ children }: { children: React.ReactNode })
           console.warn(`Skipping ${unsyncedEvents.length - eventsToSync.length} malformed local location events during sync.`);
         }
         if (eventsToSync.length > 0) {
-          await supabase.from('location_events').upsert(eventsToSync);
+          await upsertLocationEvents(eventsToSync);
         }
         const successfullySyncedEventIds = eventsToSync.map(e => e.id);
         await markLocationEventsAsSynced(successfullySyncedEventIds);
@@ -396,8 +493,15 @@ export function AssignmentsProvider({ children }: { children: React.ReactNode })
     const inserted = await insertAssignment(newRecord);
     if (inserted) {
       setAssignments(prev => [...prev, inserted]);
+      if (userRole !== 'worker') {
+        try {
+          await reconcileCompletedWorkerDay(inserted.worker_id, inserted.assigned_date);
+        } catch (reconcileError) {
+          console.error('Assignment inserted, but reconciliation failed:', reconcileError);
+        }
+      }
     }
-  }, [user, userCompanyId]);
+  }, [reconcileCompletedWorkerDay, user, userCompanyId, userRole]);
 
   const updateAssignmentSortKey = useCallback(async (id: string, newSortKey: string) => {
     const updated = await updateAssignment(id, { sort_key: newSortKey });
@@ -416,11 +520,25 @@ export function AssignmentsProvider({ children }: { children: React.ReactNode })
     newWorkerId: string,
     newSortKey: string
   ) => {
+    const previousAssignment = assignments.find(a => a.id === id) || null;
     const updated = await updateAssignment(id, { worker_id: newWorkerId, sort_key: newSortKey });
     if (updated) {
       setAssignments(prev => prev.map(a => a.id === id ? updated : a));
+      if (userRole !== 'worker') {
+        const datesToReconcile = new Set<string>([updated.assigned_date]);
+        for (const assignedDate of datesToReconcile) {
+          try {
+            if (previousAssignment?.worker_id) {
+              await reconcileCompletedWorkerDay(previousAssignment.worker_id, assignedDate);
+            }
+            await reconcileCompletedWorkerDay(updated.worker_id, assignedDate);
+          } catch (reconcileError) {
+            console.error('Assignment moved, but reconciliation failed:', reconcileError);
+          }
+        }
+      }
     }
-  }, []);
+  }, [assignments, reconcileCompletedWorkerDay, userRole]);
 
   const updateAssignmentStartTime = useCallback(async (id: string, startTime: string | null) => {
     const updated = await updateAssignment(id, { start_time: startTime });
@@ -498,6 +616,22 @@ export function AssignmentsProvider({ children }: { children: React.ReactNode })
     if (isOffline) {
         // --- Removed explicit location event insertion ---
         // The native background module now handles geofence entry/exit events.
+        try {
+          await insertLocalLocationEvent({
+            id: randomUUID(),
+            timestamp: new Date().toISOString(),
+            companyId: userCompanyId,
+            type: 'passive_tracking',
+            assignmentId: sessionToEnd.assignment_id,
+            workerId: user.id,
+            latitude: location.latitude,
+            longitude: location.longitude,
+            notes: 'Checkout location anchor',
+            synced: 0,
+          });
+        } catch (anchorError) {
+          console.error('Failed to save local checkout anchor event:', anchorError);
+        }
 
         const updatedSession = { ...sessionToEnd, end_time: new Date().toISOString(), synced: false }; // Offline sessions are not synced
         await updateLocalWorkSession(updatedSession);
@@ -521,6 +655,31 @@ export function AssignmentsProvider({ children }: { children: React.ReactNode })
 
             // If everything successful, update AsyncStorage and ensure final UI state reflects synced data
             if (endedSession) {
+                try {
+                  await upsertLocationEvents([{
+                    id: randomUUID(),
+                    created_at: endedSession.end_time!,
+                    company_id: sessionToEnd.company_id,
+                    worker_id: sessionToEnd.worker_id,
+                    assignment_id: sessionToEnd.assignment_id,
+                    type: 'passive_tracking',
+                    latitude: location.latitude,
+                    longitude: location.longitude,
+                    notes: 'Checkout location anchor',
+                  }]);
+                  const assignedDate = sessionToEnd.worker_assignments?.assigned_date || moment(sessionToEnd.start_time).format('YYYY-MM-DD');
+                  const liveAssignments = await fetchAssignmentsForWorkers(userCompanyId, assignedDate, [sessionToEnd.worker_id]);
+                  await reconcileSessionGeofenceEvents(
+                    {
+                      ...sessionToEnd,
+                      end_time: endedSession.end_time,
+                    },
+                    liveAssignments,
+                    location
+                  );
+                } catch (reconcileError) {
+                  console.error('Work session ended, but reconciliation failed:', reconcileError);
+                }
                 setLoadedWorkSessions(prev => prev.map(s => (s.id === sessionId ? endedSession : s))); // Update with actual ended session from service
                 const assignmentId = endedSession.assignment_id;
                 if (assignmentId) {
@@ -544,7 +703,7 @@ export function AssignmentsProvider({ children }: { children: React.ReactNode })
             throw err; 
         }
     }
-  }, [user, userCompanyId, isOffline, loadedWorkSessions]);
+  }, [user, userCompanyId, isOffline, loadedWorkSessions, reconcileSessionGeofenceEvents]);
 
   const updateWorkSessionAssignment = useCallback(async (sessionId: string, newAssignmentId: string) => {
     const updatedSession = await updateWorkSessionAssignmentService(sessionId, newAssignmentId);

@@ -84,7 +84,7 @@ final class IOSBackgroundLocationManager: NSObject, CLLocationManagerDelegate {
       locationManager.stopMonitoring(for: region)
     }
 
-    for assignment in assignments.prefix(20) where assignment.status == "active" || assignment.status == "next" {
+    for assignment in assignments.prefix(20) where assignment.status != "completed" {
       let region = CLCircularRegion(
         center: CLLocationCoordinate2D(latitude: assignment.latitude, longitude: assignment.longitude),
         radius: assignment.radius,
@@ -135,7 +135,7 @@ final class IOSBackgroundLocationManager: NSObject, CLLocationManagerDelegate {
     }
 
     var transitionDetected = false
-    for assignment in stateStore.geofenceAssignments where assignment.status == "active" || assignment.status == "next" {
+    for assignment in stateStore.geofenceAssignments where assignment.status != "completed" {
       let assignmentLocation = CLLocation(latitude: assignment.latitude, longitude: assignment.longitude)
       let isInside = location.distance(from: assignmentLocation) <= assignment.radius
       let previousInside = stateStore.insideState(for: assignment.id)

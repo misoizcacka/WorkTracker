@@ -90,15 +90,45 @@ export function SessionProvider(props: React.PropsWithChildren<{}>) {
     setUserRole(currentRole);
 
     if (currentCompanyId) {
-        const { data: companyDetails, error: companyDetailsError } = await supabase
+      type CompanyDetails = {
+        id?: string;
+        name: string | null;
+        country: string | null;
+        subscription_period_end: string | null;
+        scheduled_worker_seats: number | null;
+        scheduled_change_effective_at: string | null;
+      };
+
+      let companyDetails: CompanyDetails | null = null;
+
+      const { data: directCompanyDetails, error: companyDetailsError } = await supabase
           .from('companies')
           .select('name, country, subscription_period_end, scheduled_worker_seats, scheduled_change_effective_at')
           .eq('id', currentCompanyId)
           .maybeSingle();
-      
+
       if (companyDetailsError) {
         console.error('Error fetching company details in AuthContext:', companyDetailsError);
-      } else if (companyDetails) {
+      } else {
+        companyDetails = directCompanyDetails;
+      }
+
+      if (!companyDetails) {
+        const { data: rpcCompanyDetails, error: rpcCompanyDetailsError } = await supabase
+          .rpc('get_my_company_details')
+          .maybeSingle();
+
+        if (rpcCompanyDetailsError) {
+          console.error('Error fetching company details fallback in AuthContext:', rpcCompanyDetailsError);
+        } else {
+          const fallbackCompanyDetails = rpcCompanyDetails as CompanyDetails | null;
+          if (fallbackCompanyDetails?.id === currentCompanyId) {
+            companyDetails = fallbackCompanyDetails;
+          }
+        }
+      }
+
+      if (companyDetails) {
         setUserCompanyName(companyDetails.name);
         setUserCompanyCountry(companyDetails.country);
         setUserScheduledWorkerSeats(companyDetails.scheduled_worker_seats ?? null);

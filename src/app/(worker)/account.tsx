@@ -16,7 +16,6 @@ export default function WorkerAccountScreen() {
   const { profile } = useEmployeeProfile();
 
   const fullName = profile?.full_name || user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Member';
-  const email = user?.email || "N/A";
   const displayRole = userRole ? userRole.charAt(0).toUpperCase() + userRole.slice(1) : 'Worker';
 
   return (
@@ -54,11 +53,11 @@ export default function WorkerAccountScreen() {
               
               <View style={styles.detailRow}>
                 <View style={styles.detailIcon}>
-                  <Ionicons name="mail-outline" size={18} color={theme.colors.primary} />
+                  <Ionicons name="keypad-outline" size={18} color={theme.colors.primary} />
                 </View>
                 <View style={styles.detailContent}>
-                  <Text style={styles.detailLabel}>Email Address</Text>
-                  <Text style={styles.detailValue} fontType="medium">{email}</Text>
+                  <Text style={styles.detailLabel}>Access</Text>
+                  <Text style={styles.detailValue} fontType="medium">Use an invite code from your manager to sign in on another device.</Text>
                 </View>
               </View>
 

@@ -22,6 +22,7 @@ import { View, Text } from '../../components/Themed';
 import { Logo } from '~/components/Logo';
 
 import { GeofenceAssignment } from 'background-location';
+import { fetchAssignmentsForWorkers } from '~/services/workerAssignments';
 
 export default function Home() {
   const { user, userCompanyId, isCompanyIdLoading, deviceToken, deviceSecret, userCompanyName } = useSession();
@@ -45,8 +46,9 @@ export default function Home() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isProcessingCheckInOut, setIsProcessingCheckInOut] = useState(false);
   const [pendingAction, setPendingAction] = useState<'checking_in' | 'checking_out' | null>(null);
+  const [lastOnSiteAssignmentId, setLastOnSiteAssignmentId] = useState<string | null>(null);
 
-  const { processedAssignments, loadAssignmentsForDate, loadWorkSessionsForDate, isLoading: assignmentsLoading, activeWorkSession, startWorkSession, endWorkSession, lastCheckoutAssignmentId } = useAssignments();
+  const { processedAssignments, loadAssignmentsForDate, loadWorkSessionsForDate, isLoading: assignmentsLoading, activeWorkSession, loadedWorkSessions, startWorkSession, endWorkSession, lastCheckoutAssignmentId, isOffline } = useAssignments();
 
   const isDataLoading = assignmentsLoading || projectsLoading;
   const ACCEPTABLE_DISTANCE = 150; // meters
@@ -55,15 +57,16 @@ export default function Home() {
   const sessionStartTime = activeWorkSession ? new Date(activeWorkSession.start_time).getTime() : null;
   const stableCheckedIn = pendingAction === 'checking_in' ? true : (pendingAction === 'checking_out' ? false : checkedIn);
 
-  const fetchHomeData = useCallback(async (forceFetchFromSupabase = false) => {
+  const fetchHomeData = useCallback(async (forceFetchFromSupabase = false, targetDate?: string) => {
+    const dateToUse = targetDate ?? currentDate;
     if (user?.id) {
       if (activeWorkSession && activeWorkSession.worker_assignments) {
         const dateToLoad = activeWorkSession.worker_assignments.assigned_date;
         await loadAssignmentsForDate(dateToLoad, [user.id], forceFetchFromSupabase);
         await loadWorkSessionsForDate(dateToLoad, user.id);
       } else if (activeWorkSession === null) {
-        await loadAssignmentsForDate(currentDate, [user.id], forceFetchFromSupabase);
-        await loadWorkSessionsForDate(currentDate, user.id);
+        await loadAssignmentsForDate(dateToUse, [user.id], forceFetchFromSupabase);
+        await loadWorkSessionsForDate(dateToUse, user.id);
       }
     }
   }, [user?.id, activeWorkSession, loadAssignmentsForDate, loadWorkSessionsForDate, currentDate]);
@@ -110,9 +113,17 @@ export default function Home() {
     })();
   }, []);
 
+  const visibleAssignmentDate = useMemo(() => {
+    if (activeWorkSession?.worker_assignments?.assigned_date) {
+      return activeWorkSession.worker_assignments.assigned_date;
+    }
+    return currentDate;
+  }, [activeWorkSession?.worker_assignments?.assigned_date, currentDate]);
+
   const currentWorkersAssignments = useMemo(() => {
-    return user?.id ? processedAssignments[user.id] || [] : [];
-  }, [user?.id, processedAssignments]);
+    const workerAssignments = user?.id ? processedAssignments[user.id] || [] : [];
+    return workerAssignments.filter((assignment) => (assignment as any).assigned_date === visibleAssignmentDate);
+  }, [user?.id, processedAssignments, visibleAssignmentDate]);
 
   const assignmentAtCurrentLocation = useMemo(() => {
     if (!workerMapLocation || currentWorkersAssignments.length === 0) return null;
@@ -128,16 +139,73 @@ export default function Home() {
   }, [workerMapLocation, currentWorkersAssignments]);
 
   const { currentActiveAssignment, nextAssignableAssignment } = useMemo(() => {
-    if (!user?.id || currentWorkersAssignments.length === 0) return { currentActiveAssignment: null, nextAssignableAssignment: null };
-    const currentActive = currentWorkersAssignments.find((assign: ProcessedAssignmentStepWithStatus) => assign.status === 'active') || null;
-    const nextAssignable = currentWorkersAssignments.find((assign: ProcessedAssignmentStepWithStatus) => assign.status === 'next') || null;
+    if (!user?.id || currentWorkersAssignments.length === 0) {
+      return { currentActiveAssignment: null, nextAssignableAssignment: null };
+    }
+
+    const sortedAssignments = [...currentWorkersAssignments].sort((a, b) => a.sort_key.localeCompare(b.sort_key));
+    const currentActive = activeWorkSession
+      ? sortedAssignments.find((assignment) => assignment.id === activeWorkSession.assignment_id) || null
+      : null;
+
+    const completedAssignmentsForVisibleDate = loadedWorkSessions
+      .filter((session) => !!session.end_time && moment(session.start_time).format('YYYY-MM-DD') === visibleAssignmentDate)
+      .map((session) => session.assignment_id);
+
+    const lastCompletedSortKeyForVisibleDate = sortedAssignments
+      .filter((assignment) => completedAssignmentsForVisibleDate.includes(assignment.id))
+      .sort((a, b) => b.sort_key.localeCompare(a.sort_key))[0]?.sort_key ?? null;
+
+    const nextAssignable = lastCompletedSortKeyForVisibleDate
+      ? sortedAssignments.find((assignment) => assignment.sort_key > lastCompletedSortKeyForVisibleDate) || null
+      : sortedAssignments[0] || null;
+
     return { currentActiveAssignment: currentActive, nextAssignableAssignment: nextAssignable };
-  }, [user?.id, currentWorkersAssignments]);
+  }, [activeWorkSession, currentWorkersAssignments, loadedWorkSessions, user?.id, visibleAssignmentDate]);
+
+  const lastWorkedAssignment = useMemo(() => {
+    if (currentWorkersAssignments.length === 0) {
+      return null;
+    }
+
+    const sessionsForVisibleDate = loadedWorkSessions
+      .filter((session) => moment(session.start_time).format('YYYY-MM-DD') === visibleAssignmentDate)
+      .sort((a, b) => {
+        const aTime = new Date(a.end_time ?? a.start_time).getTime();
+        const bTime = new Date(b.end_time ?? b.start_time).getTime();
+        return bTime - aTime;
+      });
+
+    const latestWorkedSession = sessionsForVisibleDate[0];
+    if (!latestWorkedSession?.assignment_id) {
+      return currentActiveAssignment;
+    }
+
+    return currentWorkersAssignments.find((assignment) => assignment.id === latestWorkedSession.assignment_id) || currentActiveAssignment;
+  }, [currentWorkersAssignments, currentActiveAssignment, loadedWorkSessions, visibleAssignmentDate]);
+
+  const lastOnSiteAssignment = useMemo(() => {
+    if (!lastOnSiteAssignmentId) {
+      return null;
+    }
+    return currentWorkersAssignments.find((assignment) => assignment.id === lastOnSiteAssignmentId) || null;
+  }, [currentWorkersAssignments, lastOnSiteAssignmentId]);
+
+  useEffect(() => {
+    if (assignmentAtCurrentLocation?.id) {
+      setLastOnSiteAssignmentId(assignmentAtCurrentLocation.id);
+      return;
+    }
+
+    if (!checkedIn) {
+      setLastOnSiteAssignmentId(null);
+    }
+  }, [assignmentAtCurrentLocation, checkedIn]);
 
   const { relevantAssignment, isSelectionLocked } = useMemo(() => {
     if (checkedIn) {
       return { 
-        relevantAssignment: assignmentAtCurrentLocation || currentActiveAssignment, 
+        relevantAssignment: assignmentAtCurrentLocation || lastOnSiteAssignment || lastWorkedAssignment || currentActiveAssignment, 
         isSelectionLocked: true 
       };
     }
@@ -152,7 +220,7 @@ export default function Home() {
       : lastCheckoutAss || nextAssignableAssignment;
 
     return { relevantAssignment: assignmentToDisplay, isSelectionLocked: false };
-  }, [checkedIn, currentActiveAssignment, assignmentAtCurrentLocation, currentWorkersAssignments, lastCheckoutAssignmentId, selectedNextAssignmentId, nextAssignableAssignment]);
+  }, [checkedIn, currentActiveAssignment, assignmentAtCurrentLocation, currentWorkersAssignments, lastCheckoutAssignmentId, lastOnSiteAssignment, lastWorkedAssignment, selectedNextAssignmentId, nextAssignableAssignment]);
 
   const targetProjectLocation = useMemo(() => {
     const ass = relevantAssignment as any;
@@ -171,6 +239,44 @@ export default function Home() {
     if (ass?.type === 'common_location' && ass.location) return ass.location.name;
     return "Project Site";
   }, [relevantAssignment]);
+
+  const backgroundGeofenceAssignments = useMemo<GeofenceAssignment[]>(() => {
+    const geofences = currentWorkersAssignments.flatMap((assignment) => {
+      const ass = assignment as any;
+      const latitude = ass.type === 'project'
+        ? ass.project?.location?.latitude
+        : ass.location?.latitude;
+      const longitude = ass.type === 'project'
+        ? ass.project?.location?.longitude
+        : ass.location?.longitude;
+
+      if (latitude == null || longitude == null) {
+        return [];
+      }
+
+      return [{
+        id: assignment.id,
+        latitude,
+        longitude,
+        radius: ACCEPTABLE_DISTANCE,
+        type: ass.type,
+        status: assignment.id === activeWorkSession?.assignment_id ? 'active' : assignment.status,
+      }];
+    });
+
+    if (relevantAssignment && !geofences.some((assignment) => assignment.id === relevantAssignment.id) && targetProjectLocation) {
+      geofences.unshift({
+        id: relevantAssignment.id,
+        latitude: targetProjectLocation.lat,
+        longitude: targetProjectLocation.lon,
+        radius: ACCEPTABLE_DISTANCE,
+        type: (relevantAssignment as any).type,
+        status: relevantAssignment.id === activeWorkSession?.assignment_id ? 'active' : relevantAssignment.status,
+      });
+    }
+
+    return geofences;
+  }, [ACCEPTABLE_DISTANCE, activeWorkSession?.assignment_id, currentWorkersAssignments, relevantAssignment, targetProjectLocation]);
 
   const isNearby = distance !== null && distance < ACCEPTABLE_DISTANCE;
 
@@ -242,8 +348,70 @@ export default function Home() {
     return () => { isMounted = false; if (intervalId) clearInterval(intervalId); };
   }, [locationPermission, targetProjectLocation]);
 
+  useEffect(() => {
+    if (!checkedIn || !activeWorkSession || !user?.id || !userCompanyId || !deviceToken || !deviceSecret) {
+      return;
+    }
+
+    if (backgroundGeofenceAssignments.length === 0) {
+      return;
+    }
+
+    const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
+    const supabaseKey = process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
+    if (!supabaseUrl || !supabaseKey) {
+      return;
+    }
+
+    BackgroundLocation.start(
+      user.id,
+      activeWorkSession.assignment_id,
+      userCompanyId,
+      JSON.stringify({ url: supabaseUrl, key: supabaseKey }),
+      deviceToken,
+      deviceSecret,
+      JSON.stringify(backgroundGeofenceAssignments)
+    ).catch((error) => {
+      console.error('Failed to refresh background geofence assignments:', error);
+    });
+  }, [activeWorkSession, backgroundGeofenceAssignments, checkedIn, deviceSecret, deviceToken, user?.id, userCompanyId]);
+
   const handleCheckIn = async () => {
     if (checkedIn || !relevantAssignment || !targetProjectLocation) return;
+
+    const today = moment().format('YYYY-MM-DD');
+    if (currentDate !== today) {
+      if (isOffline) {
+        Alert.alert("Connect to Refresh", "Today's assignments have not been loaded yet. Go online to refresh your schedule before checking in.");
+        return;
+      }
+
+      setCurrentDate(today);
+      await fetchHomeData(true, today);
+      Alert.alert("Schedule Refreshed", "Today's assignments were refreshed. Review your schedule and tap check in again.");
+      return;
+    }
+
+    if (isOffline && currentWorkersAssignments.length === 0) {
+      Alert.alert("Connect to Refresh", "No assignments are loaded for today. Go online to pull today's schedule before checking in.");
+      return;
+    }
+
+    if (!isOffline && user?.id && userCompanyId) {
+      const liveAssignments = await fetchAssignmentsForWorkers(userCompanyId, today, [user.id]);
+      if (liveAssignments.length === 0) {
+        await fetchHomeData(true, today);
+        Alert.alert("No Assignments Today", "You do not have any assignments scheduled for today.");
+        return;
+      }
+
+      if (!liveAssignments.some((assignment) => assignment.id === relevantAssignment.id)) {
+        await fetchHomeData(true, today);
+        Alert.alert("Schedule Updated", "Your assignments changed. Review today's schedule and try checking in again.");
+        return;
+      }
+    }
+
     const { status: bgStatus } = await Location.getBackgroundPermissionsAsync();
     if (bgStatus !== 'granted') { Alert.alert("Background Location Required", "Please allow location access 'All the time'."); return; }
 
@@ -263,17 +431,18 @@ export default function Home() {
       await startWorkSession(relevantAssignment.id, currentLocation);
       const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
       const supabaseKey = process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
+      const geofenceAssignmentsToStart = backgroundGeofenceAssignments.length > 0
+        ? backgroundGeofenceAssignments
+        : [{
+            id: relevantAssignment.id,
+            latitude: targetProjectLocation.lat,
+            longitude: targetProjectLocation.lon,
+            radius: ACCEPTABLE_DISTANCE,
+            type: (relevantAssignment as any).type,
+            status: 'active' as const,
+          }];
 
-      const currentGeofenceAssignments: GeofenceAssignment[] = [{
-        id: relevantAssignment.id,
-        latitude: targetProjectLocation.lat,
-        longitude: targetProjectLocation.lon,
-        radius: ACCEPTABLE_DISTANCE,
-        type: (relevantAssignment as any).type,
-        status: 'active',
-      }];
-
-      await BackgroundLocation.start(user!.id, relevantAssignment.id, userCompanyId!, JSON.stringify({ url: supabaseUrl, key: supabaseKey }), deviceToken!, deviceSecret!, JSON.stringify(currentGeofenceAssignments));
+      await BackgroundLocation.start(user!.id, relevantAssignment.id, userCompanyId!, JSON.stringify({ url: supabaseUrl, key: supabaseKey }), deviceToken!, deviceSecret!, JSON.stringify(geofenceAssignmentsToStart));
       Toast.show({ type: 'success', text1: 'Checked In', text2: `Working on ${projectLocationName}` });
       setSelectedNextAssignmentId(null);
     } catch (err: any) {

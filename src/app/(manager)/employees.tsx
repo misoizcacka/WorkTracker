@@ -1,5 +1,5 @@
 import React, { useState, useContext, useMemo } from "react";
-import { View, StyleSheet, useWindowDimensions, TextInput, Image, TouchableOpacity, ScrollView, ActivityIndicator, Platform } from "react-native";
+import { View, StyleSheet, useWindowDimensions, TextInput, Image, TouchableOpacity, ScrollView, ActivityIndicator, Platform, Share, Modal } from "react-native";
 import { Text } from "../../components/Themed";
 import Toast from 'react-native-toast-message';
 import moment from "moment";
@@ -16,16 +16,31 @@ import { Employee, Invite } from "../../types";
 import { Ionicons } from '@expo/vector-icons';
 import { Dropdown } from "react-native-element-dropdown";
 import UserAvatar from "../../components/UserAvatar";
+import { useSession } from "../../context/AuthContext";
 
 
 
 
-type CombinedEmployeeType = Employee | (Invite & { status: 'pending'; avatar_url: string | null; phone_number: string | null; });
+type PendingInviteRow = {
+  id: string;
+  full_name: string;
+  phone_number: null;
+  status: 'pending';
+  role: 'worker' | 'manager';
+  company_id: string;
+  avatar_url: null;
+  created_at: string;
+  reporting_to: null;
+  token: string;
+};
+
+type CombinedEmployeeType = Employee | PendingInviteRow;
 
 export default function ManagerEmployees() {
   const { width } = useWindowDimensions();
   const employeesContext = useContext(EmployeesContext);
   const invitesContext = useContext(InvitesContext);
+  const { user, userRole } = useSession();
   
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('All');
@@ -33,6 +48,10 @@ export default function ManagerEmployees() {
   const [editModalVisible, setEditModalVisible] = useState(false);
   const [removeModalVisible, setRemoveModalVisible] = useState(false);
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
+  const [accessLinkModalVisible, setAccessLinkModalVisible] = useState(false);
+  const [accessLink, setAccessLink] = useState('');
+  const [accessInviteCode, setAccessInviteCode] = useState<string | null>(null);
+  const [accessLinkWorkerName, setAccessLinkWorkerName] = useState('');
   const [loading, setLoading] = useState(false); // Used for general loading states, e.g., invite cancellation
   const [isCancellingInvite, setIsCancellingInvite] = useState<string | null>(null); // To track which invite is being cancelled
 
@@ -42,12 +61,11 @@ export default function ManagerEmployees() {
     status: 100,
     role: 100,
     joined: 150, // Increased from 120
-    actions: 100,
+    actions: 140,
   };
 
   const flexibleColumnMinLengths = {
     name: 100, // Reduced from 150
-    email: 150, // Reduced from 200
     reportingTo: 150,
   };
 
@@ -61,23 +79,43 @@ export default function ManagerEmployees() {
   }
 
   const { employees, seatsUsed, seatLimit, updateEmployee, deleteEmployee, getEmployeeById } = employeesContext;
-  const { invites, deleteInvite } = invitesContext;
+  const { invites, deleteInvite, createInvite, getInviteLink } = invitesContext;
+  const isOwner = userRole === 'owner';
 
   const combinedList = useMemo(() => {
-    const pendingInvites = invites.map(invite => ({
+    const visibleInvites = invites.filter(invite => {
+      if (invite.employee_id) return false;
+      if (isOwner) return true;
+      return invite.role === 'worker' && invite.reporting_to === user?.id;
+    });
+
+    const pendingInvites = visibleInvites.map(invite => ({
       id: invite.id, // Use invite.id for unique key
       full_name: invite.full_name,
-      email: invite.email,
       phone_number: null, // Invites don't have phone_number yet
-      status: 'pending' as Employee['status'], // Explicitly cast status to be compatible
+      status: 'pending' as const,
       role: invite.role,
       company_id: invite.company_id,
       avatar_url: null, // Invites don't have avatar_url yet
       created_at: invite.created_at,
       reporting_to: null, // Invites don't have reporting_to yet
+      token: invite.token,
     }));
     return [...employees, ...pendingInvites];
-  }, [employees, invites]);
+  }, [employees, invites, isOwner, user?.id]);
+
+  const shareLink = async (link: string) => {
+    if (Platform.OS === 'web' && navigator?.clipboard?.writeText) {
+      await navigator.clipboard.writeText(link);
+      Toast.show({ type: 'success', text1: 'Link Copied', text2: 'Invite link copied to clipboard.' });
+      return;
+    }
+
+    await Share.share({
+      message: link,
+      url: link,
+    });
+  };
 
   const handleCancelPending = async (item: CombinedEmployeeType) => {
     if (item.status === 'pending') {
@@ -94,7 +132,45 @@ export default function ManagerEmployees() {
     }
   };
 
-  const managerCount = employees.filter(e => e.role === 'manager').length;
+  const handleSharePendingInvite = async (item: CombinedEmployeeType & { token?: string }) => {
+    if (!item.token) {
+      return;
+    }
+
+    try {
+      await shareLink(getInviteLink({ token: item.token }));
+    } catch (error) {
+      Toast.show({ type: 'error', text1: 'Error', text2: 'Failed to share invite link.' });
+    }
+  };
+
+  const handleGenerateAccessLink = async (employee: Employee) => {
+    setLoading(true);
+    try {
+      const result = await createInvite({ employee_id: employee.id });
+      if (!result?.inviteLink) {
+        throw new Error('Missing invite link.');
+      }
+
+      setAccessLink(result.inviteLink);
+      setAccessInviteCode(result.invite.invite_code ?? null);
+      setAccessLinkWorkerName(employee.full_name);
+      setAccessLinkModalVisible(true);
+      Toast.show({
+        type: 'success',
+        text1: 'Access Link Ready',
+        text2: `Share the access link or code with ${employee.full_name}.`
+      });
+    } catch (error) {
+      console.error("Failed to generate access link", error);
+      Toast.show({ type: 'error', text1: 'Error', text2: 'Failed to generate access link.' });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const managerCount = isOwner ? employees.filter(e => e.role === 'manager').length : 0;
+  const visibleWorkerCount = employees.filter(e => e.role === 'worker').length;
 
   const getStatusStyle = (status: Employee['status']) => { // Changed type to Employee['status']
     switch (status) {
@@ -138,7 +214,7 @@ export default function ManagerEmployees() {
     { label: 'Disabled', value: 'Disabled' },
   ];
 
-  const renderEmployeeRow = (item: CombinedEmployeeType) => {
+  const renderEmployeeRow = (item: CombinedEmployeeType & { token?: string }) => {
     const statusStyle = getStatusStyle(item.status as Employee['status']); // Cast status for getStatusStyle
     const isPendingInvite = item.status === 'pending';
     const manager = !isPendingInvite && (item as Employee).reporting_to && typeof (item as Employee).reporting_to === 'string' ? getEmployeeById((item as Employee).reporting_to!) : null; // Use non-null assertion
@@ -149,7 +225,6 @@ export default function ManagerEmployees() {
           <UserAvatar avatarUrl={item.avatar_url} size={40} />
         </View>
         <Text style={[styles.tableCellText, { flex: 1, minWidth: flexibleColumnMinLengths.name }]} numberOfLines={1} ellipsizeMode="tail">{item.full_name}</Text>
-        <Text style={[styles.tableCellText, { flex: 1, minWidth: flexibleColumnMinLengths.email }]} numberOfLines={1} ellipsizeMode="tail">{item.email}</Text>
         <Text style={[styles.tableCellText, { width: fixedColumnWidths.phone }]} numberOfLines={1} ellipsizeMode="tail">{item.phone_number || 'N/A'}</Text>
         <View style={[styles.tableCell, { width: fixedColumnWidths.status }]}>
           <View style={[styles.statusBadge, { backgroundColor: statusStyle.color }]}>
@@ -163,19 +238,27 @@ export default function ManagerEmployees() {
         </Text>
         <View style={[styles.tableCellActions, { width: fixedColumnWidths.actions }]}>
           {isPendingInvite ? (
-            <TouchableOpacity
-              onPress={() => handleCancelPending(item)}
-              style={[styles.actionButton, { flexDirection: 'column', alignItems: 'center' }]}
-              disabled={isCancellingInvite === item.id}
-            >
-              {isCancellingInvite === item.id ? (
-                <ActivityIndicator size="small" color={theme.colors.danger} />
-              ) : (
-                <Ionicons name="close-circle-outline" size={24} color={theme.colors.danger} />
-              )}
-            </TouchableOpacity>
+            <>
+              <TouchableOpacity onPress={() => handleSharePendingInvite(item)} style={styles.actionButton}>
+                <Ionicons name="link-outline" size={24} color={theme.colors.primary} />
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => handleCancelPending(item)}
+                style={[styles.actionButton, { flexDirection: 'column', alignItems: 'center' }]}
+                disabled={isCancellingInvite === item.id}
+              >
+                {isCancellingInvite === item.id ? (
+                  <ActivityIndicator size="small" color={theme.colors.danger} />
+                ) : (
+                  <Ionicons name="close-circle-outline" size={24} color={theme.colors.danger} />
+                )}
+              </TouchableOpacity>
+            </>
           ) : (
             <>
+              <TouchableOpacity onPress={() => handleGenerateAccessLink(item as Employee)} style={styles.actionButton} disabled={loading}>
+                <Ionicons name="link-outline" size={24} color={theme.colors.secondary} />
+              </TouchableOpacity>
               <TouchableOpacity onPress={() => handleEdit(item as Employee)} style={styles.actionButton}>
                 <Ionicons name="pencil-outline" size={24} color={theme.colors.primary} />
               </TouchableOpacity>
@@ -193,7 +276,6 @@ export default function ManagerEmployees() {
     <View style={styles.tableHeaderRow}>
       <View style={[styles.tableHeaderSpacer, { width: fixedColumnWidths.avatar }]} />
       <Text style={[styles.tableHeaderCell, { flex: 1, minWidth: flexibleColumnMinLengths.name }]} fontType="bold">Name</Text>
-      <Text style={[styles.tableHeaderCell, { flex: 1, minWidth: flexibleColumnMinLengths.email }]} fontType="bold">Email</Text>
       <Text style={[styles.tableHeaderCell, { width: fixedColumnWidths.phone }]} fontType="bold">Phone</Text>
       <Text style={[styles.tableHeaderCell, { width: fixedColumnWidths.status }]} fontType="bold">Status</Text>
       <Text style={[styles.tableHeaderCell, { width: fixedColumnWidths.role }]} fontType="bold">Role</Text>
@@ -232,14 +314,23 @@ export default function ManagerEmployees() {
             />
           </View>
           <View style={styles.headerStatsAndButton}>
-            <View style={styles.statItem}>
-              <Text style={styles.statValue} fontType="bold">{seatsUsed}/{seatLimit}</Text>
-              <Text style={styles.statLabel} fontType="regular">Seats Used</Text>
-            </View>
-            <View style={styles.statItem}>
-              <Text style={styles.statValue} fontType="bold">{managerCount}</Text>
-              <Text style={styles.statLabel} fontType="regular">Managers</Text>
-            </View>
+            {isOwner ? (
+              <View style={styles.statItem}>
+                <Text style={styles.statValue} fontType="bold">{seatsUsed}/{seatLimit}</Text>
+                <Text style={styles.statLabel} fontType="regular">Seats Used</Text>
+              </View>
+            ) : (
+              <View style={styles.statItem}>
+                <Text style={styles.statValue} fontType="bold">{visibleWorkerCount}</Text>
+                <Text style={styles.statLabel} fontType="regular">Workers</Text>
+              </View>
+            )}
+            {isOwner ? (
+              <View style={styles.statItem}>
+                <Text style={styles.statValue} fontType="bold">{managerCount}</Text>
+                <Text style={styles.statLabel} fontType="regular">Managers</Text>
+              </View>
+            ) : null}
             <Button title="Invite" onPress={handleInvite} style={styles.createButton} textStyle={styles.createButtonText} />
           </View>
         </View>
@@ -270,6 +361,49 @@ export default function ManagerEmployees() {
         onConfirm={handleConfirmRemoveEmployee}
         loading={loading}
       />
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={accessLinkModalVisible}
+        onRequestClose={() => setAccessLinkModalVisible(false)}
+      >
+        <View style={styles.modalBackdrop}>
+          <View style={styles.accessLinkModal}>
+            <TouchableOpacity style={styles.modalCloseButton} onPress={() => setAccessLinkModalVisible(false)}>
+              <Ionicons name="close-circle-outline" size={24} color={theme.colors.bodyText} />
+            </TouchableOpacity>
+            <Text style={styles.modalTitle} fontType="bold">Access Link Ready</Text>
+            <Text style={styles.modalDescription} fontType="regular">
+              Share this link or invite code with {accessLinkWorkerName || 'the worker'} so they can sign in again.
+            </Text>
+            {accessInviteCode ? (
+              <View style={styles.codeCard}>
+                <Text style={styles.codeLabel} fontType="bold">Invite Code</Text>
+                <Text style={styles.codeValue} fontType="bold">{accessInviteCode}</Text>
+              </View>
+            ) : null}
+            <TextInput
+              style={[styles.modalInput, styles.linkInput]}
+              value={accessLink}
+              editable={false}
+              multiline
+            />
+            <Button
+              onPress={() => shareLink(accessLink)}
+              title={Platform.OS === 'web' ? 'Copy Link' : 'Share Link'}
+              style={styles.modalPrimaryButton}
+              textStyle={styles.modalPrimaryButtonText}
+            />
+            <Button
+              onPress={() => setAccessLinkModalVisible(false)}
+              title="Done"
+              type="secondary"
+              style={styles.modalSecondaryButton}
+              textStyle={styles.modalSecondaryButtonText}
+            />
+          </View>
+        </View>
+      </Modal>
     </AnimatedScreen>
   );
 }
@@ -463,5 +597,96 @@ const styles = StyleSheet.create({
   inviteEmail: {
     fontSize: 14,
     color: theme.colors.bodyText,
+  },
+  modalBackdrop: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  },
+  accessLinkModal: {
+    width: '90%',
+    maxWidth: 420,
+    backgroundColor: theme.colors.cardBackground,
+    borderRadius: theme.radius.lg,
+    borderWidth: 1,
+    borderColor: theme.colors.borderColor,
+    padding: theme.spacing(4),
+    alignItems: 'center',
+  },
+  modalCloseButton: {
+    position: 'absolute',
+    top: 10,
+    right: 10,
+    zIndex: 1,
+    padding: 5,
+  },
+  modalTitle: {
+    fontSize: theme.fontSizes.xl,
+    color: theme.colors.headingText,
+    marginBottom: theme.spacing(2),
+    textAlign: 'center',
+  },
+  modalDescription: {
+    color: theme.colors.bodyText,
+    textAlign: 'center',
+    marginBottom: theme.spacing(2),
+  },
+  codeCard: {
+    width: '100%',
+    borderWidth: 1,
+    borderColor: theme.colors.borderColor,
+    borderRadius: theme.radius.lg,
+    padding: theme.spacing(2),
+    backgroundColor: theme.colors.pageBackground,
+    alignItems: 'center',
+    marginBottom: theme.spacing(2),
+  },
+  codeLabel: {
+    fontSize: theme.fontSizes.xs,
+    color: theme.colors.bodyText,
+    letterSpacing: 1,
+    textTransform: 'uppercase',
+    marginBottom: theme.spacing(0.5),
+  },
+  codeValue: {
+    fontSize: 24,
+    letterSpacing: 3,
+    color: theme.colors.headingText,
+  },
+  modalInput: {
+    width: '100%',
+    borderColor: theme.colors.borderColor,
+    borderWidth: 1,
+    borderRadius: theme.radius.md,
+    paddingHorizontal: theme.spacing(2),
+    color: theme.colors.bodyText,
+    marginBottom: theme.spacing(2),
+  },
+  linkInput: {
+    minHeight: 90,
+    textAlignVertical: 'top',
+    paddingVertical: theme.spacing(2),
+  },
+  modalPrimaryButton: {
+    width: '100%',
+    minHeight: 52,
+    borderRadius: theme.radius.lg,
+    marginBottom: theme.spacing(1.5),
+  },
+  modalPrimaryButtonText: {
+    fontSize: theme.fontSizes.md,
+  },
+  modalSecondaryButton: {
+    width: '100%',
+    minHeight: 52,
+    borderRadius: theme.radius.lg,
+    backgroundColor: theme.colors.pageBackground,
+    borderWidth: 1,
+    borderColor: theme.colors.borderColor,
+  },
+  modalSecondaryButtonText: {
+    color: theme.colors.primary,
+    fontSize: theme.fontSizes.md,
   },
 });

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useContext } from 'react';
 import { View, ScrollView, TouchableOpacity, ActivityIndicator, StyleSheet, Platform, TextInput, FlatList } from 'react-native';
 import { Text } from '../../../components/Themed';
 import AnimatedScreen from '../../../components/AnimatedScreen';
@@ -9,6 +9,7 @@ import { Project } from '~/types';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { theme } from '../../../theme';
+import { EmployeesContext, EmployeesContextType } from '../../../context/EmployeesContext';
 
 interface ReportRow {
   worker_id: string;
@@ -19,6 +20,8 @@ interface ReportRow {
 const ProjectLaborReport = () => {
   const router = useRouter();
   const { projects, isLoading: projectsLoading } = useProjects();
+  const { employees } = useContext(EmployeesContext) as EmployeesContextType;
+  const visibleWorkerIds = useMemo(() => new Set(employees.filter(employee => employee.role === 'worker').map(employee => employee.id)), [employees]);
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [reportData, setReportData] = useState<ReportRow[]>([]);
   const [loading, setLoading] = useState(false);
@@ -46,13 +49,13 @@ const ProjectLaborReport = () => {
         console.error('Error fetching job costing report:', error);
         setReportData([]);
       } else {
-        setReportData(data || []);
+        setReportData((data || []).filter((row: ReportRow) => visibleWorkerIds.has(row.worker_id)));
       }
       setLoading(false);
     };
 
     fetchReportData();
-  }, [selectedProject]);
+  }, [selectedProject, visibleWorkerIds]);
 
   const totalProjectHours = reportData.reduce((sum: number, row: ReportRow) => sum + row.hours_on_project, 0);
 

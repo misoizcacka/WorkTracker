@@ -12,6 +12,8 @@ import { Region } from 'react-native-maps';
 import { WorkerLocation } from '~/components/map-types';
 import { EmployeesContext, EmployeesContextType } from '~/context/EmployeesContext';
 
+const viewerTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+
 interface DailyEvent {
   event_id: string;
   event_timestamp: string;
@@ -88,7 +90,7 @@ const LocationReplayMapOnlyPanel = ({ workerId, date }: LocationReplayMapOnlyPan
   }, []);
 
   useEffect(() => {
-    if (!workerId || !date) {
+    if (!workerId || !date || !getEmployeeById(workerId)) {
         setEvents([]);
         setDailySummary(null);
         setMapWorker([]);
@@ -100,6 +102,7 @@ const LocationReplayMapOnlyPanel = ({ workerId, date }: LocationReplayMapOnlyPan
       const { data, error } = await supabase.rpc('get_worker_daily_details', {
         worker_id_param: workerId,
         report_date: moment(date).format('YYYY-MM-DD'),
+        p_timezone: viewerTimeZone,
       });
 
       if (error) {
@@ -125,6 +128,7 @@ const LocationReplayMapOnlyPanel = ({ workerId, date }: LocationReplayMapOnlyPan
         const { data, error } = await supabase.rpc('get_worker_daily_summary', {
             worker_id_param: workerId,
             report_date: moment(date).format('YYYY-MM-DD'),
+            p_timezone: viewerTimeZone,
         });
 
         if (error) {
@@ -146,7 +150,7 @@ const LocationReplayMapOnlyPanel = ({ workerId, date }: LocationReplayMapOnlyPan
 
     fetchDetails();
     fetchSummary();
-  }, [workerId, date, calculateKilometers]);
+  }, [workerId, date, calculateKilometers, getEmployeeById]);
 
   // Effect to initialize selectedMapTime and map region when all data is loaded
   useEffect(() => {
@@ -240,6 +244,14 @@ const LocationReplayMapOnlyPanel = ({ workerId, date }: LocationReplayMapOnlyPan
     );
   }
 
+  if (!getEmployeeById(workerId)) {
+    return (
+      <Card style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: theme.spacing(3) }}>
+        <Text style={{ color: theme.colors.bodyText, fontSize: 18 }} fontType="regular">You do not have access to this worker.</Text>
+      </Card>
+    );
+  }
+
   return (
     <View style={styles.container}>
       {(loading || loadingSummary) ? (
@@ -266,7 +278,13 @@ const LocationReplayMapOnlyPanel = ({ workerId, date }: LocationReplayMapOnlyPan
                       {dailySummary && sliderMinTime !== null && sliderMaxTime !== null && (
                           <View style={styles.timelineSliderContainer}>
                               <Text style={styles.timelineSliderLabel} fontType="regular">
-                                  Time: {temporarySelectedMapTime ? moment(temporarySelectedMapTime).format('HH:mm:ss') : 'N/A'}
+                                  Time: {temporarySelectedMapTime ? new Intl.DateTimeFormat(undefined, {
+                                      timeZone: viewerTimeZone,
+                                      hour: '2-digit',
+                                      minute: '2-digit',
+                                      second: '2-digit',
+                                      hour12: false,
+                                  }).format(new Date(temporarySelectedMapTime)) : 'N/A'}
                               </Text>
                               <Slider
                                   style={styles.timelineSlider}
@@ -280,8 +298,8 @@ const LocationReplayMapOnlyPanel = ({ workerId, date }: LocationReplayMapOnlyPan
                                   thumbTintColor={theme.colors.primary}
                               />
                               <View style={styles.timeLabelsContainer}>
-                                  <Text style={styles.timeLabel}>{moment(sliderMinTime).format('HH:mm')}</Text>
-                                  <Text style={styles.timeLabel} fontType="regular">{moment(sliderMaxTime).format('HH:mm')}</Text>
+                                  <Text style={styles.timeLabel}>{new Intl.DateTimeFormat(undefined, { timeZone: viewerTimeZone, hour: '2-digit', minute: '2-digit', hour12: false }).format(new Date(sliderMinTime))}</Text>
+                                  <Text style={styles.timeLabel} fontType="regular">{new Intl.DateTimeFormat(undefined, { timeZone: viewerTimeZone, hour: '2-digit', minute: '2-digit', hour12: false }).format(new Date(sliderMaxTime))}</Text>
                               </View>
                           </View>
                       )}

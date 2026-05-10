@@ -175,14 +175,14 @@ export default function RootLayout() {
 }
 
   function Main() {
-    const { user, isLoading, userCompanyId, isCompanyIdLoading, userRole } = useSession()!;
+    const { user, isLoading, userCompanyId, isCompanyIdLoading, userRole, isCompanyDetailsComplete } = useSession()!;
     const segments = useSegments();
     const router = useRouter();
 
     useEffect(() => {
       if (isLoading) return;
 
-      const inAuthGroup = segments[0] === '(guest)' || segments[0] === 'auth' || segments[0] === 'onboarding';
+      const inAuthGroup = segments[0] === '(guest)' || segments[0] === 'auth' || segments[0] === 'onboarding' || segments[0] === 'join';
       const inMobileOnly = segments[0] === 'mobile-only';
       
       if (!user) {
@@ -208,7 +208,7 @@ export default function RootLayout() {
       const inPaymentFlow = segments.includes('payment');
       const currentPath = segments.join('/');
 
-      const companySetupComplete = user.user_metadata?.company_setup_complete || false;
+      const companySetupComplete = isCompanyDetailsComplete || user.user_metadata?.company_setup_complete || false;
 
       const isOnCompanySetupPage = segments[0] === '(manager)' && segments.length > 1 && (segments as any)[1] === 'company-setup';
 
@@ -216,18 +216,18 @@ export default function RootLayout() {
         return;
       }
 
-      if ((userRole === 'manager' || userRole === 'owner') && !inPaymentFlow && userCompanyId === null) {
+      if (userRole === 'owner' && !inPaymentFlow && userCompanyId === null) {
         if (!currentPath.startsWith('subscription/setup')) {
           router.replace('/subscription/setup');
         }
         return;
       }
 
-      if ((userRole === 'manager' || userRole === 'owner') && subscriptionStatus !== 'active') {
+      if (userRole === 'owner' && subscriptionStatus !== 'active') {
         if (segments[0] !== 'subscription' && segments[0] !== 'onboarding' && !inPaymentFlow) {
           router.replace('/subscription/setup');
         }
-      } else if ((userRole === 'manager' || userRole === 'owner') && subscriptionStatus === 'active' && !companySetupComplete) {
+      } else if (userRole === 'owner' && subscriptionStatus === 'active' && !companySetupComplete) {
         if (!isOnCompanySetupPage && !inPaymentFlow) {
           router.replace('/(manager)/company-setup');
         }
@@ -246,6 +246,7 @@ export default function RootLayout() {
       }}>
         <Stack.Screen name="(guest)" options={{ headerShown: false }} />
         <Stack.Screen name="auth" options={{ headerShown: false }} />
+        <Stack.Screen name="join" options={{ headerShown: false }} />
         <Stack.Screen name="subscription" />
         <Stack.Screen name="onboarding" />
         <Stack.Screen name="(manager)" />

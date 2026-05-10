@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import { View, TextInput, StyleSheet, ActivityIndicator, ScrollView, Platform, Dimensions, Image, Pressable, TouchableOpacity, Linking } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useRouter, Link } from 'expo-router';
@@ -11,6 +11,8 @@ import { Logo } from '~/components/Logo';
 import { supabase } from '../../utils/supabase';
 import { useSession } from '../../context/AuthContext';
 import { useTranslation } from 'react-i18next';
+import { InvitesContext } from '../../context/InvitesContext';
+import { normalizeInviteCode } from '../../utils/invites';
 
 const { width } = Dimensions.get('window');
 
@@ -18,11 +20,13 @@ export default function Login() {
   const { refreshUser, user, userRole } = useSession()!;
   const router = useRouter();
   const { t } = useTranslation();
+  const invitesContext = useContext(InvitesContext);
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [passwordVisible, setPasswordVisible] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [inviteCode, setInviteCode] = useState('');
   const [errors, setErrors] = useState<{ email?: string; password?: string; general?: string }>({});
 
   useEffect(() => {
@@ -78,6 +82,81 @@ export default function Login() {
       Linking.openURL('https://work-tracker-sandy-iota.vercel.app/auth/signup');
     }
   };
+
+  const handleContinueWithCode = async () => {
+    const normalizedCode = normalizeInviteCode(inviteCode);
+    if (normalizedCode.length !== 6) {
+      setErrors({ general: 'Enter your 6-character invite code.' });
+      return;
+    }
+
+    setErrors({});
+    setIsSubmitting(true);
+
+    try {
+      const invite = await invitesContext?.getInviteByCode(normalizedCode);
+      if (!invite?.token) {
+        setErrors({ general: 'That invite code is invalid or has expired.' });
+        return;
+      }
+
+      router.push(`/join/${invite.token}`);
+    } catch (error: any) {
+      setErrors({ general: error.message || 'Could not validate that invite code.' });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  if (Platform.OS !== 'web') {
+    return (
+      <AnimatedScreen>
+        <View style={styles.container}>
+          <View style={styles.header}>
+            <Logo style={styles.logo} />
+          </View>
+
+          <ScrollView contentContainerStyle={styles.scrollContent}>
+            <Card style={styles.loginCard}>
+              <View style={styles.mobileIconShell}>
+                <Feather name="key" size={26} color={theme.colors.primary} />
+              </View>
+              <Text style={styles.title} fontType="bold">Worker Access</Text>
+              <Text style={styles.description} fontType="regular">
+                Enter the invite code from your manager to continue.
+              </Text>
+
+              {errors.general && (
+                <View style={styles.errorContainer}>
+                  <Text style={styles.errorText} fontType="regular">{errors.general}</Text>
+                </View>
+              )}
+
+              <TextInput
+                style={styles.inviteCodeInput}
+                value={inviteCode}
+                onChangeText={(value) => setInviteCode(normalizeInviteCode(value))}
+                placeholder="AB7K92"
+                autoCapitalize="characters"
+                autoCorrect={false}
+                maxLength={6}
+                placeholderTextColor={theme.colors.disabledText}
+              />
+
+              <Button
+                onPress={handleContinueWithCode}
+                disabled={isSubmitting}
+                loading={isSubmitting}
+                title="Continue with Code"
+                style={styles.loginButton}
+                textStyle={styles.loginButtonText}
+              />
+            </Card>
+          </ScrollView>
+        </View>
+      </AnimatedScreen>
+    );
+  }
 
   return (
     <AnimatedScreen>
@@ -161,6 +240,15 @@ export default function Login() {
               textStyle={styles.loginButtonText}
             />
 
+            {Platform.OS !== 'web' && (
+              <Button
+                title="Join With Invite"
+                onPress={() => router.push('/join')}
+                style={styles.joinButton}
+                textStyle={styles.joinButtonText}
+              />
+            )}
+
             <View style={styles.separatorContainer}>
               <View style={styles.separatorLine} />
               <Text style={styles.separatorText} fontType="regular">{t('login.or')}</Text>
@@ -220,16 +308,39 @@ export default function Login() {
     }),
   },
   title: {
-    fontSize: 28,
+    fontSize: Platform.OS === 'web' ? 28 : 24,
     color: theme.colors.headingText,
     textAlign: 'center',
     marginBottom: theme.spacing(1),
   },
   description: {
-    fontSize: 16,
+    fontSize: Platform.OS === 'web' ? 16 : 15,
     color: theme.colors.bodyText,
     textAlign: 'center',
     marginBottom: theme.spacing(4),
+  },
+  mobileIconShell: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: theme.colors.primaryMuted,
+    alignSelf: 'center',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: theme.spacing(2),
+  },
+  inviteCodeInput: {
+    height: 54,
+    borderColor: theme.colors.borderColor,
+    borderWidth: 1,
+    borderRadius: theme.radius.lg,
+    paddingHorizontal: theme.spacing(2),
+    fontSize: 22,
+    color: theme.colors.headingText,
+    backgroundColor: theme.colors.background,
+    letterSpacing: 4,
+    textAlign: 'center',
+    marginBottom: theme.spacing(2),
   },
   errorContainer: {
     backgroundColor: theme.colors.errorBackground,
@@ -305,6 +416,19 @@ export default function Login() {
   },
   loginButtonText: {
     color: 'white',
+    fontSize: 16,
+  },
+  joinButton: {
+    backgroundColor: theme.colors.cardBackground,
+    borderWidth: 1,
+    borderColor: theme.colors.borderColor,
+    borderRadius: theme.radius.lg,
+    height: 52,
+    justifyContent: 'center',
+    marginTop: theme.spacing(2),
+  },
+  joinButtonText: {
+    color: theme.colors.headingText,
     fontSize: 16,
   },
   separatorContainer: {

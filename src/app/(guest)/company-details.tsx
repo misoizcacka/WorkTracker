@@ -117,14 +117,14 @@ const styles = StyleSheet.create({
     }),
   },
   title: {
-    fontSize: 28,
+    fontSize: 24,
     fontWeight: 'bold',
     color: theme.colors.headingText,
     textAlign: 'center',
     marginBottom: theme.spacing(1),
   },
   description: {
-    fontSize: 16,
+    fontSize: 15,
     color: theme.colors.bodyText,
     textAlign: 'center',
     marginBottom: theme.spacing(4),

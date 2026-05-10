@@ -1,17 +1,14 @@
-import React, { useState, useContext, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { View, StyleSheet, Image, TextInput, FlatList, TouchableOpacity, Platform, ActivityIndicator } from 'react-native';
 import { Text } from '~/components/Themed';
 import { Ionicons } from '@expo/vector-icons';
 import moment from 'moment';
 
-import { useSession } from '~/context/AuthContext';
-import { EmployeesContext, EmployeesContextType } from '~/context/EmployeesContext';
 import { theme } from '~/theme';
 import CrossPlatformDatePicker from '~/components/CrossPlatformDatePicker';
 import UserAvatar from '~/components/UserAvatar';
 import { supabase } from '~/utils/supabase'; // Import supabase
-
-import { Employee } from '~/types'; // Assuming Employee type is accessible
+import { EmployeesContext, EmployeesContextType } from '~/context/EmployeesContext';
 
 interface Worker { // Defined here for local use
   worker_id: string;
@@ -26,9 +23,7 @@ interface LocationReplayWorkerSelectorProps {
 }
 
 const LocationReplayWorkerSelector = ({ onSelectionChange, initialWorkerId, initialDate }: LocationReplayWorkerSelectorProps) => {
-    const { user } = useSession();
-    const { employees } = useContext(EmployeesContext) as EmployeesContextType;
-
+    const { employees } = React.useContext(EmployeesContext) as EmployeesContextType;
     const [searchTerm, setSearchTerm] = useState('');
     const [workers, setWorkers] = useState<Worker[]>([]); // State to hold workers with sessions
     const [selectedWorkerId, setSelectedWorkerId] = useState<string | undefined>(initialWorkerId);
@@ -48,13 +43,18 @@ const LocationReplayWorkerSelector = ({ onSelectionChange, initialWorkerId, init
                 console.error('Error fetching workers with sessions:', error);
                 setWorkers([]);
             } else {
-                setWorkers(data || []);
+                const allowedWorkerIds = new Set(
+                    employees
+                        .filter(employee => employee.role === 'worker')
+                        .map(employee => employee.id)
+                );
+                setWorkers((data || []).filter((worker: Worker) => allowedWorkerIds.has(worker.worker_id)));
             }
             setLoadingWorkers(false);
         };
 
         fetchWorkersWithSessions();
-    }, [selectedDate]);
+    }, [selectedDate, employees]);
 
     // Filter workers based on search term
     const filteredWorkers = useMemo(() => {
@@ -63,10 +63,6 @@ const LocationReplayWorkerSelector = ({ onSelectionChange, initialWorkerId, init
             worker.full_name.toLowerCase().includes(searchTerm.toLowerCase())
         );
     }, [workers, searchTerm]);
-
-    const employeeEmailById = useMemo(() => {
-        return new Map(employees.map((employee: Employee) => [employee.id, employee.email]));
-    }, [employees]);
 
     useEffect(() => {
         // When initialWorkerId or initialDate changes from props, update internal state
@@ -91,7 +87,6 @@ const LocationReplayWorkerSelector = ({ onSelectionChange, initialWorkerId, init
 
     const renderWorkerItem = ({ item }: { item: Worker }) => { // Changed type to Worker
         const isSelected = selectedWorkerId === item.worker_id; // Changed to item.worker_id
-        const email = employeeEmailById.get(item.worker_id);
 
         return (
             <TouchableOpacity onPress={() => handleWorkerPress(item)} style={[styles.workerItem, isSelected && styles.selectedWorkerItem]}>
@@ -104,7 +99,6 @@ const LocationReplayWorkerSelector = ({ onSelectionChange, initialWorkerId, init
                     <UserAvatar avatarUrl={item.avatar_url} size={40} style={styles.avatar} />
                     <View style={styles.itemInfo}>
                         <Text style={[styles.itemName, isSelected && styles.selectedWorkerText]} fontType="medium">{item.full_name}</Text>
-                        {!!email && <Text style={styles.itemSubtitle} fontType="regular">{email}</Text>}
                     </View>
                     {isSelected && <Ionicons name="chevron-forward" size={16} color={theme.colors.primary} />}
             </TouchableOpacity>

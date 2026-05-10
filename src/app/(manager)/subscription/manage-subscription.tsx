@@ -18,7 +18,7 @@ const PRICE_PER_WORKER = 6;
 
 export default function ManageSubscriptionScreen() {
   const router = useRouter();
-  const { userCompanyId, userCompanyName, userSubscriptionPeriodEnd, refreshUser } = useSession();
+  const { userCompanyId, userCompanyName, userSubscriptionPeriodEnd, userRole, refreshUser } = useSession();
   const employeesContext = useContext(EmployeesContext) as EmployeesContextType;
 
   const currentSeats = employeesContext?.seatLimit || 0;
@@ -33,9 +33,14 @@ export default function ManageSubscriptionScreen() {
   const [isInitialLoading, setIsInitialLoading] = useState(true);
 
   useEffect(() => {
+    if (userRole && userRole !== 'owner') {
+      router.replace('/(manager)/account');
+      return;
+    }
+
     setNewSlotCount(configuredSeats);
     setIsInitialLoading(false);
-  }, [configuredSeats]);
+  }, [configuredSeats, router, userRole]);
 
   const handleIncrement = () => setNewSlotCount(prev => prev + 1);
   const handleDecrement = () => {

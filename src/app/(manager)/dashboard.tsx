@@ -40,7 +40,7 @@ interface ActivityEvent {
 
 export default function NewManagerDashboard() {
   const router = useRouter();
-  const { user, userCompanyId, userCompanyName, isLoading: isAuthLoading } = useSession();
+  const { user, userCompanyId, userCompanyName, userRole, isLoading: isAuthLoading } = useSession();
   const employeesContext = useContext(EmployeesContext);
 
   const [stats, setStats] = useState<DashboardStats>({
@@ -76,7 +76,7 @@ export default function NewManagerDashboard() {
         const todayStr = moment().format('YYYY-MM-DD');
         const today = moment().startOf('day').toISOString();
         const startOfMonth = moment().startOf('month').toISOString();
-        const startOfWeek = moment().startOf('week').toISOString();
+        const visibleWorkerIds = new Set(workers.map(worker => worker.id));
 
         // 1. Fetch active sessions
         const { data: activeSessions, error: activeError } = await supabase
@@ -86,6 +86,7 @@ export default function NewManagerDashboard() {
           .is('end_time', null);
 
         if (activeError) throw activeError;
+        const visibleActiveSessions = (activeSessions || []).filter(session => visibleWorkerIds.has(session.worker_id));
 
         // 2. Fetch today's and month's sessions for hours calculation
         const { data: monthSessions, error: sessionsError } = await supabase
@@ -96,20 +97,21 @@ export default function NewManagerDashboard() {
           .not('end_time', 'is', null);
 
         if (sessionsError) throw sessionsError;
+        const visibleMonthSessions = (monthSessions || []).filter(session => visibleWorkerIds.has(session.worker_id));
 
         const calculateMinutes = (start: string, end: string) => {
           return moment(end).diff(moment(start), 'minutes');
         };
 
-        const totalMinutesToday = monthSessions
+        const totalMinutesToday = visibleMonthSessions
           ?.filter(s => moment(s.start_time).isSameOrAfter(today))
           .reduce((acc, s) => acc + calculateMinutes(s.start_time, s.end_time!), 0) || 0;
 
-        const totalMinutesMonth = monthSessions?.reduce((acc, s) => acc + calculateMinutes(s.start_time, s.end_time!), 0) || 0;
+        const totalMinutesMonth = visibleMonthSessions.reduce((acc, s) => acc + calculateMinutes(s.start_time, s.end_time!), 0) || 0;
 
         // 3. Top Workers this month
         const monthlyWorkersMap: Record<string, number> = {};
-        monthSessions?.forEach(s => {
+        visibleMonthSessions.forEach(s => {
           const mins = calculateMinutes(s.start_time, s.end_time!);
           monthlyWorkersMap[s.worker_id] = (monthlyWorkersMap[s.worker_id] || 0) + mins;
         });
@@ -123,7 +125,7 @@ export default function NewManagerDashboard() {
           .slice(0, 5); // Show top 5 for monthly overview
 
         // 4. Idle Workers (not clocked in)
-        const onlineWorkerIds = new Set(activeSessions?.map(s => s.worker_id));
+        const onlineWorkerIds = new Set(visibleActiveSessions.map(s => s.worker_id));
         const idleWorkers = workers
           .filter(w => !onlineWorkerIds.has(w.id))
           .map(w => w.full_name)
@@ -137,12 +139,13 @@ export default function NewManagerDashboard() {
           .eq('assigned_date', todayStr);
         
         if (assignmentsError) console.error('Assignments Error:', assignmentsError);
+        const visibleTodayAssignments = (todayAssignments || []).filter(assignment => visibleWorkerIds.has(assignment.worker_id));
 
-        const assignedWorkerIds = new Set(todayAssignments?.map(a => a.worker_id));
+        const assignedWorkerIds = new Set(visibleTodayAssignments.map(a => a.worker_id));
         const unassignedCount = workers.filter(w => !assignedWorkerIds.has(w.id)).length;
 
         const plannedProjectIds = new Set(
-          todayAssignments
+          visibleTodayAssignments
             ?.filter(a => a.ref_type === 'project')
             .map(a => a.ref_id)
         );
@@ -191,7 +194,7 @@ export default function NewManagerDashboard() {
 
         // Calculate unique active project IDs from sessions
         const activeProjectIds = new Set();
-        activeSessions?.forEach(s => {
+        visibleActiveSessions.forEach(s => {
           const assignment = Array.isArray(s.worker_assignments) ? s.worker_assignments[0] : s.worker_assignments;
           if (assignment?.ref_type === 'project') {
             activeProjectIds.add(assignment.ref_id);
@@ -203,9 +206,9 @@ export default function NewManagerDashboard() {
 
         setStats({
           totalWorkers: totalWorkersCount,
-          workersOnline: activeSessions?.length || 0,
+          workersOnline: visibleActiveSessions.length,
           totalHoursToday: Math.round((totalMinutesToday / 60) * 10) / 10,
-          activeSessions: activeSessions || [],
+          activeSessions: visibleActiveSessions,
           monthToDateHours: Math.round((totalMinutesMonth / 60) * 10) / 10,
           activeProjectsCount: activeProjectIds.size,
           totalProjectsCount,
@@ -218,7 +221,9 @@ export default function NewManagerDashboard() {
           unassignedCount,
         });
 
-        const locationActivities: ActivityEvent[] = (locationsRes.data || []).map(l => {
+        const locationActivities: ActivityEvent[] = (locationsRes.data || [])
+          .filter(l => visibleWorkerIds.has(l.worker_id))
+          .map(l => {
           // Access the joined data via the explicit relationship names
           const assignment = (l as any).worker_assignments;
           const firstAssignment = Array.isArray(assignment) ? assignment[0] : assignment;
@@ -515,10 +520,12 @@ export default function NewManagerDashboard() {
                   <Ionicons name="folder-outline" size={24} color={theme.colors.primary} />
                   <Text style={styles.quickActionLabel}>Projects</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={styles.quickActionButton} onPress={() => router.push('/(manager)/subscription')}>
-                  <Ionicons name="card-outline" size={24} color={theme.colors.primary} />
-                  <Text style={styles.quickActionLabel}>Billing</Text>
-                </TouchableOpacity>
+                {userRole === 'owner' ? (
+                  <TouchableOpacity style={styles.quickActionButton} onPress={() => router.push('/(manager)/subscription')}>
+                    <Ionicons name="card-outline" size={24} color={theme.colors.primary} />
+                    <Text style={styles.quickActionLabel}>Billing</Text>
+                  </TouchableOpacity>
+                ) : null}
               </View>
             </Card>
           </View>

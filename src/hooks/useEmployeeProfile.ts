@@ -8,10 +8,14 @@ export interface EmployeeProfile {
   id: string;
   company_id: string;
   full_name: string;
+  email: string;
   phone_number: string | null;
   role: 'owner' | 'manager' | 'worker';
+  status: 'pending' | 'active' | 'disabled';
   avatar_url: string | null; // The raw path from storage
   public_avatar_url: string | null; // The full public URL for rendering
+  reporting_to: string | null;
+  created_at: string;
 }
 
 /**

@@ -9,6 +9,9 @@ import DailyWorkerMap from '~/components/DailyWorkerMap';
 import { Assignment, LocationEvent, useMapGeoJSON } from '~/hooks/useMapGeoJSON';
 import { Ionicons } from '@expo/vector-icons';
 import { Region } from 'react-native-maps';
+import { EmployeesContext, EmployeesContextType } from '~/context/EmployeesContext';
+
+const viewerTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
 
 interface DailyEvent {
   event_id: string;
@@ -50,6 +53,7 @@ const haversineDistance = (lat1: number, lon1: number, lat2: number, lon2: numbe
 };
 
 const WorkerDailyDetailsPanel = ({ workerId, date }: WorkerDailyDetailsPanelProps) => {
+  const { getEmployeeById } = React.useContext(EmployeesContext) as EmployeesContextType;
   const [events, setEvents] = useState<DailyEvent[]>([]);
   const [dailySummary, setDailySummary] = useState<DailySummary | null>(null);
   const [loading, setLoading] = useState(false);
@@ -187,7 +191,11 @@ const WorkerDailyDetailsPanel = ({ workerId, date }: WorkerDailyDetailsPanelProp
   }, []);
 
   useEffect(() => {
-    if (!workerId || !date) return;
+    if (!workerId || !date || !getEmployeeById(workerId)) {
+      setEvents([]);
+      setDailySummary(null);
+      return;
+    }
 
     const fetchDetails = async () => {
       setLoading(true);
@@ -198,6 +206,7 @@ const WorkerDailyDetailsPanel = ({ workerId, date }: WorkerDailyDetailsPanelProp
         supabase.rpc('get_worker_daily_details', {
           worker_id_param: workerId,
           report_date: moment(date).format('YYYY-MM-DD'),
+          p_timezone: viewerTimeZone,
         })
       ]);
 
@@ -230,6 +239,7 @@ const WorkerDailyDetailsPanel = ({ workerId, date }: WorkerDailyDetailsPanelProp
         const { data, error } = await supabase.rpc('get_worker_daily_summary', {
             worker_id_param: workerId,
             report_date: moment(date).format('YYYY-MM-DD'),
+            p_timezone: viewerTimeZone,
         });
 
         if (error) {
@@ -254,7 +264,7 @@ const WorkerDailyDetailsPanel = ({ workerId, date }: WorkerDailyDetailsPanelProp
 
     fetchDetails();
     fetchSummary();
-  }, [workerId, date, calculateKilometers]);
+  }, [workerId, date, calculateKilometers, getEmployeeById]);
 
   const renderEvent = (event: DailyEvent) => {
     const isEnter = event.event_type === 'enter_geofence';
@@ -270,7 +280,13 @@ const WorkerDailyDetailsPanel = ({ workerId, date }: WorkerDailyDetailsPanelProp
                 {isEnter ? "Entered" : "Exited"} {event.ref_name}
             </Text>
             <Text style={styles.eventSubtext} fontType="regular">
-                {moment(event.event_timestamp).format('hh:mm:ss A')}
+                {new Intl.DateTimeFormat(undefined, {
+                    timeZone: viewerTimeZone,
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit',
+                    hour12: true,
+                }).format(new Date(event.event_timestamp))}
             </Text>
         </View>
       </View>
@@ -281,6 +297,15 @@ const WorkerDailyDetailsPanel = ({ workerId, date }: WorkerDailyDetailsPanelProp
     return (
       <View style={styles.centerContainer}>
         <ActivityIndicator size="large" color={theme.colors.primary} />
+      </View>
+    );
+  }
+
+  if (workerId && !getEmployeeById(workerId)) {
+    return (
+      <View style={styles.centerContainer}>
+        <Ionicons name="lock-closed-outline" size={64} color={theme.colors.borderColor} />
+        <Text style={styles.emptyText} fontType="regular">You do not have access to this worker.</Text>
       </View>
     );
   }
@@ -310,7 +335,7 @@ const WorkerDailyDetailsPanel = ({ workerId, date }: WorkerDailyDetailsPanelProp
                 </View>
                 <View>
                     <Text style={styles.workerName} fontType="bold">{dailySummary.worker_full_name}</Text>
-                    <Text style={styles.workerSubtext} fontType="regular">{moment(date).format('MMMM D, YYYY')}</Text>
+                    <Text style={styles.workerSubtext} fontType="regular">{new Intl.DateTimeFormat(undefined, { timeZone: viewerTimeZone, year: 'numeric', month: 'long', day: 'numeric' }).format(date)}</Text>
                 </View>
             </View>
             

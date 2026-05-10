@@ -1,8 +1,7 @@
 import { Image, View, StyleSheet, Pressable, Linking } from 'react-native';
-import { Link } from 'expo-router';
 
-const APPLE_STORE_URL = 'https://apps.apple.com/us/app/expo-go/id1394474753'; // Link to Expo Go on App Store
-const GOOGLE_PLAY_URL = 'https://play.google.com/store/apps/details?id=host.exp.exponent'; // Link to Expo Go on Google Play
+const APPLE_STORE_URL = process.env.EXPO_PUBLIC_APP_STORE_URL || 'https://apps.apple.com/app/id0000000000';
+const GOOGLE_PLAY_URL = process.env.EXPO_PUBLIC_PLAY_STORE_URL || 'https://play.google.com/store/apps/details?id=app.koord';
 
 const APPLE_BADGE_IMG = 'https://developer.apple.com/assets/elements/badges/download-on-the-app-store.svg';
 const GOOGLE_BADGE_IMG = 'https://play.google.com/intl/en_us/badges/static/images/badges/en_badge_web_generic.png';

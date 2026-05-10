@@ -28,6 +28,7 @@ export default function ManagerAccount() {
     userSubscriptionPeriodEnd,
     userScheduledWorkerSeats,
     userScheduledChangeEffectiveAt,
+    userRole,
     refreshUser,
   } = useSession()!;
   const { profile, isLoading: isProfileLoading, refetchProfile } = useProfile();
@@ -188,6 +189,10 @@ export default function ManagerAccount() {
   };
 
   const handleSaveCompanyChanges = async () => {
+    if (userRole !== 'owner') {
+      Alert.alert("Not Allowed", "Only owners can update company settings.");
+      return;
+    }
     if (!userCompanyId) return;
     if (companyName === userCompanyName) {
         Toast.show({ type: 'info', text1: 'No Changes', text2: 'Company name is the same.' });
@@ -225,6 +230,7 @@ export default function ManagerAccount() {
   }
 
   const roleLabel = profile?.role ? profile.role.toUpperCase() : 'MANAGER';
+  const isOwner = userRole === 'owner';
   const seatsUsed = employeesContext?.seatsUsed || 0;
   const seatLimit = employeesContext?.seatLimit || 0;
 
@@ -233,7 +239,9 @@ export default function ManagerAccount() {
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.pageHeader}>
           <Text style={styles.pageTitle} fontType="bold">My Account</Text>
-          <Text style={styles.pageSubtitle}>Manage your personal profile and company settings.</Text>
+          <Text style={styles.pageSubtitle}>
+            {isOwner ? 'Manage your personal profile and company settings.' : 'Manage your personal profile and security.'}
+          </Text>
         </View>
 
         <View style={styles.accountContent}>
@@ -319,90 +327,92 @@ export default function ManagerAccount() {
               </View>
             </Card>
 
-            {/* 2. Company Profile Section */}
-            <Card style={styles.sectionCard}>
-              <Text style={styles.sectionTitle} fontType="bold">Company Profile</Text>
-              <View style={styles.form}>
-                <View style={styles.inputGroup}>
-                  <Text style={styles.label} fontType="bold">Company Name</Text>
-                  <TextInput 
-                    style={styles.input} 
-                    value={companyName} 
-                    onChangeText={setCompanyName} 
-                    placeholder="Enter company name"
-                    placeholderTextColor={theme.colors.disabledText}
+            {isOwner ? (
+              <Card style={styles.sectionCard}>
+                <Text style={styles.sectionTitle} fontType="bold">Company Profile</Text>
+                <View style={styles.form}>
+                  <View style={styles.inputGroup}>
+                    <Text style={styles.label} fontType="bold">Company Name</Text>
+                    <TextInput
+                      style={styles.input}
+                      value={companyName}
+                      onChangeText={setCompanyName}
+                      placeholder="Enter company name"
+                      placeholderTextColor={theme.colors.disabledText}
+                    />
+                  </View>
+                  <Button
+                    title="Update"
+                    onPress={handleSaveCompanyChanges}
+                    disabled={isSavingCompany || companyName === userCompanyName}
+                    style={styles.primaryButton}
+                    loading={isSavingCompany}
                   />
                 </View>
-                <Button 
-                  title="Update" 
-                  onPress={handleSaveCompanyChanges} 
-                  disabled={isSavingCompany || companyName === userCompanyName} 
-                  style={styles.primaryButton}
-                  loading={isSavingCompany}
-                />
-              </View>
-            </Card>
+              </Card>
+            ) : null}
           </View>
 
           <View style={styles.column}>
-            {/* 3. Subscription Card */}
-            <Card style={styles.sectionCard}>
-              <View style={styles.cardHeaderRow}>
-                <Text style={styles.sectionTitle} fontType="bold">Subscription & Billing</Text>
-                <Ionicons name="card-outline" size={20} color={theme.colors.primary} />
-              </View>
-              
-              <View style={styles.subscriptionStats}>
-                <View style={styles.subStatBox}>
-                  <Text style={styles.subStatValue} fontType="bold">{seatsUsed}</Text>
-                  <Text style={styles.subStatLabel}>Active Workers</Text>
+            {isOwner ? (
+              <Card style={styles.sectionCard}>
+                <View style={styles.cardHeaderRow}>
+                  <Text style={styles.sectionTitle} fontType="bold">Subscription & Billing</Text>
+                  <Ionicons name="card-outline" size={20} color={theme.colors.primary} />
                 </View>
-                <View style={[styles.subStatBox, styles.subStatDivider]}>
-                  <Text style={styles.subStatValue} fontType="bold">{seatLimit}</Text>
-                  <Text style={styles.subStatLabel}>Worker Seats</Text>
-                </View>
-              </View>
 
-              <View style={styles.usageContainer}>
-                <View style={styles.usageHeader}>
-                  <Text style={styles.usageLabel}>Seat Utilization</Text>
-                  <Text style={styles.usageValue}>{Math.round((seatsUsed / (seatLimit || 1)) * 100)}%</Text>
+                <View style={styles.subscriptionStats}>
+                  <View style={styles.subStatBox}>
+                    <Text style={styles.subStatValue} fontType="bold">{seatsUsed}</Text>
+                    <Text style={styles.subStatLabel}>Active Workers</Text>
+                  </View>
+                  <View style={[styles.subStatBox, styles.subStatDivider]}>
+                    <Text style={styles.subStatValue} fontType="bold">{seatLimit}</Text>
+                    <Text style={styles.subStatLabel}>Worker Seats</Text>
+                  </View>
                 </View>
-                <View style={styles.progressBarBg}>
-                  <View 
-                    style={[
-                      styles.progressBarFill, 
-                      { width: `${Math.min((seatsUsed / (seatLimit || 1)) * 100, 100)}%` }
-                    ]} 
-                  />
-                </View>
-              </View>
 
-              {userSubscriptionPeriodEnd && (
-                <View style={styles.periodContainer}>
-                  <Ionicons name="time-outline" size={16} color={theme.colors.bodyText} />
-                  <Text style={styles.periodEndText}>
-                    Next renewal: <Text fontType="bold" style={{ color: theme.colors.headingText }}>{moment(userSubscriptionPeriodEnd).format('MMMM D, YYYY')}</Text>
-                  </Text>
+                <View style={styles.usageContainer}>
+                  <View style={styles.usageHeader}>
+                    <Text style={styles.usageLabel}>Seat Utilization</Text>
+                    <Text style={styles.usageValue}>{Math.round((seatsUsed / (seatLimit || 1)) * 100)}%</Text>
+                  </View>
+                  <View style={styles.progressBarBg}>
+                    <View
+                      style={[
+                        styles.progressBarFill,
+                        { width: `${Math.min((seatsUsed / (seatLimit || 1)) * 100, 100)}%` }
+                      ]}
+                    />
+                  </View>
                 </View>
-              )}
 
-              {userScheduledWorkerSeats !== null && userScheduledWorkerSeats !== undefined && (
-                <View style={styles.periodContainer}>
-                  <Ionicons name="arrow-down-circle-outline" size={16} color={theme.colors.primary} />
-                  <Text style={styles.periodEndText}>
-                    Scheduled seats next cycle: <Text fontType="bold" style={{ color: theme.colors.headingText }}>{userScheduledWorkerSeats}</Text>
-                    {userScheduledChangeEffectiveAt ? ` on ${moment(userScheduledChangeEffectiveAt).format('MMMM D, YYYY')}` : ''}
-                  </Text>
-                </View>
-              )}
+                {userSubscriptionPeriodEnd && (
+                  <View style={styles.periodContainer}>
+                    <Ionicons name="time-outline" size={16} color={theme.colors.bodyText} />
+                    <Text style={styles.periodEndText}>
+                      Next renewal: <Text fontType="bold" style={{ color: theme.colors.headingText }}>{moment(userSubscriptionPeriodEnd).format('MMMM D, YYYY')}</Text>
+                    </Text>
+                  </View>
+                )}
 
-              <Button 
-                title="Manage Subscription" 
-                onPress={() => router.push('/(manager)/subscription/manage-subscription')} 
-                style={styles.manageSubButton}
-              />
-            </Card>
+                {userScheduledWorkerSeats !== null && userScheduledWorkerSeats !== undefined && (
+                  <View style={styles.periodContainer}>
+                    <Ionicons name="arrow-down-circle-outline" size={16} color={theme.colors.primary} />
+                    <Text style={styles.periodEndText}>
+                      Scheduled seats next cycle: <Text fontType="bold" style={{ color: theme.colors.headingText }}>{userScheduledWorkerSeats}</Text>
+                      {userScheduledChangeEffectiveAt ? ` on ${moment(userScheduledChangeEffectiveAt).format('MMMM D, YYYY')}` : ''}
+                    </Text>
+                  </View>
+                )}
+
+                <Button
+                  title="Manage Subscription"
+                  onPress={() => router.push('/(manager)/subscription/manage-subscription')}
+                  style={styles.manageSubButton}
+                />
+              </Card>
+            ) : null}
 
             {/* 4. Security */}
             <Card style={styles.sectionCard}>
