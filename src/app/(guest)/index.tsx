@@ -146,6 +146,19 @@ export default function LandingPage() {
 
         <View style={styles.footer}>
           <Text style={styles.footerText} fontType="regular">© {new Date().getFullYear()} Koord. All rights reserved.</Text>
+          <View style={styles.footerLinks}>
+            <Link href="/(guest)/terms" asChild>
+              <TouchableOpacity>
+                <Text style={styles.footerLink} fontType="regular">Terms of Service</Text>
+              </TouchableOpacity>
+            </Link>
+            <Text style={styles.footerDot} fontType="regular">·</Text>
+            <Link href="/(guest)/privacy" asChild>
+              <TouchableOpacity>
+                <Text style={styles.footerLink} fontType="regular">Privacy Policy</Text>
+              </TouchableOpacity>
+            </Link>
+          </View>
         </View>
       </View>
     </AnimatedScreen>
@@ -391,8 +404,22 @@ const styles = StyleSheet.create({
   footer: {
     padding: theme.spacing(5),
     alignItems: 'center',
+    gap: theme.spacing(1.5),
   },
   footerText: {
+    fontSize: 12,
+    color: theme.colors.disabledText,
+  },
+  footerLinks: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing(1.5),
+  },
+  footerLink: {
+    fontSize: 12,
+    color: theme.colors.primary,
+  },
+  footerDot: {
     fontSize: 12,
     color: theme.colors.disabledText,
   },

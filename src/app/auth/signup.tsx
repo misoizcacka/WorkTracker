@@ -233,6 +233,18 @@ export default function Signup() {
                   )}
                 </Button>
 
+                <Text style={styles.legalConsent} fontType="regular">
+                  By creating an account you agree to our{' '}
+                  <Link href="/(guest)/terms" asChild>
+                    <Text style={styles.legalLink} fontType="regular">Terms of Service</Text>
+                  </Link>
+                  {' '}and{' '}
+                  <Link href="/(guest)/privacy" asChild>
+                    <Text style={styles.legalLink} fontType="regular">Privacy Policy</Text>
+                  </Link>
+                  .
+                </Text>
+
                 <View style={styles.signInLinkContainer}>
                   <Text style={styles.signInText} fontType="regular">{t('signup.alreadyHaveAccount')}</Text>
                   <Link href="/(guest)/login" asChild>
@@ -438,6 +450,17 @@ const styles = StyleSheet.create({
   },
   signInLink: {
     fontSize: 14,
+    color: theme.colors.primary,
+  },
+  legalConsent: {
+    fontSize: 12,
+    color: theme.colors.disabledText,
+    textAlign: 'center',
+    marginTop: theme.spacing(2),
+    lineHeight: 18,
+  },
+  legalLink: {
+    fontSize: 12,
     color: theme.colors.primary,
   },
 });

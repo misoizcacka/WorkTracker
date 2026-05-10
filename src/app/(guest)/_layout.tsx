@@ -15,7 +15,7 @@ export default function GuestLayout() {
     // Only allow 'login' and 'auth' flows
     if (Platform.OS !== 'web') {
       const currentSegment = segments[segments.length - 1];
-      const isAuthFlow = segments.includes('auth') || segments.includes('signup');
+      const isAuthFlow = segments.includes('auth') || segments.includes('signup') || currentSegment === 'terms';
       
       // If we are in the guest group but not on the login page or in an allowed flow
       if (segments[0] === '(guest)' && currentSegment !== 'login' && !isAuthFlow) {
@@ -37,6 +37,8 @@ export default function GuestLayout() {
         <Stack.Screen name="signup-success" />
         <Stack.Screen name="auth" />
         <Stack.Screen name="signup" />
+        <Stack.Screen name="terms" />
+        <Stack.Screen name="privacy" />
       </Stack>
     </I18nextProvider>
   );
