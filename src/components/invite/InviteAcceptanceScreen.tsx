@@ -267,6 +267,18 @@ export function InviteAcceptanceScreen({ token }: InviteAcceptanceScreenProps) {
 
             {formError && <Text style={styles.formErrorText} fontType="regular">{formError}</Text>}
 
+            <Text style={styles.legalConsent} fontType="regular">
+              By joining, you agree to Koord's{' '}
+              <Link href="/(guest)/terms" asChild>
+                <Text style={styles.legalLink} fontType="regular">Terms of Service</Text>
+              </Link>
+              {' '}and{' '}
+              <Link href="/(guest)/privacy" asChild>
+                <Text style={styles.legalLink} fontType="regular">Privacy Policy</Text>
+              </Link>
+              , including background location tracking during work sessions.
+            </Text>
+
             <Button
               onPress={handleJoin}
               disabled={isSubmitting || (invite.role === 'manager' && (password.length < 6 || password !== confirmPassword))}
@@ -426,6 +438,17 @@ const styles = StyleSheet.create({
   joinButtonText: {
     color: 'white',
     fontSize: 15,
+  },
+  legalConsent: {
+    fontSize: 12,
+    color: theme.colors.disabledText,
+    textAlign: 'center',
+    marginBottom: theme.spacing(2),
+    lineHeight: 18,
+  },
+  legalLink: {
+    fontSize: 12,
+    color: theme.colors.primary,
   },
   stateScreen: {
     flex: 1,

@@ -39,6 +39,7 @@ export default function GuestLayout() {
         <Stack.Screen name="signup" />
         <Stack.Screen name="terms" />
         <Stack.Screen name="privacy" />
+        <Stack.Screen name="legal-notice" />
       </Stack>
     </I18nextProvider>
   );

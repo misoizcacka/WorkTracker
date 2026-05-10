@@ -110,51 +110,29 @@ export default function Signup() {
 
         <ScrollView contentContainerStyle={styles.scrollContent}>
           <View style={styles.mainLayout}>
-            {/* Left Column: Marketing (Desktop Only) */}
+            {/* Left Column: Reassurance (Desktop Only) */}
             {isLargeScreen && (
               <View style={styles.marketingColumn}>
-                <Text style={styles.marketingTitle} fontType="bold">
-                  {t('signup.marketingTitle')}
-                </Text>
-                <Text style={styles.marketingSubtitle} fontType="regular">
-                  {t('signup.marketingDescription')}
-                </Text>
+                <View style={styles.reassurancePanel}>
+                  <Text style={styles.reassuranceTitle} fontType="bold">
+                    You're one step away from running a tighter operation.
+                  </Text>
+                  <Text style={styles.reassuranceSubtitle} fontType="regular">
+                    Koord gives you a live view of your crew, automatic time tracking, and payroll-ready reports — without the spreadsheets.
+                  </Text>
 
-                <View style={styles.bulletList}>
-                  <View style={styles.bulletItem}>
-                    <View style={styles.bulletIcon}>
-                      <Ionicons name="calendar-outline" size={24} color={theme.colors.primary} />
-                    </View>
-                    <View style={styles.bulletTextContainer}>
-                      <Text style={styles.bulletTitle} fontType="bold">{t('signup.smartSchedulingTitle')}</Text>
-                      <Text style={styles.bulletDescription} fontType="regular">
-                        {t('signup.smartSchedulingDesc')}
-                      </Text>
-                    </View>
-                  </View>
-
-                  <View style={styles.bulletItem}>
-                    <View style={styles.bulletIcon}>
-                      <Ionicons name="map-outline" size={24} color={theme.colors.primary} />
-                    </View>
-                    <View style={styles.bulletTextContainer}>
-                      <Text style={styles.bulletTitle} fontType="bold">{t('signup.realTimeOversightTitle')}</Text>
-                      <Text style={styles.bulletDescription} fontType="regular">
-                        {t('signup.realTimeOversightDesc')}
-                      </Text>
-                    </View>
-                  </View>
-
-                  <View style={styles.bulletItem}>
-                    <View style={styles.bulletIcon}>
-                      <Ionicons name="document-text-outline" size={24} color={theme.colors.primary} />
-                    </View>
-                    <View style={styles.bulletTextContainer}>
-                      <Text style={styles.bulletTitle} fontType="bold">{t('signup.automatedReportingTitle')}</Text>
-                      <Text style={styles.bulletDescription} fontType="regular">
-                        {t('signup.automatedReportingDesc')}
-                      </Text>
-                    </View>
+                  <View style={styles.trustList}>
+                    {[
+                      { icon: 'checkmark-circle-outline', text: 'Set up your company in under 5 minutes' },
+                      { icon: 'phone-portrait-outline', text: 'Workers download the app and join with an invite code' },
+                      { icon: 'shield-checkmark-outline', text: 'GDPR compliant — data stays in the EU' },
+                      { icon: 'close-circle-outline', text: 'Cancel your subscription any time, no lock-in' },
+                    ].map((item, i) => (
+                      <View key={i} style={styles.trustItem}>
+                        <Ionicons name={item.icon as any} size={20} color={theme.colors.primary} />
+                        <Text style={styles.trustText} fontType="regular">{item.text}</Text>
+                      </View>
+                    ))}
                   </View>
                 </View>
               </View>
@@ -295,46 +273,37 @@ const styles = StyleSheet.create({
     flex: 1,
     maxWidth: 500,
   },
-  marketingTitle: {
-    fontSize: 42,
-    color: theme.colors.headingText,
-    lineHeight: 52,
-    marginBottom: theme.spacing(2),
-  },
-  marketingSubtitle: {
-    fontSize: 18,
-    color: theme.colors.bodyText,
-    lineHeight: 28,
-    marginBottom: theme.spacing(6),
-  },
-  bulletList: {
+  reassurancePanel: {
+    flex: 1,
+    borderRadius: theme.radius.xl,
+    padding: theme.spacing(5),
     gap: theme.spacing(4),
-  },
-  bulletItem: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: theme.spacing(2),
-  },
-  bulletIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: theme.radius.md,
-    backgroundColor: theme.colors.primaryMuted,
-    alignItems: 'center',
     justifyContent: 'center',
   },
-  bulletTextContainer: {
-    flex: 1,
-  },
-  bulletTitle: {
-    fontSize: 18,
+  reassuranceTitle: {
+    fontSize: 30,
+    lineHeight: 40,
     color: theme.colors.headingText,
-    marginBottom: 4,
   },
-  bulletDescription: {
+  reassuranceSubtitle: {
     fontSize: 15,
+    lineHeight: 26,
     color: theme.colors.bodyText,
+  },
+  trustList: {
+    gap: theme.spacing(2.5),
+    marginTop: theme.spacing(1),
+  },
+  trustItem: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: theme.spacing(1.5),
+  },
+  trustText: {
+    flex: 1,
+    fontSize: 14,
     lineHeight: 22,
+    color: theme.colors.bodyText,
   },
   formColumn: {
     flex: 1,

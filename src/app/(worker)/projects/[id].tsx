@@ -376,11 +376,10 @@ const styles = StyleSheet.create({
     fontSize: theme.fontSizes.sm,
   },
   headerSections: {
-    paddingHorizontal: 0,
+    paddingHorizontal: theme.spacing(2),
   },
   section: {
     marginTop: theme.spacing(3),
-    paddingHorizontal: theme.spacing(3),
   },
   sectionTitle: {
     fontSize: theme.fontSizes.md,
@@ -390,7 +389,7 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
   },
   overviewCard: {
-    padding: theme.spacing(2.5),
+    padding: theme.spacing(2),
     backgroundColor: theme.colors.cardBackground,
     borderRadius: theme.radius.lg,
     borderWidth: 1,
@@ -403,12 +402,13 @@ const styles = StyleSheet.create({
   },
   projectImageList: {
     paddingVertical: theme.spacing(1),
+    paddingLeft: theme.spacing(0),
   },
   projectImage: {
-    width: 280,
+    width: 260,
     height: 180,
     borderRadius: theme.radius.lg,
-    marginRight: theme.spacing(2),
+    marginRight: theme.spacing(1.5),
   },
   mapContainer: {
     borderRadius: theme.radius.lg,
@@ -434,7 +434,7 @@ const styles = StyleSheet.create({
     fontSize: 10,
   },
   listContainer: {
-    paddingHorizontal: theme.spacing(3),
+    paddingHorizontal: theme.spacing(2),
     paddingBottom: theme.spacing(4),
   },
   messageCard: {

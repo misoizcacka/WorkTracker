@@ -240,6 +240,18 @@ export default function Login() {
               textStyle={styles.loginButtonText}
             />
 
+            <Text style={styles.legalConsent} fontType="regular">
+              By signing in you agree to our{' '}
+              <Link href="/(guest)/terms" asChild>
+                <Text style={styles.legalLink} fontType="regular">Terms of Service</Text>
+              </Link>
+              {' '}and{' '}
+              <Link href="/(guest)/privacy" asChild>
+                <Text style={styles.legalLink} fontType="regular">Privacy Policy</Text>
+              </Link>
+              .
+            </Text>
+
             {Platform.OS !== 'web' && (
               <Button
                 title="Join With Invite"
@@ -459,5 +471,16 @@ export default function Login() {
   signUpButtonText: {
     color: theme.colors.primary,
     fontSize: 16,
+  },
+  legalConsent: {
+    fontSize: 12,
+    color: theme.colors.disabledText,
+    textAlign: 'center',
+    marginTop: theme.spacing(1.5),
+    lineHeight: 18,
+  },
+  legalLink: {
+    fontSize: 12,
+    color: theme.colors.primary,
   },
 });

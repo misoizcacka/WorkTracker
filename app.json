@@ -48,12 +48,7 @@
           "serviceType": "location"
         }
       ],
-      "package": "app.koord",
-      "config": {
-        "googleMaps": {
-          "apiKey": "AIzaSyDE81zzchDXalQuGapH-E8tBBjnN9fT304"
-        }
-      }
+      "package": "app.koord"
     },
     "web": {
       "favicon": "./assets/favicon.png",
