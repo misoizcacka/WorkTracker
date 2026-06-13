@@ -277,8 +277,8 @@ class PeriodicLocationTrackingService : Service() {
         val locationName = getSharedPreferences(Constants.SHARED_PREFS_NAME, Context.MODE_PRIVATE)
             .getString(Constants.KEY_LOCATION_NAME, null)
 
-        val contentTitle = if (!locationName.isNullOrBlank()) "📍 Working at $locationName" else "📍 Koord — Work Session Active"
-        val contentText = "Your location is being tracked. Tap to open the app."
+        val contentTitle = if (!locationName.isNullOrBlank()) "Working at $locationName" else "Koord — Work Session Active"
+        val contentText = "Location tracking is active."
         
         val notification = NotificationCompat.Builder(this, Constants.NOTIFICATION_CHANNEL_ID)
             .setContentTitle(contentTitle)
@@ -286,8 +286,6 @@ class PeriodicLocationTrackingService : Service() {
             .setSmallIcon(if (iconResId != 0) iconResId else android.R.drawable.ic_dialog_info)
             .setContentIntent(pendingIntent)
             .setOngoing(true)
-            .setColor(0xFF1E3A5F.toInt())
-            .setColorized(true)
             .build()
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
