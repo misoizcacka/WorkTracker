@@ -1,6 +1,6 @@
 import React, { useMemo, useState, useRef, useEffect } from 'react';
 import RNMapView, { Marker, Callout, Circle, MapViewProps as RNMapViewProps, LatLng, FitToOptions, Region, PROVIDER_GOOGLE } from 'react-native-maps';
-import { View, Image, Text, StyleSheet, Dimensions, Platform } from 'react-native';
+import { View, Image, Text, StyleSheet, Dimensions } from 'react-native';
 import { theme } from '../theme';
 import Supercluster from 'supercluster';
 import { FontAwesome5, Ionicons } from '@expo/vector-icons';
