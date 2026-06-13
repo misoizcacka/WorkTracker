@@ -26,7 +26,8 @@ data class GeofenceAssignment(
 
 data class SupabaseConfig(
     val url: String,
-    val key: String
+    val key: String,
+    val locationName: String? = null
 )
 
 class BackgroundLocationModule : Module() {
@@ -52,7 +53,7 @@ class BackgroundLocationModule : Module() {
     override fun definition() = ModuleDefinition {
         Name("BackgroundLocation")
 
-        AsyncFunction("start") { workerId: String, assignmentId: String, companyId: String, supabaseConfig: String, deviceToken: String, deviceSecret: String, geofenceAssignments: String, locationName: String, promise: Promise ->
+        AsyncFunction("start") { workerId: String, assignmentId: String, companyId: String, supabaseConfig: String, deviceToken: String, deviceSecret: String, geofenceAssignments: String, promise: Promise ->
             val reactContext = appContext.reactContext ?: run {
                 promise.reject("APP_CONTEXT_ERROR", "React Application Context is null.", null)
                 return@AsyncFunction
@@ -75,7 +76,7 @@ class BackgroundLocationModule : Module() {
                 putString(Constants.KEY_SUPABASE_URL, parsedSupabaseConfig.url)
                 putString(Constants.KEY_SUPABASE_PUBLISHABLE_KEY, parsedSupabaseConfig.key)
                 putString(Constants.SHARED_PREFS_KEY_GEOFENCE_ASSIGNMENTS, geofenceAssignments)
-                putString(Constants.KEY_LOCATION_NAME, locationName)
+                putString(Constants.KEY_LOCATION_NAME, parsedSupabaseConfig.locationName ?: "")
                 apply()
             }
             

@@ -19,24 +19,18 @@ export function start(
   geofenceAssignments: string,
   locationName: string = ''
 ): Promise<void> {
-    console.log("JS BackgroundLocation.start: workerId", workerId);
-    console.log("JS BackgroundLocation.start: assignmentId", assignmentId);
-    console.log("JS BackgroundLocation.start: companyId", companyId);
-    console.log("JS BackgroundLocation.start: supabaseConfig (partial)", supabaseConfig.substring(0, 20) + "...");
-    console.log("JS BackgroundLocation.start: deviceToken (partial)", deviceToken.substring(0, 5) + "...");
-    console.log("JS BackgroundLocation.start: deviceSecret (partial)", deviceSecret.substring(0, 5) + "...");
-    console.log("JS BackgroundLocation.start: geofenceAssignments (length)", geofenceAssignments.length);
+    // Embed locationName into supabaseConfig to avoid exceeding Expo Modules AsyncFunction param limit (8)
+    const supabaseConfigWithName = JSON.stringify({ ...JSON.parse(supabaseConfig), locationName });
 
     try {
         return BackgroundLocationModule.start(
           workerId,
           assignmentId,
           companyId,
-          supabaseConfig,
+          supabaseConfigWithName,
           deviceToken,
           deviceSecret,
-          geofenceAssignments,
-          locationName
+          geofenceAssignments
         );
     } catch (e) {
         console.error("JS BackgroundLocation.start: Error calling native module:", e);
