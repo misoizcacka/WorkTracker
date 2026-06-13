@@ -53,6 +53,7 @@ let _dbPromise: Promise<SQLite.SQLiteDatabase> | null = null;
 
 async function initializeDb(): Promise<SQLite.SQLiteDatabase> {
   const db = await SQLite.openDatabaseAsync(DB_NAME);
+  await db.execAsync('PRAGMA journal_mode = WAL;');
   await db.execAsync(
     CREATE_LOCAL_ASSIGNMENTS_TABLE_SQL + '\n' +
     CREATE_LOCAL_WORK_SESSIONS_TABLE_SQL + '\n' +

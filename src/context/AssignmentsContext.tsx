@@ -115,6 +115,7 @@ export function AssignmentsProvider({ children }: { children: React.ReactNode })
   const [activeWorkSession, setActiveWorkSession] = useState<WorkSession | null>(null);
   const [loadedWorkSessions, setLoadedWorkSessions] = useState<WorkSession[]>([]);
   const loadingDates = useRef(new Set<string>());
+  const isSyncing = useRef(false);
   const [lastCompletedSortKey, setLastCompletedSortKey] = useState<string | null>(null);
   const [lastCheckoutAssignmentId, setLastCheckoutAssignmentId] = useState<string | null>(null);
   const [lastCheckoutDate, setLastCheckoutDate] = useState<string | null>(null); // YYYY-MM-DD
@@ -288,50 +289,42 @@ export function AssignmentsProvider({ children }: { children: React.ReactNode })
   }, [loadedWorkSessions]);
 
   const syncLocalChanges = useCallback(async () => {
-    if (!userCompanyId) return; // Cannot sync without companyId
+    if (!userCompanyId) return;
+    if (isSyncing.current) return;
+    isSyncing.current = true;
     console.log("Attempting to sync local changes...");
+
+    // Sync Location Events — isolated so a failure doesn't block work session sync
     try {
-      // Sync Location Events
       const unsyncedEvents = await getUnsyncedLocationEvents();
       if (unsyncedEvents.length > 0) {
-        console.log(`Found ${unsyncedEvents.length} unsynced location events. Syncing...`);
         const eventsToSync = unsyncedEvents
           .filter(event => event.id && event.timestamp && event.company_id && event.worker_id && event.assignment_id)
           .map(({ id, timestamp, company_id, worker_id, assignment_id, type, latitude, longitude, notes }) => ({
-            id,
-            created_at: timestamp,
-            company_id,
-            worker_id,
-            assignment_id,
-            type,
-            latitude,
-            longitude,
-            notes,
+            id, created_at: timestamp, company_id, worker_id, assignment_id, type, latitude, longitude, notes,
           }));
-        if (eventsToSync.length !== unsyncedEvents.length) {
-          console.warn(`Skipping ${unsyncedEvents.length - eventsToSync.length} malformed local location events during sync.`);
-        }
         if (eventsToSync.length > 0) {
           await upsertLocationEvents(eventsToSync);
+          await markLocationEventsAsSynced(eventsToSync.map(e => e.id));
+          console.log(`Synced ${eventsToSync.length} local location events.`);
         }
-        const successfullySyncedEventIds = eventsToSync.map(e => e.id);
-        await markLocationEventsAsSynced(successfullySyncedEventIds);
-        console.log(`Synced ${successfullySyncedEventIds.length} local location events.`);
       }
+    } catch (err) {
+      console.error("Error syncing location events (work session sync will still proceed):", err);
+    }
 
-      // Sync Work Sessions
+    // Sync Work Sessions — isolated separately
+    try {
       const unsyncedWorkSessions = await getUnsyncedWorkSessions();
       if (unsyncedWorkSessions.length > 0) {
-        console.log(`Found ${unsyncedWorkSessions.length} unsynced work sessions. Syncing...`);
         await upsertWorkSessions(unsyncedWorkSessions);
-        const successfullySyncedSessionIds = unsyncedWorkSessions.map(ws => ws.id);
-        await markWorkSessionsAsSynced(successfullySyncedSessionIds);
-        console.log(`Synced ${successfullySyncedSessionIds.length} local work sessions.`);
+        await markWorkSessionsAsSynced(unsyncedWorkSessions.map(ws => ws.id));
+        console.log(`Synced ${unsyncedWorkSessions.length} local work sessions.`);
       }
-      
     } catch (err) {
-      console.error("Error during sync:", err);
-      setError("Failed to sync local changes.");
+      console.error("Error syncing work sessions:", err);
+    } finally {
+      isSyncing.current = false;
     }
   }, [userCompanyId]);
 
@@ -344,10 +337,26 @@ export function AssignmentsProvider({ children }: { children: React.ReactNode })
     setError(null);
     try {
       const session = await fetchActiveWorkSession(user.id);
-      setActiveWorkSession(session);
+      if (session) {
+        setActiveWorkSession(session);
+        return;
+      }
+      // Supabase returned nothing — check local SQLite for an unsynced active session
+      const today = moment().format('YYYY-MM-DD');
+      const localSessions = await getLocalWorkSessions(user.id, today);
+      const localActive = localSessions.find(s => !s.end_time) || null;
+      setActiveWorkSession(localActive);
     } catch (err: any) {
-      setError(err.message);
-      console.error('Error fetching active work session:', err);
+      // Supabase unreachable (offline) — fall back to local
+      try {
+        const today = moment().format('YYYY-MM-DD');
+        const localSessions = await getLocalWorkSessions(user.id, today);
+        const localActive = localSessions.find(s => !s.end_time) || null;
+        setActiveWorkSession(localActive);
+      } catch (localErr) {
+        setError(err.message);
+        console.error('Error fetching active work session:', err);
+      }
     }
   }, [user?.id]);
 
