@@ -58,6 +58,7 @@
     "geolib": "^3.3.4",
     "i18n-js": "^4.5.1",
     "i18next": "^25.6.3",
+    "lightningcss": "1.32.0",
     "mapbox-gl": "^3.16.0",
     "maplibre-gl": "^5.13.0",
     "moment": "^2.30.1",

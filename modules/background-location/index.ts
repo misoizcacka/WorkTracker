@@ -16,7 +16,8 @@ export function start(
   supabaseConfig: string,
   deviceToken: string,
   deviceSecret: string,
-  geofenceAssignments: string
+  geofenceAssignments: string,
+  locationName: string = ''
 ): Promise<void> {
     console.log("JS BackgroundLocation.start: workerId", workerId);
     console.log("JS BackgroundLocation.start: assignmentId", assignmentId);
@@ -34,7 +35,8 @@ export function start(
           supabaseConfig,
           deviceToken,
           deviceSecret,
-          geofenceAssignments
+          geofenceAssignments,
+          locationName
         );
     } catch (e) {
         console.error("JS BackgroundLocation.start: Error calling native module:", e);

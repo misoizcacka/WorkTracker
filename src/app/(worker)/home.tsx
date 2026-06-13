@@ -370,7 +370,8 @@ export default function Home() {
       JSON.stringify({ url: supabaseUrl, key: supabaseKey }),
       deviceToken,
       deviceSecret,
-      JSON.stringify(backgroundGeofenceAssignments)
+      JSON.stringify(backgroundGeofenceAssignments),
+      projectLocationName
     ).catch((error) => {
       console.error('Failed to refresh background geofence assignments:', error);
     });
@@ -442,7 +443,7 @@ export default function Home() {
             status: 'active' as const,
           }];
 
-      await BackgroundLocation.start(user!.id, relevantAssignment.id, userCompanyId!, JSON.stringify({ url: supabaseUrl, key: supabaseKey }), deviceToken!, deviceSecret!, JSON.stringify(geofenceAssignmentsToStart));
+      await BackgroundLocation.start(user!.id, relevantAssignment.id, userCompanyId!, JSON.stringify({ url: supabaseUrl, key: supabaseKey }), deviceToken!, deviceSecret!, JSON.stringify(geofenceAssignmentsToStart), projectLocationName);
       Toast.show({ type: 'success', text1: 'Checked In', text2: `Working on ${projectLocationName}` });
       setSelectedNextAssignmentId(null);
     } catch (err: any) {

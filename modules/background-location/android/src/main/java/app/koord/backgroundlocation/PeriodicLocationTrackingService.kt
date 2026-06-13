@@ -273,13 +273,21 @@ class PeriodicLocationTrackingService : Service() {
         val notificationIntent = Intent(applicationContext, Class.forName("$appPackageName.MainActivity").asSubclass(android.app.Activity::class.java))
         val pendingIntent = PendingIntent.getActivity(this, 0, notificationIntent, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
         val iconResId = applicationContext.resources.getIdentifier("ic_launcher", "mipmap", appPackageName)
+
+        val locationName = getSharedPreferences(Constants.SHARED_PREFS_NAME, Context.MODE_PRIVATE)
+            .getString(Constants.KEY_LOCATION_NAME, null)
+
+        val contentTitle = if (!locationName.isNullOrBlank()) "📍 Working at $locationName" else "📍 Koord — Work Session Active"
+        val contentText = "Your location is being tracked. Tap to open the app."
         
         val notification = NotificationCompat.Builder(this, Constants.NOTIFICATION_CHANNEL_ID)
-            .setContentTitle("Koord Tracking Active")
-            .setContentText("Monitoring work session.")
+            .setContentTitle(contentTitle)
+            .setContentText(contentText)
             .setSmallIcon(if (iconResId != 0) iconResId else android.R.drawable.ic_dialog_info)
             .setContentIntent(pendingIntent)
             .setOngoing(true)
+            .setColor(0xFF1E3A5F.toInt())
+            .setColorized(true)
             .build()
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
