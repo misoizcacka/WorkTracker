@@ -2,7 +2,6 @@ import React, { useMemo, useState, useEffect, useCallback } from 'react';
 import { StyleSheet, ScrollView, View, TouchableOpacity, ActivityIndicator, RefreshControl, Platform } from 'react-native';
 import { Text } from '../../../components/Themed';
 import { useRouter } from 'expo-router';
-import { Card } from '../../../components/Card';
 import { theme } from '../../../theme';
 import AnimatedScreen from '../../../components/AnimatedScreen';
 import { Ionicons } from '@expo/vector-icons';
@@ -22,84 +21,42 @@ interface AssignmentItem {
   status: AssignmentStatus;
 }
 
-const getStatusBadgeStyle = (status: AssignmentStatus) => {
-  switch (status) {
-    case 'completed':
-      return { 
-        bg: theme.statusColors.successBackground, 
-        text: theme.statusColors.successText, 
-        label: 'COMPLETED',
-        icon: 'checkmark-circle' as const 
-      };
-    case 'active':
-      return { 
-        bg: theme.statusColors.activeBackground, 
-        text: theme.statusColors.activeText, 
-        label: 'IN PROGRESS',
-        icon: 'play-circle' as const 
-      };
-    case 'next':
-      return { 
-        bg: theme.statusColors.nextBackground, 
-        text: theme.statusColors.nextText, 
-        label: 'UP NEXT',
-        icon: 'arrow-forward-circle' as const 
-      };
-    case 'pending':
-    default:
-      return { 
-        bg: theme.statusColors.neutralBackground, 
-        text: theme.statusColors.neutralText, 
-        label: 'PENDING',
-        icon: 'ellipse-outline' as const 
-      };
-  }
-};
-
 const AssignmentCard = ({ item, onPress }: { item: AssignmentItem; onPress: (refId: string) => void }) => {
-  const badge = getStatusBadgeStyle(item.status);
+  const visited = item.status === 'completed' || item.status === 'active';
+  const isActive = item.status === 'active';
 
   return (
-    <Card style={styles.assignmentCard}>
-      <TouchableOpacity 
-        onPress={() => onPress(item.ref_id)} 
-        disabled={item.type === 'common_location'}
-        style={styles.cardTouchable}
-      >
-        <View style={styles.cardHeader}>
-          <View style={[styles.iconContainer, { backgroundColor: item.status === 'active' ? theme.colors.primary : theme.colors.primaryMuted }]}>
-            <Ionicons 
-              name={item.type === 'project' ? "business-outline" : "pin-outline"} 
-              size={20} 
-              color={item.status === 'active' ? 'white' : theme.colors.bodyText} 
-            />
-          </View>
-          <View style={styles.titleContainer}>
-            <Text style={styles.projectName} fontType="bold">{item.name}</Text>
-            {item.address && (
-              <Text style={styles.projectAddress} numberOfLines={1}>{item.address}</Text>
-            )}
-          </View>
-          <View style={[styles.statusBadge, { backgroundColor: badge.bg }]}>
-            <Text style={[styles.statusBadgeText, { color: badge.text }]} fontType="bold">
-              {badge.label}
-            </Text>
-          </View>
+    <TouchableOpacity
+      onPress={() => item.type === 'project' && onPress(item.ref_id)}
+      disabled={item.type === 'common_location'}
+      activeOpacity={item.type === 'project' ? 0.7 : 1}
+    >
+      <View style={[styles.assignmentRow, isActive && styles.assignmentRowActive]}>
+        <View style={[styles.visitDot, visited ? styles.visitDotVisited : styles.visitDotUnvisited]}>
+          {visited && <Ionicons name="checkmark" size={12} color="white" />}
         </View>
 
-        <View style={styles.cardFooter}>
-          <View style={styles.footerDetail}>
-            <Ionicons name="time-outline" size={14} color={theme.colors.disabledText} />
-            <Text style={styles.footerText}>
-              {item.startTime ? `Scheduled: ${item.startTime}` : 'No fixed time'}
-            </Text>
-          </View>
+        <View style={styles.assignmentInfo}>
+          <Text style={styles.projectName} fontType="bold" numberOfLines={1}>{item.name}</Text>
+          {item.address ? (
+            <Text style={styles.projectAddress} numberOfLines={1}>{item.address}</Text>
+          ) : item.startTime ? (
+            <Text style={styles.projectAddress}>{item.startTime}</Text>
+          ) : null}
+        </View>
+
+        <View style={styles.assignmentRight}>
+          {isActive && (
+            <View style={styles.activePill}>
+              <Text style={styles.activePillText} fontType="bold">Active</Text>
+            </View>
+          )}
           {item.type === 'project' && (
             <Ionicons name="chevron-forward" size={16} color={theme.colors.disabledText} />
           )}
         </View>
-      </TouchableOpacity>
-    </Card>
+      </View>
+    </TouchableOpacity>
   );
 };
 
@@ -205,7 +162,7 @@ const styles = StyleSheet.create({
     color: theme.colors.headingText,
   },
   headerSubtitle: {
-    fontSize: theme.fontSizes.md,
+    fontSize: theme.fontSizes.sm,
     color: theme.colors.bodyText,
     marginTop: 4,
     textTransform: 'capitalize',
@@ -232,33 +189,42 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   listContainer: {
-    gap: theme.spacing(2),
-  },
-  assignmentCard: {
     borderRadius: theme.radius.lg,
-    padding: 0, // Reset padding to handle touchable correctly
-    overflow: 'hidden',
     borderWidth: 1,
     borderColor: theme.colors.borderColor,
+    backgroundColor: theme.colors.cardBackground,
+    overflow: 'hidden',
   },
-  cardTouchable: {
-    padding: theme.spacing(2),
-  },
-  cardHeader: {
+  assignmentRow: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
+    alignItems: 'center',
+    paddingHorizontal: theme.spacing(2),
+    paddingVertical: theme.spacing(1.5),
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.borderColor,
   },
-  iconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+  assignmentRowActive: {
+    backgroundColor: theme.colors.primaryMuted,
+  },
+  visitDot: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: theme.spacing(2),
+    flexShrink: 0,
   },
-  titleContainer: {
+  visitDotVisited: {
+    backgroundColor: theme.colors.primary,
+  },
+  visitDotUnvisited: {
+    backgroundColor: 'transparent',
+    borderWidth: 2,
+    borderColor: theme.colors.borderColor,
+  },
+  assignmentInfo: {
     flex: 1,
-    marginRight: theme.spacing(1),
   },
   projectName: {
     fontSize: theme.fontSizes.md,
@@ -269,30 +235,19 @@ const styles = StyleSheet.create({
     color: theme.colors.bodyText,
     marginTop: 2,
   },
-  statusBadge: {
-    paddingHorizontal: theme.spacing(1),
-    paddingVertical: 4,
-    borderRadius: theme.radius.sm,
-  },
-  statusBadgeText: {
-    fontSize: 10,
-  },
-  cardFooter: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: theme.spacing(2),
-    paddingTop: theme.spacing(1.5),
-    borderTopWidth: 1,
-    borderTopColor: theme.colors.borderColor,
-  },
-  footerDetail: {
+  assignmentRight: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 8,
   },
-  footerText: {
-    fontSize: theme.fontSizes.xs,
-    color: theme.colors.disabledText,
+  activePill: {
+    backgroundColor: theme.colors.primary,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: theme.radius.pill,
+  },
+  activePillText: {
+    color: 'white',
+    fontSize: 11,
   },
 });

@@ -7,7 +7,6 @@ import * as BackgroundLocation from 'background-location';
 import { getDistance } from "geolib";
 import { Button } from "../../components/Button";
 import { Card } from "../../components/Card";
-import { CircularTimer } from "../../components/CircularTimer";
 import AnimatedScreen from "../../components/AnimatedScreen";
 import { theme } from "../../theme";
 import { MapView, Marker, Circle } from '../../components/MapView';
@@ -543,25 +542,55 @@ export default function Home() {
         contentContainerStyle={styles.scrollContent}
         refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} colors={[theme.colors.primary]} />}
       >
+        {/* Header */}
         <View style={styles.pageHeader}>
           <Logo style={styles.logo} />
+          <Text style={styles.dateText}>{moment().format('ddd, MMM D')}</Text>
         </View>
+
         <View style={styles.homeContent}>
-          {/* 1. Combined Assignment & Status Card */}
-          <Card style={styles.sectionCard}>
-            <View style={styles.cardHeaderRow}>
-              <Text style={styles.sectionTitle} fontType="bold">
-                {stableCheckedIn ? "Current Assignment" : "Today's Schedule"}
-              </Text>
+          {/* Status + Assignment card */}
+          <View style={styles.mainCard}>
+            <View style={styles.mainCardTop}>
+              <View style={styles.mainCardLeft}>
+                <Text style={styles.mainCardLabel} fontType="medium">
+                  {stableCheckedIn ? 'Currently working at' : 'Next assignment'}
+                </Text>
+                {isDataLoading ? (
+                  <ActivityIndicator color={theme.colors.primary} style={{ marginTop: 8 }} />
+                ) : relevantAssignment ? (
+                  <>
+                    <TouchableOpacity
+                      onPress={() => !isSelectionLocked && setIsAssignmentSelectionModalVisible(true)}
+                      disabled={isSelectionLocked}
+                      style={styles.siteNameRow}
+                    >
+                      <Text style={styles.siteName} fontType="bold" numberOfLines={1}>{projectLocationName}</Text>
+                      {!isSelectionLocked && <Ionicons name="chevron-down" size={16} color={theme.colors.bodyText} />}
+                    </TouchableOpacity>
+                    <Text style={styles.siteAddress} numberOfLines={1}>
+                      {(relevantAssignment as any).project?.address || (relevantAssignment as any).location?.name || ''}
+                    </Text>
+                  </>
+                ) : (
+                  <Text style={styles.siteName} fontType="bold">No assignments today</Text>
+                )}
+              </View>
+
               {statusBadgeInfo && (
-                <View style={[styles.statusBadge, { 
-                  backgroundColor: statusBadgeInfo.type === 'active' ? theme.statusColors.activeBackground : 
-                                   statusBadgeInfo.type === 'success' ? theme.statusColors.successBackground : 
+                <View style={[styles.statusPill, {
+                  backgroundColor: statusBadgeInfo.type === 'active' ? theme.colors.primary :
+                                   statusBadgeInfo.type === 'success' ? theme.statusColors.successBackground :
                                    theme.statusColors.warningBackground
                 }]}>
-                  <Text style={[styles.statusBadgeText, { 
-                    color: statusBadgeInfo.type === 'active' ? theme.statusColors.activeText : 
-                           statusBadgeInfo.type === 'success' ? theme.statusColors.successText : 
+                  <View style={[styles.statusDot, {
+                    backgroundColor: statusBadgeInfo.type === 'active' ? '#fff' :
+                                     statusBadgeInfo.type === 'success' ? theme.statusColors.successText :
+                                     theme.statusColors.warningText
+                  }]} />
+                  <Text style={[styles.statusPillText, {
+                    color: statusBadgeInfo.type === 'active' ? '#fff' :
+                           statusBadgeInfo.type === 'success' ? theme.statusColors.successText :
                            theme.statusColors.warningText
                   }]} fontType="bold">
                     {statusBadgeInfo.label}
@@ -569,106 +598,75 @@ export default function Home() {
                 </View>
               )}
             </View>
-            
-            {isDataLoading ? (
-              <ActivityIndicator color={theme.colors.primary} style={{ marginVertical: 10 }} />
-            ) : !relevantAssignment ? (
-              <View style={styles.emptyState}>
-                <Ionicons name="calendar-outline" size={32} color={theme.colors.disabledText} />
-                <Text style={styles.emptyText}>No assignments scheduled for today.</Text>
-              </View>
-            ) : (
-              <View>
-                <View style={styles.assignmentInfoRow}>
-                  <TouchableOpacity 
-                    style={styles.assignmentItem} 
-                    onPress={() => setIsAssignmentSelectionModalVisible(true)}
-                    disabled={isSelectionLocked}
-                  >
-                    <View style={[styles.projectIconContainer, { backgroundColor: (relevantAssignment as any).project?.color || theme.colors.primary + '20' }]}>
-                      <Ionicons name="business-outline" size={20} color="white" />
-                    </View>
-                    <View style={styles.projectInfo}>
-                      <Text style={styles.projectName} fontType="bold">{projectLocationName}</Text>
-                      <Text style={styles.projectAddress} numberOfLines={1}>{(relevantAssignment as any).project?.address || 'Site assignment'}</Text>
-                    </View>
-                    {!isSelectionLocked && <Ionicons name="chevron-forward" size={20} color={theme.colors.disabledText} />}
-                  </TouchableOpacity>
 
-                  {!stableCheckedIn && (
-                    <TouchableOpacity style={styles.navigateButton} onPress={handleNavigate}>
-                      <View style={styles.navigateIconCircle}>
-                        <Ionicons name="navigate" size={20} color="white" />
-                      </View>
-                      <Text style={styles.navigateText} fontType="bold">NAV</Text>
-                    </TouchableOpacity>
-                  )}
-                </View>
-
-                <View style={styles.statusDetailRow}>
-                  <Ionicons 
-                    name={stableCheckedIn ? "time-outline" : "location-outline"} 
-                    size={16} 
-                    color={theme.colors.bodyText} 
-                  />
-                  <Text style={styles.statusSubText} fontType="medium">
-                    {stableCheckedIn && sessionStartTime 
-                      ? ` Started at ${moment(sessionStartTime).format('hh:mm A')}` 
-                      : ` ${locationStatusText}`}
-                  </Text>
-                </View>
-              </View>
-            )}
-          </Card>
-
-          {/* 2. Focus Section: Timer or Map */}
-          {(stableCheckedIn || relevantAssignment) && (
-            <Card style={styles.sectionCard}>
-              <Text style={styles.sectionTitle} fontType="bold">
-                {stableCheckedIn ? "Active Session" : "Location Overview"}
-              </Text>
-              <View style={styles.focusContainer}>
-                {stableCheckedIn ? (
-                  <CircularTimer elapsedTime={elapsedTime} size={240} strokeWidth={12} />
+            {/* Location / timer row */}
+            {relevantAssignment && (
+              <View style={styles.mainCardBottom}>
+                {stableCheckedIn && sessionStartTime ? (
+                  <View style={styles.sessionRow}>
+                    <Ionicons name="time-outline" size={14} color={theme.colors.bodyText} />
+                    <Text style={styles.sessionText}>
+                      {` Started ${moment(sessionStartTime).format('h:mm A')} · ${Math.floor(elapsedTime / 3600)}h ${Math.floor((elapsedTime % 3600) / 60)}m`}
+                    </Text>
+                  </View>
                 ) : (
-                  <View style={styles.mapWrapper}>
-                    {locationReady && workerMapLocation && targetProjectLocation ? (
-                      <MapView
-                        ref={mapRef}
-                        style={styles.map}
-                        scrollEnabled={false}
-                        zoomEnabled={false}
-                        showsUserLocation={true}
-                        region={mapRegion}
-                      >
-                        <Marker 
-                          coordinate={{ latitude: targetProjectLocation.lat, longitude: targetProjectLocation.lon }}
-                          anchor={{ x: 0.5, y: 0.5 }}
-                          pinColor={theme.colors.primary}
-                        />
-                        <Circle center={{ latitude: targetProjectLocation.lat, longitude: targetProjectLocation.lon }} radius={ACCEPTABLE_DISTANCE} strokeWidth={2} strokeColor={theme.colors.primary} fillColor={theme.colors.primary + '20'} />
-                      </MapView>
-                    ) : (
-                      <View style={styles.mapLoading}>
-                        <ActivityIndicator color={theme.colors.primary} />
-                        <Text style={styles.mapLoadingText}>Preparing map...</Text>
-                      </View>
-                    )}
+                  <View style={styles.sessionRow}>
+                    <Ionicons name="location-outline" size={14} color={theme.colors.bodyText} />
+                    <Text style={styles.sessionText}>{` ${locationStatusText}`}</Text>
                   </View>
                 )}
+                {!stableCheckedIn && targetProjectLocation && (
+                  <TouchableOpacity onPress={handleNavigate} style={styles.navButton}>
+                    <Ionicons name="navigate-outline" size={14} color={theme.colors.primary} />
+                    <Text style={styles.navButtonText} fontType="bold"> Navigate</Text>
+                  </TouchableOpacity>
+                )}
               </View>
-            </Card>
+            )}
+          </View>
+
+          {/* Map — always show when there's a relevant assignment and not checked in, or show compact when checked in */}
+          {relevantAssignment && targetProjectLocation && (
+            <View style={[styles.mapCard, stableCheckedIn && styles.mapCardCheckedIn]}>
+              {locationReady && workerMapLocation ? (
+                <MapView
+                  ref={mapRef}
+                  style={StyleSheet.absoluteFillObject}
+                  scrollEnabled={false}
+                  zoomEnabled={false}
+                  showsUserLocation={true}
+                  region={mapRegion}
+                >
+                  <Marker
+                    coordinate={{ latitude: targetProjectLocation.lat, longitude: targetProjectLocation.lon }}
+                    anchor={{ x: 0.5, y: 0.5 }}
+                    pinColor={theme.colors.primary}
+                  />
+                  <Circle
+                    center={{ latitude: targetProjectLocation.lat, longitude: targetProjectLocation.lon }}
+                    radius={ACCEPTABLE_DISTANCE}
+                    strokeWidth={2}
+                    strokeColor={theme.colors.primary}
+                    fillColor={theme.colors.primary + '20'}
+                  />
+                </MapView>
+              ) : (
+                <View style={styles.mapLoading}>
+                  <ActivityIndicator color={theme.colors.primary} />
+                </View>
+              )}
+            </View>
           )}
         </View>
       </ScrollView>
 
-      {/* FIXED FOOTER BUTTON */}
+      {/* Check in/out button */}
       <View style={styles.footer}>
         <Button
           onPress={stableCheckedIn ? handleCheckOut : handleCheckIn}
           style={[styles.actionButton, stableCheckedIn ? styles.checkOutBtn : styles.checkInBtn]}
           disabled={buttonDisabled || isActuallyProcessing}
-          title={buttonTitle}
+          title={stableCheckedIn ? "Check Out" : (relevantAssignment ? "Check In" : "No Assignments")}
           textStyle={styles.buttonText}
           loading={isActuallyProcessing}
         />
@@ -686,6 +684,160 @@ export default function Home() {
 }
 
 const styles = StyleSheet.create({
+  scrollContent: {
+    paddingBottom: 100,
+  },
+  pageHeader: {
+    paddingTop: theme.spacing(4),
+    paddingBottom: theme.spacing(2),
+    paddingHorizontal: theme.spacing(3),
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  logo: {},
+  dateText: {
+    fontSize: theme.fontSizes.sm,
+    color: theme.colors.bodyText,
+  },
+  homeContent: {
+    paddingHorizontal: theme.spacing(3),
+    gap: theme.spacing(2),
+  },
+  // Main assignment card
+  mainCard: {
+    backgroundColor: theme.colors.cardBackground,
+    borderRadius: theme.radius.lg,
+    borderWidth: 1,
+    borderColor: theme.colors.borderColor,
+    overflow: 'hidden',
+  },
+  mainCardTop: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    padding: theme.spacing(2.5),
+  },
+  mainCardLeft: {
+    flex: 1,
+    marginRight: theme.spacing(1.5),
+  },
+  mainCardLabel: {
+    fontSize: theme.fontSizes.xs,
+    color: theme.colors.disabledText,
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
+    marginBottom: 6,
+  },
+  siteNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  siteName: {
+    fontSize: theme.fontSizes.lg,
+    color: theme.colors.headingText,
+    flexShrink: 1,
+  },
+  siteAddress: {
+    fontSize: theme.fontSizes.sm,
+    color: theme.colors.bodyText,
+    marginTop: 2,
+  },
+  statusPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: theme.radius.pill,
+    gap: 5,
+    alignSelf: 'flex-start',
+  },
+  statusDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+  },
+  statusPillText: {
+    fontSize: 11,
+  },
+  mainCardBottom: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: theme.spacing(2.5),
+    paddingVertical: theme.spacing(1.5),
+    borderTopWidth: 1,
+    borderTopColor: theme.colors.borderColor,
+  },
+  sessionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  sessionText: {
+    fontSize: theme.fontSizes.sm,
+    color: theme.colors.bodyText,
+  },
+  navButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingLeft: theme.spacing(1),
+  },
+  navButtonText: {
+    fontSize: theme.fontSizes.sm,
+    color: theme.colors.primary,
+  },
+  // Map
+  mapCard: {
+    height: 220,
+    borderRadius: theme.radius.lg,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: theme.colors.borderColor,
+  },
+  mapCardCheckedIn: {
+    height: 140,
+  },
+  mapLoading: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: theme.colors.cardBackground,
+  },
+  // Footer
+  footer: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    padding: theme.spacing(2.5),
+    paddingBottom: theme.spacing(3),
+    backgroundColor: theme.colors.pageBackground,
+    borderTopWidth: 1,
+    borderTopColor: theme.colors.borderColor,
+  },
+  actionButton: {
+    height: 50,
+    borderRadius: theme.radius.md,
+    width: '100%',
+    shadowColor: 'transparent',
+    shadowOpacity: 0,
+    shadowRadius: 0,
+    elevation: 0,
+    overflow: 'hidden',
+  },
+  checkInBtn: {
+    backgroundColor: theme.colors.primary,
+  },
+  checkOutBtn: {
+    backgroundColor: theme.colors.danger,
+  },
+  buttonText: {
+    color: 'white',
+    fontSize: 15,
+  },
+  // Permission screens
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
@@ -702,17 +854,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 20,
   },
-  scrollContent: {
-    paddingBottom: 120,
-  },
-  pageHeader: {
-    paddingVertical: theme.spacing(4),
-    paddingHorizontal: theme.spacing(3),
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  logo: {
-  },
   pageTitle: {
     fontSize: theme.fontSizes.xl,
     color: theme.colors.headingText,
@@ -721,181 +862,5 @@ const styles = StyleSheet.create({
     fontSize: theme.fontSizes.lg,
     color: theme.colors.bodyText,
     marginTop: 2,
-  },
-  homeContent: {
-    paddingHorizontal: theme.spacing(3),
-  },
-  sectionCard: {
-    marginBottom: theme.spacing(2),
-    borderRadius: theme.radius.xl,
-    backgroundColor: theme.colors.cardBackground,
-    padding: theme.spacing(3),
-    borderWidth: 1,
-    borderColor: theme.colors.borderColor,
-  },
-  sectionTitle: {
-    fontSize: theme.fontSizes.lg,
-    color: theme.colors.headingText,
-  },
-  cardHeaderRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: theme.spacing(2),
-  },
-  statusBadge: {
-    paddingHorizontal: theme.spacing(1.5),
-    paddingVertical: theme.spacing(0.5),
-    borderRadius: theme.radius.pill,
-  },
-  statusBadgeText: {
-    fontSize: theme.fontSizes.xs,
-  },
-  statusInfo: {
-    marginTop: 5,
-  },
-  statusMainText: {
-    fontSize: theme.fontSizes.md,
-    color: theme.colors.bodyText,
-  },
-  statusSubText: {
-    fontSize: theme.fontSizes.sm,
-    color: theme.colors.disabledText,
-    marginTop: 4,
-  },
-  todayText: {
-    fontSize: theme.fontSizes.sm,
-    color: theme.colors.disabledText,
-  },
-  assignmentItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: theme.spacing(1),
-    flex: 1,
-  },
-  assignmentInfoRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  navigateButton: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginLeft: theme.spacing(2),
-    paddingHorizontal: theme.spacing(1),
-  },
-  navigateIconCircle: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: theme.colors.primary,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 2,
-  },
-  navigateText: {
-    fontSize: 10,
-    color: theme.colors.primary,
-  },
-  projectIconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: theme.spacing(2),
-  },
-  projectInfo: {
-    flex: 1,
-  },
-  projectName: {
-    fontSize: theme.fontSizes.md,
-    color: theme.colors.headingText,
-  },
-  projectAddress: {
-    fontSize: theme.fontSizes.sm,
-    color: theme.colors.bodyText,
-    marginTop: 2,
-  },
-  statusDetailRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: theme.spacing(1.5),
-    paddingTop: theme.spacing(1.5),
-    borderTopWidth: 1,
-    borderTopColor: theme.colors.borderColor,
-  },
-  emptyState: {
-    alignItems: 'center',
-    paddingVertical: 20,
-  },
-  emptyText: {
-    color: theme.colors.disabledText,
-    marginTop: 10,
-    fontSize: theme.fontSizes.sm,
-  },
-  focusContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 10,
-  },
-  mapWrapper: {
-    width: '100%',
-    height: 240,
-    borderRadius: theme.radius.lg,
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: theme.colors.borderColor,
-  },
-  map: {
-    width: '100%',
-    height: '100%',
-  },
-  markerContainer: {
-    backgroundColor: theme.colors.primary,
-    padding: 6,
-    borderRadius: 15,
-    borderWidth: 2,
-    borderColor: 'white',
-  },
-  mapLoading: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: theme.colors.background,
-  },
-  mapLoadingText: {
-    marginTop: 10,
-    color: theme.colors.disabledText,
-  },
-  footer: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    padding: theme.spacing(3),
-    backgroundColor: theme.colors.background,
-    borderTopWidth: 1,
-    borderTopColor: theme.colors.borderColor,
-  },
-  actionButton: {
-    height: 56,
-    borderRadius: theme.radius.lg,
-    width: '100%',
-    shadowColor: 'transparent',
-    shadowOpacity: 0,
-    shadowRadius: 0,
-    elevation: 0,
-    overflow: 'hidden',
-  },
-  checkInBtn: {
-    backgroundColor: theme.colors.primary,
-  },
-  checkOutBtn: {
-    backgroundColor: theme.colors.secondary,
-  },
-  buttonText: {
-    color: 'white',
-    fontSize: 16,
   },
 });
