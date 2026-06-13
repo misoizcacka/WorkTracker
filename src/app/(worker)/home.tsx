@@ -643,11 +643,8 @@ export default function Home() {
                         <Marker 
                           coordinate={{ latitude: targetProjectLocation.lat, longitude: targetProjectLocation.lon }}
                           anchor={{ x: 0.5, y: 0.5 }}
-                        >
-                          <View style={styles.markerContainer}>
-                            <Ionicons name="briefcase" size={16} color="white" />
-                          </View>
-                        </Marker>
+                          pinColor={theme.colors.primary}
+                        />
                         <Circle center={{ latitude: targetProjectLocation.lat, longitude: targetProjectLocation.lon }} radius={ACCEPTABLE_DISTANCE} strokeWidth={2} strokeColor={theme.colors.primary} fillColor={theme.colors.primary + '20'} />
                       </MapView>
                     ) : (

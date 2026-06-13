@@ -1,6 +1,6 @@
 import React, { useMemo, useState, useRef, useEffect } from 'react';
-import RNMapView, { Marker, Callout, Circle, MapViewProps as RNMapViewProps, LatLng, FitToOptions, Region } from 'react-native-maps';
-import { View, Image, Text, StyleSheet, Dimensions } from 'react-native';
+import RNMapView, { Marker, Callout, Circle, MapViewProps as RNMapViewProps, LatLng, FitToOptions, Region, PROVIDER_GOOGLE } from 'react-native-maps';
+import { View, Image, Text, StyleSheet, Dimensions, Platform } from 'react-native';
 import { theme } from '../theme';
 import Supercluster from 'supercluster';
 import { FontAwesome5, Ionicons } from '@expo/vector-icons';
@@ -35,9 +35,10 @@ export const MapView = React.forwardRef<MapViewHandle, NativeMapViewProps>(
   ({ selectedWorkers = [], selectedProjects = [], initialRegion, children, ...props }, ref) => {
     const { region, ...restProps } = props;
     const mapViewRef = useRef<RNMapView>(null);
+    const isMounted = useRef(false);
 
     useEffect(() => {
-      if (region && mapViewRef.current) {
+      if (region && mapViewRef.current && isMounted.current) {
         mapViewRef.current.animateToRegion(region as Region, 750);
       }
     }, [region]);
@@ -106,8 +107,10 @@ export const MapView = React.forwardRef<MapViewHandle, NativeMapViewProps>(
 
   return (
     <RNMapView
+      provider={PROVIDER_GOOGLE}
       {...restProps}
       ref={mapViewRef}
+      onMapReady={() => { isMounted.current = true; }}
       initialRegion={initialRegion || (region as Region)}
       onRegionChangeComplete={(region) => {
         const newZoom = Math.log2(360 * ((Dimensions.get('window').width / 256) / region.longitudeDelta));
