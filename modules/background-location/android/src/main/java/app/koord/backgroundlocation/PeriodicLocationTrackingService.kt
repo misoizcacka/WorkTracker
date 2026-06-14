@@ -95,6 +95,14 @@ class PeriodicLocationTrackingService : Service() {
                     val wasInside = sharedPrefs.getBoolean(manualKey, !isNowInside)
                     
                     if (isNowInside != wasInside || !hasPreviousState) {
+                        // On first detection (no previous state), only fire enter events.
+                        // Firing exit for a geofence we were never recorded inside is noise.
+                        val isRealTransition = hasPreviousState
+                        val isInitialEntry = !hasPreviousState && isNowInside
+                        if (!isRealTransition && !isInitialEntry) {
+                            sharedPrefs.edit().putBoolean(manualKey, isNowInside).apply()
+                            return@forEach
+                        }
                         Log.d("PeriodicLocationTrackingService", "MANUAL transition/initial state detected for ${it.id}: $status")
                         sharedPrefs.edit().putBoolean(manualKey, isNowInside).apply()
                         transitionDetected = true
