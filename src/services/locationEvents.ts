@@ -42,16 +42,14 @@ export async function fetchLocationEventsForWorkerInRange(
 }
 
 export async function upsertLocationEvents(events: LocationEventRecord[]): Promise<LocationEventRecord[]> {
-  if (events.length === 0) {
-    return [];
-  }
+  if (events.length === 0) return [];
 
-  const { error } = await supabase.rpc('insert_location_events_from_app', {
-    p_events: events,
-  });
+  const { error } = await supabase
+    .from('location_events')
+    .upsert(events, { onConflict: 'id', ignoreDuplicates: true });
 
   if (error) {
-    console.error('Error inserting location events via RPC:', error);
+    console.error('Error upserting location events:', error);
     throw error;
   }
 
