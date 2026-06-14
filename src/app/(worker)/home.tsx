@@ -24,7 +24,7 @@ import { GeofenceAssignment } from 'background-location';
 import { fetchAssignmentsForWorkers } from '~/services/workerAssignments';
 
 export default function Home() {
-  const { user, userCompanyId, isCompanyIdLoading, deviceToken, deviceSecret, userCompanyName } = useSession();
+  const { user, userCompanyId, isCompanyIdLoading, deviceToken, deviceSecret, userCompanyName, session } = useSession();
   const { loadInitialProjects, isLoading: projectsLoading } = useProjects();
   const [currentDate, setCurrentDate] = useState(moment().format('YYYY-MM-DD'));
   const [locationPermission, setLocationPermission] = useState<Location.PermissionStatus | null>(null);
@@ -370,7 +370,8 @@ export default function Home() {
       deviceToken,
       deviceSecret,
       JSON.stringify(backgroundGeofenceAssignments),
-      projectLocationName
+      projectLocationName,
+      session?.access_token ?? ''
     ).catch((error) => {
       console.error('Failed to refresh background geofence assignments:', error);
     });
@@ -442,7 +443,7 @@ export default function Home() {
             status: 'active' as const,
           }];
 
-      await BackgroundLocation.start(user!.id, relevantAssignment.id, userCompanyId!, JSON.stringify({ url: supabaseUrl, key: supabaseKey }), deviceToken!, deviceSecret!, JSON.stringify(geofenceAssignmentsToStart), projectLocationName);
+      await BackgroundLocation.start(user!.id, relevantAssignment.id, userCompanyId!, JSON.stringify({ url: supabaseUrl, key: supabaseKey }), deviceToken!, deviceSecret!, JSON.stringify(geofenceAssignmentsToStart), projectLocationName, session?.access_token ?? '');
       Toast.show({ type: 'success', text1: 'Checked In', text2: `Working on ${projectLocationName}` });
       setSelectedNextAssignmentId(null);
     } catch (err: any) {

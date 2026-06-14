@@ -12,6 +12,7 @@ object Constants {
     const val KEY_SUPABASE_PUBLISHABLE_KEY = "supabase_publishable_key"
     const val KEY_APP_PACKAGE_NAME = "app_package_name"
     const val KEY_LOCATION_NAME = "location_name"
+    const val KEY_ACCESS_TOKEN = "access_token"
 
     // Geofencing constants
     const val GEOFENCE_RADIUS_METERS = 150f // From frontend ACCEPTABLE_DISTANCE

@@ -27,7 +27,8 @@ data class GeofenceAssignment(
 data class SupabaseConfig(
     val url: String,
     val key: String,
-    val locationName: String? = null
+    val locationName: String? = null,
+    val accessToken: String? = null
 )
 
 class BackgroundLocationModule : Module() {
@@ -77,6 +78,8 @@ class BackgroundLocationModule : Module() {
                 putString(Constants.KEY_SUPABASE_PUBLISHABLE_KEY, parsedSupabaseConfig.key)
                 putString(Constants.SHARED_PREFS_KEY_GEOFENCE_ASSIGNMENTS, geofenceAssignments)
                 putString(Constants.KEY_LOCATION_NAME, parsedSupabaseConfig.locationName ?: "")
+                putString(Constants.KEY_ACCESS_TOKEN, parsedSupabaseConfig.accessToken ?: "")
+                putString(Constants.KEY_ACCESS_TOKEN, parsedSupabaseConfig.accessToken ?: "")
                 apply()
             }
             

@@ -17,17 +17,17 @@ export function start(
   deviceToken: string,
   deviceSecret: string,
   geofenceAssignments: string,
-  locationName: string = ''
+  locationName: string = '',
+  accessToken: string = ''
 ): Promise<void> {
-    // Embed locationName into supabaseConfig to avoid exceeding Expo Modules AsyncFunction param limit (8)
-    const supabaseConfigWithName = JSON.stringify({ ...JSON.parse(supabaseConfig), locationName });
+    const config = { ...JSON.parse(supabaseConfig), locationName, accessToken };
 
     try {
         return BackgroundLocationModule.start(
           workerId,
           assignmentId,
           companyId,
-          supabaseConfigWithName,
+          JSON.stringify(config),
           deviceToken,
           deviceSecret,
           geofenceAssignments
