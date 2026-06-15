@@ -47,7 +47,7 @@ export default function Home() {
   const [pendingAction, setPendingAction] = useState<'checking_in' | 'checking_out' | null>(null);
   const [lastOnSiteAssignmentId, setLastOnSiteAssignmentId] = useState<string | null>(null);
 
-  const { processedAssignments, loadAssignmentsForDate, loadWorkSessionsForDate, isLoading: assignmentsLoading, activeWorkSession, loadedWorkSessions, startWorkSession, endWorkSession, lastCheckoutAssignmentId, isOffline } = useAssignments();
+  const { processedAssignments, loadAssignmentsForDate, loadWorkSessionsForDate, isLoading: assignmentsLoading, activeWorkSession, loadedWorkSessions, startWorkSession, endWorkSession, lastCheckoutAssignmentId, isOffline, isSyncingToCloud } = useAssignments();
 
   const isDataLoading = assignmentsLoading || projectsLoading;
   const ACCEPTABLE_DISTANCE = 150; // meters
@@ -549,7 +549,15 @@ export default function Home() {
         {/* Header */}
         <View style={styles.pageHeader}>
           <Logo style={styles.logo} />
-          <Text style={styles.dateText}>{moment().format('ddd, MMM D')}</Text>
+          <View style={styles.headerRight}>
+            {isSyncingToCloud && (
+              <View style={styles.syncPill}>
+                <ActivityIndicator size="small" color={theme.colors.bodyText} style={{ transform: [{ scale: 0.6 }] }} />
+                <Text style={styles.syncText} fontType="medium">Syncing</Text>
+              </View>
+            )}
+            <Text style={styles.dateText}>{moment().format('ddd, MMM D')}</Text>
+          </View>
         </View>
 
         <View style={styles.homeContent}>
@@ -577,7 +585,13 @@ export default function Home() {
                     </Text>
                   </>
                 ) : (
-                  <Text style={styles.siteName} fontType="bold">No assignments today</Text>
+                  <View style={styles.emptyAssignment}>
+                    <Ionicons name="calendar-outline" size={28} color={theme.colors.disabledText} />
+                    <View style={styles.emptyAssignmentText}>
+                      <Text style={styles.emptyAssignmentTitle} fontType="bold">No assignments today</Text>
+                      <Text style={styles.emptyAssignmentSub}>Your manager hasn't scheduled anything yet.</Text>
+                    </View>
+                  </View>
                 )}
               </View>
 
@@ -700,6 +714,24 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   logo: {},
+  headerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  syncPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: theme.colors.primaryMuted,
+    borderRadius: theme.radius.pill,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    gap: 2,
+  },
+  syncText: {
+    fontSize: 11,
+    color: theme.colors.bodyText,
+  },
   dateText: {
     fontSize: theme.fontSizes.sm,
     color: theme.colors.bodyText,
@@ -732,6 +764,24 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     letterSpacing: 0.8,
     marginBottom: 6,
+  },
+  emptyAssignment: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing(1.5),
+    paddingVertical: theme.spacing(1),
+  },
+  emptyAssignmentText: {
+    flex: 1,
+  },
+  emptyAssignmentTitle: {
+    fontSize: theme.fontSizes.md,
+    color: theme.colors.headingText,
+  },
+  emptyAssignmentSub: {
+    fontSize: theme.fontSizes.sm,
+    color: theme.colors.disabledText,
+    marginTop: 2,
   },
   siteNameRow: {
     flexDirection: 'row',

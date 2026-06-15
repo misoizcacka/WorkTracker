@@ -126,9 +126,11 @@ export default function ProjectsScreen() {
           </View>
         ) : todaysAssignments.length === 0 ? (
           <View style={styles.emptyState}>
-            <Ionicons name="calendar-outline" size={64} color={theme.colors.borderColor} />
-            <Text style={styles.emptyText} fontType="medium">No assignments for today.</Text>
-            <Text style={styles.emptySubText}>Your schedule will appear here once assigned.</Text>
+            <View style={styles.emptyIconWrap}>
+              <Ionicons name="calendar-outline" size={32} color={theme.colors.disabledText} />
+            </View>
+            <Text style={styles.emptyText} fontType="bold">No assignments today</Text>
+            <Text style={styles.emptySubText}>Your schedule will appear here once your manager assigns you to a site.</Text>
           </View>
         ) : (
           <View style={styles.listContainer}>
@@ -176,17 +178,27 @@ const styles = StyleSheet.create({
   emptyState: {
     alignItems: 'center',
     paddingVertical: 60,
+    paddingHorizontal: theme.spacing(4),
+  },
+  emptyIconWrap: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: theme.colors.primaryMuted,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: theme.spacing(2),
   },
   emptyText: {
     fontSize: theme.fontSizes.lg,
-    color: theme.colors.bodyText,
-    marginTop: 16,
+    color: theme.colors.headingText,
+    marginBottom: 6,
   },
   emptySubText: {
     fontSize: theme.fontSizes.sm,
     color: theme.colors.disabledText,
-    marginTop: 8,
     textAlign: 'center',
+    lineHeight: 20,
   },
   listContainer: {
     borderRadius: theme.radius.lg,

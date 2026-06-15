@@ -115,7 +115,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: theme.spacing(3),
   },
   profileCard: {
-    borderRadius: theme.radius.xl,
+    borderRadius: theme.radius.lg,
     padding: theme.spacing(3),
     marginBottom: theme.spacing(3),
     borderWidth: 1,
@@ -197,12 +197,12 @@ const styles = StyleSheet.create({
   },
   logoutButton: {
     width: '100%',
-    height: 56,
-    borderRadius: theme.radius.lg,
+    height: 50,
+    borderRadius: theme.radius.md,
     backgroundColor: theme.colors.danger,
   },
   logoutButtonText: {
     color: 'white',
-    fontSize: 16,
+    fontSize: 15,
   },
 });

@@ -353,7 +353,7 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   summaryCard: {
-    borderRadius: theme.radius.xl,
+    borderRadius: theme.radius.lg,
     padding: theme.spacing(3),
     marginBottom: theme.spacing(3),
     borderWidth: 1,

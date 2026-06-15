@@ -48,7 +48,7 @@ const trackingDotsLayerStyle: CircleLayerSpecification = {
   },
 };
 
-const TILE_PROVIDER_STYLE = 'https://tiles.stadiamaps.com/styles/osm_bright.json';
+const TILE_PROVIDER_STYLE = 'https://data.lfmaps.fr/styles/bright';
 
 const DailyWorkerMapWeb: React.FC<DailyWorkerMapProps & {
   assignmentPointsGeoJSON: FeatureCollection<Point>;
