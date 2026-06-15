@@ -24,7 +24,7 @@ import { GeofenceAssignment } from 'background-location';
 import { fetchAssignmentsForWorkers } from '~/services/workerAssignments';
 
 export default function Home() {
-  const { user, userCompanyId, isCompanyIdLoading, deviceToken, deviceSecret, userCompanyName, session } = useSession();
+  const { user, userCompanyId, isCompanyIdLoading, deviceToken, deviceSecret, userCompanyName, session, refreshUser } = useSession();
   const { loadInitialProjects, isLoading: projectsLoading } = useProjects();
   const [currentDate, setCurrentDate] = useState(moment().format('YYYY-MM-DD'));
   const [locationPermission, setLocationPermission] = useState<Location.PermissionStatus | null>(null);
@@ -303,6 +303,9 @@ export default function Home() {
   }, [relevantAssignment, locationReady, targetProjectLocation, isNearby, distance, projectLocationName]);
 
   useEffect(() => { fetchHomeData(); }, [fetchHomeData]);
+
+  // Ensure the session token is always fresh when the screen loads
+  useEffect(() => { refreshUser(); }, []);
 
   useEffect(() => {
     let timer: any;
