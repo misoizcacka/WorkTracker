@@ -26,13 +26,13 @@ export const Logo: React.FC<LogoProps> = ({
   let height: DimensionValue = theme.branding.logoHeight;
 
   if (variant === 'icon') {
-    width = 16;
-    height = 24;
+    width = 10;
+    height = 15;
   } else {
     switch (size) {
       case 'small':
-        width = theme.branding.logoWidthSmall;
-        height = theme.branding.logoHeightSmall;
+        width = 89;
+        height = 18;
         break;
       case 'medium':
         width = theme.branding.logoWidthMedium;
@@ -49,7 +49,22 @@ export const Logo: React.FC<LogoProps> = ({
     }
   }
 
-  const source = variant === 'icon' ? KLogoSVG : (Platform.OS === 'web' ? LogoSVG : LogoPNG);
+  if (Platform.OS === 'web') {
+    const src = variant === 'icon' ? KLogoSVG : LogoSVG;
+    const resolvedSrc = typeof src === 'string' ? src : (src.default ?? src.uri ?? src);
+    return (
+      // @ts-ignore
+      <img
+        src={resolvedSrc}
+        width={width as number}
+        height={height as number}
+        style={{ display: 'block', objectFit: 'contain' }}
+        draggable={false}
+      />
+    );
+  }
+
+  const source = variant === 'icon' ? KLogoSVG : LogoPNG;
 
   return (
     <Image 

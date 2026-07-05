@@ -145,6 +145,11 @@ export default function ManagerEmployees() {
   };
 
   const handleGenerateAccessLink = async (employee: Employee) => {
+    if (employee.id === user?.id) {
+      Toast.show({ type: 'info', text1: 'Not Available', text2: 'You cannot generate an invite link for yourself.' });
+      return;
+    }
+
     setLoading(true);
     try {
       const result = await createInvite({ employee_id: employee.id });
@@ -217,6 +222,7 @@ export default function ManagerEmployees() {
   const renderEmployeeRow = (item: CombinedEmployeeType & { token?: string }) => {
     const statusStyle = getStatusStyle(item.status as Employee['status']); // Cast status for getStatusStyle
     const isPendingInvite = item.status === 'pending';
+    const isCurrentUser = !isPendingInvite && item.id === user?.id;
     const manager = !isPendingInvite && (item as Employee).reporting_to && typeof (item as Employee).reporting_to === 'string' ? getEmployeeById((item as Employee).reporting_to!) : null; // Use non-null assertion
 
     return (
@@ -256,9 +262,11 @@ export default function ManagerEmployees() {
             </>
           ) : (
             <>
-              <TouchableOpacity onPress={() => handleGenerateAccessLink(item as Employee)} style={styles.actionButton} disabled={loading}>
-                <Ionicons name="link-outline" size={24} color={theme.colors.secondary} />
-              </TouchableOpacity>
+              {!isCurrentUser ? (
+                <TouchableOpacity onPress={() => handleGenerateAccessLink(item as Employee)} style={styles.actionButton} disabled={loading}>
+                  <Ionicons name="link-outline" size={24} color={theme.colors.secondary} />
+                </TouchableOpacity>
+              ) : null}
               <TouchableOpacity onPress={() => handleEdit(item as Employee)} style={styles.actionButton}>
                 <Ionicons name="pencil-outline" size={24} color={theme.colors.primary} />
               </TouchableOpacity>
@@ -501,7 +509,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 15,
     marginLeft: theme.spacing(2),
   },
-  createButtonText: { color: "white", fontSize: 18 },
+  createButtonText: { color: "white", fontSize: theme.fontSizes.md },
   // tableWrapperCard removed
 
   tableHeaderRow: {
@@ -559,12 +567,12 @@ const styles = StyleSheet.create({
   },
   statusText: {
     color: 'white',
-    fontSize: 12,
+    fontSize: theme.fontSizes.xs,
     textTransform: 'capitalize',
   },
   actionButton: { padding: theme.spacing(0.5) },
   actionButtonText: {
-    fontSize: 12,
+    fontSize: theme.fontSizes.xs,
     color: theme.colors.bodyText,
     marginTop: theme.spacing(0.5),
   },
@@ -574,7 +582,7 @@ const styles = StyleSheet.create({
     padding: theme.spacing(2),
   },
   invitesTitle: {
-    fontSize: 18,
+    fontSize: theme.fontSizes.lg,
     fontWeight: 'bold',
     color: theme.colors.headingText,
     marginBottom: theme.spacing(1.5),
@@ -591,11 +599,11 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   inviteName: {
-    fontSize: 16,
+    fontSize: theme.fontSizes.md,
     color: theme.colors.bodyText,
   },
   inviteEmail: {
-    fontSize: 14,
+    fontSize: theme.fontSizes.sm,
     color: theme.colors.bodyText,
   },
   modalBackdrop: {

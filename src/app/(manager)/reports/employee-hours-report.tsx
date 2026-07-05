@@ -397,7 +397,7 @@ const styles = StyleSheet.create({
         flex: 2,
     },
     reportTitle: {
-        fontSize: 22,
+        fontSize: theme.fontSizes.xl,
         color: theme.colors.headingText,
         marginBottom: theme.spacing(0.5),
     },
@@ -423,7 +423,7 @@ const styles = StyleSheet.create({
         marginBottom: theme.spacing(0.5),
     },
     statValue: {
-        fontSize: 24,
+        fontSize: theme.fontSizes.xl,
         color: theme.colors.primary,
     },
     tableContainer: {

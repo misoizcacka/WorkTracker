@@ -1,4 +1,4 @@
-const { withAndroidManifest, createRunOncePlugin } = require('@expo/config-plugins');
+const { withAndroidManifest, withInfoPlist, createRunOncePlugin } = require('@expo/config-plugins');
 
 const pkg = require('../package.json'); // Adjust path to find the frontend package.json
 
@@ -33,7 +33,23 @@ const withBackgroundLocation = (config) => {
         return config;
     });
 
-    // We will add iOS Info.plist modifications here later
+    config = withInfoPlist(config, (config) => {
+        const modes = new Set(config.modResults.UIBackgroundModes || []);
+        modes.add('location');
+
+        config.modResults.UIBackgroundModes = Array.from(modes);
+        config.modResults.NSLocationWhenInUseUsageDescription =
+            config.modResults.NSLocationWhenInUseUsageDescription ||
+            'This app uses your location to track your work hours when you are checked in.';
+        config.modResults.NSLocationAlwaysAndWhenInUseUsageDescription =
+            config.modResults.NSLocationAlwaysAndWhenInUseUsageDescription ||
+            'This app uses your location in the background to track your work hours and send periodic updates even when the app is closed.';
+        config.modResults.NSLocationAlwaysUsageDescription =
+            config.modResults.NSLocationAlwaysUsageDescription ||
+            'This app uses your location in the background to track your work hours and send periodic updates.';
+
+        return config;
+    });
 
     return config;
 };

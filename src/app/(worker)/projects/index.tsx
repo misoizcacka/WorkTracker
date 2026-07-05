@@ -190,9 +190,9 @@ const styles = StyleSheet.create({
     marginBottom: theme.spacing(2),
   },
   emptyText: {
-    fontSize: theme.fontSizes.lg,
-    color: theme.colors.headingText,
-    marginBottom: 6,
+    fontSize: theme.fontSizes.sm,
+    color: theme.colors.bodyText,
+    marginTop: 16,
   },
   emptySubText: {
     fontSize: theme.fontSizes.sm,

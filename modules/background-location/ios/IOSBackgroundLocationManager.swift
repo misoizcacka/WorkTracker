@@ -12,12 +12,14 @@ final class IOSBackgroundLocationManager: NSObject, CLLocationManagerDelegate {
   private let passiveInterval: TimeInterval = 15 * 60
   private var currentModeIsActive: Bool?
   private var shouldTreatNextLocationAsReconcile = false
+  private var backgroundTask: UIBackgroundTaskIdentifier = .invalid
 
   private override init() {
     super.init()
     locationManager.delegate = self
     locationManager.allowsBackgroundLocationUpdates = true
-    locationManager.pausesLocationUpdatesAutomatically = false
+    locationManager.pausesLocationUpdatesAutomatically = true
+    locationManager.activityType = .other
 
     NotificationCenter.default.addObserver(
       self,
@@ -25,6 +27,31 @@ final class IOSBackgroundLocationManager: NSObject, CLLocationManagerDelegate {
       name: UIApplication.didBecomeActiveNotification,
       object: nil
     )
+  }
+
+  func authorizationStatus() -> String {
+    switch locationManager.authorizationStatus {
+    case .notDetermined:
+      return "not_determined"
+    case .restricted:
+      return "restricted"
+    case .denied:
+      return "denied"
+    case .authorizedAlways:
+      return "authorized_always"
+    case .authorizedWhenInUse:
+      return "authorized_when_in_use"
+    @unknown default:
+      return "unknown"
+    }
+  }
+
+  func requestWhenInUseAuthorization() {
+    locationManager.requestWhenInUseAuthorization()
+  }
+
+  func requestAlwaysAuthorization() {
+    locationManager.requestAlwaysAuthorization()
   }
 
   deinit {
@@ -61,6 +88,24 @@ final class IOSBackgroundLocationManager: NSObject, CLLocationManagerDelegate {
     locationManager.startMonitoringSignificantLocationChanges()
     shouldTreatNextLocationAsReconcile = true
     locationManager.requestLocation()
+    flushPendingEvents()
+  }
+
+  func resumeFromStoredState() {
+    guard stateStore.workerId != nil,
+          stateStore.assignmentId != nil,
+          stateStore.companyId != nil,
+          stateStore.supabaseConfig != nil else {
+      return
+    }
+
+    registerGeofences(assignments: stateStore.geofenceAssignments)
+    let isInsideCurrent = currentAssignment().flatMap { stateStore.insideState(for: $0.id) } ?? true
+    startLocationUpdates(active: !isInsideCurrent)
+    locationManager.startMonitoringSignificantLocationChanges()
+    shouldTreatNextLocationAsReconcile = true
+    locationManager.requestLocation()
+    flushPendingEvents()
   }
 
   func stop() {
@@ -72,6 +117,7 @@ final class IOSBackgroundLocationManager: NSObject, CLLocationManagerDelegate {
     currentModeIsActive = nil
     stateStore.clear()
     authenticator.clearCredentials()
+    endBackgroundTask()
   }
 
   @objc
@@ -109,6 +155,8 @@ final class IOSBackgroundLocationManager: NSObject, CLLocationManagerDelegate {
     locationManager.stopUpdatingLocation()
     locationManager.desiredAccuracy = active ? kCLLocationAccuracyNearestTenMeters : kCLLocationAccuracyHundredMeters
     locationManager.distanceFilter = active ? 25 : 250
+    locationManager.pausesLocationUpdatesAutomatically = !active
+    locationManager.activityType = active ? .fitness : .other
     locationManager.startUpdatingLocation()
   }
 
@@ -119,11 +167,14 @@ final class IOSBackgroundLocationManager: NSObject, CLLocationManagerDelegate {
   }
 
   private func handleLocation(_ location: CLLocation) {
+    guard abs(location.timestamp.timeIntervalSinceNow) < 120 else {
+      return
+    }
     stateStore.lastKnownLocation = location.coordinate
     let source = shouldTreatNextLocationAsReconcile ? "reconcile" : "location_update"
     shouldTreatNextLocationAsReconcile = false
-    Task {
-      await processLocation(location, source: source)
+    performBackgroundWork {
+      await self.processLocation(location, source: source)
     }
   }
 
@@ -184,6 +235,76 @@ final class IOSBackgroundLocationManager: NSObject, CLLocationManagerDelegate {
     stateStore.lastLocationEventAt = Date()
   }
 
+  private func handleRegionTransition(region: CLRegion, isInside: Bool, source: String) {
+    guard let assignment = stateStore.geofenceAssignments.first(where: { $0.id == region.identifier && $0.status != "completed" }),
+          let workerId = stateStore.workerId,
+          let companyId = stateStore.companyId else {
+      shouldTreatNextLocationAsReconcile = true
+      locationManager.requestLocation()
+      return
+    }
+
+    stateStore.updateInsideState(for: assignment.id, isInside: isInside)
+    stateStore.lastLocationEventAt = Date()
+    if assignment.id == stateStore.assignmentId {
+      startLocationUpdates(active: !isInside)
+    }
+
+    let location = locationManager.location
+    let latitude = location?.coordinate.latitude ?? assignment.latitude
+    let longitude = location?.coordinate.longitude ?? assignment.longitude
+    let type = isInside ? "enter_geofence" : "exit_geofence"
+
+    performBackgroundWork {
+      await self.emitEvent(
+        type: type,
+        assignmentId: assignment.id,
+        workerId: workerId,
+        companyId: companyId,
+        latitude: latitude,
+        longitude: longitude,
+        notes: "Transition detected via \(source)"
+      )
+      await self.flushPendingEventsAsync()
+    }
+
+    shouldTreatNextLocationAsReconcile = true
+    locationManager.requestLocation()
+  }
+
+  private func flushPendingEvents() {
+    performBackgroundWork {
+      await self.flushPendingEventsAsync()
+    }
+  }
+
+  private func flushPendingEventsAsync() async {
+    guard let config = stateStore.supabaseConfig else { return }
+    let service = SupabaseService(config: config, authenticator: authenticator)
+    await service.flushPendingEvents()
+  }
+
+  private func performBackgroundWork(_ work: @escaping () async -> Void) {
+    beginBackgroundTask()
+    Task {
+      await work()
+      endBackgroundTask()
+    }
+  }
+
+  private func beginBackgroundTask() {
+    guard backgroundTask == .invalid else { return }
+    backgroundTask = UIApplication.shared.beginBackgroundTask(withName: "BackgroundLocation") { [weak self] in
+      self?.endBackgroundTask()
+    }
+  }
+
+  private func endBackgroundTask() {
+    guard backgroundTask != .invalid else { return }
+    UIApplication.shared.endBackgroundTask(backgroundTask)
+    backgroundTask = .invalid
+  }
+
   private func emitEvent(
     type: String,
     assignmentId: String,
@@ -207,6 +328,7 @@ final class IOSBackgroundLocationManager: NSObject, CLLocationManagerDelegate {
     )
     let service = SupabaseService(config: config, authenticator: authenticator)
     _ = await service.sendEvent(event)
+    await service.flushPendingEvents()
   }
 
   func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
@@ -219,24 +341,21 @@ final class IOSBackgroundLocationManager: NSObject, CLLocationManagerDelegate {
   }
 
   func locationManager(_ manager: CLLocationManager, didEnterRegion region: CLRegion) {
-    if let location = manager.location {
-      Task {
-        await processLocation(location, source: "os_geofence_enter")
-      }
-    } else {
-      shouldTreatNextLocationAsReconcile = true
-      manager.requestLocation()
-    }
+    handleRegionTransition(region: region, isInside: true, source: "os_geofence_enter")
   }
 
   func locationManager(_ manager: CLLocationManager, didExitRegion region: CLRegion) {
-    if let location = manager.location {
-      Task {
-        await processLocation(location, source: "os_geofence_exit")
-      }
-    } else {
-      shouldTreatNextLocationAsReconcile = true
-      manager.requestLocation()
+    handleRegionTransition(region: region, isInside: false, source: "os_geofence_exit")
+  }
+
+  func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
+    if manager.authorizationStatus == .authorizedAlways {
+      resumeFromStoredState()
     }
+  }
+
+  func locationManager(_ manager: CLLocationManager, monitoringDidFailFor region: CLRegion?, withError error: Error) {
+    NSLog("IOSBackgroundLocationManager: monitoring failed for \(region?.identifier ?? "unknown"): \(error.localizedDescription)")
+    resumeFromStoredState()
   }
 }

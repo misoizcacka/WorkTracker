@@ -131,12 +131,12 @@ const styles = StyleSheet.create({
         marginBottom: theme.spacing(1.5),
     },
     cardTitle: {
-        fontSize: 18,
+        fontSize: theme.fontSizes.lg,
         color: theme.colors.headingText,
         marginBottom: theme.spacing(0.5),
     },
     cardDescription: {
-        fontSize: 14,
+        fontSize: theme.fontSizes.sm,
         color: theme.colors.bodyText,
         lineHeight: 20,
     },

@@ -60,17 +60,31 @@ export const ManagerSidebar = () => {
   const [isExpanded, setIsExpanded] = useState(false);
   const [isSignOutHovered, setIsSignOutHovered] = useState(false);
   const animation = useRef(new Animated.Value(SIDEBAR_COLLAPSED_WIDTH)).current;
+  const iconOpacity = useRef(new Animated.Value(1)).current;
+  const fullOpacity = useRef(new Animated.Value(0)).current;
   const pathname = usePathname();
   const { signOut } = useSession();
 
   const toggleSidebar = (expand: boolean) => {
     setIsExpanded(expand);
-    Animated.spring(animation, {
-      toValue: expand ? SIDEBAR_EXPANDED_WIDTH : SIDEBAR_COLLAPSED_WIDTH,
-      useNativeDriver: false,
-      friction: 8,
-      tension: 40,
-    }).start();
+    Animated.parallel([
+      Animated.spring(animation, {
+        toValue: expand ? SIDEBAR_EXPANDED_WIDTH : SIDEBAR_COLLAPSED_WIDTH,
+        useNativeDriver: false,
+        friction: 8,
+        tension: 40,
+      }),
+      Animated.timing(iconOpacity, {
+        toValue: expand ? 0 : 1,
+        duration: 80,
+        useNativeDriver: true,
+      }),
+      Animated.timing(fullOpacity, {
+        toValue: expand ? 1 : 0,
+        duration: 80,
+        useNativeDriver: true,
+      }),
+    ]).start();
   };
 
   const navItems = [
@@ -87,15 +101,11 @@ export const ManagerSidebar = () => {
   ];
 
   const handleMouseEnter = () => {
-    if (Platform.OS === 'web') {
-      toggleSidebar(true);
-    }
+    if (Platform.OS === 'web') toggleSidebar(true);
   };
 
   const handleMouseLeave = () => {
-    if (Platform.OS === 'web') {
-      toggleSidebar(false);
-    }
+    if (Platform.OS === 'web') toggleSidebar(false);
   };
 
   return (
@@ -122,14 +132,15 @@ export const ManagerSidebar = () => {
       >
         <View style={styles.topSection}>
           <Link href="/(manager)/dashboard" asChild>
-            <Pressable style={StyleSheet.flatten([styles.logoContainer, !isExpanded && styles.collapsedLogo])}>
-                <View style={styles.logoFrame}>
-                  {isExpanded ? (
-                    <Logo variant="full" size="small" style={styles.fullLogo} />
-                  ) : (
-                    <Logo variant="icon" style={styles.iconLogo} />
-                  )}
-                </View>
+            <Pressable style={styles.logoContainer}>
+              {/* K icon centered in collapsed 64px bar — fades out on expand */}
+              <Animated.View style={[styles.logoIcon, { opacity: iconOpacity }]}>
+                <Logo variant="icon" />
+              </Animated.View>
+              {/* Full logo left-aligned with nav items — fades in on expand */}
+              <Animated.View style={[styles.logoFull, { opacity: fullOpacity }]}>
+                <Logo variant="full" size="small" />
+              </Animated.View>
             </Pressable>
           </Link>
 
@@ -195,28 +206,21 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   logoContainer: {
-    paddingLeft: 24,
+    width: SIDEBAR_COLLAPSED_WIDTH,
     marginBottom: 32,
-    alignItems: 'flex-start',
-    flexDirection: 'row',
+    height: 18,
   },
-  collapsedLogo: {
-    paddingLeft: 24,
-    justifyContent: 'flex-start',
+  // K: absolutely centered in the 64px collapsed bar
+  logoIcon: {
+    position: 'absolute',
+    top: 0,
+    left: (SIDEBAR_COLLAPSED_WIDTH - 10) / 2,
   },
-  logoFrame: {
-    height: 22,
-    width: 66,
-    alignItems: 'flex-start',
-    justifyContent: 'center',
-  },
-  fullLogo: {
-    height: 22,
-    width: 66,
-  },
-  iconLogo: {
-    height: theme.branding.logoHeightSmall,
-    width: theme.branding.logoHeightSmall,
+  // Full logo: left-aligned matching nav item icon position (paddingHorizontal:16 + marginHorizontal:8 = 24)
+  logoFull: {
+    position: 'absolute',
+    top: 0,
+    left: 24,
   },
   navContainer: {
     flex: 1,

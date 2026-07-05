@@ -1,7 +1,8 @@
 {
   "platforms": ["apple", "android", "web"],
   "apple": {
-    "modules": ["BackgroundLocationModule"]
+    "modules": ["BackgroundLocationModule"],
+    "appDelegateSubscribers": ["BackgroundLocationAppDelegateSubscriber"]
   },
   "android": {
     "modules": ["app.koord.backgroundlocation.BackgroundLocationModule"]

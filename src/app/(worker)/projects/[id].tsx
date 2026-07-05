@@ -22,6 +22,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { MapView, Marker } from '../../../components/MapView';
 import ImageCarouselModal from '../../../components/ImageCarouselModal';
 import { useProjects, ProjectMessage } from '../../../context/ProjectsContext';
+import { compressImageAsync } from '../../../utils/imageCompression';
 import moment from 'moment';
 
 export default function ProjectDetailsScreen() {
@@ -108,7 +109,8 @@ export default function ProjectDetailsScreen() {
       }
       if (selectedImages.length > 0) {
         for (const imageUri of selectedImages) {
-          await sendImageMessage(project.id, imageUri);
+          const compressed = await compressImageAsync(imageUri);
+          await sendImageMessage(project.id, compressed);
         }
       }
     } catch (error) {

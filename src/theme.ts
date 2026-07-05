@@ -31,7 +31,7 @@ export const theme = {
     logoWidthSmall: 60,
     logoHeightSmall: 20,
     logoWidthMedium: 70,
-    logoHeightMedium: 24,
+    logoHeightMedium: 24 ,
   },
 
   statusColors: {
@@ -70,11 +70,11 @@ export const theme = {
   },
 
   fontSizes: {
-    xs: 12,
-    sm: 14,
-    md: 16,
-    lg: 20,
-    xl: 24,
+    xs: 11,
+    sm: 13,
+    md: 14,
+    lg: 17,
+    xl: 20,
   },
 
   shadow: {

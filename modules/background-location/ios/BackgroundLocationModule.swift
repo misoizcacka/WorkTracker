@@ -36,5 +36,17 @@ public class BackgroundLocationModule: Module {
     AsyncFunction("stop") {
       IOSBackgroundLocationManager.shared.stop()
     }
+
+    AsyncFunction("requestWhenInUseAuthorization") {
+      IOSBackgroundLocationManager.shared.requestWhenInUseAuthorization()
+    }
+
+    AsyncFunction("requestAlwaysAuthorization") {
+      IOSBackgroundLocationManager.shared.requestAlwaysAuthorization()
+    }
+
+    AsyncFunction("getAuthorizationStatus") {
+      IOSBackgroundLocationManager.shared.authorizationStatus()
+    }
   }
 }

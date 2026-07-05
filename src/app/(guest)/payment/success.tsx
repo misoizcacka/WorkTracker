@@ -20,7 +20,7 @@ export default function PaymentSuccess() {
   const { t } = useTranslation();
 
   const [status, setStatus] = useState('verifying');
-  const [successType, setSuccessType] = useState<'new' | 'update'>('new');
+  const [isUpdate, setIsUpdate] = useState(false);
   const [error, setError] = useState('');
 
   useEffect(() => {
@@ -48,11 +48,8 @@ export default function PaymentSuccess() {
       }
 
       if (data.status === 'success') {
-        // Essential: Refresh the local session state to see new worker_seats immediately
         await refreshUser();
-        
-        const isUpdate = data.type === 'seat_increase';
-        setSuccessType(isUpdate ? 'update' : 'new');
+        setIsUpdate(data.type === 'seat_increase');
         setStatus('success');
 
         if (Platform.OS === 'web') {
@@ -86,17 +83,16 @@ export default function PaymentSuccess() {
           </>
         );
       case 'success':
-        const isUpdate = successType === 'update';
         return (
           <>
             <View style={styles.iconCircle}>
-                <Text style={styles.statusIcon}>✅</Text>
+                <Text style={styles.statusIcon}>OK</Text>
             </View>
             <Text style={styles.title} fontType='bold'>
                 {isUpdate ? 'Capacity Updated!' : t('payment.successTitle', 'Payment Successful!')}
             </Text>
             <Text style={styles.description} fontType='regular'>
-                {isUpdate 
+                {isUpdate
                     ? 'Your new worker seats are now active and ready to use.'
                     : t('payment.successDescription', 'Your payment was successful. Click below to continue to your company setup.')
                 }
@@ -112,7 +108,7 @@ export default function PaymentSuccess() {
         return (
           <>
             <View style={[styles.iconCircle, { backgroundColor: theme.colors.errorBackground }]}>
-                <Text style={styles.statusIcon}>❌</Text>
+                <Text style={styles.statusIcon}>!</Text>
             </View>
             <Text style={styles.title} fontType='bold'>{t('payment.failedTitle', 'Payment Failed')}</Text>
             <View style={styles.errorContainer}>
@@ -147,7 +143,7 @@ export default function PaymentSuccess() {
         </ScrollView>
 
         <View style={styles.footer}>
-            <Text style={styles.footerText} fontType="regular">© {new Date().getFullYear()} Koord. {t('common.allRightsReserved')}</Text>
+            <Text style={styles.footerText} fontType="regular">(c) {new Date().getFullYear()} Koord. {t('common.allRightsReserved')}</Text>
         </View>
       </View>
     </AnimatedScreen>

@@ -468,8 +468,8 @@ const PayrollReport = () => {
                                 <Text style={styles.payableBadgeText} fontType="bold">{item.payable_hours.toFixed(2)}</Text>
                             </View>
                         </View>
-                        <Text style={[styles.tableCell, styles.colNumeric, { color: theme.colors.slate }]} fontType="italic">Manual Entry</Text>
-                        <Text style={[styles.tableCell, styles.colNumeric, { color: theme.colors.slate }]} fontType="italic">Manual Entry</Text>
+                        <Text style={[styles.tableCell, styles.colNumeric, { color: theme.colors.disabledText }]} fontType="regular">Manual Entry</Text>
+                        <Text style={[styles.tableCell, styles.colNumeric, { color: theme.colors.disabledText }]} fontType="regular">Manual Entry</Text>
                     </View>
                     ))}
                 </ScrollView>

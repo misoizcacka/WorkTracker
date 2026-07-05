@@ -64,8 +64,8 @@ export function SessionProvider(props: React.PropsWithChildren<{}>) {
     setUserScheduledWorkerSeats(null);
     setUserScheduledChangeEffectiveAt(null);
     setIsSubscriptionExpired(false);
-    setIsCompanyDetailsComplete(false);
-    setUserRole(null);
+    // NOTE: intentionally NOT resetting isCompanyDetailsComplete or userRole here
+    // to avoid redirect flashes in _layout while async fetch is in progress
 
     if (!loggedInUser) {
       setUserCompanyId(null);
@@ -161,8 +161,8 @@ export function SessionProvider(props: React.PropsWithChildren<{}>) {
         const isExpired = finalPeriodEnd && new Date(finalPeriodEnd) < new Date();
         setIsSubscriptionExpired(!!isExpired);
 
-        const isPlaceholderName = companyDetails.name?.startsWith('New Company - ');
-        setIsCompanyDetailsComplete(!isPlaceholderName);
+        const isPlaceholderName = !companyDetails.name || companyDetails.name === 'New Company' || companyDetails.name?.startsWith('New Company - ');
+        setIsCompanyDetailsComplete(!isPlaceholderName && !!companyDetails.country);
       }
     }
 

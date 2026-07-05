@@ -387,7 +387,7 @@ const styles = StyleSheet.create({
   },
   createButtonText: {
     color: 'white',
-    fontSize: 18,
+    fontSize: theme.fontSizes.md,
   },
   grid: {
     width: '100%',

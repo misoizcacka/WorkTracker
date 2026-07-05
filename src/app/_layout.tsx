@@ -180,63 +180,57 @@ export default function RootLayout() {
     const router = useRouter();
 
     useEffect(() => {
-      if (isLoading) return;
+      if (isLoading || isCompanyIdLoading) return;
 
       const inAuthGroup = segments[0] === '(guest)' || segments[0] === 'auth' || segments[0] === 'onboarding' || segments[0] === 'join';
+      const inPaymentFlow = segments[0] === '(guest)' && segments.includes('payment');
+      const inSubscriptionFlow = segments[0] === 'subscription';
+      const inManagerApp = segments[0] === '(manager)';
+      const inWorkerApp = segments[0] === '(worker)';
       const inMobileOnly = segments[0] === 'mobile-only';
-      
+
+      // 1. Not logged in → guest
       if (!user) {
         if (!inAuthGroup) {
-          console.log("Not authenticated, redirecting to guest group");
-          // On mobile, we prefer going straight to login instead of the landing page
-          if (Platform.OS !== 'web') {
-            router.replace('/(guest)/login');
-          } else {
-            router.replace('/(guest)/');
-          }
+          router.replace(Platform.OS !== 'web' ? '/(guest)/login' : '/(guest)/');
         }
         return;
       }
 
-      if (Platform.OS === 'web' && user && userRole === 'worker' && !inMobileOnly) {
+      // 2. Worker on web → mobile-only
+      if (Platform.OS === 'web' && userRole === 'worker' && !inMobileOnly) {
         router.replace('/mobile-only');
         return;
       }
 
-      const inApp = segments[0] === '(manager)' || segments[0] === '(worker)';
       const subscriptionStatus = user.app_metadata?.subscription_status;
-      const inPaymentFlow = segments.includes('payment');
-      const currentPath = segments.join('/');
+      const companySetupComplete = isCompanyDetailsComplete || !!user.user_metadata?.company_setup_complete;
 
-      const companySetupComplete = isCompanyDetailsComplete || user.user_metadata?.company_setup_complete || false;
-
-      const isOnCompanySetupPage = segments[0] === '(manager)' && segments.length > 1 && (segments as any)[1] === 'company-setup';
-
-      if ((userRole === 'manager' || userRole === 'owner') && isCompanyIdLoading) {
-        return;
-      }
-
-      if (userRole === 'owner' && !inPaymentFlow && userCompanyId === null) {
-        if (!currentPath.startsWith('subscription/setup')) {
-          router.replace('/subscription/setup');
-        }
-        return;
-      }
-
+      // 3. Owner without subscription → subscription setup
+      //    But never interrupt an active payment flow or subscription flow
       if (userRole === 'owner' && subscriptionStatus !== 'active') {
-        if (segments[0] !== 'subscription' && segments[0] !== 'onboarding' && !inPaymentFlow) {
+        if (!inSubscriptionFlow && !inPaymentFlow) {
           router.replace('/subscription/setup');
         }
-      } else if (userRole === 'owner' && subscriptionStatus === 'active' && !companySetupComplete) {
-        if (!isOnCompanySetupPage && !inPaymentFlow) {
+        return;
+      }
+
+      // 4. Owner with subscription but company not set up → company-setup
+      //    But never interrupt if they're already in the manager app or payment flow
+      if (userRole === 'owner' && subscriptionStatus === 'active' && !companySetupComplete) {
+        if (!inManagerApp && !inPaymentFlow && !inSubscriptionFlow) {
           router.replace('/(manager)/company-setup');
         }
-      } else if (user && userRole) {
-        if (!inApp && !inMobileOnly) {
+        return;
+      }
+
+      // 5. Fully set up → send to app if not already there
+      if (user && userRole) {
+        if (!inManagerApp && !inWorkerApp && !inMobileOnly) {
           router.replace(userRole === 'worker' ? '/(worker)/home' : '/(manager)/dashboard');
         }
       }
-    }, [user, segments, isLoading, userRole, userCompanyId, isCompanyIdLoading]);
+    }, [user, segments, isLoading, isCompanyIdLoading, userRole, userCompanyId, isCompanyDetailsComplete]);
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: theme.colors.pageBackground }}>

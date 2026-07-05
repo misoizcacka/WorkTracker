@@ -1,8 +1,8 @@
 {
   "expo": {
-    "name": "Koord",
-    "slug": "Koord",
-    "scheme": "Koord",
+    "name": "Koordinate",
+    "slug": "Koordinate",
+    "scheme": "Koordinate",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/koordappicon.png",
@@ -21,7 +21,6 @@
         "NSLocationAlwaysAndWhenInUseUsageDescription": "This app uses your location in the background to track your work hours and send periodic updates even when the app is closed.",
         "NSLocationAlwaysUsageDescription": "This app uses your location in the background to track your work hours and send periodic updates.",
         "UIBackgroundModes": [
-          "location",
           "location"
         ],
         "ITSAppUsesNonExemptEncryption": false

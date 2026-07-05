@@ -263,8 +263,6 @@ export function ProjectsProvider({ children }: { children: React.ReactNode }) {
 
   const sendImageMessage = async (projectId: string, imageUri: string): Promise<ProjectMessage | undefined> => {
     const { data: { user } } = await supabase.auth.getUser();
-    const session = await supabase.auth.getSession();
-    console.log(JSON.stringify(session.data.session, null, 2));
     if (!user) throw new Error('You must be logged in to send an image.');
     const messageId = uuidv4();
     const filePath = `${projectId}/${messageId}.jpeg`;

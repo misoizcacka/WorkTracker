@@ -92,10 +92,13 @@ export default function ManageSubscriptionScreen() {
 
     } catch (err: any) {
       console.error("Update Error:", err);
+      const isPaymentError = err?.message?.toLowerCase().includes('payment') || err?.message?.toLowerCase().includes('card') || err?.message?.toLowerCase().includes('invoice');
       Toast.show({
         type: 'error',
-        text1: 'Update Failed',
-        text2: 'We could not update your subscription. Please try again or check your payment method.',
+        text1: isPaymentError ? 'Payment Failed' : 'Update Failed',
+        text2: isPaymentError
+          ? 'Your card was declined or could not be charged. Please update your payment method and try again.'
+          : err?.message || 'We could not update your subscription. Please try again.',
       });
     } finally {
       setIsSaving(false);

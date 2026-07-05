@@ -1,4 +1,5 @@
 import React, { useState, useContext, useEffect, useRef } from 'react';
+import { compressImageAsync } from '~/utils/imageCompression';
 import {
   StyleSheet,
   View,
@@ -117,7 +118,8 @@ export default function ProjectDetailsScreen() {
       }
       if (imageUris.length > 0) {
         for (const imageUri of imageUris) {
-          await sendImageMessage(project.id, imageUri);
+          const compressed = await compressImageAsync(imageUri);
+          await sendImageMessage(project.id, compressed);
         }
       }
       await loadMessages();

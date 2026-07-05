@@ -59,6 +59,60 @@ final class LocationDbHelper {
     sqlite3_step(statement)
   }
 
+  func unsyncedEvents(limit: Int = 25) -> [LocationEventRecord] {
+    guard let db = openDatabase() else { return [] }
+    defer { sqlite3_close(db) }
+    guard prepareDatabase(db) else { return [] }
+
+    let sql = """
+      SELECT id, timestamp, company_id, type, assignment_id, worker_id, latitude, longitude, notes
+      FROM \(tableName)
+      WHERE synced = 0
+      ORDER BY timestamp ASC
+      LIMIT ?;
+    """
+    var statement: OpaquePointer?
+    guard sqlite3_prepare_v2(db, sql, -1, &statement, nil) == SQLITE_OK else { return [] }
+    defer { sqlite3_finalize(statement) }
+    sqlite3_bind_int(statement, 1, Int32(limit))
+
+    var events: [LocationEventRecord] = []
+    while sqlite3_step(statement) == SQLITE_ROW {
+      guard let idC = sqlite3_column_text(statement, 0),
+            let timestampC = sqlite3_column_text(statement, 1),
+            let companyIdC = sqlite3_column_text(statement, 2),
+            let typeC = sqlite3_column_text(statement, 3),
+            let assignmentIdC = sqlite3_column_text(statement, 4),
+            let workerIdC = sqlite3_column_text(statement, 5) else {
+        continue
+      }
+
+      let timestamp = String(cString: timestampC)
+      guard let createdAt = date(from: timestamp) else { continue }
+
+      let notes: String?
+      if let notesC = sqlite3_column_text(statement, 8) {
+        notes = String(cString: notesC)
+      } else {
+        notes = nil
+      }
+
+      events.append(LocationEventRecord(
+        id: String(cString: idC),
+        createdAt: createdAt,
+        companyId: String(cString: companyIdC),
+        workerId: String(cString: workerIdC),
+        assignmentId: String(cString: assignmentIdC),
+        type: String(cString: typeC),
+        latitude: sqlite3_column_double(statement, 6),
+        longitude: sqlite3_column_double(statement, 7),
+        notes: notes
+      ))
+    }
+
+    return events
+  }
+
   private func openDatabase() -> OpaquePointer? {
     let fileManager = FileManager.default
     guard let documentsDirectory = fileManager.urls(for: .documentDirectory, in: .userDomainMask).first else {
@@ -197,5 +251,12 @@ final class LocationDbHelper {
     formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
     formatter.timeZone = TimeZone(secondsFromGMT: 0)
     return formatter.string(from: date)
+  }
+
+  private func date(from isoString: String) -> Date? {
+    let formatter = ISO8601DateFormatter()
+    formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+    formatter.timeZone = TimeZone(secondsFromGMT: 0)
+    return formatter.date(from: isoString)
   }
 }

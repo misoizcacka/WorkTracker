@@ -41,3 +41,15 @@ export function start(
 export function stop(): Promise<void> {
     return BackgroundLocationModule.stop();
 }
+
+export function requestWhenInUseAuthorization(): Promise<void> {
+    return BackgroundLocationModule.requestWhenInUseAuthorization();
+}
+
+export function requestAlwaysAuthorization(): Promise<void> {
+    return BackgroundLocationModule.requestAlwaysAuthorization();
+}
+
+export function getAuthorizationStatus(): Promise<string> {
+    return BackgroundLocationModule.getAuthorizationStatus();
+}

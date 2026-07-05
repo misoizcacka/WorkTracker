@@ -12,16 +12,17 @@ interface BackgroundLocationModule {
     geofenceAssignments: string
   ) => Promise<void>;
   stop: () => Promise<void>;
+  requestWhenInUseAuthorization: () => Promise<void>;
+  requestAlwaysAuthorization: () => Promise<void>;
+  getAuthorizationStatus: () => Promise<string>;
 }
 
 let BackgroundLocationModule: BackgroundLocationModule;
 
 try {
-  // Only attempt to require the native module if we are on a platform where it's expected to exist.
-  // For now, it's implemented on Android. On iOS/Expo Go, we'll fall back to the mock.
   BackgroundLocationModule = requireNativeModule<BackgroundLocationModule>('BackgroundLocation');
 } catch (error) {
-  console.warn('Native BackgroundLocation module not found, using mock implementation. This is expected in Expo Go or on iOS for now.');
+  console.warn('Native BackgroundLocation module not found, using mock implementation. This is expected in Expo Go or web.');
   
   // Mock implementation for development/iOS without native code
   BackgroundLocationModule = {
@@ -32,6 +33,18 @@ try {
     stop: async () => {
       console.log('[MOCK] BackgroundLocation.stop called');
       return Promise.resolve();
+    },
+    requestWhenInUseAuthorization: async () => {
+      console.log('[MOCK] BackgroundLocation.requestWhenInUseAuthorization called');
+      return Promise.resolve();
+    },
+    requestAlwaysAuthorization: async () => {
+      console.log('[MOCK] BackgroundLocation.requestAlwaysAuthorization called');
+      return Promise.resolve();
+    },
+    getAuthorizationStatus: async () => {
+      console.log('[MOCK] BackgroundLocation.getAuthorizationStatus called');
+      return 'unknown';
     },
   };
 }

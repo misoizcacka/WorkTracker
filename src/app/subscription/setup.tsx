@@ -185,7 +185,7 @@ export default function SubscriptionSetupPage() {
               <Text style={styles.calculatorLabel} fontType="medium">{t('pricing.howManyWorkers')}</Text>
               <View style={styles.workerInputGroup}>
                 <TouchableOpacity onPress={handleDecrementWorkers} style={styles.workerButton}>
-                  <Text style={styles.workerButtonText} fontType="bold">−</Text>
+                  <Text style={styles.workerButtonText} fontType="bold">-</Text>
                 </TouchableOpacity>
                 <TextInput
                   style={styles.calculatorInput}
@@ -225,7 +225,7 @@ export default function SubscriptionSetupPage() {
         </ScrollView>
 
         <View style={styles.footer}>
-          <Text style={styles.footerText} fontType="regular">© {new Date().getFullYear()} Koord. {t('common.allRightsReserved')}</Text>
+          <Text style={styles.footerText} fontType="regular">(c) {new Date().getFullYear()} Koord. {t('common.allRightsReserved')}</Text>
         </View>
       </View>
     </AnimatedScreen>

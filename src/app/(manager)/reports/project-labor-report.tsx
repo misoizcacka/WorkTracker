@@ -311,7 +311,7 @@ const styles = StyleSheet.create({
     flex: 2,
   },
   projectTitle: {
-    fontSize: 22,
+    fontSize: theme.fontSizes.xl,
     color: theme.colors.headingText,
     marginBottom: theme.spacing(0.5),
   },

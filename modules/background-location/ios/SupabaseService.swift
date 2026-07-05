@@ -22,6 +22,16 @@ final class SupabaseService {
       return false
     }
 
+    return await sendPersistedEvent(event)
+  }
+
+  func flushPendingEvents(limit: Int = 25) async {
+    for event in dbHelper.unsyncedEvents(limit: limit) {
+      _ = await sendPersistedEvent(event)
+    }
+  }
+
+  private func sendPersistedEvent(_ event: LocationEventRecord) async -> Bool {
     guard let deviceToken = authenticator.deviceToken else {
       return false
     }
