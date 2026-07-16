@@ -35,6 +35,7 @@ import {
   insertLocalWorkSession, updateLocalWorkSession,
   insertLocalLocationEvent, getUnsyncedLocationEvents, markLocationEventsAsSynced,
   getLocalWorkSessions,
+  getLocalActiveWorkSession,
   getUnsyncedWorkSessions,
   markWorkSessionsAsSynced,
 } from '~/db/database';
@@ -47,6 +48,7 @@ import {
   AssignmentGeofenceTarget,
   deriveMissingGeofenceEvents,
 } from '~/utils/locationEventReconciliation';
+import * as BackgroundLocation from 'background-location';
 
 export type AssignmentStatus = 'active' | 'completed' | 'next' | 'pending';
 
@@ -86,6 +88,7 @@ interface AssignmentsContextType {
   // Offline-First
   syncLocalChanges: () => Promise<void>;
   isOffline: boolean;
+  isSyncingToCloud: boolean;
   lastCheckoutAssignmentId: string | null; // New prop
 }
 
@@ -111,25 +114,41 @@ export function AssignmentsProvider({ children }: { children: React.ReactNode })
   const [error, setError] = useState<string | null>(null);
 
   const [isOffline, setIsOffline] = useState(false);
+  const [isOfflineInitialised, setIsOfflineInitialised] = useState(false);
 
   const [activeWorkSession, setActiveWorkSession] = useState<WorkSession | null>(null);
   const [loadedWorkSessions, setLoadedWorkSessions] = useState<WorkSession[]>([]);
   const loadingDates = useRef(new Set<string>());
   const isSyncing = useRef(false);
+  const [isSyncingToCloud, setIsSyncingToCloud] = useState(false);
   const [lastCompletedSortKey, setLastCompletedSortKey] = useState<string | null>(null);
   const [lastCheckoutAssignmentId, setLastCheckoutAssignmentId] = useState<string | null>(null);
   const [lastCheckoutDate, setLastCheckoutDate] = useState<string | null>(null); // YYYY-MM-DD
 
+  const COMMON_LOCATIONS_CACHE_KEY = 'cached_common_locations';
+
   const loadCommonLocations = useCallback(async () => {
     setIsLoading(true);
+    // Seed from cache immediately so assignments resolve names/coords before fetch
+    try {
+      const cached = await AsyncStorage.getItem(COMMON_LOCATIONS_CACHE_KEY);
+      if (cached) setCommonLocations(JSON.parse(cached));
+    } catch {}
+
     try {
       const data = await fetchCommonLocations();
       if (data) {
         setCommonLocations(data);
+        // Save fresh data for next offline use
+        try {
+          await AsyncStorage.setItem(COMMON_LOCATIONS_CACHE_KEY, JSON.stringify(data));
+        } catch (cacheErr) {
+          console.warn('AssignmentsContext: failed to cache common locations:', cacheErr);
+        }
       }
     } catch (err: any) {
       console.error("Failed to load common locations:", err);
-      setError("Failed to load locations");
+      // Cache already applied above — no need to set error, offline is expected
     } finally {
       setIsLoading(false);
     }
@@ -226,18 +245,32 @@ export function AssignmentsProvider({ children }: { children: React.ReactNode })
   }, [reconcileSessionGeofenceEvents, userCompanyId]);
 
   // Initialize SQLite DB and listen for network changes, ONLY for workers.
+  // Use NetInfo.fetch() to resolve the real network state *before* the first
+  // data load fires, eliminating the race where isOffline is false but we are
+  // actually offline and the Supabase call fails.
   useEffect(() => {
-    if (userRole === 'worker') {
-      getDb(); // Initialize the DB
-
-      const unsubscribe = NetInfo.addEventListener((state: NetInfoState) => {
-        setIsOffline(state.isConnected === false);
-      });
-
-      return () => {
-        unsubscribe();
-      };
+    if (userRole !== 'worker') {
+      setIsOfflineInitialised(true);
+      return;
     }
+
+    getDb(); // Initialize the DB
+
+    let unsubscribe: (() => void) | null = null;
+
+    NetInfo.fetch().then((state) => {
+      setIsOffline(state.isConnected === false);
+      setIsOfflineInitialised(true);
+
+      // Subscribe to future changes after we have the initial state
+      unsubscribe = NetInfo.addEventListener((nextState: NetInfoState) => {
+        setIsOffline(nextState.isConnected === false);
+      });
+    });
+
+    return () => {
+      unsubscribe?.();
+    };
   }, [userRole]);
 
   // Load common locations for ALL authenticated users (managers and workers)
@@ -268,12 +301,14 @@ export function AssignmentsProvider({ children }: { children: React.ReactNode })
       loadLastCheckoutData();
   }, []);
 
-  // Sync local changes when coming online, ONLY for workers
+  // Sync local changes when coming online, ONLY for workers.
+  // Guard on isOfflineInitialised so this never fires before we know the real
+  // network state — avoids a Supabase call when we are actually offline.
   useEffect(() => {
-    if (userRole === 'worker' && !isOffline && userCompanyId) { // Ensure userCompanyId is available before syncing
+    if (userRole === 'worker' && isOfflineInitialised && !isOffline && userCompanyId) {
       syncLocalChanges();
     }
-  }, [userRole, isOffline, userCompanyId]);
+  }, [userRole, isOfflineInitialised, isOffline, userCompanyId]);
 
   // Determine the last completed sort key when loaded sessions change
   useEffect(() => {
@@ -292,7 +327,18 @@ export function AssignmentsProvider({ children }: { children: React.ReactNode })
     if (!userCompanyId) return;
     if (isSyncing.current) return;
     isSyncing.current = true;
+    setIsSyncingToCloud(true);
     console.log("Attempting to sync local changes...");
+
+    // Flush any events the native background service wrote to its own SQLite while offline
+    try {
+      const flushed = await BackgroundLocation.flushPendingEvents();
+      if (flushed > 0) {
+        console.log(`Flushed ${flushed} pending native location events to Supabase.`);
+      }
+    } catch (flushErr) {
+      console.warn('syncLocalChanges: native flush failed (non-fatal):', flushErr);
+    }
 
     // Sync Location Events — isolated so a failure doesn't block work session sync
     try {
@@ -320,13 +366,33 @@ export function AssignmentsProvider({ children }: { children: React.ReactNode })
         await upsertWorkSessions(unsyncedWorkSessions);
         await markWorkSessionsAsSynced(unsyncedWorkSessions.map(ws => ws.id));
         console.log(`Synced ${unsyncedWorkSessions.length} local work sessions.`);
+
+        // Reconcile any sessions that were ended while offline — these never went through
+        // the online checkout path so their geofence events were never derived.
+        // We run this after upsert so the sessions exist in Supabase before we fetch
+        // the location event timeline for them.
+        const completedOfflineSessions = unsyncedWorkSessions.filter(ws => !!ws.end_time);
+        for (const session of completedOfflineSessions) {
+          try {
+            const assignedDate = (session as any).worker_assignments?.assigned_date
+              ?? (session as any).assigned_date
+              ?? moment(session.start_time).format('YYYY-MM-DD');
+            const liveAssignments = await fetchAssignmentsForWorkers(userCompanyId, assignedDate, [session.worker_id]);
+            await reconcileSessionGeofenceEvents(session, liveAssignments);
+            console.log(`Reconciled offline session ${session.id}`);
+          } catch (reconcileErr) {
+            // Non-fatal — session is already synced, reconciliation is best-effort
+            console.warn(`syncLocalChanges: reconciliation failed for session ${session.id}:`, reconcileErr);
+          }
+        }
       }
     } catch (err) {
       console.error("Error syncing work sessions:", err);
     } finally {
       isSyncing.current = false;
+      setIsSyncingToCloud(false);
     }
-  }, [userCompanyId]);
+  }, [userCompanyId, reconcileSessionGeofenceEvents]);
 
 
   const loadActiveWorkSession = useCallback(async () => {
@@ -339,23 +405,23 @@ export function AssignmentsProvider({ children }: { children: React.ReactNode })
       const session = await fetchActiveWorkSession(user.id);
       if (session) {
         setActiveWorkSession(session);
+        // Mirror to local SQLite so offline restarts can find it
+        try {
+          await insertLocalWorkSession({ ...session, synced: true });
+        } catch {}
         return;
       }
       // Supabase returned nothing — check local SQLite for an unsynced active session
-      const today = moment().format('YYYY-MM-DD');
-      const localSessions = await getLocalWorkSessions(user.id, today);
-      const localActive = localSessions.find(s => !s.end_time) || null;
+      const localActive = await getLocalActiveWorkSession(user.id);
       setActiveWorkSession(localActive);
     } catch (err: any) {
-      // Supabase unreachable (offline) — fall back to local
+      // Supabase unreachable (offline) — fall back to local SQLite
       try {
-        const today = moment().format('YYYY-MM-DD');
-        const localSessions = await getLocalWorkSessions(user.id, today);
-        const localActive = localSessions.find(s => !s.end_time) || null;
+        const localActive = await getLocalActiveWorkSession(user.id);
         setActiveWorkSession(localActive);
       } catch (localErr) {
-        setError(err.message);
-        console.error('Error fetching active work session:', err);
+        console.error('Error fetching active work session from local SQLite:', localErr);
+        setActiveWorkSession(null);
       }
     }
   }, [user?.id]);
@@ -415,28 +481,29 @@ export function AssignmentsProvider({ children }: { children: React.ReactNode })
           fetchedAssignments = supabaseAssignments as AssignmentRecord[];
 
           if (userRole === 'worker') {
-            const db = await getDb();
-            // We use sequential runAsync instead of withTransactionAsync to prevent
-            // "cannot start a transaction within a transaction" errors during app init
-            // where multiple components might trigger a sync simultaneously.
-            await db.runAsync(`DELETE FROM local_assignments WHERE worker_id = ? AND assigned_date = ?;`, workerIds[0], date);
-            for (const assign of fetchedAssignments) {
-              await db.runAsync(
-                `INSERT INTO local_assignments (id, company_id, worker_id, assigned_date, sort_key, ref_id, ref_type, start_time, created_at, created_by, synced) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`,
-                [
-                  assign.id,
-                  assign.company_id,
-                  assign.worker_id,
-                  assign.assigned_date,
-                  assign.sort_key,
-                  assign.ref_id,
-                  assign.ref_type,
-                  assign.start_time || null,
-                  assign.created_at,
-                  assign.created_by,
-                  1
-                ]
-              );
+            try {
+              const db = await getDb();
+              await db.runAsync(`DELETE FROM local_assignments WHERE worker_id = ? AND assigned_date = ?;`, workerIds[0], date);
+              for (const assign of fetchedAssignments) {
+                await db.runAsync(
+                  `INSERT INTO local_assignments (id, company_id, worker_id, assigned_date, sort_key, ref_id, ref_type, start_time, created_at, created_by, synced) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`,
+                  [
+                    assign.id,
+                    assign.company_id,
+                    assign.worker_id,
+                    assign.assigned_date,
+                    assign.sort_key,
+                    assign.ref_id,
+                    assign.ref_type,
+                    assign.start_time || null,
+                    assign.created_at,
+                    assign.created_by,
+                    1
+                  ]
+                );
+              }
+            } catch (dbErr) {
+              console.warn('loadAssignmentsForDate: failed to mirror assignments to SQLite:', dbErr);
             }
           }
         }
@@ -592,10 +659,31 @@ export function AssignmentsProvider({ children }: { children: React.ReactNode })
       try {
         const remoteSession = await insertWorkSession(user.id, assignmentId, userCompanyId);
         if (remoteSession) {
-          const onlineSession = { ...remoteSession, synced: true };
-          setActiveWorkSession(onlineSession);
-          setLoadedWorkSessions(prev => [...prev, onlineSession]);
-          session = onlineSession;
+          // Enrich with worker_assignments data from the local assignments state
+          // so the SQLite mirror has the full shape needed when going offline.
+          const matchingAssignment = assignments.find(a => a.id === assignmentId);
+          const enrichedSession = {
+            ...remoteSession,
+            synced: true,
+            worker_assignments: matchingAssignment
+              ? {
+                  assigned_date: matchingAssignment.assigned_date,
+                  sort_key: matchingAssignment.sort_key,
+                  ref_id: matchingAssignment.ref_id,
+                  ref_type: matchingAssignment.ref_type,
+                }
+              : undefined,
+          };
+          setActiveWorkSession(enrichedSession);
+          setLoadedWorkSessions(prev => [...prev, enrichedSession]);
+          session = enrichedSession;
+
+          // Also persist to local SQLite so the session survives an offline restart
+          try {
+            await insertLocalWorkSession(enrichedSession);
+          } catch (localErr) {
+            console.warn('startWorkSession: failed to mirror session to local SQLite:', localErr);
+          }
         } else {
             throw new Error("Failed to create Supabase work session.");
         }
@@ -603,7 +691,7 @@ export function AssignmentsProvider({ children }: { children: React.ReactNode })
         console.error("Failed to create Supabase work session:", err);
         throw err;
       }
-        }
+    }
         // --- Removed explicit location event insertion ---
         // The native background module now handles geofence entry/exit events.
       }, [user, userCompanyId, isOffline]);
@@ -690,6 +778,12 @@ export function AssignmentsProvider({ children }: { children: React.ReactNode })
                   console.error('Work session ended, but reconciliation failed:', reconcileError);
                 }
                 setLoadedWorkSessions(prev => prev.map(s => (s.id === sessionId ? endedSession : s))); // Update with actual ended session from service
+                // Also update local SQLite so the ended state persists if the app restarts offline
+                try {
+                  await updateLocalWorkSession({ ...endedSession, synced: true });
+                } catch (localErr) {
+                  console.warn('endWorkSession: failed to mirror ended session to local SQLite:', localErr);
+                }
                 const assignmentId = endedSession.assignment_id;
                 if (assignmentId) {
                     setLastCheckoutAssignmentId(assignmentId);
@@ -794,6 +888,7 @@ export function AssignmentsProvider({ children }: { children: React.ReactNode })
     processedAssignments,
     syncLocalChanges,
     isOffline,
+    isSyncingToCloud,
     lastCheckoutAssignmentId,
   };
 

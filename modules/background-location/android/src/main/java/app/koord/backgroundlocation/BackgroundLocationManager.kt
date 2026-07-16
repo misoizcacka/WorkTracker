@@ -22,11 +22,16 @@ object BackgroundLocationManager {
     private val sentEventsCache = mutableMapOf<String, Long>() // Key: "geofenceId_type", Value: Timestamp
 
     @Synchronized
+    fun clearCache() {
+        sentEventsCache.clear()
+    }
+
+    @Synchronized
     private fun isDuplicateEvent(geofenceId: String, type: String): Boolean {
         val key = "${geofenceId}_$type"
         val now = System.currentTimeMillis()
         val lastSent = sentEventsCache[key] ?: 0L
-        if (now - lastSent < 120000L) { // 2 minute deduplication window
+        if (now - lastSent < 30000L) { // 30 second deduplication window (debug)
             return true
         }
         sentEventsCache[key] = now
@@ -84,8 +89,8 @@ object BackgroundLocationManager {
             .build()
 
         val workRequest = PeriodicWorkRequestBuilder<PeriodicLocationPingWorker>(
-            15, TimeUnit.MINUTES, // Repeat every 15 minutes
-            5, TimeUnit.MINUTES // Flex interval for execution within the last 5 minutes of the period
+            15, TimeUnit.MINUTES, // Android enforces 15min minimum — fires as early as possible
+            14, TimeUnit.MINUTES  // Max flex: execute anywhere in the 15min window
         )
         .setConstraints(constraints)
         .addTag(PERIODIC_WORK_TAG)
@@ -93,7 +98,7 @@ object BackgroundLocationManager {
 
         WorkManager.getInstance(context).enqueueUniquePeriodicWork(
             PERIODIC_WORK_NAME,
-            ExistingPeriodicWorkPolicy.UPDATE,
+            ExistingPeriodicWorkPolicy.KEEP, // KEEP preserves the existing schedule — UPDATE resets the timer
             workRequest
         )
         Log.d(TAG, "Periodic LocationUpdateWorker scheduled.")

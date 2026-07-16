@@ -44,9 +44,21 @@ export async function fetchLocationEventsForWorkerInRange(
 export async function upsertLocationEvents(events: LocationEventRecord[]): Promise<LocationEventRecord[]> {
   if (events.length === 0) return [];
 
-  const { error } = await supabase
-    .from('location_events')
-    .upsert(events, { onConflict: 'id', ignoreDuplicates: true });
+  // Direct table inserts/upserts are blocked by RLS (REVOKE INSERT FROM authenticated).
+  // Must call the SECURITY DEFINER RPC instead.
+  const { error } = await supabase.rpc('insert_location_events_from_app', {
+    p_events: events.map(e => ({
+      id: e.id,
+      created_at: e.created_at,
+      company_id: e.company_id,
+      worker_id: e.worker_id,
+      assignment_id: e.assignment_id,
+      type: e.type,
+      latitude: e.latitude,
+      longitude: e.longitude,
+      notes: e.notes ?? null,
+    })),
+  });
 
   if (error) {
     console.error('Error upserting location events:', error);
@@ -58,20 +70,18 @@ export async function upsertLocationEvents(events: LocationEventRecord[]): Promi
 
 /**
  * Inserts a new location event record into Supabase.
+ * Routes through upsertLocationEvents which uses the SECURITY DEFINER RPC
+ * (direct table inserts are blocked by RLS).
  */
 export async function insertLocationEvent(event: Omit<LocationEventRecord, 'id' | 'created_at'>): Promise<LocationEventRecord> {
-  const { data, error } = await supabase
-    .from('location_events')
-    .insert(event)
-    .select()
-    .single();
-
-  if (error) {
-    console.error('Error inserting location event:', error);
-    throw error;
-  }
-
-  return data as LocationEventRecord;
+  const { v4: uuidv4 } = await import('uuid');
+  const full: LocationEventRecord = {
+    ...event,
+    id: uuidv4(),
+    created_at: new Date().toISOString(),
+  };
+  await upsertLocationEvents([full]);
+  return full;
 }
 
 /**

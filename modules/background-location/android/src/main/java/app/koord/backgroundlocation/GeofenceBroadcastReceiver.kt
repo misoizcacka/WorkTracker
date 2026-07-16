@@ -10,10 +10,18 @@ import com.google.android.gms.location.GeofenceStatusCodes
 import com.google.android.gms.location.GeofencingEvent
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 
 class GeofenceBroadcastReceiver : BroadcastReceiver() {
     private val TAG = "GeofenceReceiver"
+
+    companion object {
+        // Shared scope for all geofence events — outlives individual receiver instances
+        // (BroadcastReceiver is reinstantiated per event) but is bounded to the process.
+        // SupervisorJob means one failed event doesn't cancel other in-flight events.
+        private val receiverScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    }
 
     override fun onReceive(context: Context, intent: Intent) {
         val geofencingEvent = GeofencingEvent.fromIntent(intent)
@@ -52,7 +60,7 @@ class GeofenceBroadcastReceiver : BroadcastReceiver() {
             val supabaseService = SupabaseService(context, supabaseUrl, supabaseKey, DeviceAuthenticator(context))
             val pendingResult = goAsync()
 
-            CoroutineScope(Dispatchers.IO).launch {
+            receiverScope.launch {
                 try {
                     val eventType = if (transition == Geofence.GEOFENCE_TRANSITION_ENTER) "enter_geofence" else "exit_geofence"
                     

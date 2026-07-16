@@ -12,6 +12,9 @@ import AnimatedScreen from '../AnimatedScreen';
 import { Card } from '../Card';
 import { Logo } from '../Logo';
 import { useSession } from '~/context/AuthContext';
+import * as SecureStore from 'expo-secure-store';
+
+export const WORKER_CREDENTIALS_KEY = 'worker_auth_credentials';
 
 interface InviteAcceptanceScreenProps {
   token?: string;
@@ -119,6 +122,20 @@ export function InviteAcceptanceScreen({ token }: InviteAcceptanceScreenProps) {
       if (signInError) {
         setFormError(signInError.message || 'Could not sign you in automatically.');
         return;
+      }
+
+      // Persist credentials in SecureStore so the app can silently re-authenticate
+      // if the session expires (e.g. after a device reboot or 60-day token expiry).
+      // Only workers need this — managers know their own password.
+      if (invite.role === 'worker' && Platform.OS !== 'web') {
+        try {
+          await SecureStore.setItemAsync(
+            WORKER_CREDENTIALS_KEY,
+            JSON.stringify({ email: authEmail, password: authPassword })
+          );
+        } catch (credErr) {
+          console.warn('InviteAcceptanceScreen: failed to save worker credentials:', credErr);
+        }
       }
 
       await refreshUser();

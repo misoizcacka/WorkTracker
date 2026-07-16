@@ -1,107 +1,98 @@
 package app.koord.backgroundlocation
 
 import android.Manifest
+import android.app.ActivityManager
 import android.content.Context
+import android.content.Intent
 import android.content.pm.PackageManager
-import android.location.Location
+import android.os.Build
 import android.util.Log
 import androidx.core.content.ContextCompat
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
-import androidx.work.ListenableWorker // Explicitly import ListenableWorker for Result class
-import com.google.android.gms.location.LocationServices
-import com.google.android.gms.location.FusedLocationProviderClient
-import kotlinx.coroutines.tasks.await
-import java.util.UUID
-import java.util.concurrent.TimeUnit
+import androidx.work.ListenableWorker
 
 class PeriodicLocationPingWorker(appContext: Context, workerParams: WorkerParameters) :
     CoroutineWorker(appContext, workerParams) {
 
-    init {
-        Log.d("LocationUpdateWorker", "LocationUpdateWorker instantiated.")
-    }
-
-    private lateinit var fusedLocationClient: FusedLocationProviderClient
-    private lateinit var supabaseService: SupabaseService
-    private lateinit var deviceAuthenticator: DeviceAuthenticator // NEW: DeviceAuthenticator
-
     override suspend fun doWork(): ListenableWorker.Result {
         Log.d("LocationUpdateWorker", "doWork started.")
 
-        // Initialize components
-        fusedLocationClient = LocationServices.getFusedLocationProviderClient(applicationContext)
-        deviceAuthenticator = DeviceAuthenticator(applicationContext) // NEW: Initialize DeviceAuthenticator
-
-        // Retrieve data from SharedPreferences
         val sharedPrefs = applicationContext.getSharedPreferences(Constants.SHARED_PREFS_NAME, Context.MODE_PRIVATE)
-        val workerId = sharedPrefs.getString(Constants.KEY_WORKER_ID, null as String?)
-        val assignmentId = sharedPrefs.getString(Constants.KEY_ASSIGNMENT_ID, null as String?)
-        val companyId = sharedPrefs.getString(Constants.KEY_COMPANY_ID, null as String?)
-        val supabaseUrl = sharedPrefs.getString(Constants.KEY_SUPABASE_URL, null as String?)
-        val supabasePublishableKey = sharedPrefs.getString(Constants.KEY_SUPABASE_PUBLISHABLE_KEY, null as String?)
-        // Removed accessToken
+        val workerId = sharedPrefs.getString(Constants.KEY_WORKER_ID, null)
 
-        Log.d("LocationUpdateWorker", "SharedPreferences values: " +
-                "workerId=$workerId, " +
-                "assignmentId=$assignmentId, " +
-                "companyId=$companyId, " +
-                "supabaseUrl=${supabaseUrl?.take(5)}..., " + // Log first 5 chars for brevity/security
-                "supabasePublishableKey=${supabasePublishableKey?.take(5)}...") // Log first 5 chars
-
-        if (workerId == null || assignmentId == null || companyId == null || supabaseUrl == null || supabasePublishableKey == null) { // Removed accessToken from null check
-            Log.e("LocationUpdateWorker", "Missing required parameters in SharedPreferences. Cannot track location.")
-            return ListenableWorker.Result.failure()
+        // If there's no active session (prefs cleared by stop()), do nothing.
+        if (workerId == null) {
+            Log.d("LocationUpdateWorker", "No active session in SharedPreferences. Nothing to do.")
+            return ListenableWorker.Result.success()
         }
 
-        // Initialize SupabaseService with retrieved credentials and device authenticator
-        supabaseService = SupabaseService(applicationContext, supabaseUrl, supabasePublishableKey, deviceAuthenticator) // NEW: Pass deviceAuthenticator
-
-        // Check for permissions
-        val hasPermissions = hasLocationPermissions()
-        Log.d("LocationUpdateWorker", "Location permissions check result: $hasPermissions")
-        if (!hasPermissions) {
-            Log.e("LocationUpdateWorker", "Location permissions not granted. Cannot get location.")
+        // Check for permissions before attempting any location or service work
+        if (!hasLocationPermissions()) {
+            Log.e("LocationUpdateWorker", "Location permissions not granted.")
             return ListenableWorker.Result.failure()
         }
 
         return try {
-            val location: Location? = fusedLocationClient.lastLocation.await()
-            Log.d("LocationUpdateWorker", "FusedLocationProviderClient.lastLocation.await() result: ${location?.latitude}, ${location?.longitude}")
+            // No location event emitted here — the foreground service (once restarted below)
+            // will emit active_tracking / passive_tracking events at its own interval.
+            // WorkManager's only job is to keep the service alive.
 
-            location?.let {
-                val locationEventId = UUID.randomUUID().toString()
-                val timestamp = System.currentTimeMillis()
-                val type = "ping"
-                val notes = "Periodic background location update via WorkManager"
+            // --- Service liveness check ---
+            // If the foreground tracking service was killed (memory pressure, battery optimizer,
+            // manufacturer ROM), restart it here so geofencing resumes. WorkManager is the last
+            // safety net — it survives everything the service cannot.
+            ensureTrackingServiceRunning(sharedPrefs.getString(Constants.SHARED_PREFS_KEY_GEOFENCE_ASSIGNMENTS, null))
 
-                // Persist + send through SupabaseService so all native event paths share one queueing contract.
-                Log.d("LocationUpdateWorker", "Attempting to send location event to Supabase: $locationEventId")
-                val supabasePushSuccessful = supabaseService.sendLocationEvent(
-                    id = locationEventId,
-                    timestamp = timestamp,
-                    type = type,
-                    assignmentId = assignmentId,
-                    workerId = workerId,
-                    companyId = companyId,
-                    latitude = it.latitude,
-                    longitude = it.longitude,
-                    notes = notes
-                )
-                if (supabasePushSuccessful) {
-                    Log.d("LocationUpdateWorker", "Location $locationEventId successfully pushed to Supabase and marked as synced.")
-                } else {
-                    Log.w("LocationUpdateWorker", "Failed to push location $locationEventId to Supabase (best-effort). It remains marked as unsynced locally.")
-                }
-                ListenableWorker.Result.success()
-            } ?: run {
-                Log.w("LocationUpdateWorker", "Last known location is null. Skipping location event processing.")
-                ListenableWorker.Result.success()
-            }
+            ListenableWorker.Result.success()
         } catch (e: Exception) {
-            Log.e("LocationUpdateWorker", "Error getting location or saving event for $workerId: ${e.message}. Location will remain unsynced if saved locally.", e)
-            ListenableWorker.Result.success() // Return success for best-effort, even if location acquisition failed
+            Log.e("LocationUpdateWorker", "Error in doWork for $workerId: ${e.message}.", e)
+            ListenableWorker.Result.success() // Best-effort — don't retry, next scheduled run will pick up
         }
+    }
+
+    /**
+     * Checks if PeriodicLocationTrackingService is currently running.
+     * If it is not, starts it as a foreground service so geofencing resumes.
+     * Only acts when a session is active (SharedPrefs are populated by start()).
+     */
+    private fun ensureTrackingServiceRunning(geofenceJson: String?) {
+        val isRunning = isServiceRunning(PeriodicLocationTrackingService::class.java)
+        if (isRunning) {
+            Log.d("LocationUpdateWorker", "TrackingService is alive — no restart needed.")
+            return
+        }
+
+        Log.w("LocationUpdateWorker", "TrackingService is NOT running — restarting to resume geofencing.")
+        val serviceIntent = Intent(applicationContext, PeriodicLocationTrackingService::class.java).apply {
+            // Pass the stored geofence JSON so the service re-registers all fences on restart,
+            // exactly the same as when the JS layer calls BackgroundLocation.start().
+            if (geofenceJson != null) {
+                putExtra("geofence_data", geofenceJson)
+            }
+        }
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                applicationContext.startForegroundService(serviceIntent)
+            } else {
+                applicationContext.startService(serviceIntent)
+            }
+            Log.d("LocationUpdateWorker", "TrackingService restart initiated.")
+        } catch (e: Exception) {
+            // On Android 12+ this can throw ForegroundServiceStartNotAllowedException if the
+            // app is in a fully background state with no visible activity/notification.
+            // Nothing we can do here — the next WorkManager run will try again.
+            Log.e("LocationUpdateWorker", "Failed to restart TrackingService: ${e.message}")
+        }
+    }
+
+    @Suppress("DEPRECATION")
+    private fun isServiceRunning(serviceClass: Class<*>): Boolean {
+        val manager = applicationContext.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
+        // getRunningServices is deprecated in API 26+ but remains the only reliable way
+        // to check your own service's liveness from within the same package.
+        return manager.getRunningServices(Int.MAX_VALUE)
+            .any { it.service.className == serviceClass.name }
     }
 
     private fun hasLocationPermissions(): Boolean {

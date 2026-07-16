@@ -20,11 +20,12 @@ import AssignmentSelectionModal from '../../components/AssignmentSelectionModal'
 import { View, Text } from '../../components/Themed';
 import { Logo } from '~/components/Logo';
 
+import { CircularTimer } from '~/components/CircularTimer';
 import { GeofenceAssignment } from 'background-location';
 import { fetchAssignmentsForWorkers } from '~/services/workerAssignments';
 
 export default function Home() {
-  const { user, userCompanyId, isCompanyIdLoading, deviceToken, deviceSecret, userCompanyName, session, refreshUser } = useSession();
+  const { user, userCompanyId, isCompanyIdLoading, deviceToken, deviceSecret, userCompanyName, refreshUser } = useSession();
   const { loadInitialProjects, isLoading: projectsLoading } = useProjects();
   const [currentDate, setCurrentDate] = useState(moment().format('YYYY-MM-DD'));
   const [locationPermission, setLocationPermission] = useState<Location.PermissionStatus | null>(null);
@@ -108,6 +109,17 @@ export default function Home() {
           Alert.alert("Background Location Required", "This app requires background location access to track work hours accurately.", [{ text: "Open Settings", onPress: () => Linking.openSettings() }]);
         }
         await Notifications.requestPermissionsAsync();
+        // Prompt Android users to disable battery optimization for reliable background tracking
+        if (Platform.OS === 'android') {
+          Alert.alert(
+            "Disable Battery Optimization",
+            "For accurate work hour tracking, please disable battery optimization for this app. Tap 'Open Settings', find this app, and select 'Unrestricted' or 'Don't optimize'.",
+            [
+              { text: "Open Settings", onPress: () => Linking.openSettings() },
+              { text: "Later", style: "cancel" },
+            ]
+          );
+        }
       }
     })();
   }, []);
@@ -208,17 +220,20 @@ export default function Home() {
         isSelectionLocked: true 
       };
     }
+
+    // Manual selection always wins — don't let location polling override it
+    if (selectedNextAssignmentId) {
+      const manuallySelected = currentWorkersAssignments.find(a => a.id === selectedNextAssignmentId) || null;
+      return { relevantAssignment: manuallySelected, isSelectionLocked: false };
+    }
     
+    // Auto-select based on proximity only if user hasn't manually chosen
     if (assignmentAtCurrentLocation) {
       return { relevantAssignment: assignmentAtCurrentLocation, isSelectionLocked: false };
     }
 
     const lastCheckoutAss = currentWorkersAssignments.find((assign: ProcessedAssignmentStepWithStatus) => assign.id === lastCheckoutAssignmentId);
-    let assignmentToDisplay = selectedNextAssignmentId 
-      ? currentWorkersAssignments.find(a => a.id === selectedNextAssignmentId) || null
-      : lastCheckoutAss || nextAssignableAssignment;
-
-    return { relevantAssignment: assignmentToDisplay, isSelectionLocked: false };
+    return { relevantAssignment: lastCheckoutAss || nextAssignableAssignment || null, isSelectionLocked: false };
   }, [checkedIn, currentActiveAssignment, assignmentAtCurrentLocation, currentWorkersAssignments, lastCheckoutAssignmentId, lastOnSiteAssignment, lastWorkedAssignment, selectedNextAssignmentId, nextAssignableAssignment]);
 
   const targetProjectLocation = useMemo(() => {
@@ -304,8 +319,10 @@ export default function Home() {
 
   useEffect(() => { fetchHomeData(); }, [fetchHomeData]);
 
-  // Ensure the session token is always fresh when the screen loads
-  useEffect(() => { refreshUser(); }, []);
+  // Ensure the session token is always fresh when the screen loads — skip when offline
+  useEffect(() => {
+    if (!isOffline) refreshUser();
+  }, [isOffline]);
 
   useEffect(() => {
     let timer: any;
@@ -350,11 +367,18 @@ export default function Home() {
     return () => { isMounted = false; if (intervalId) clearInterval(intervalId); };
   }, [locationPermission, targetProjectLocation]);
 
+  const startedSessionIdRef = useRef<string | null>(null);
+
   useEffect(() => {
-    if (!checkedIn || !activeWorkSession || !user?.id || !userCompanyId || !deviceToken || !deviceSecret) {
+    const sessionId = activeWorkSession?.id ?? null;
+
+    // Only start once per unique session — prevents re-firing when other deps change
+    if (!sessionId || sessionId === startedSessionIdRef.current) {
       return;
     }
-
+    if (!checkedIn || !user?.id || !userCompanyId || !deviceToken || !deviceSecret) {
+      return;
+    }
     if (backgroundGeofenceAssignments.length === 0) {
       return;
     }
@@ -365,88 +389,88 @@ export default function Home() {
       return;
     }
 
+    startedSessionIdRef.current = sessionId;
     BackgroundLocation.start(
       user.id,
-      activeWorkSession.assignment_id,
+      activeWorkSession!.assignment_id,
       userCompanyId,
-      JSON.stringify({ url: supabaseUrl, key: supabaseKey }),
+      JSON.stringify({ url: supabaseUrl, key: supabaseKey, locationName: projectLocationName }),
       deviceToken,
       deviceSecret,
-      JSON.stringify(backgroundGeofenceAssignments),
-      projectLocationName,
-      session?.access_token ?? ''
+      JSON.stringify(backgroundGeofenceAssignments)
     ).catch((error) => {
       console.error('Failed to refresh background geofence assignments:', error);
+      startedSessionIdRef.current = null; // Allow retry on failure
     });
-  }, [activeWorkSession, backgroundGeofenceAssignments, checkedIn, deviceSecret, deviceToken, user?.id, userCompanyId]);
+  }, [activeWorkSession?.id, backgroundGeofenceAssignments, checkedIn, deviceSecret, deviceToken, user?.id, userCompanyId]);
 
   const handleCheckIn = async () => {
     if (checkedIn || !relevantAssignment || !targetProjectLocation) return;
 
-    const today = moment().format('YYYY-MM-DD');
-    if (currentDate !== today) {
-      if (isOffline) {
-        Alert.alert("Connect to Refresh", "Today's assignments have not been loaded yet. Go online to refresh your schedule before checking in.");
-        return;
-      }
-
-      setCurrentDate(today);
-      await fetchHomeData(true, today);
-      Alert.alert("Schedule Refreshed", "Today's assignments were refreshed. Review your schedule and tap check in again.");
-      return;
-    }
-
-    if (isOffline && currentWorkersAssignments.length === 0) {
-      Alert.alert("Connect to Refresh", "No assignments are loaded for today. Go online to pull today's schedule before checking in.");
-      return;
-    }
-
-    if (!isOffline && user?.id && userCompanyId) {
-      const liveAssignments = await fetchAssignmentsForWorkers(userCompanyId, today, [user.id]);
-      if (liveAssignments.length === 0) {
-        await fetchHomeData(true, today);
-        Alert.alert("No Assignments Today", "You do not have any assignments scheduled for today.");
-        return;
-      }
-
-      if (!liveAssignments.some((assignment) => assignment.id === relevantAssignment.id)) {
-        await fetchHomeData(true, today);
-        Alert.alert("Schedule Updated", "Your assignments changed. Review today's schedule and try checking in again.");
-        return;
-      }
-    }
-
-    const { status: bgStatus } = await Location.getBackgroundPermissionsAsync();
-    if (bgStatus !== 'granted') { Alert.alert("Background Location Required", "Please allow location access 'All the time'."); return; }
-
-    let currentLocation;
-    try {
-      const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
-      currentLocation = { latitude: loc.coords.latitude, longitude: loc.coords.longitude };
-    } catch (err) { return; }
-
-    const d = getDistance(currentLocation, { latitude: targetProjectLocation.lat, longitude: targetProjectLocation.lon });
-    if (d > ACCEPTABLE_DISTANCE) { Alert.alert("Too far", `You must be at ${projectLocationName} to check in.`); return; }
-
+    // 9-D: Lock the button immediately before any async work to prevent double-tap races.
     setIsProcessingCheckInOut(true);
     setPendingAction('checking_in');
-    
-    try {
-      await startWorkSession(relevantAssignment.id, currentLocation);
-      const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
-      const supabaseKey = process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
-      const geofenceAssignmentsToStart = backgroundGeofenceAssignments.length > 0
-        ? backgroundGeofenceAssignments
-        : [{
-            id: relevantAssignment.id,
-            latitude: targetProjectLocation.lat,
-            longitude: targetProjectLocation.lon,
-            radius: ACCEPTABLE_DISTANCE,
-            type: (relevantAssignment as any).type,
-            status: 'active' as const,
-          }];
 
-      await BackgroundLocation.start(user!.id, relevantAssignment.id, userCompanyId!, JSON.stringify({ url: supabaseUrl, key: supabaseKey }), deviceToken!, deviceSecret!, JSON.stringify(geofenceAssignmentsToStart), projectLocationName, session?.access_token ?? '');
+    try {
+      const today = moment().format('YYYY-MM-DD');
+      if (currentDate !== today) {
+        if (isOffline) {
+          Alert.alert("Connect to Refresh", "Today's assignments have not been loaded yet. Go online to refresh your schedule before checking in.");
+          return;
+        }
+
+        setCurrentDate(today);
+        await fetchHomeData(true, today);
+        Alert.alert("Schedule Refreshed", "Today's assignments were refreshed. Review your schedule and tap check in again.");
+        return;
+      }
+
+      if (isOffline && currentWorkersAssignments.length === 0) {
+        Alert.alert("Connect to Refresh", "No assignments are loaded for today. Go online to pull today's schedule before checking in.");
+        return;
+      }
+
+      if (!isOffline && user?.id && userCompanyId) {
+        // 9-C: Wrap the live-assignment fetch in try-catch so a network failure doesn't
+        // silently abort check-in with no feedback to the user.
+        let liveAssignments;
+        try {
+          liveAssignments = await fetchAssignmentsForWorkers(userCompanyId, today, [user.id]);
+        } catch (fetchErr) {
+          console.warn('handleCheckIn: could not verify live assignments, proceeding with cached data.', fetchErr);
+          liveAssignments = null;
+        }
+
+        if (liveAssignments !== null) {
+          if (liveAssignments.length === 0) {
+            await fetchHomeData(true, today);
+            Alert.alert("No Assignments Today", "You do not have any assignments scheduled for today.");
+            return;
+          }
+
+          if (!liveAssignments.some((assignment) => assignment.id === relevantAssignment.id)) {
+            await fetchHomeData(true, today);
+            Alert.alert("Schedule Updated", "Your assignments changed. Review today's schedule and try checking in again.");
+            return;
+          }
+        }
+      }
+
+      const { status: bgStatus } = await Location.getBackgroundPermissionsAsync();
+      if (bgStatus !== 'granted') { Alert.alert("Background Location Required", "Please allow location access 'All the time'."); return; }
+
+      let currentLocation;
+      try {
+        const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
+        currentLocation = { latitude: loc.coords.latitude, longitude: loc.coords.longitude };
+      } catch (err) { return; }
+
+      const d = getDistance(currentLocation, { latitude: targetProjectLocation.lat, longitude: targetProjectLocation.lon });
+      if (d > ACCEPTABLE_DISTANCE) { Alert.alert("Too far", `You must be at ${projectLocationName} to check in.`); return; }
+
+      await startWorkSession(relevantAssignment.id, currentLocation);
+      // BackgroundLocation.start is handled by the useEffect that watches activeWorkSession —
+      // no need to call it here, which avoids the double-registration race.
       Toast.show({ type: 'success', text1: 'Checked In', text2: `Working on ${projectLocationName}` });
       setSelectedNextAssignmentId(null);
     } catch (err: any) {
@@ -471,6 +495,7 @@ export default function Home() {
     try {
       await endWorkSession(activeWorkSession.id, currentLocation);
       BackgroundLocation.stop();
+      startedSessionIdRef.current = null;
       Toast.show({ type: 'info', text1: 'Checked Out', text2: `Success from ${projectLocationName}` });
       setElapsedTime(0);
       setSelectedNextAssignmentId(null);
@@ -518,6 +543,28 @@ export default function Home() {
   const handleSelectAssignment = (assignmentId: string) => {
     setSelectedNextAssignmentId(assignmentId);
     setIsAssignmentSelectionModalVisible(false);
+    // Immediately animate the map to fit the new assignment + user location.
+    // We can't use mapRegion state here because it updates asynchronously —
+    // instead compute the region directly and call animateToRegion on the ref.
+    const assignment = currentWorkersAssignments.find(a => a.id === assignmentId) as any;
+    if (!assignment) return;
+    const lat = assignment.type === 'project' ? assignment.project?.location?.latitude : assignment.location?.latitude;
+    const lon = assignment.type === 'project' ? assignment.project?.location?.longitude : assignment.location?.longitude;
+    if (lat == null || lon == null) return;
+    if (mapRef.current) {
+      const latDelta = workerMapLocation
+        ? Math.max(Math.abs(workerMapLocation.latitude - lat) * 1.5, 0.005)
+        : 0.005;
+      const lonDelta = workerMapLocation
+        ? Math.max(Math.abs(workerMapLocation.longitude - lon) * 1.5, 0.005)
+        : 0.005;
+      mapRef.current.animateToRegion({
+        latitude: workerMapLocation ? (workerMapLocation.latitude + lat) / 2 : lat,
+        longitude: workerMapLocation ? (workerMapLocation.longitude + lon) / 2 : lon,
+        latitudeDelta: latDelta,
+        longitudeDelta: lonDelta,
+      }, 600);
+    }
   };
 
   if (locationPermission === null) {
@@ -559,6 +606,16 @@ export default function Home() {
             <Text style={styles.dateText}>{moment().format('ddd, MMM D')}</Text>
           </View>
         </View>
+
+        {/* Offline banner */}
+        {isOffline && (
+          <View style={styles.offlineBanner}>
+            <Ionicons name="cloud-offline-outline" size={14} color="#92400E" />
+            <Text style={styles.offlineBannerText} fontType="medium">
+              {stableCheckedIn ? " You're offline — check out is still available" : " You're offline"}
+            </Text>
+          </View>
+        )}
 
         <View style={styles.homeContent}>
           {/* Status + Assignment card */}
@@ -643,9 +700,15 @@ export default function Home() {
             )}
           </View>
 
-          {/* Map — always show when there's a relevant assignment and not checked in, or show compact when checked in */}
-          {relevantAssignment && targetProjectLocation && (
-            <View style={[styles.mapCard, stableCheckedIn && styles.mapCardCheckedIn]}>
+          {/* Timer when checked in, map when not */}
+          {stableCheckedIn && sessionStartTime ? (
+            <View style={styles.timerCard}>
+              <CircularTimer elapsedTime={elapsedTime} size={200} strokeWidth={6} />
+            </View>
+          ) : (
+            // Keep MapView always mounted so isMounted stays true and animateToRegion works.
+            // Just hide the card when there's nothing to show.
+            <View style={[styles.mapCard, (!relevantAssignment || !targetProjectLocation) && { display: 'none' }]}>
               {locationReady && workerMapLocation ? (
                 <MapView
                   ref={mapRef}
@@ -655,18 +718,22 @@ export default function Home() {
                   showsUserLocation={true}
                   region={mapRegion}
                 >
-                  <Marker
-                    coordinate={{ latitude: targetProjectLocation.lat, longitude: targetProjectLocation.lon }}
-                    anchor={{ x: 0.5, y: 0.5 }}
-                    pinColor={theme.colors.primary}
-                  />
-                  <Circle
-                    center={{ latitude: targetProjectLocation.lat, longitude: targetProjectLocation.lon }}
-                    radius={ACCEPTABLE_DISTANCE}
-                    strokeWidth={2}
-                    strokeColor={theme.colors.primary}
-                    fillColor={theme.colors.primary + '20'}
-                  />
+                  {targetProjectLocation && (
+                    <>
+                      <Marker
+                        coordinate={{ latitude: targetProjectLocation.lat, longitude: targetProjectLocation.lon }}
+                        anchor={{ x: 0.5, y: 0.5 }}
+                        pinColor={theme.colors.primary}
+                      />
+                      <Circle
+                        center={{ latitude: targetProjectLocation.lat, longitude: targetProjectLocation.lon }}
+                        radius={ACCEPTABLE_DISTANCE}
+                        strokeWidth={2}
+                        strokeColor={theme.colors.primary}
+                        fillColor={theme.colors.primary + '20'}
+                      />
+                    </>
+                  )}
                 </MapView>
               ) : (
                 <View style={styles.mapLoading}>
@@ -712,12 +779,17 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    backgroundColor: theme.colors.pageBackground,
   },
-  logo: {},
+  logo: {
+    width: theme.branding.logoWidth,
+    height: theme.branding.logoHeight,
+  },
   headerRight: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
+    flexShrink: 0,
   },
   syncPill: {
     flexDirection: 'row',
@@ -731,6 +803,20 @@ const styles = StyleSheet.create({
   syncText: {
     fontSize: 11,
     color: theme.colors.bodyText,
+  },
+  offlineBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFBEB',
+    borderTopWidth: 1,
+    borderBottomWidth: 1,
+    borderColor: '#FDE68A',
+    paddingHorizontal: theme.spacing(3),
+    paddingVertical: 8,
+  },
+  offlineBannerText: {
+    fontSize: theme.fontSizes.sm,
+    color: '#92400E',
   },
   dateText: {
     fontSize: theme.fontSizes.sm,
@@ -850,8 +936,14 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: theme.colors.borderColor,
   },
-  mapCardCheckedIn: {
-    height: 140,
+  // Timer (shown instead of map when checked in)
+  timerCard: {
+    backgroundColor: theme.colors.cardBackground,
+    borderRadius: theme.radius.lg,
+    borderWidth: 1,
+    borderColor: theme.colors.borderColor,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   mapLoading: {
     flex: 1,

@@ -24,6 +24,8 @@ interface DeriveMissingGeofenceEventsParams {
 }
 
 const TRANSITION_EVENT_TYPES = new Set(['enter_geofence', 'exit_geofence']);
+// All event types that carry real GPS coordinates we can use for geofence proximity checks.
+// ping is intentionally excluded — WorkManager no longer emits it.
 const TRACKING_EVENT_TYPES = new Set(['active_tracking', 'passive_tracking', 'periodic_update']);
 
 function isInsideGeofence(
@@ -81,9 +83,20 @@ export function deriveMissingGeofenceEvents({
       continue;
     }
 
-    const firstInsideSample = chronologicalEvents.find(event =>
-      isInsideGeofence({ latitude: event.latitude, longitude: event.longitude }, geofence)
-    );
+    const firstInsideSample = chronologicalEvents.find(event => {
+      // Transition events (enter/exit) carry the assignment_id they were fired for,
+      // NOT the physical location of the worker at that moment in a general sense.
+      // A transition event for assignment B could have coordinates that accidentally
+      // fall inside assignment A's geofence if the sites are close together — using it
+      // would derive a false enter_geofence for A.
+      // Tracking events (active_tracking, passive_tracking) use the current assignment's
+      // id but represent the worker's actual GPS position, so they're safe to use for
+      // any geofence proximity check regardless of which assignment_id they carry.
+      if (TRANSITION_EVENT_TYPES.has(event.type) && event.assignment_id !== geofence.assignmentId) {
+        return false;
+      }
+      return isInsideGeofence({ latitude: event.latitude, longitude: event.longitude }, geofence);
+    });
 
     let entryReferenceTime = hasEnter
       ? assignmentEvents.find(event => event.type === 'enter_geofence')?.created_at ?? null
@@ -108,10 +121,16 @@ export function deriveMissingGeofenceEvents({
       continue;
     }
 
-    const exitSample = chronologicalEvents.find(event =>
-      new Date(event.created_at).getTime() > new Date(entryReferenceTime).getTime() &&
-      !isInsideGeofence({ latitude: event.latitude, longitude: event.longitude }, geofence)
-    );
+    const exitSample = chronologicalEvents.find(event => {
+      if (new Date(event.created_at).getTime() <= new Date(entryReferenceTime).getTime()) {
+        return false;
+      }
+      // Same rule as firstInsideSample: skip transition events from other assignments.
+      if (TRANSITION_EVENT_TYPES.has(event.type) && event.assignment_id !== geofence.assignmentId) {
+        return false;
+      }
+      return !isInsideGeofence({ latitude: event.latitude, longitude: event.longitude }, geofence);
+    });
 
     if (exitSample) {
       derivedEvents.push(

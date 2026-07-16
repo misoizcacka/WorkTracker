@@ -1,8 +1,8 @@
 package app.koord.backgroundlocation
 
 object Constants {
-    const val PASSIVE_TRACKING_INTERVAL_MS = 5 * 60 * 1000L
-    const val ACTIVE_TRACKING_INTERVAL_MS = 3 * 60 * 1000L
+    const val ACTIVE_TRACKING_INTERVAL_MS = 2 * 60 * 1000L   // 2 min — worker outside geofence, traveling
+    const val PASSIVE_TRACKING_INTERVAL_MS = 5 * 60 * 1000L  // 5 min — worker inside geofence, on site
 
     const val SHARED_PREFS_NAME = "location_tracking_prefs"
     const val KEY_WORKER_ID = "worker_id"
@@ -12,7 +12,6 @@ object Constants {
     const val KEY_SUPABASE_PUBLISHABLE_KEY = "supabase_publishable_key"
     const val KEY_APP_PACKAGE_NAME = "app_package_name"
     const val KEY_LOCATION_NAME = "location_name"
-    const val KEY_ACCESS_TOKEN = "access_token"
 
     // Geofencing constants
     const val GEOFENCE_RADIUS_METERS = 150f // From frontend ACCEPTABLE_DISTANCE

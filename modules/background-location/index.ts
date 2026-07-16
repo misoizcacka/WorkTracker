@@ -42,6 +42,10 @@ export function stop(): Promise<void> {
     return BackgroundLocationModule.stop();
 }
 
+export function flushPendingEvents(): Promise<number> {
+    return BackgroundLocationModule.flushPendingEvents?.() ?? Promise.resolve(0);
+}
+
 export function requestWhenInUseAuthorization(): Promise<void> {
     return BackgroundLocationModule.requestWhenInUseAuthorization();
 }

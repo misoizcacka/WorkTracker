@@ -1,7 +1,8 @@
 {
   "expo": {
     "name": "Koordinate",
-    "slug": "Koordinate",
+    "slug": "Koord",
+    "owner": "misoizcacka",
     "scheme": "Koordinate",
     "version": "1.0.0",
     "orientation": "portrait",

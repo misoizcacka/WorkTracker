@@ -13,6 +13,10 @@ import android.content.Context
 import com.google.android.gms.location.LocationServices
 import android.app.PendingIntent
 import com.google.gson.Gson
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 
 // Re-adding the missing data classes
 data class GeofenceAssignment(
@@ -27,12 +31,15 @@ data class GeofenceAssignment(
 data class SupabaseConfig(
     val url: String,
     val key: String,
-    val locationName: String? = null,
-    val accessToken: String? = null
+    val locationName: String? = null
 )
 
 class BackgroundLocationModule : Module() {
-    
+
+    // Coroutine scope tied to this module instance — cancelled when the module is destroyed.
+    private val moduleJob = SupervisorJob()
+    private val moduleScope = CoroutineScope(Dispatchers.IO + moduleJob)
+
     private fun getGeofencePendingIntent(context: Context): PendingIntent {
         val intent = Intent(context, GeofenceBroadcastReceiver::class.java).apply {
             setPackage(context.packageName)
@@ -78,8 +85,6 @@ class BackgroundLocationModule : Module() {
                 putString(Constants.KEY_SUPABASE_PUBLISHABLE_KEY, parsedSupabaseConfig.key)
                 putString(Constants.SHARED_PREFS_KEY_GEOFENCE_ASSIGNMENTS, geofenceAssignments)
                 putString(Constants.KEY_LOCATION_NAME, parsedSupabaseConfig.locationName ?: "")
-                putString(Constants.KEY_ACCESS_TOKEN, parsedSupabaseConfig.accessToken ?: "")
-                putString(Constants.KEY_ACCESS_TOKEN, parsedSupabaseConfig.accessToken ?: "")
                 apply()
             }
             
@@ -97,16 +102,48 @@ class BackgroundLocationModule : Module() {
             promise.resolve(Unit)
         }
 
+        AsyncFunction("flushPendingEvents") { promise: Promise ->
+            val context = appContext.reactContext?.applicationContext ?: run {
+                promise.reject("APP_CONTEXT_ERROR", "Context is null.", null)
+                return@AsyncFunction
+            }
+            val sharedPrefs = context.getSharedPreferences(Constants.SHARED_PREFS_NAME, Context.MODE_PRIVATE)
+            val supabaseUrl = sharedPrefs.getString(Constants.KEY_SUPABASE_URL, null)
+            val supabaseKey = sharedPrefs.getString(Constants.KEY_SUPABASE_PUBLISHABLE_KEY, null)
+            if (supabaseUrl == null || supabaseKey == null) {
+                promise.resolve(0) // No config, can't flush
+                return@AsyncFunction
+            }
+            moduleScope.launch {
+                try {
+                    val supabaseService = SupabaseService(context, supabaseUrl, supabaseKey, DeviceAuthenticator(context))
+                    val flushed = supabaseService.flushPendingEvents()
+                    promise.resolve(flushed)
+                } catch (e: Exception) {
+                    promise.reject("FLUSH_ERROR", "Failed to flush pending events: ${e.message}", e)
+                }
+            }
+        }
+
         AsyncFunction("stop") { promise: Promise ->
             val context = appContext.reactContext?.applicationContext ?: run {
                 promise.reject("APP_CONTEXT_ERROR", "Context is null.", null)
                 return@AsyncFunction
             }
             
-            LocationServices.getGeofencingClient(context).removeGeofences(getGeofencePendingIntent(context))
+            // Stop the service and clear prefs immediately — these are synchronous and safe.
             context.stopService(Intent(context, PeriodicLocationTrackingService::class.java))
+            BackgroundLocationManager.stopPeriodicUpdates(context)
             context.getSharedPreferences(Constants.SHARED_PREFS_NAME, Context.MODE_PRIVATE).edit().clear().apply()
-            promise.resolve(Unit)
+
+            // Resolve the promise only after the async geofence removal has completed
+            // so a rapid stop() → start() sequence doesn't race with old geofences still registered.
+            LocationServices.getGeofencingClient(context)
+                .removeGeofences(getGeofencePendingIntent(context))
+                .addOnCompleteListener {
+                    // Resolve regardless of success/failure — the service is already stopped.
+                    promise.resolve(Unit)
+                }
         }
     }
 }

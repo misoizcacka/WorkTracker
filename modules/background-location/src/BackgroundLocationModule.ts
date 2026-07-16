@@ -12,6 +12,7 @@ interface BackgroundLocationModule {
     geofenceAssignments: string
   ) => Promise<void>;
   stop: () => Promise<void>;
+  flushPendingEvents: () => Promise<number>;
   requestWhenInUseAuthorization: () => Promise<void>;
   requestAlwaysAuthorization: () => Promise<void>;
   getAuthorizationStatus: () => Promise<string>;
@@ -33,6 +34,10 @@ try {
     stop: async () => {
       console.log('[MOCK] BackgroundLocation.stop called');
       return Promise.resolve();
+    },
+    flushPendingEvents: async () => {
+      console.log('[MOCK] BackgroundLocation.flushPendingEvents called');
+      return Promise.resolve(0);
     },
     requestWhenInUseAuthorization: async () => {
       console.log('[MOCK] BackgroundLocation.requestWhenInUseAuthorization called');

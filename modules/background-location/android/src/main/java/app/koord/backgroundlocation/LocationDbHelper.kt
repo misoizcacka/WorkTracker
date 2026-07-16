@@ -43,6 +43,11 @@ class LocationDbHelper(private val context: Context) {
         }
 
         val db = SQLiteDatabase.openOrCreateDatabase(databaseFile.absolutePath, null)
+        // Enable WAL mode so the native Android connection is consistent with the
+        // expo-sqlite JS side which also sets journal_mode=WAL on the same file.
+        // PRAGMA must go through rawQuery — execSQL rejects it with "Queries can be
+        // performed using query or rawQuery methods only" (SQLITE_OK code 0).
+        db.rawQuery("PRAGMA journal_mode=WAL;", null).use { it.moveToFirst() }
         
         // Ensure table exists
         if (!tableExists(db, TABLE_NAME)) {
@@ -81,7 +86,11 @@ class LocationDbHelper(private val context: Context) {
             
             val values = ContentValues().apply {
                 put(COLUMN_ID, id)
-                put(COLUMN_TIMESTAMP, SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US).format(Date(timestamp))) // ISO 8601 string
+                // Format as UTC — SimpleDateFormat defaults to device local timezone if not set,
+                // which would store e.g. "13:36Z" for a Berlin device when the real UTC is "11:36Z".
+                val tsFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US)
+                tsFormat.timeZone = TimeZone.getTimeZone("UTC")
+                put(COLUMN_TIMESTAMP, tsFormat.format(Date(timestamp)))
                 put(COLUMN_COMPANY_ID, companyId)
                 put(COLUMN_TYPE, type)
                 put(COLUMN_ASSIGNMENT_ID, assignmentId)
@@ -105,6 +114,60 @@ class LocationDbHelper(private val context: Context) {
         } finally {
             db?.close()
         }
+    }
+
+    data class UnsyncedEvent(
+        val id: String,
+        val timestamp: Long,
+        val companyId: String,
+        val type: String,
+        val assignmentId: String,
+        val workerId: String,
+        val latitude: Double,
+        val longitude: Double,
+        val notes: String?
+    )
+
+    fun getUnsyncedEvents(limit: Int = 50): List<UnsyncedEvent> {
+        var db: SQLiteDatabase? = null
+        val events = mutableListOf<UnsyncedEvent>()
+        try {
+            db = openOrCreateAndPrepareDatabase()
+            val cursor = db.rawQuery(
+                "SELECT * FROM $TABLE_NAME WHERE $COLUMN_SYNCED = 0 ORDER BY $COLUMN_TIMESTAMP ASC LIMIT ?",
+                arrayOf(limit.toString())
+            )
+            val dateFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US)
+            // Timestamps are stored as UTC — must parse with UTC or non-UTC devices will
+            // produce wrong epoch milliseconds and send events with incorrect created_at.
+            dateFormat.timeZone = TimeZone.getTimeZone("UTC")
+            dateFormat.timeZone = TimeZone.getTimeZone("UTC")
+            while (cursor.moveToNext()) {
+                try {
+                    val tsStr = cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_TIMESTAMP))
+                    val tsMs = dateFormat.parse(tsStr)?.time ?: System.currentTimeMillis()
+                    events.add(UnsyncedEvent(
+                        id = cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_ID)),
+                        timestamp = tsMs,
+                        companyId = cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_COMPANY_ID)),
+                        type = cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_TYPE)),
+                        assignmentId = cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_ASSIGNMENT_ID)),
+                        workerId = cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_WORKER_ID)),
+                        latitude = cursor.getDouble(cursor.getColumnIndexOrThrow(COLUMN_LATITUDE)),
+                        longitude = cursor.getDouble(cursor.getColumnIndexOrThrow(COLUMN_LONGITUDE)),
+                        notes = cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_NOTES))
+                    ))
+                } catch (e: Exception) {
+                    Log.w("LocationDbHelper", "Skipping malformed unsynced row: ${e.message}")
+                }
+            }
+            cursor.close()
+        } catch (e: Exception) {
+            Log.e("LocationDbHelper", "Error reading unsynced events: ${e.message}", e)
+        } finally {
+            db?.close()
+        }
+        return events
     }
 
     fun updateLocationEventSyncedStatus(id: String, syncedStatus: Int) {
@@ -190,16 +253,24 @@ class LocationDbHelper(private val context: Context) {
             return false
         }
 
+        // Only look at transitions within the last 2 minutes (debug; use 10min in production).
+        val windowMs = 2 * 60 * 1000L
+        val cutoffTime = Date(System.currentTimeMillis() - windowMs)
+        val cutoffFmt = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US)
+        cutoffFmt.timeZone = TimeZone.getTimeZone("UTC")
+        val cutoffIso = cutoffFmt.format(cutoffTime)
+
         val cursor = db.rawQuery(
             """
             SELECT $COLUMN_TYPE
             FROM $TABLE_NAME
             WHERE $COLUMN_ASSIGNMENT_ID = ?
               AND $COLUMN_TYPE IN (?, ?)
+              AND $COLUMN_TIMESTAMP >= ?
             ORDER BY $COLUMN_TIMESTAMP DESC
             LIMIT 1
             """.trimIndent(),
-            arrayOf(assignmentId, "enter_geofence", "exit_geofence")
+            arrayOf(assignmentId, "enter_geofence", "exit_geofence", cutoffIso)
         )
 
         try {

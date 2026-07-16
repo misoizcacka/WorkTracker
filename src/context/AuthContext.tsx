@@ -6,6 +6,9 @@ import * as SecureStore from 'expo-secure-store';
 import 'react-native-get-random-values'; 
 import { v4 as uuidv4 } from 'uuid'; 
 import { Platform } from 'react-native';
+import NetInfo from '@react-native-community/netinfo';
+
+const COMPANY_DETAILS_CACHE_KEY = 'cached_company_details';
 
 // Define the shape of the context value
 interface AuthContextType {
@@ -89,18 +92,52 @@ export function SessionProvider(props: React.PropsWithChildren<{}>) {
     setUserCompanyId(currentCompanyId);
     setUserRole(currentRole);
 
-    if (currentCompanyId) {
-      type CompanyDetails = {
-        id?: string;
-        name: string | null;
-        country: string | null;
-        subscription_period_end: string | null;
-        scheduled_worker_seats: number | null;
-        scheduled_change_effective_at: string | null;
-      };
+    if (!currentCompanyId) {
+      setIsCompanyIdLoading(false);
+      return;
+    }
 
-      let companyDetails: CompanyDetails | null = null;
+    // Check network before hitting Supabase — if offline load from cache immediately
+    const netState = await NetInfo.fetch();
+    const isOnline = netState.isConnected && netState.isInternetReachable !== false;
 
+    if (!isOnline) {
+      // Try to load previously cached company details from SecureStore
+      try {
+        const cached = await SecureStore.getItemAsync(COMPANY_DETAILS_CACHE_KEY);
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          if (parsed.company_id === currentCompanyId) {
+            setUserCompanyName(parsed.name ?? null);
+            setUserCompanyCountry(parsed.country ?? null);
+            setUserSubscriptionPeriodEnd(parsed.subscription_period_end ?? null);
+            setUserScheduledWorkerSeats(parsed.scheduled_worker_seats ?? null);
+            setUserScheduledChangeEffectiveAt(parsed.scheduled_change_effective_at ?? null);
+            const isExpired = parsed.subscription_period_end && new Date(parsed.subscription_period_end) < new Date();
+            setIsSubscriptionExpired(!!isExpired);
+            const isPlaceholderName = !parsed.name || parsed.name === 'New Company' || parsed.name?.startsWith('New Company - ');
+            setIsCompanyDetailsComplete(!isPlaceholderName && !!parsed.country);
+          }
+        }
+      } catch (cacheErr) {
+        console.warn('AuthContext: failed to read cached company details:', cacheErr);
+      }
+      setIsCompanyIdLoading(false);
+      return;
+    }
+
+    type CompanyDetails = {
+      id?: string;
+      name: string | null;
+      country: string | null;
+      subscription_period_end: string | null;
+      scheduled_worker_seats: number | null;
+      scheduled_change_effective_at: string | null;
+    };
+
+    let companyDetails: CompanyDetails | null = null;
+
+    try {
       const { data: directCompanyDetails, error: companyDetailsError } = await supabase
           .from('companies')
           .select('name, country, subscription_period_end, scheduled_worker_seats, scheduled_change_effective_at')
@@ -112,8 +149,12 @@ export function SessionProvider(props: React.PropsWithChildren<{}>) {
       } else {
         companyDetails = directCompanyDetails;
       }
+    } catch (networkErr) {
+      console.warn('AuthContext: network error fetching company details, falling back to cache:', networkErr);
+    }
 
-      if (!companyDetails) {
+    if (!companyDetails) {
+      try {
         const { data: rpcCompanyDetails, error: rpcCompanyDetailsError } = await supabase
           .rpc('get_my_company_details')
           .maybeSingle();
@@ -126,43 +167,74 @@ export function SessionProvider(props: React.PropsWithChildren<{}>) {
             companyDetails = fallbackCompanyDetails;
           }
         }
+      } catch (networkErr) {
+        console.warn('AuthContext: network error on RPC fallback:', networkErr);
       }
+    }
 
-      if (companyDetails) {
-        setUserCompanyName(companyDetails.name);
-        setUserCompanyCountry(companyDetails.country);
-        setUserScheduledWorkerSeats(companyDetails.scheduled_worker_seats ?? null);
-        setUserScheduledChangeEffectiveAt(companyDetails.scheduled_change_effective_at ?? null);
-        
-        let finalPeriodEnd = companyDetails.subscription_period_end;
-
-        // Sync if expired
-        if (finalPeriodEnd && new Date(finalPeriodEnd) < new Date()) {
-          console.log('Subscription period ended, syncing with Stripe...');
-          try {
-            const { data: syncData, error: syncError } = await supabase.functions.invoke('sync-subscription-status', {
-              body: { companyId: currentCompanyId }
-            });
-            if (!syncError && syncData) {
-              finalPeriodEnd = syncData.periodEnd;
-              if (syncData.clearedScheduledDowngrade) {
-                setUserScheduledWorkerSeats(null);
-                setUserScheduledChangeEffectiveAt(null);
-              }
-            }
-          } catch (err) {
-            console.error('Error syncing subscription:', err);
+    // If both network fetches failed, try cache as last resort
+    if (!companyDetails) {
+      try {
+        const cached = await SecureStore.getItemAsync(COMPANY_DETAILS_CACHE_KEY);
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          if (parsed.company_id === currentCompanyId) {
+            companyDetails = parsed;
           }
         }
+      } catch (cacheErr) {
+        console.warn('AuthContext: failed to read cached company details on fallback:', cacheErr);
+      }
+    }
 
-        setUserSubscriptionPeriodEnd(finalPeriodEnd);
-        
-        // Block if date is in the past
-        const isExpired = finalPeriodEnd && new Date(finalPeriodEnd) < new Date();
-        setIsSubscriptionExpired(!!isExpired);
+    if (companyDetails) {
+      setUserCompanyName(companyDetails.name);
+      setUserCompanyCountry(companyDetails.country);
+      setUserScheduledWorkerSeats(companyDetails.scheduled_worker_seats ?? null);
+      setUserScheduledChangeEffectiveAt(companyDetails.scheduled_change_effective_at ?? null);
+      
+      let finalPeriodEnd = companyDetails.subscription_period_end;
 
-        const isPlaceholderName = !companyDetails.name || companyDetails.name === 'New Company' || companyDetails.name?.startsWith('New Company - ');
-        setIsCompanyDetailsComplete(!isPlaceholderName && !!companyDetails.country);
+      // Sync if expired (only when online)
+      if (isOnline && finalPeriodEnd && new Date(finalPeriodEnd) < new Date()) {
+        console.log('Subscription period ended, syncing with Stripe...');
+        try {
+          const { data: syncData, error: syncError } = await supabase.functions.invoke('sync-subscription-status', {
+            body: { companyId: currentCompanyId }
+          });
+          if (!syncError && syncData) {
+            finalPeriodEnd = syncData.periodEnd;
+            if (syncData.clearedScheduledDowngrade) {
+              setUserScheduledWorkerSeats(null);
+              setUserScheduledChangeEffectiveAt(null);
+            }
+          }
+        } catch (err) {
+          console.error('Error syncing subscription:', err);
+        }
+      }
+
+      setUserSubscriptionPeriodEnd(finalPeriodEnd);
+      
+      // Block if date is in the past
+      const isExpired = finalPeriodEnd && new Date(finalPeriodEnd) < new Date();
+      setIsSubscriptionExpired(!!isExpired);
+
+      const isPlaceholderName = !companyDetails.name || companyDetails.name === 'New Company' || companyDetails.name?.startsWith('New Company - ');
+      setIsCompanyDetailsComplete(!isPlaceholderName && !!companyDetails.country);
+
+      // Cache successful fetch to SecureStore for offline use
+      try {
+        await SecureStore.setItemAsync(COMPANY_DETAILS_CACHE_KEY, JSON.stringify({
+          company_id: currentCompanyId,
+          name: companyDetails.name,
+          country: companyDetails.country,
+          subscription_period_end: finalPeriodEnd,
+          scheduled_worker_seats: companyDetails.scheduled_worker_seats ?? null,
+          scheduled_change_effective_at: companyDetails.scheduled_change_effective_at ?? null,
+        }));
+      } catch (cacheErr) {
+        console.warn('AuthContext: failed to cache company details:', cacheErr);
       }
     }
 
@@ -171,11 +243,42 @@ export function SessionProvider(props: React.PropsWithChildren<{}>) {
 
   useEffect(() => {
     setIsLoading(true);
-    supabase.auth.getSession().then(({ data: { session: initialSession } }) => {
-      setSession(initialSession);
-      setUser(initialSession?.user ?? null);
+    supabase.auth.getSession().then(async ({ data: { session: initialSession } }) => {
+      if (initialSession) {
+        setSession(initialSession);
+        setUser(initialSession.user);
+        setIsLoading(false);
+        fetchUserDetailsAndCompany(initialSession.user);
+        return;
+      }
+
+      // No active session — try silent re-auth from stored worker credentials
+      // before giving up and showing the login screen.
+      if (Platform.OS !== 'web') {
+        try {
+          const stored = await SecureStore.getItemAsync('worker_auth_credentials');
+          if (stored) {
+            const { email, password } = JSON.parse(stored);
+            const { data: reAuthData, error: reAuthError } = await supabase.auth.signInWithPassword({ email, password });
+            if (!reAuthError && reAuthData.session) {
+              // onAuthStateChange will fire and call fetchUserDetailsAndCompany
+              setIsLoading(false);
+              return;
+            } else {
+              // Credentials are stale — clear them so we don't loop
+              console.warn('AuthContext: silent re-auth failed, clearing stored credentials:', reAuthError?.message);
+              await SecureStore.deleteItemAsync('worker_auth_credentials');
+            }
+          }
+        } catch (e) {
+          console.warn('AuthContext: error during silent re-auth:', e);
+        }
+      }
+
+      setSession(null);
+      setUser(null);
       setIsLoading(false);
-      fetchUserDetailsAndCompany(initialSession?.user ?? null);
+      fetchUserDetailsAndCompany(null);
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, newSession) => {
@@ -244,12 +347,19 @@ export function SessionProvider(props: React.PropsWithChildren<{}>) {
   }, [fetchUserDetailsAndCompany]);
 
   const refreshUser = useCallback(async () => {
-    const { data: { session: refreshedSession }, error: sessionError } = await supabase.auth.refreshSession();
-    if (sessionError) return;
-    const { data: { user: latestUser } } = await supabase.auth.getUser();
-    if (latestUser) {
-      setUser(latestUser);
-      fetchUserDetailsAndCompany(latestUser);
+    const netState = await NetInfo.fetch();
+    const isOnline = netState.isConnected && netState.isInternetReachable !== false;
+    if (!isOnline) return; // Nothing to refresh offline — cached state is already loaded
+    try {
+      const { data: { session: refreshedSession }, error: sessionError } = await supabase.auth.refreshSession();
+      if (sessionError) return;
+      const { data: { user: latestUser } } = await supabase.auth.getUser();
+      if (latestUser) {
+        setUser(latestUser);
+        fetchUserDetailsAndCompany(latestUser);
+      }
+    } catch (err) {
+      console.warn('refreshUser: network error, skipping refresh:', err);
     }
   }, [fetchUserDetailsAndCompany]);
 

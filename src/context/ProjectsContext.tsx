@@ -3,10 +3,13 @@ import { supabase } from '../utils/supabase';
 import { decode } from 'base64-arraybuffer';
 import { v4 as uuidv4 } from 'uuid';
 import { Platform } from 'react-native';
-import { compressImageAsync } from '../utils/imageCompression'; // Import the new compression utility // Added Platform import
+import { compressImageAsync } from '../utils/imageCompression';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Keep this for native platforms
 import { readAsStringAsync } from 'expo-file-system/legacy';
+
+const PROJECTS_CACHE_KEY = 'cached_projects';
 
 
 
@@ -128,7 +131,6 @@ export function ProjectsProvider({ children }: { children: React.ReactNode }) {
     setIsLoading(true);
     setError(null);
     try {
-      // Fetch all projects
       const { data, error: fetchError } = await supabase
         .from('projects')
         .select(`*, project_photos ( url )`)
@@ -137,14 +139,40 @@ export function ProjectsProvider({ children }: { children: React.ReactNode }) {
       if (fetchError) throw new Error(`Failed to fetch projects: ${fetchError.message}`);
       
       const mappedProjects: Project[] = data.map(mapProjectRecord);
-
       setProjects(mappedProjects);
 
+      // Cache for offline use
+      try {
+        await AsyncStorage.setItem(PROJECTS_CACHE_KEY, JSON.stringify(mappedProjects));
+      } catch (cacheErr) {
+        console.warn('ProjectsContext: failed to cache projects:', cacheErr);
+      }
     } catch (e: any) {
       setError(e.message);
+      // Network error — try to serve from cache
+      try {
+        const cached = await AsyncStorage.getItem(PROJECTS_CACHE_KEY);
+        if (cached) {
+          setProjects(JSON.parse(cached));
+        }
+      } catch (cacheErr) {
+        console.warn('ProjectsContext: failed to read project cache:', cacheErr);
+      }
     } finally {
       setIsLoading(false);
     }
+  }, []);
+
+  // On mount: immediately seed from cache so assignments can resolve project
+  // names/coordinates before the Supabase fetch completes (or if offline).
+  useEffect(() => {
+    AsyncStorage.getItem(PROJECTS_CACHE_KEY).then((cached) => {
+      if (cached) {
+        try {
+          setProjects(JSON.parse(cached));
+        } catch {}
+      }
+    });
   }, []);
 
   const createProject = async (
