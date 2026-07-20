@@ -33,13 +33,16 @@ const datePickerStyles = `
     border-color: ${theme.colors.borderColor};
     border-radius: ${theme.radius.sm}px;
     background-color: ${theme.colors.cardBackground};
-    z-index: 9999; /* Ensure it appears above other elements */
+    z-index: 99999;
+  }
+  .react-datepicker-popper {
+    z-index: 99999 !important;
   }
   .react-datepicker__header {
     background-color: ${theme.colors.cardBackground};
     border-bottom-color: ${theme.colors.borderColor};
-    border-top-left-radius: ${theme.radius.sm}px; /* Match main picker's border-radius */
-    border-top-right-radius: ${theme.radius.sm}px; /* Match main picker's border-radius */
+    border-top-left-radius: ${theme.radius.sm}px;
+    border-top-right-radius: ${theme.radius.sm}px;
   }
   .react-datepicker__current-month,
   .react-datepicker__day-name {
@@ -48,8 +51,8 @@ const datePickerStyles = `
   .react-datepicker__day--selected,
   .react-datepicker__day--keyboard-selected {
     background-color: ${theme.colors.primaryMuted};
-    color: ${theme.colors.primary}; /* Primary text color */
-    border-radius: ${theme.radius.sm}px; /* Rounded corners for selected days */
+    color: ${theme.colors.primary};
+    border-radius: ${theme.radius.sm}px;
   }
   .react-datepicker__day--selected:hover,
   .react-datepicker__day--keyboard-selected:hover {
@@ -64,7 +67,7 @@ const datePickerStyles = `
   }
   .react-datepicker__day:hover {
     background-color: ${theme.colors.primaryMuted};
-    border-radius: ${theme.radius.sm}px; /* Rounded corners for hover state */
+    border-radius: ${theme.radius.sm}px;
   }
   .react-datepicker__navigation-icon::before {
     border-color: ${theme.colors.headingText};

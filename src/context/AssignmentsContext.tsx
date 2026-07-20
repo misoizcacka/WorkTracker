@@ -82,7 +82,7 @@ interface AssignmentsContextType {
   activeWorkSession: WorkSession | null;
   loadedWorkSessions: WorkSession[];
   startWorkSession: (assignmentId: string, location: { latitude: number; longitude: number }) => Promise<void>;
-  endWorkSession: (sessionId: string, location: { latitude: number; longitude: number }) => Promise<void>;
+  endWorkSession: (sessionId: string, location: { latitude: number; longitude: number }, breakMinutes: number) => Promise<void>;
   updateWorkSessionAssignment: (sessionId: string, newAssignmentId: string) => Promise<void>;
 
   // Offline-First
@@ -330,9 +330,13 @@ export function AssignmentsProvider({ children }: { children: React.ReactNode })
     setIsSyncingToCloud(true);
     console.log("Attempting to sync local changes...");
 
-    // Flush any events the native background service wrote to its own SQLite while offline
+    // Flush any events the native background service wrote to its own SQLite while offline.
+    // Pass the Supabase URL/key directly — after checkout, SharedPrefs are cleared so the
+    // native module can't read them from prefs. JS env vars are always available.
     try {
-      const flushed = await BackgroundLocation.flushPendingEvents();
+      const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
+      const supabaseKey = process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
+      const flushed = await BackgroundLocation.flushPendingEvents(supabaseUrl, supabaseKey);
       if (flushed > 0) {
         console.log(`Flushed ${flushed} pending native location events to Supabase.`);
       }
@@ -363,15 +367,52 @@ export function AssignmentsProvider({ children }: { children: React.ReactNode })
     try {
       const unsyncedWorkSessions = await getUnsyncedWorkSessions();
       if (unsyncedWorkSessions.length > 0) {
-        await upsertWorkSessions(unsyncedWorkSessions);
-        await markWorkSessionsAsSynced(unsyncedWorkSessions.map(ws => ws.id));
-        console.log(`Synced ${unsyncedWorkSessions.length} local work sessions.`);
+        // Before upserting, check if the server already ended any of these sessions
+        // (manager may have hit "END" while the worker was offline).
+        // In that case: keep whichever end_time is earlier, but always preserve the
+        // worker's total_break_minutes since the manager's remote checkout doesn't set it.
+        const sessionIds = unsyncedWorkSessions.map(ws => ws.id);
+        const { data: serverSessions } = await supabase
+          .from('work_sessions')
+          .select('id, end_time, total_break_minutes')
+          .in('id', sessionIds);
 
-        // Reconcile any sessions that were ended while offline — these never went through
-        // the online checkout path so their geofence events were never derived.
-        // We run this after upsert so the sessions exist in Supabase before we fetch
-        // the location event timeline for them.
-        const completedOfflineSessions = unsyncedWorkSessions.filter(ws => !!ws.end_time);
+        const serverMap: Record<string, { end_time: string | null; total_break_minutes: number }> = {};
+        for (const s of serverSessions ?? []) {
+          serverMap[s.id] = s;
+        }
+
+        const sessionsToUpsert = unsyncedWorkSessions.map(ws => {
+          const server = serverMap[ws.id];
+          if (!server) return ws; // not on server yet, upsert as-is
+
+          let resolvedEndTime = ws.end_time;
+          if (server.end_time && ws.end_time) {
+            // Both ended — use whichever is earlier (manager may have ended it mid-shift)
+            resolvedEndTime = new Date(server.end_time) < new Date(ws.end_time)
+              ? server.end_time
+              : ws.end_time;
+          } else if (server.end_time && !ws.end_time) {
+            // Manager ended it, worker is still "active" locally — respect server
+            resolvedEndTime = server.end_time;
+          }
+
+          // Always use the worker's break minutes if they recorded any.
+          // Manager's remote checkout doesn't set break minutes so server value
+          // is likely 0 — the worker's recorded value is more accurate.
+          const resolvedBreakMinutes = ws.total_break_minutes > 0
+            ? ws.total_break_minutes
+            : (server.total_break_minutes ?? 0);
+
+          return { ...ws, end_time: resolvedEndTime, total_break_minutes: resolvedBreakMinutes };
+        });
+
+        await upsertWorkSessions(sessionsToUpsert);
+        await markWorkSessionsAsSynced(sessionsToUpsert.map(ws => ws.id));
+        console.log(`Synced ${sessionsToUpsert.length} local work sessions.`);
+
+        // Reconcile completed sessions that were ended while offline
+        const completedOfflineSessions = sessionsToUpsert.filter(ws => !!ws.end_time);
         for (const session of completedOfflineSessions) {
           try {
             const assignedDate = (session as any).worker_assignments?.assigned_date
@@ -381,7 +422,6 @@ export function AssignmentsProvider({ children }: { children: React.ReactNode })
             await reconcileSessionGeofenceEvents(session, liveAssignments);
             console.log(`Reconciled offline session ${session.id}`);
           } catch (reconcileErr) {
-            // Non-fatal — session is already synced, reconciliation is best-effort
             console.warn(`syncLocalChanges: reconciliation failed for session ${session.id}:`, reconcileErr);
           }
         }
@@ -429,6 +469,57 @@ export function AssignmentsProvider({ children }: { children: React.ReactNode })
   useEffect(() => {
     loadActiveWorkSession();
   }, [loadActiveWorkSession]);
+
+  // Realtime subscription — workers only.
+  // If the manager remotely ends the active session via Corrections, detect it here
+  // so the worker's app transitions out of the "checked in" state immediately.
+  useEffect(() => {
+    if (userRole !== 'worker' || !user?.id || isOffline) return;
+
+    const channel = supabase
+      .channel(`worker-session-${user.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'work_sessions',
+          filter: `worker_id=eq.${user.id}`,
+        },
+        async (payload) => {
+          const updated = payload.new as any;
+          // Manager set end_time on a session we think is still active
+          if (updated.end_time && activeWorkSession?.id === updated.id) {
+            console.log('AssignmentsContext: active session was remotely ended by manager.');
+            // Reload from server — this will find no active session and clear state
+            await loadActiveWorkSession();
+            // Mirror the ended session to local SQLite so it's not re-synced as unsynced
+            try {
+              await import('~/db/database').then(db =>
+                db.updateLocalWorkSession({ ...updated, synced: true })
+              );
+            } catch {}
+            // Stop background tracking since the session is over
+            try {
+              const BL = await import('background-location');
+              await BL.stop();
+            } catch {}
+            // Notify the worker
+            const { default: Toast } = await import('react-native-toast-message');
+            Toast.show({
+              type: 'info',
+              text1: 'Session Ended',
+              text2: 'Your manager ended your work session.',
+            });
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [userRole, user?.id, isOffline, activeWorkSession?.id, loadActiveWorkSession]);
 
   const loadWorkSessionsForDate = useCallback(
     async (date: string, workerId: string) => {
@@ -696,7 +787,7 @@ export function AssignmentsProvider({ children }: { children: React.ReactNode })
         // The native background module now handles geofence entry/exit events.
       }, [user, userCompanyId, isOffline]);
 
-  const endWorkSession = useCallback(async (sessionId: string, location: { latitude: number; longitude: number }) => {
+  const endWorkSession = useCallback(async (sessionId: string, location: { latitude: number; longitude: number }, breakMinutes: number) => {
     if (!user?.id || !userCompanyId) return;
 
     const sessionToEnd = loadedWorkSessions.find(s => s.id === sessionId);
@@ -707,12 +798,10 @@ export function AssignmentsProvider({ children }: { children: React.ReactNode })
     
     // Optimistically update UI first for immediate feedback
     setActiveWorkSession(null);
-    const updatedSessionOptimistic = { ...sessionToEnd, end_time: new Date().toISOString(), synced: isOffline ? false : true };
+    const updatedSessionOptimistic = { ...sessionToEnd, end_time: new Date().toISOString(), total_break_minutes: breakMinutes, synced: isOffline ? false : true };
     setLoadedWorkSessions(prev => prev.map(s => (s.id === sessionId ? updatedSessionOptimistic : s)));
 
     if (isOffline) {
-        // --- Removed explicit location event insertion ---
-        // The native background module now handles geofence entry/exit events.
         try {
           await insertLocalLocationEvent({
             id: randomUUID(),
@@ -730,10 +819,9 @@ export function AssignmentsProvider({ children }: { children: React.ReactNode })
           console.error('Failed to save local checkout anchor event:', anchorError);
         }
 
-        const updatedSession = { ...sessionToEnd, end_time: new Date().toISOString(), synced: false }; // Offline sessions are not synced
+        const updatedSession = { ...sessionToEnd, end_time: new Date().toISOString(), total_break_minutes: breakMinutes, synced: false };
         await updateLocalWorkSession(updatedSession);
         
-        // UI already optimistically updated, ensure consistent state
         setLoadedWorkSessions(prev => prev.map(s => (s.id === sessionId ? updatedSession : s)));
         
         const assignmentId = updatedSession.assignment_id;
@@ -747,8 +835,7 @@ export function AssignmentsProvider({ children }: { children: React.ReactNode })
 
     } else { // Online path
         try {
-            // Run network requests in parallel
-            const endedSession = await endWorkSessionService(sessionId); // Removed insertLocationEvent call
+            const endedSession = await endWorkSessionService(sessionId, breakMinutes);
 
             // If everything successful, update AsyncStorage and ensure final UI state reflects synced data
             if (endedSession) {

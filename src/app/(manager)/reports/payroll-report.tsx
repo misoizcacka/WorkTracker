@@ -12,6 +12,21 @@ import { exportWorkbookToExcel } from '../../../utils/exportHelpers';
 import { EmployeesContext, EmployeesContextType } from '../../../context/EmployeesContext';
 import { useSession } from '../../../context/AuthContext';
 
+/** Maps ISO 3166-1 alpha-2 country codes to their currency symbol. */
+function getCurrencySymbol(country: string | null): string {
+  if (!country) return '€';
+  const map: Record<string, string> = {
+    DE: '€', AT: '€', FR: '€', ES: '€', IT: '€', NL: '€', BE: '€',
+    PT: '€', FI: '€', IE: '€', GR: '€', LU: '€', SI: '€', SK: '€',
+    EE: '€', LV: '€', LT: '€', CY: '€', MT: '€',
+    US: '$', CA: 'CA$', AU: 'A$', GB: '£', CH: 'CHF', SE: 'kr',
+    NO: 'kr', DK: 'kr', PL: 'zł', CZ: 'Kč', HU: 'Ft', RO: 'lei',
+    TR: '₺', JP: '¥', CN: '¥', KR: '₩', IN: '₹', BR: 'R$',
+    MX: '$', SG: 'S$', NZ: 'NZ$', ZA: 'R', AE: 'د.إ', SA: '﷼',
+  };
+  return map[country.toUpperCase()] ?? '€';
+}
+
 interface PayrollReportItem {
   worker_id: string;
   worker_name: string;
@@ -19,12 +34,15 @@ interface PayrollReportItem {
   total_break_minutes: number;
   total_correction_minutes: number;
   payable_hours: number;
+  effective_hourly_rate: number | null; // null if no rate set for this month
+  total_pay: number | null;             // null if no rate set for this month
 }
 
 const PayrollReport = () => {
   const router = useRouter();
   const { employees } = useContext(EmployeesContext) as EmployeesContextType;
-  const { userCompanyName } = useSession();
+  const { userCompanyName, userCompanyCountry } = useSession();
+  const currency = getCurrencySymbol(userCompanyCountry);
   const visibleWorkerIds = useMemo(() => new Set(employees.filter(employee => employee.role === 'worker').map(employee => employee.id)), [employees]);
   const [selectedMonth, setSelectedMonth] = useState(moment().month() + 1);
   const [selectedYear, setSelectedYear] = useState(moment().year());
@@ -43,7 +61,9 @@ const PayrollReport = () => {
         console.error('Error fetching payroll report:', error);
         setReportData([]);
       } else {
-        setReportData((data || []).filter((row: PayrollReportItem) => visibleWorkerIds.has(row.worker_id)));
+        setReportData(
+          (data || []).filter((row: PayrollReportItem) => visibleWorkerIds.has(row.worker_id))
+        );
       }
       setLoading(false);
     };
@@ -313,7 +333,7 @@ const PayrollReport = () => {
       [],
       ['ADMINISTRATIVE NOTES'],
       ['• Payable Hours = (Work Hours) - (Break Time) + (Corrections).'],
-      ['• Hourly Rate and Total Pay columns in the next sheet are for manual calculation and verification.'],
+      ['• Hourly Rate and Total Pay are pre-filled from the rate timeline set per worker. Workers without a rate show blank — set their rate in the Team page.'],
       ['• Please ensure all entries comply with local labor regulations before processing payment.'],
     ];
     const summarySheet = XLSX.utils.aoa_to_sheet(summaryRows);
@@ -324,26 +344,30 @@ const PayrollReport = () => {
     const payrollRows = [
       ['Employee Name', 'Total Work Hours', 'Break Time (min)', 'Correction (min)', 'Payable Hours', 'Hourly Rate', 'Total Pay'],
       ...reportData.map((item, index) => {
-        const rowNum = index + 2; // Excel rows are 1-indexed, headers are row 1
+        const rowNum = index + 2;
+        const rate = item.effective_hourly_rate ?? null;
+        const totalPay = item.total_pay ?? null;
         return [
           item.worker_name,
           Number(item.total_work_hours.toFixed(2)),
           item.total_break_minutes,
           item.total_correction_minutes,
           Number(item.payable_hours.toFixed(2)),
-          '', // Empty string instead of null for Hourly Rate (manual entry)
-          { f: `E${rowNum}*F${rowNum}`, t: 'n' }, // Total Pay formula with explicit numeric type
+          rate !== null ? rate : '',
+          totalPay !== null
+            ? Number(totalPay.toFixed(2))
+            : { f: `E${rowNum}*F${rowNum}`, t: 'n' },
         ];
       }),
       [],
       [
-        'Totals', 
-        Number(totalWorkHours.toFixed(2)), 
-        totalBreakMinutes, 
-        totalCorrectionMinutes, 
+        'Totals',
+        Number(totalWorkHours.toFixed(2)),
+        totalBreakMinutes,
+        totalCorrectionMinutes,
         Number(totalPayableHours.toFixed(2)),
         '',
-        { f: `SUM(G2:G${reportData.length + 1})`, t: 'n' } // Totals with explicit numeric type
+        { f: `SUM(G2:G${reportData.length + 1})`, t: 'n' }
       ],
     ];
     const payrollSheet = XLSX.utils.aoa_to_sheet(payrollRows);
@@ -468,10 +492,31 @@ const PayrollReport = () => {
                                 <Text style={styles.payableBadgeText} fontType="bold">{item.payable_hours.toFixed(2)}</Text>
                             </View>
                         </View>
-                        <Text style={[styles.tableCell, styles.colNumeric, { color: theme.colors.disabledText }]} fontType="regular">Manual Entry</Text>
-                        <Text style={[styles.tableCell, styles.colNumeric, { color: theme.colors.disabledText }]} fontType="regular">Manual Entry</Text>
-                    </View>
-                    ))}
+                        {(() => {
+                            const rate = item.effective_hourly_rate ?? null;
+                            const totalPay = item.total_pay ?? null;
+                            return (
+                              <>
+                                <Text
+                                  style={[styles.tableCell, styles.colNumeric, {
+                                    color: rate !== null ? theme.colors.headingText : theme.colors.disabledText
+                                  }]}
+                                  fontType={rate !== null ? 'medium' : 'regular'}
+                                >
+                                  {rate !== null ? `${currency}${rate.toFixed(2)}` : '—'}
+                                </Text>
+                                <Text
+                                  style={[styles.tableCell, styles.colNumeric, {
+                                    color: totalPay !== null ? theme.colors.success : theme.colors.disabledText
+                                  }]}
+                                  fontType={totalPay !== null ? 'bold' : 'regular'}
+                                >
+                                  {totalPay !== null ? `${currency}${totalPay.toFixed(2)}` : '—'}
+                                </Text>
+                              </>
+                            );
+                        })()}
+                    </View>                    ))}
                 </ScrollView>
                 )}
             </View>

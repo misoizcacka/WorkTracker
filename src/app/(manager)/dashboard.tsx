@@ -12,6 +12,20 @@ import { Button } from '../../components/Button';
 import { EmployeesContext } from '../../context/EmployeesContext';
 import moment from 'moment';
 
+function getCurrencySymbol(country: string | null): string {
+  if (!country) return '€';
+  const map: Record<string, string> = {
+    DE: '€', AT: '€', FR: '€', ES: '€', IT: '€', NL: '€', BE: '€',
+    PT: '€', FI: '€', IE: '€', GR: '€', LU: '€', SI: '€', SK: '€',
+    EE: '€', LV: '€', LT: '€', CY: '€', MT: '€',
+    US: '$', CA: 'CA$', AU: 'A$', GB: '£', CH: 'CHF', SE: 'kr',
+    NO: 'kr', DK: 'kr', PL: 'zł', CZ: 'Kč', HU: 'Ft', RO: 'lei',
+    TR: '₺', JP: '¥', CN: '¥', KR: '₩', IN: '₹', BR: 'R$',
+    MX: '$', SG: 'S$', NZ: 'NZ$', ZA: 'R',
+  };
+  return map[country.toUpperCase()] ?? '€';
+}
+
 interface DashboardStats {
   totalWorkers: number;
   workersOnline: number;
@@ -27,6 +41,8 @@ interface DashboardStats {
   topWorkers: { name: string, hours: number }[];
   currentMonthYear: string;
   unassignedCount: number;
+  monthToDatePay: number | null; // null if no rates set at all
+  missingRatesCount: number;     // workers with no rate set this month
 }
 
 interface ActivityEvent {
@@ -40,7 +56,7 @@ interface ActivityEvent {
 
 export default function NewManagerDashboard() {
   const router = useRouter();
-  const { user, userCompanyId, userCompanyName, userRole, isLoading: isAuthLoading } = useSession();
+  const { user, userCompanyId, userCompanyName, userCompanyCountry, userRole, isLoading: isAuthLoading } = useSession();
   const employeesContext = useContext(EmployeesContext);
 
   const [stats, setStats] = useState<DashboardStats>({
@@ -58,6 +74,8 @@ export default function NewManagerDashboard() {
     topWorkers: [],
     currentMonthYear: moment().format('MMMM YYYY'),
     unassignedCount: 0,
+    monthToDatePay: null,
+    missingRatesCount: 0,
   });
   
   const [activities, setActivities] = useState<ActivityEvent[]>([]);
@@ -151,7 +169,7 @@ export default function NewManagerDashboard() {
         );
 
         // 6. Fetch today's context data
-        const [locationsRes, projectsRes, commonLocationsRes] = await Promise.all([
+        const [locationsRes, projectsRes, commonLocationsRes, payrollRes] = await Promise.all([
           supabase
             .from('location_events')
             .select(`
@@ -169,7 +187,7 @@ export default function NewManagerDashboard() {
             .gte('created_at', today)
             .in('type', ['enter_geofence', 'exit_geofence'])
             .order('created_at', { ascending: false })
-            .limit(10),
+            .limit(5),
           supabase
             .from('projects')
             .select('id, name, address')
@@ -177,12 +195,27 @@ export default function NewManagerDashboard() {
           supabase
             .from('common_locations')
             .select('id, name, address')
-            .eq('company_id', userCompanyId)
+            .eq('company_id', userCompanyId),
+          // Real MTD payroll using rate-aware RPC
+          supabase.rpc('get_monthly_payroll_report', {
+            report_year: moment().year(),
+            report_month: moment().month() + 1,
+          }),
         ]);
 
         if (locationsRes.error) console.error('Locations Query Error:', locationsRes.error);
         if (projectsRes.error) console.error('Projects Query Error:', projectsRes.error);
         if (commonLocationsRes.error) console.error('Common Locations Query Error:', commonLocationsRes.error);
+        if (payrollRes.error) console.warn('Payroll MTD error:', payrollRes.error);
+
+        // Sum total_pay across all visible workers — null if no rates set
+        const payrollRows = (payrollRes.data || []).filter((r: any) => visibleWorkerIds.has(r.worker_id));
+        const ratedRows = payrollRows.filter((r: any) => r.total_pay !== null);
+        const missingRatesCount = payrollRows.length - ratedRows.length;
+        // Sum only workers who have rates — partial total is still useful
+        const monthToDatePay = ratedRows.length > 0
+          ? ratedRows.reduce((sum: number, r: any) => sum + Number(r.total_pay), 0)
+          : null;
 
         const totalProjectsCount = projectsRes.data?.length || 0;
         const projectsMap = new Map((projectsRes.data || []).map(p => [p.id, p.name]));
@@ -219,12 +252,13 @@ export default function NewManagerDashboard() {
           topWorkers,
           currentMonthYear: moment().format('MMMM YYYY'),
           unassignedCount,
+          monthToDatePay,
+          missingRatesCount,
         });
 
         const locationActivities: ActivityEvent[] = (locationsRes.data || [])
           .filter(l => visibleWorkerIds.has(l.worker_id))
           .map(l => {
-          // Access the joined data via the explicit relationship names
           const assignment = (l as any).worker_assignments;
           const firstAssignment = Array.isArray(assignment) ? assignment[0] : assignment;
           
@@ -243,14 +277,39 @@ export default function NewManagerDashboard() {
 
           return {
             id: l.id,
-            type: 'location_event',
+            type: 'location_event' as const,
             event: `${workerName} ${action} ${siteName}`,
             time: moment(l.created_at).format('hh:mm A'),
-            timestamp: new Date(l.created_at)
+            timestamp: new Date(l.created_at),
           };
         });
 
-        setActivities(locationActivities);
+        // Add check-in / check-out events from today's sessions
+        const sessionActivities: ActivityEvent[] = [
+          ...visibleActiveSessions.map(s => ({
+            id: `checkin-${s.id}`,
+            type: 'work_session' as const,
+            event: `${(s.employees as any)?.full_name || 'Worker'} checked in`,
+            time: moment(s.start_time).format('hh:mm A'),
+            timestamp: new Date(s.start_time),
+          })),
+          ...visibleMonthSessions
+            .filter(s => s.end_time && moment(s.end_time).isSameOrAfter(today))
+            .map(s => ({
+              id: `checkout-${s.worker_id}-${s.end_time}`,
+              type: 'work_session' as const,
+              event: `${workers.find(w => w.id === s.worker_id)?.full_name || 'Worker'} checked out`,
+              time: moment(s.end_time!).format('hh:mm A'),
+              timestamp: new Date(s.end_time!),
+            })),
+        ];
+
+        // Merge, sort newest first, take top 5
+        const allActivities = [...locationActivities, ...sessionActivities]
+          .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())
+          .slice(0, 5);
+
+        setActivities(allActivities);
 
       } catch (error) {
         console.error('Error fetching dashboard data:', error);
@@ -288,6 +347,8 @@ export default function NewManagerDashboard() {
     };
   }, [userCompanyId, totalWorkersCount, workers]);
 
+  const currency = getCurrencySymbol(userCompanyCountry);
+
   if (isAuthLoading || isLoadingStats) {
     return (
       <AnimatedScreen>
@@ -298,8 +359,6 @@ export default function NewManagerDashboard() {
       </AnimatedScreen>
     );
   }
-
-  const estimatedPayroll = stats.monthToDateHours * 25; // Using default $25/hr as it's not in DB
 
   return (
     <AnimatedScreen>
@@ -406,22 +465,32 @@ export default function NewManagerDashboard() {
               )}
             </Card>
 
-            {/* NEW: 4. Financial Snapshot */}
+            {/* 4. Financial Snapshot */}
             <Card style={styles.sectionCard}>
               <Text style={styles.sectionTitle} fontType="bold">Financial Quick View (MTD)</Text>
               <View style={styles.financialRow}>
                 <View>
-                  <Text style={styles.financialLabel}>Total Hours</Text>
+                  <Text style={styles.financialLabel}>Total Payable Hours</Text>
                   <Text style={styles.financialValue} fontType="bold">{stats.monthToDateHours}h</Text>
                 </View>
                 <View style={{ alignItems: 'flex-end' }}>
                   <Text style={styles.financialLabel}>Est. Payroll</Text>
-                  <Text style={[styles.financialValue, { color: theme.colors.success }]} fontType="bold">
-                    ${estimatedPayroll.toLocaleString()}
-                  </Text>
+                  {stats.monthToDatePay !== null ? (
+                    <Text style={[styles.financialValue, { color: theme.colors.success }]} fontType="bold">
+                      {currency}{stats.monthToDatePay.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </Text>
+                  ) : (
+                    <Text style={[styles.financialValue, { color: theme.colors.disabledText, fontSize: theme.fontSizes.md }]} fontType="regular">
+                      Set hourly rates to see payroll
+                    </Text>
+                  )}
                 </View>
               </View>
-              <Text style={styles.financialNote}>* Estimated at average $25/hr</Text>
+              {stats.monthToDatePay === null && (
+                <Text style={styles.financialNote}>
+                  Go to Team → worker → 💰 to set hourly rates.
+                </Text>
+              )}
             </Card>
           </View>
 
@@ -459,21 +528,19 @@ export default function NewManagerDashboard() {
                 </View>
               </View>
               {activities.length === 0 ? (
-                <Text style={styles.emptyText}>No location activity today.</Text>
+                <Text style={styles.emptyText}>No activity today.</Text>
               ) : (
                 activities.map(activity => (
                   <View key={activity.id} style={styles.activityItem}>
                     <View style={styles.activityIconContainer}>
-                      <Ionicons 
-                        name="location-outline" 
-                        size={18} 
-                        color={theme.colors.primary} 
+                      <Ionicons
+                        name={activity.type === 'work_session' ? 'time-outline' : 'location-outline'}
+                        size={18}
+                        color={activity.type === 'work_session' ? theme.colors.secondary : theme.colors.primary}
                       />
                     </View>
                     <View style={styles.activityContent}>
-                      <Text style={styles.activityText}>
-                        {activity.event}
-                      </Text>
+                      <Text style={styles.activityText}>{activity.event}</Text>
                       <Text style={styles.activityTime}>{activity.time}</Text>
                     </View>
                   </View>

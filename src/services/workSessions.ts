@@ -75,19 +75,19 @@ export async function upsertWorkSessions(sessions: WorkSession[]): Promise<WorkS
 }
 
 /**
- * Ends an existing work session.
+ * Ends an existing work session, storing the break duration taken by the worker.
  * @param sessionId The ID of the session to end.
+ * @param totalBreakMinutes The total break duration in minutes entered by the worker.
  * @returns The updated WorkSession.
  */
-export async function endWorkSession(sessionId: string): Promise<WorkSession> {
+export async function endWorkSession(sessionId: string, totalBreakMinutes: number = 0): Promise<WorkSession> {
   const now = new Date();
   
-  // No need to fetch start_time or calculate duration here, as it's now a frontend calculation.
   const { data, error } = await supabase
     .from('work_sessions')
     .update({
       end_time: now.toISOString(),
-      // duration_seconds is no longer stored in DB, so removed from update payload
+      total_break_minutes: totalBreakMinutes,
     })
     .eq('id', sessionId)
     .select()

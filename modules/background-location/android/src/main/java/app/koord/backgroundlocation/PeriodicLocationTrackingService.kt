@@ -28,6 +28,16 @@ import java.util.UUID
 
 class PeriodicLocationTrackingService : Service() {
 
+    companion object {
+        /**
+         * In-process liveness flag. Set true in onCreate, false in onDestroy.
+         * WorkManager reads this instead of the deprecated getRunningServices().
+         * AtomicBoolean is used for safe cross-thread reads (WorkManager runs on
+         * a background thread in the same process).
+         */
+        val isRunning = java.util.concurrent.atomic.AtomicBoolean(false)
+    }
+
     private lateinit var fusedLocationClient: FusedLocationProviderClient
     private lateinit var geofencingClient: GeofencingClient
     private lateinit var locationCallback: LocationCallback
@@ -59,6 +69,7 @@ class PeriodicLocationTrackingService : Service() {
 
     override fun onCreate() {
         super.onCreate()
+        isRunning.set(true)
         createNotificationChannel()
         
         // Use applicationContext for clients to avoid service-context permission quirks
@@ -316,12 +327,34 @@ class PeriodicLocationTrackingService : Service() {
         } else {
             Constants.PASSIVE_TRACKING_INTERVAL_MS
         }
-        // Use BALANCED priority for passive mode — HIGH_ACCURACY on a stationary device
-        // triggers the OS "too fast / too close" throttle and stops delivering updates entirely.
+
+        // Active mode (worker outside geofence, traveling):
+        //   HIGH_ACCURACY forces the GPS hardware to produce a real fix.
+        //   setWaitForAccurateLocation(true) tells FusedLocation to wait for a
+        //   genuine GPS reading rather than returning a cached network location.
+        //   setMaxUpdateDelayMillis(interval) caps how long the OS can defer delivery
+        //   — prevents batching on devices that group location updates to save battery.
+        //   setMinUpdateIntervalMillis is intentionally NOT set (or set very low) so
+        //   the OS doesn't use it as an excuse to return a stale cached fix.
+        //
+        // Passive mode (worker on site, stationary):
+        //   BALANCED_POWER is sufficient — we just need proof-of-presence, not
+        //   precise movement tracking. HIGH_ACCURACY on a stationary device triggers
+        //   the "too fast / too close" OS throttle and stops delivering updates.
         val priority = if (active) Priority.PRIORITY_HIGH_ACCURACY else Priority.PRIORITY_BALANCED_POWER_ACCURACY
-        val request = LocationRequest.Builder(priority, interval)
-            .setMinUpdateIntervalMillis(interval)
-            .build()
+        val request = if (active) {
+            LocationRequest.Builder(priority, interval)
+                .setMinUpdateIntervalMillis(30_000L)       // Allow early delivery if OS has a fresh fix
+                .setMaxUpdateDelayMillis(interval)         // Never defer longer than our interval
+                .setWaitForAccurateLocation(true)          // Force real GPS, not network/cached guess
+                .build()
+        } else {
+            LocationRequest.Builder(priority, interval)
+                .setMinUpdateIntervalMillis(60_000L)       // Passive: no need to rush
+                .setMaxUpdateDelayMillis(interval + 30_000L) // Allow slight batching — fine for on-site
+                .setWaitForAccurateLocation(false)         // Network accuracy is fine when stationary
+                .build()
+        }
 
         try {
             fusedLocationClient.requestLocationUpdates(request, locationCallback, Looper.getMainLooper())
@@ -389,6 +422,7 @@ class PeriodicLocationTrackingService : Service() {
 
     override fun onDestroy() {
         super.onDestroy()
+        isRunning.set(false)
         fusedLocationClient.removeLocationUpdates(locationCallback)
         BackgroundLocationManager.stopPeriodicUpdates(this)
         serviceJob.cancel()

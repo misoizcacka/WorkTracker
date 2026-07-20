@@ -1,5 +1,5 @@
-import React from "react";
-import { StyleSheet, View, ScrollView, Image } from "react-native";
+import React, { useRef, useState } from "react";
+import { StyleSheet, View, ScrollView, Image, TouchableOpacity } from "react-native";
 import { Text } from "../../components/Themed";
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { Card } from "../../components/Card";
@@ -9,11 +9,30 @@ import AnimatedScreen from "../../components/AnimatedScreen";
 import { useSession } from "../../context/AuthContext";
 import { Ionicons } from "@expo/vector-icons";
 import { useEmployeeProfile } from "../../hooks/useEmployeeProfile";
+import { useRouter } from "expo-router";
 
 export default function WorkerAccountScreen() {
   const tabBarHeight = useBottomTabBarHeight();
   const { signOut, user, userRole, userCompanyName } = useSession()!;
   const { profile } = useEmployeeProfile();
+  const router = useRouter();
+
+  // Hidden diagnostic entry — triple-tap the version text at the bottom
+  const tapCount = useRef(0);
+  const tapTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [diagnosticUnlocked, setDiagnosticUnlocked] = useState(false);
+
+  const handleVersionTap = () => {
+    tapCount.current += 1;
+    if (tapTimer.current) clearTimeout(tapTimer.current);
+    if (tapCount.current >= 3) {
+      tapCount.current = 0;
+      setDiagnosticUnlocked(true);
+      router.push('/(worker)/diagnostics');
+    } else {
+      tapTimer.current = setTimeout(() => { tapCount.current = 0; }, 800);
+    }
+  };
 
   const fullName = profile?.full_name || user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Member';
   const displayRole = userRole ? userRole.charAt(0).toUpperCase() + userRole.slice(1) : 'Worker';
@@ -83,6 +102,21 @@ export default function WorkerAccountScreen() {
                 textStyle={styles.logoutButtonText}
               />
             </View>
+
+            {/* Hidden diagnostic entry — triple-tap to unlock */}
+            <TouchableOpacity onPress={handleVersionTap} activeOpacity={1} style={styles.versionTap}>
+              <Text style={styles.versionText}>v1.0</Text>
+            </TouchableOpacity>
+
+            {diagnosticUnlocked && (
+              <TouchableOpacity
+                style={styles.diagnosticsButton}
+                onPress={() => router.push('/(worker)/diagnostics')}
+              >
+                <Ionicons name="pulse-outline" size={14} color={theme.colors.primary} />
+                <Text style={styles.diagnosticsButtonText} fontType="medium">Location Diagnostics</Text>
+              </TouchableOpacity>
+            )}
           </View>
         </ScrollView>
       </View>
@@ -204,5 +238,26 @@ const styles = StyleSheet.create({
   logoutButtonText: {
     color: 'white',
     fontSize: 15,
+  },
+  versionTap: {
+    alignItems: 'center',
+    paddingVertical: theme.spacing(2),
+    marginTop: theme.spacing(1),
+  },
+  versionText: {
+    fontSize: 11,
+    color: theme.colors.disabledText,
+  },
+  diagnosticsButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: theme.spacing(1.5),
+    marginBottom: theme.spacing(2),
+  },
+  diagnosticsButtonText: {
+    fontSize: theme.fontSizes.sm,
+    color: theme.colors.primary,
   },
 });

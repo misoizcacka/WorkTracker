@@ -103,6 +103,16 @@ export type ProcessedAssignmentStepWithStatus = ProcessedAssignmentStep & {
   status: AssignmentStatus;
 };
 
+export interface HourlyRate {
+  id: string;
+  company_id: string;
+  employee_id: string;
+  hourly_rate: number;
+  effective_from: string; // ISO timestamp — this rate applies from this point forward
+  created_by: string;
+  created_at: string;
+}
+
 export interface WorkSession {
   id: string; // uuid
   created_at: string; // timestamp with time zone

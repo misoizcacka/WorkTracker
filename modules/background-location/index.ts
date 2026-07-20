@@ -1,4 +1,6 @@
 import BackgroundLocationModule from './src/BackgroundLocationModule';
+import type { LocationDiagnostics } from './src/BackgroundLocationModule';
+export type { LocationDiagnostics };
 
 export interface GeofenceAssignment {
   id: string;
@@ -42,8 +44,8 @@ export function stop(): Promise<void> {
     return BackgroundLocationModule.stop();
 }
 
-export function flushPendingEvents(): Promise<number> {
-    return BackgroundLocationModule.flushPendingEvents?.() ?? Promise.resolve(0);
+export function flushPendingEvents(supabaseUrl?: string, supabaseKey?: string): Promise<number> {
+    return BackgroundLocationModule.flushPendingEvents?.(supabaseUrl, supabaseKey) ?? Promise.resolve(0);
 }
 
 export function requestWhenInUseAuthorization(): Promise<void> {
@@ -56,4 +58,8 @@ export function requestAlwaysAuthorization(): Promise<void> {
 
 export function getAuthorizationStatus(): Promise<string> {
     return BackgroundLocationModule.getAuthorizationStatus();
+}
+
+export function getDiagnostics(): Promise<LocationDiagnostics> {
+    return BackgroundLocationModule.getDiagnostics();
 }

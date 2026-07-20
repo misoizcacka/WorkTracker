@@ -236,6 +236,7 @@ const EditPersonModal: React.FC<EditPersonModalProps> = ({ visible, onClose, emp
                     />
                   </View>
                 )}
+
               </View>
             </View>
             

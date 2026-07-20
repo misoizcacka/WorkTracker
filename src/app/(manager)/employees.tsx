@@ -17,6 +17,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Dropdown } from "react-native-element-dropdown";
 import UserAvatar from "../../components/UserAvatar";
 import { useSession } from "../../context/AuthContext";
+import HourlyRateModal from "../../components/HourlyRateModal";
 
 
 
@@ -54,6 +55,8 @@ export default function ManagerEmployees() {
   const [accessLinkWorkerName, setAccessLinkWorkerName] = useState('');
   const [loading, setLoading] = useState(false); // Used for general loading states, e.g., invite cancellation
   const [isCancellingInvite, setIsCancellingInvite] = useState<string | null>(null); // To track which invite is being cancelled
+  const [hourlyRateModalVisible, setHourlyRateModalVisible] = useState(false);
+  const [selectedRateEmployee, setSelectedRateEmployee] = useState<Employee | null>(null);
 
   const fixedColumnWidths = {
     avatar: 60,
@@ -61,7 +64,7 @@ export default function ManagerEmployees() {
     status: 100,
     role: 100,
     joined: 150, // Increased from 120
-    actions: 140,
+    actions: 170,
   };
 
   const flexibleColumnMinLengths = {
@@ -267,6 +270,14 @@ export default function ManagerEmployees() {
                   <Ionicons name="link-outline" size={24} color={theme.colors.secondary} />
                 </TouchableOpacity>
               ) : null}
+              {isOwner && (item as Employee).role === 'worker' ? (
+                <TouchableOpacity
+                  onPress={() => { setSelectedRateEmployee(item as Employee); setHourlyRateModalVisible(true); }}
+                  style={styles.actionButton}
+                >
+                  <Ionicons name="cash-outline" size={24} color={theme.colors.success} />
+                </TouchableOpacity>
+              ) : null}
               <TouchableOpacity onPress={() => handleEdit(item as Employee)} style={styles.actionButton}>
                 <Ionicons name="pencil-outline" size={24} color={theme.colors.primary} />
               </TouchableOpacity>
@@ -369,6 +380,15 @@ export default function ManagerEmployees() {
         onConfirm={handleConfirmRemoveEmployee}
         loading={loading}
       />
+      {selectedRateEmployee && (
+        <HourlyRateModal
+          visible={hourlyRateModalVisible}
+          onClose={() => { setHourlyRateModalVisible(false); setSelectedRateEmployee(null); }}
+          employeeId={selectedRateEmployee.id}
+          companyId={selectedRateEmployee.company_id}
+          employeeName={selectedRateEmployee.full_name}
+        />
+      )}
       <Modal
         animationType="slide"
         transparent={true}

@@ -55,7 +55,7 @@ class SupabaseService(
     ): Boolean = withContext(Dispatchers.IO) {
         val deviceToken = deviceAuthenticator.deviceToken
         if (deviceToken == null) {
-            Log.e("SupabaseService", "No device token available, cannot push event $id")
+            Log.e("SupabaseService", "pushEvent SKIP — no device token in EncryptedSharedPrefs. Event $id will be marked as unflushable.")
             return@withContext false
         }
 
@@ -136,36 +136,57 @@ class SupabaseService(
 
     /**
      * Reads all unsynced events from native SQLite and pushes them to Supabase.
-     * Loops in batches of 50 until the queue is fully drained so a long offline
-     * period doesn't leave events behind after the first reconnect.
-     * Called when the app comes back online.
+     * Loops in batches of 50 until the queue is fully drained.
+     *
+     * Individual event failures (e.g. HMAC mismatch on old events with wrong timestamps)
+     * are skipped — the event is marked synced to prevent it from blocking the queue forever.
+     * Network-level failures (no connectivity, server down) abort the loop so we don't
+     * hammer a server that is genuinely unavailable.
      */
     suspend fun flushPendingEvents(): Int = withContext(Dispatchers.IO) {
         if (!isOnline()) return@withContext 0
         var totalFlushed = 0
+        var consecutiveNetworkFailures = 0
         while (true) {
             val pending = locationDbHelper.getUnsyncedEvents(limit = 50)
             if (pending.isEmpty()) break
             Log.d("SupabaseService", "flushPendingEvents: flushing batch of ${pending.size} events.")
             var batchFlushed = 0
+            var batchNetworkErrors = 0
             for (event in pending) {
-                val success = pushEvent(
-                    id = event.id,
-                    timestamp = event.timestamp,
-                    type = event.type,
-                    assignmentId = event.assignmentId,
-                    workerId = event.workerId,
-                    companyId = event.companyId,
-                    latitude = event.latitude,
-                    longitude = event.longitude,
-                    notes = event.notes
-                )
-                if (success) batchFlushed++
+                try {
+                    val success = pushEvent(
+                        id = event.id,
+                        timestamp = event.timestamp,
+                        type = event.type,
+                        assignmentId = event.assignmentId,
+                        workerId = event.workerId,
+                        companyId = event.companyId,
+                        latitude = event.latitude,
+                        longitude = event.longitude,
+                        notes = event.notes
+                    )
+                    if (success) {
+                        batchFlushed++
+                    } else {
+                        // Server rejected the event (4xx) — mark it synced so it doesn't
+                        // block the queue. Likely a stale event with a bad timestamp/HMAC.
+                        Log.w("SupabaseService", "Event ${event.id} rejected by server — marking as synced to unblock queue.")
+                        locationDbHelper.updateLocationEventSyncedStatus(event.id, 1)
+                    }
+                } catch (e: Exception) {
+                    // Network-level error — count it, don't skip
+                    batchNetworkErrors++
+                    Log.e("SupabaseService", "Network error pushing event ${event.id}: ${e.message}")
+                }
             }
             totalFlushed += batchFlushed
-            // If we failed to flush any event in this batch (e.g. server error), stop
-            // to avoid an infinite loop — events will retry on the next reconnect.
-            if (batchFlushed == 0) break
+            consecutiveNetworkFailures = if (batchNetworkErrors > 0) consecutiveNetworkFailures + 1 else 0
+            // Stop if we're getting consistent network errors — server may be down
+            if (consecutiveNetworkFailures >= 2) {
+                Log.w("SupabaseService", "flushPendingEvents: stopping after repeated network errors.")
+                break
+            }
         }
         Log.d("SupabaseService", "flushPendingEvents: total flushed $totalFlushed.")
         totalFlushed

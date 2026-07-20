@@ -17,6 +17,7 @@ import { ProcessedAssignmentStepWithStatus, AssignmentStatus } from '~/types';
 import moment from 'moment';
 import Toast from 'react-native-toast-message';
 import AssignmentSelectionModal from '../../components/AssignmentSelectionModal';
+import BreakDurationModal from '../../components/BreakDurationModal';
 import { View, Text } from '../../components/Themed';
 import { Logo } from '~/components/Logo';
 
@@ -47,6 +48,9 @@ export default function Home() {
   const [isProcessingCheckInOut, setIsProcessingCheckInOut] = useState(false);
   const [pendingAction, setPendingAction] = useState<'checking_in' | 'checking_out' | null>(null);
   const [lastOnSiteAssignmentId, setLastOnSiteAssignmentId] = useState<string | null>(null);
+  const [isBreakModalVisible, setIsBreakModalVisible] = useState(false);
+  // Stores the GPS location captured when user taps "Check Out", used after break modal confirms
+  const pendingCheckoutLocationRef = React.useRef<{ latitude: number; longitude: number } | null>(null);
 
   const { processedAssignments, loadAssignmentsForDate, loadWorkSessionsForDate, isLoading: assignmentsLoading, activeWorkSession, loadedWorkSessions, startWorkSession, endWorkSession, lastCheckoutAssignmentId, isOffline, isSyncingToCloud } = useAssignments();
 
@@ -483,18 +487,29 @@ export default function Home() {
 
   const handleCheckOut = async () => {
     if (!activeWorkSession) return;
+    // Grab GPS first — before showing the modal so there's no delay after confirm
     let currentLocation;
     try {
       const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
       currentLocation = { latitude: loc.coords.latitude, longitude: loc.coords.longitude };
     } catch (err) { return; }
 
+    // Store location and show break duration modal
+    pendingCheckoutLocationRef.current = currentLocation;
+    setIsBreakModalVisible(true);
+  };
+
+  const handleBreakConfirm = async (breakMinutes: number) => {
+    const currentLocation = pendingCheckoutLocationRef.current;
+    if (!activeWorkSession || !currentLocation) return;
+
+    setIsBreakModalVisible(false);
     setIsProcessingCheckInOut(true);
     setPendingAction('checking_out');
-    
+
     try {
-      await endWorkSession(activeWorkSession.id, currentLocation);
-      BackgroundLocation.stop();
+      await endWorkSession(activeWorkSession.id, currentLocation, breakMinutes);
+      await BackgroundLocation.stop();
       startedSessionIdRef.current = null;
       Toast.show({ type: 'info', text1: 'Checked Out', text2: `Success from ${projectLocationName}` });
       setElapsedTime(0);
@@ -504,7 +519,13 @@ export default function Home() {
     } finally {
       setIsProcessingCheckInOut(false);
       setPendingAction(null);
+      pendingCheckoutLocationRef.current = null;
     }
+  };
+
+  const handleBreakCancel = () => {
+    setIsBreakModalVisible(false);
+    pendingCheckoutLocationRef.current = null;
   };
 
   const handleNavigate = () => {
@@ -763,6 +784,16 @@ export default function Home() {
         assignments={currentWorkersAssignments}
         onSelectAssignment={handleSelectAssignment}
         currentSelectedId={selectedNextAssignmentId || relevantAssignment?.id || null}
+      />
+      <BreakDurationModal
+        visible={isBreakModalVisible}
+        workedMinutes={activeWorkSession
+          ? Math.floor((Date.now() - new Date(activeWorkSession.start_time).getTime()) / 60000)
+          : 0
+        }
+        onConfirm={handleBreakConfirm}
+        onCancel={handleBreakCancel}
+        isLoading={isProcessingCheckInOut}
       />
     </AnimatedScreen>
   );

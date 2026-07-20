@@ -17,6 +17,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
 
 // Re-adding the missing data classes
 data class GeofenceAssignment(
@@ -102,21 +103,98 @@ class BackgroundLocationModule : Module() {
             promise.resolve(Unit)
         }
 
-        AsyncFunction("flushPendingEvents") { promise: Promise ->
+        AsyncFunction("getDiagnostics") { promise: Promise ->
+            val context = appContext.reactContext?.applicationContext ?: run {
+                promise.reject("APP_CONTEXT_ERROR", "Context is null.", null)
+                return@AsyncFunction
+            }
+
+            moduleScope.launch {
+                try {
+                    val sharedPrefs = context.getSharedPreferences(Constants.SHARED_PREFS_NAME, Context.MODE_PRIVATE)
+
+                    // Service liveness — read the in-process AtomicBoolean flag
+                    val serviceRunning = PeriodicLocationTrackingService.isRunning.get()
+
+                    // WorkManager state
+                    val workInfos = androidx.work.WorkManager.getInstance(context)
+                        .getWorkInfosForUniqueWork("LocationUpdateUniqueWork")
+                        .get() // blocking get — we're on Dispatchers.IO
+                    val workManagerState = workInfos.firstOrNull()?.state?.name ?: "NOT_SCHEDULED"
+
+                    // Last location from FusedLocationProvider
+                    val fusedClient = com.google.android.gms.location.LocationServices
+                        .getFusedLocationProviderClient(context)
+                    val lastLocation = try {
+                        fusedClient.lastLocation.await()
+                    } catch (e: Exception) { null }
+
+                    val nowMs = System.currentTimeMillis()
+                    val lastLatitude = lastLocation?.latitude
+                    val lastLongitude = lastLocation?.longitude
+                    val lastLocationAgeSeconds = lastLocation?.let { (nowMs - it.time) / 1000L }
+                    val lastLocationAccuracyMeters = lastLocation?.accuracy
+
+                    // Geofences registered
+                    val geofenceJson = sharedPrefs.getString(Constants.SHARED_PREFS_KEY_GEOFENCE_ASSIGNMENTS, null)
+                    val geofenceCount = if (geofenceJson != null) {
+                        try {
+                            val type = object : com.google.gson.reflect.TypeToken<List<GeofenceAssignment>>() {}.type
+                            val list: List<GeofenceAssignment> = Gson().fromJson(geofenceJson, type)
+                            list.size
+                        } catch (e: Exception) { 0 }
+                    } else 0
+
+                    // Tracking mode — read from prefs
+                    val isInsideGeofence = sharedPrefs.getBoolean(Constants.SHARED_PREFS_KEY_IS_INSIDE_GEOFENCE, false)
+                    val trackingMode = if (isInsideGeofence) "PASSIVE" else "ACTIVE"
+
+                    // Active session info
+                    val workerId = sharedPrefs.getString(Constants.KEY_WORKER_ID, null)
+                    val assignmentId = sharedPrefs.getString(Constants.KEY_ASSIGNMENT_ID, null)
+
+                    // Unsynced native events count
+                    val locationDbHelper = LocationDbHelper(context)
+                    val unsyncedCount = locationDbHelper.getUnsyncedEvents(limit = 500).size
+
+                    val result = mapOf(
+                        "serviceRunning" to serviceRunning,
+                        "workManagerState" to workManagerState,
+                        "trackingMode" to trackingMode,
+                        "geofenceCount" to geofenceCount,
+                        "lastLatitude" to (lastLatitude ?: 0.0),
+                        "lastLongitude" to (lastLongitude ?: 0.0),
+                        "lastLocationAgeSeconds" to (lastLocationAgeSeconds ?: -1L),
+                        "lastLocationAccuracyMeters" to (lastLocationAccuracyMeters ?: -1f),
+                        "hasActiveSession" to (workerId != null),
+                        "workerId" to (workerId ?: ""),
+                        "assignmentId" to (assignmentId ?: ""),
+                        "unsyncedNativeEventCount" to unsyncedCount,
+                    )
+                    promise.resolve(result)
+                } catch (e: Exception) {
+                    promise.reject("DIAGNOSTICS_ERROR", "Failed to get diagnostics: ${e.message}", e)
+                }
+            }
+        }
+
+        AsyncFunction("flushPendingEvents") { supabaseUrl: String?, supabaseKey: String?, promise: Promise ->
             val context = appContext.reactContext?.applicationContext ?: run {
                 promise.reject("APP_CONTEXT_ERROR", "Context is null.", null)
                 return@AsyncFunction
             }
             val sharedPrefs = context.getSharedPreferences(Constants.SHARED_PREFS_NAME, Context.MODE_PRIVATE)
-            val supabaseUrl = sharedPrefs.getString(Constants.KEY_SUPABASE_URL, null)
-            val supabaseKey = sharedPrefs.getString(Constants.KEY_SUPABASE_PUBLISHABLE_KEY, null)
-            if (supabaseUrl == null || supabaseKey == null) {
-                promise.resolve(0) // No config, can't flush
+            // Use prefs-stored URL/key if available, fall back to the values passed from JS
+            // (JS always has EXPO_PUBLIC_SUPABASE_URL/KEY from env even after session ends)
+            val resolvedUrl = sharedPrefs.getString(Constants.KEY_SUPABASE_URL, null) ?: supabaseUrl
+            val resolvedKey = sharedPrefs.getString(Constants.KEY_SUPABASE_PUBLISHABLE_KEY, null) ?: supabaseKey
+            if (resolvedUrl == null || resolvedKey == null) {
+                promise.resolve(0) // No config at all, can't flush
                 return@AsyncFunction
             }
             moduleScope.launch {
                 try {
-                    val supabaseService = SupabaseService(context, supabaseUrl, supabaseKey, DeviceAuthenticator(context))
+                    val supabaseService = SupabaseService(context, resolvedUrl, resolvedKey, DeviceAuthenticator(context))
                     val flushed = supabaseService.flushPendingEvents()
                     promise.resolve(flushed)
                 } catch (e: Exception) {

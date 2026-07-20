@@ -1,7 +1,6 @@
 package app.koord.backgroundlocation
 
 import android.Manifest
-import android.app.ActivityManager
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -57,7 +56,10 @@ class PeriodicLocationPingWorker(appContext: Context, workerParams: WorkerParame
      * Only acts when a session is active (SharedPrefs are populated by start()).
      */
     private fun ensureTrackingServiceRunning(geofenceJson: String?) {
-        val isRunning = isServiceRunning(PeriodicLocationTrackingService::class.java)
+        // Read the in-process liveness flag set by the service itself.
+        // This is reliable, zero-overhead, and works on all Android versions —
+        // unlike the deprecated ActivityManager.getRunningServices().
+        val isRunning = PeriodicLocationTrackingService.isRunning.get()
         if (isRunning) {
             Log.d("LocationUpdateWorker", "TrackingService is alive — no restart needed.")
             return
@@ -84,15 +86,6 @@ class PeriodicLocationPingWorker(appContext: Context, workerParams: WorkerParame
             // Nothing we can do here — the next WorkManager run will try again.
             Log.e("LocationUpdateWorker", "Failed to restart TrackingService: ${e.message}")
         }
-    }
-
-    @Suppress("DEPRECATION")
-    private fun isServiceRunning(serviceClass: Class<*>): Boolean {
-        val manager = applicationContext.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
-        // getRunningServices is deprecated in API 26+ but remains the only reliable way
-        // to check your own service's liveness from within the same package.
-        return manager.getRunningServices(Int.MAX_VALUE)
-            .any { it.service.className == serviceClass.name }
     }
 
     private fun hasLocationPermissions(): Boolean {
