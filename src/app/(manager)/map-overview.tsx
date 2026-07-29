@@ -2,6 +2,7 @@ import React, { useState, useContext, useMemo, useEffect } from 'react';
 import { View, StyleSheet, Image, TextInput, FlatList, TouchableOpacity, ScrollView, Platform } from 'react-native';
 import { Text } from '../../components/Themed';
 import { MapView } from '../../components/MapView';
+import SubNavBar from '../../components/SubNavBar';
 import { useSession } from '~/context/AuthContext';
 import { EmployeesContext, EmployeesContextType } from '~/context/EmployeesContext';
 import { Project, ProjectsContext, ProjectsContextType } from '~/context/ProjectsContext';
@@ -241,6 +242,12 @@ export default function MapOverviewScreen() {
 
   return (
     <AnimatedScreen>
+      <SubNavBar items={[
+        { label: 'Projects', href: '/(manager)/projects' },
+        { label: 'Common Locations', href: '/(manager)/common-locations' },
+        { label: 'Live Map', href: '/(manager)/map-overview' },
+        { label: 'Location Replay', href: '/(manager)/location-replay' },
+      ]} />
       <View style={styles.pageHeader}>
         <Text style={styles.pageTitle} fontType="bold">Map Overview</Text>
         <Text style={styles.pageSubtitle}>Visualize worker and project locations.</Text>

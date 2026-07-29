@@ -46,7 +46,7 @@ export default function LandingPage() {
         <View style={s.nav}>
           <View style={s.navInner}>
             <Link href="/(guest)" asChild>
-              <TouchableOpacity activeOpacity={0.7}><Logo /></TouchableOpacity>
+              <TouchableOpacity activeOpacity={0.7}><Logo style={{ width: 90, height: 30 }} /></TouchableOpacity>
             </Link>
             <View style={s.navLinks}>
               <Link href="/(guest)/pricing" asChild>

@@ -6,7 +6,7 @@
     "scheme": "Koordinate",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/koordappicon.png",
+    "icon": "./assets/koordinateappicon.png",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "splash": {

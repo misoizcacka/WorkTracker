@@ -4,6 +4,7 @@ import { Text } from "../../components/Themed";
 import Toast from 'react-native-toast-message';
 import moment from "moment";
 import AnimatedScreen from "../../components/AnimatedScreen";
+import SubNavBar from "../../components/SubNavBar";
 import { theme } from "../../theme";
 import { Button } from "../../components/Button";
 import { InvitesContext } from "../../context/InvitesContext";
@@ -306,6 +307,11 @@ export default function ManagerEmployees() {
 
   return (
     <AnimatedScreen>
+      <SubNavBar items={[
+        { label: 'Employees', href: '/(manager)/employees' },
+        { label: 'Assignments', href: '/(manager)/worker-assignments' },
+        { label: 'Corrections', href: '/(manager)/corrections' },
+      ]} />
       <View style={styles.pageHeader}>
         <Text style={styles.pageTitle} fontType="bold">Team</Text>
         <Text style={styles.pageSubtitle}>Manage your workers and their roles.</Text>

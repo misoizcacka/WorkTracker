@@ -7,7 +7,7 @@ import { Text } from '../components/Themed';
 import { useSession } from '../context/AuthContext';
 import { theme } from '../theme';
 import { Card } from '../components/Card';
-import Logo from '../../assets/koordlogoblack1.svg';
+import Logo from '../../assets/koordinatelogo.svg';
 
 export default function MobileOnlyScreen() {
   const router = useRouter();

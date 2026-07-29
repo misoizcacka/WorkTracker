@@ -87,15 +87,20 @@ export const ManagerSidebar = () => {
     ]).start();
   };
 
+  // Paths that belong to each top-level group — so "Team" is active on any Team sub-page
+  const teamPaths = ['/(manager)/employees', '/(manager)/worker-assignments', '/(manager)/corrections'];
+  const locationPaths = ['/(manager)/projects', '/(manager)/common-locations', '/(manager)/map-overview', '/(manager)/location-replay'];
+
+  const isNavItemActive = (href: string): boolean => {
+    if (href === '/(manager)/employees') return teamPaths.some(p => pathname.startsWith(p));
+    if (href === '/(manager)/projects') return locationPaths.some(p => pathname.startsWith(p));
+    return pathname.startsWith(href);
+  };
+
   const navItems = [
-    { icon: 'home-outline', label: 'Dashboard', href: '/(manager)/dashboard' },
-    { icon: 'map-outline', label: 'Map Overview', href: '/(manager)/map-overview' },
-    { icon: 'timer-outline', label: 'Location Replay', href: '/(manager)/location-replay' },
-    { icon: 'people-outline', label: 'Employees', href: '/(manager)/employees' },
-    { icon: 'folder-outline', label: 'Projects', href: '/(manager)/projects' },
-    { icon: 'pin-outline', label: 'Common Locations', href: '/(manager)/common-locations' },
-    { icon: 'calendar-outline', label: 'Worker Assignments', href: '/(manager)/worker-assignments' },
-    { icon: 'construct-outline', label: 'Session Corrections', href: '/(manager)/corrections' },
+    { icon: 'home-outline', label: 'Home', href: '/(manager)/dashboard' },
+    { icon: 'people-outline', label: 'Team', href: '/(manager)/employees' },
+    { icon: 'map-outline', label: 'Locations', href: '/(manager)/projects' },
     { icon: 'document-text-outline', label: 'Reports', href: '/(manager)/reports' },
     { icon: 'person-circle-outline', label: 'Account', href: '/(manager)/account' },
   ];
@@ -151,7 +156,7 @@ export const ManagerSidebar = () => {
                 icon={item.icon as any}
                 label={item.label}
                 href={item.href}
-                isActive={pathname.startsWith(item.href)}
+                isActive={isNavItemActive(item.href)}
                 isExpanded={isExpanded}
               />
             ))}

@@ -52,12 +52,13 @@ const EditPersonModal: React.FC<EditPersonModalProps> = ({ visible, onClose, emp
     const trimmedPhone = phone.trim();
     const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     const phonePattern = /^[0-9+\-()\/\s]*$/;
+    const isPlaceholderEmail = trimmedEmail.includes('@koord.local');
 
     if (trimmedName.length < 2) {
       return 'Please enter a valid full name.';
     }
 
-    if (!emailPattern.test(trimmedEmail)) {
+    if (!isPlaceholderEmail && !emailPattern.test(trimmedEmail)) {
       return 'Please enter a valid email address.';
     }
 
@@ -112,10 +113,12 @@ const EditPersonModal: React.FC<EditPersonModalProps> = ({ visible, onClose, emp
     setError('');
     setLoading(true);
     try {
+      const isPlaceholderEmail = employee.email?.includes('@koord.local');
       await onSave({
         ...employee,
         full_name: fullName.trim(),
-        email: email.trim().toLowerCase(),
+        // Don't touch placeholder internal emails — pass the original through unchanged
+        email: isPlaceholderEmail ? employee.email : email.trim().toLowerCase(),
         phone_number: phone.trim() || null,
         reporting_to: reportingTo,
         avatar_url: avatarUrl,
@@ -186,22 +189,25 @@ const EditPersonModal: React.FC<EditPersonModalProps> = ({ visible, onClose, emp
                   />
                 </View>
 
-                <View style={styles.inputGroup}>
-                  <Text style={styles.label} fontType="bold">Email Address</Text>
-                  <TextInput
-                    style={styles.input}
-                    placeholder="Enter email address"
-                    value={email}
-                    onChangeText={setEmail}
-                    editable={userRole === 'owner'}
-                    keyboardType="email-address"
-                    autoCapitalize="none"
-                    placeholderTextColor={theme.colors.disabledText}
-                  />
-                  {userRole !== 'owner' && (
-                    <Text style={styles.fieldHint}>Only owners can change employee email addresses.</Text>
-                  )}
-                </View>
+                {/* Only show email field when it's a real email, not an internal placeholder */}
+                {email && !email.includes('@koord.local') && (
+                  <View style={styles.inputGroup}>
+                    <Text style={styles.label} fontType="bold">Email Address</Text>
+                    <TextInput
+                      style={styles.input}
+                      placeholder="Enter email address"
+                      value={email}
+                      onChangeText={setEmail}
+                      editable={userRole === 'owner'}
+                      keyboardType="email-address"
+                      autoCapitalize="none"
+                      placeholderTextColor={theme.colors.disabledText}
+                    />
+                    {userRole !== 'owner' && (
+                      <Text style={styles.fieldHint}>Only owners can change employee email addresses.</Text>
+                    )}
+                  </View>
+                )}
 
                 <View style={styles.inputGroup}>
                   <Text style={styles.label} fontType="bold">Phone Number</Text>

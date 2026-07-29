@@ -3,6 +3,7 @@ import { View, StyleSheet, useWindowDimensions, TextInput, TouchableOpacity, Ima
 import { Text } from "~/components/Themed";
 import { Card } from "~/components/Card";
 import AnimatedScreen from "~/components/AnimatedScreen";
+import SubNavBar from "~/components/SubNavBar";
 import { theme } from "~/theme";
 import { useRouter } from "expo-router";
 import { ProjectsContext, Project, ProjectsContextType } from "~/context/ProjectsContext";
@@ -203,6 +204,12 @@ export default function ManagerProjects() {
 
   return (
     <AnimatedScreen>
+      <SubNavBar items={[
+        { label: 'Projects', href: '/(manager)/projects' },
+        { label: 'Common Locations', href: '/(manager)/common-locations' },
+        { label: 'Live Map', href: '/(manager)/map-overview' },
+        { label: 'Location Replay', href: '/(manager)/location-replay' },
+      ]} />
       <View style={styles.pageHeader}>
         <Text style={styles.pageTitle} fontType="bold">Projects</Text>
         <Text style={styles.pageSubtitle} fontType="regular">Manage your ongoing projects and assign workers.</Text>

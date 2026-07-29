@@ -3,6 +3,7 @@ import { Text } from '../../components/Themed';
 import moment from 'moment';
 
 import AnimatedScreen from '../../components/AnimatedScreen';
+import SubNavBar from '../../components/SubNavBar';
 import { Card } from '../../components/Card';
 import { theme } from '../../theme';
 import { EmployeesContext } from '../../context/EmployeesContext';
@@ -175,6 +176,11 @@ const CorrectionsPage = () => {
 
     return (
         <AnimatedScreen>
+          <SubNavBar items={[
+            { label: 'Employees', href: '/(manager)/employees' },
+            { label: 'Assignments', href: '/(manager)/worker-assignments' },
+            { label: 'Corrections', href: '/(manager)/corrections' },
+          ]} />
           <View style={styles.pageHeader}>
             <Text style={styles.pageTitle} fontType="bold">Corrections</Text>
             <Text style={styles.pageSubtitle}>Adjust recorded work sessions for your team.</Text>

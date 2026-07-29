@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, Dimensions, Platform } from 'react-native';
 import { Text } from '~/components/Themed';
+import SubNavBar from '~/components/SubNavBar';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import moment from 'moment';
 
@@ -54,6 +55,12 @@ const LocationReplayPage = () => {
 
   return (
     <AnimatedScreen>
+      <SubNavBar items={[
+        { label: 'Projects', href: '/(manager)/projects' },
+        { label: 'Common Locations', href: '/(manager)/common-locations' },
+        { label: 'Live Map', href: '/(manager)/map-overview' },
+        { label: 'Location Replay', href: '/(manager)/location-replay' },
+      ]} />
       <View style={styles.pageHeader}>
         <Text style={styles.pageTitle} fontType="bold">Location Replay</Text>
         <Text style={styles.pageSubtitle}>Review historical worker locations.</Text>

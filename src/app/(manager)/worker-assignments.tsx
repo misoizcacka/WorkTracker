@@ -4,6 +4,7 @@ import { Text } from '~/components/Themed';
 import moment from 'moment';
 import { DragDropContext, DropResult, Droppable } from '@hello-pangea/dnd';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import SubNavBar from '~/components/SubNavBar';
 
 // NEW: Use new types for AssignmentsContext
 import { Employee, Project, CommonLocation, AssignmentRecord, ProcessedAssignmentStep } from '~/types';
@@ -317,11 +318,17 @@ export default function ProjectAssignmentScreen() {
   return (
     <SafeAreaProvider>
       <DragDropContext onDragEnd={onDragEnd}>
-        <View style={styles.container}>
+        <View style={{ flex: 1, backgroundColor: theme.colors.pageBackground }}>
+          <SubNavBar items={[
+            { label: 'Employees', href: '/(manager)/employees' },
+            { label: 'Assignments', href: '/(manager)/worker-assignments' },
+            { label: 'Corrections', href: '/(manager)/corrections' },
+          ]} />
           <View style={styles.pageHeader}>
             <Text style={styles.pageTitle} fontType="bold">Assignments</Text>
             <Text style={styles.pageSubtitle}>Assign projects and locations to your workers.</Text>
           </View>
+          <View style={styles.container}>
           <View style={styles.topControls}>
             <View style={styles.dateNavigation}>
               <TouchableOpacity style={styles.dateNavButton} onPress={() => setSelectedDate(moment(selectedDate).subtract(1, 'day').toDate())}>
@@ -471,6 +478,7 @@ export default function ProjectAssignmentScreen() {
           workerId={addingToWorkerId}
           assignedDate={moment(selectedDate).format('YYYY-MM-DD')}
         />
+        </View>{/* end outer wrapper */}
       </DragDropContext>
     </SafeAreaProvider>
   );

@@ -4,7 +4,7 @@ import { theme } from '../theme';
 
 // Import assets
 const LogoPNG = require('../../assets/koordlogoblack1.png');
-const LogoSVG = require('../../assets/koordlogoblack1.svg');
+const LogoSVG = require('../../assets/koordinatelogo.svg');
 const KLogoSVG = require('../../assets/klogoblack1.svg');
 
 export type LogoSize = 'small' | 'medium' | 'large' | 'auto';
@@ -52,12 +52,16 @@ export const Logo: React.FC<LogoProps> = ({
   if (Platform.OS === 'web') {
     const src = variant === 'icon' ? KLogoSVG : LogoSVG;
     const resolvedSrc = typeof src === 'string' ? src : (src.default ?? src.uri ?? src);
+    // Allow style prop to override width/height on web
+    const styleObj = style as any;
+    const resolvedWidth = styleObj?.width ?? width;
+    const resolvedHeight = styleObj?.height ?? height;
     return (
       // @ts-ignore
       <img
         src={resolvedSrc}
-        width={width as number}
-        height={height as number}
+        width={resolvedWidth as number}
+        height={resolvedHeight as number}
         style={{ display: 'block', objectFit: 'contain' }}
         draggable={false}
       />

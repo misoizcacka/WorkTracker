@@ -3,6 +3,7 @@ import { View, StyleSheet, useWindowDimensions, TextInput, TouchableOpacity, Pla
 import { Text } from "~/components/Themed";
 import { Card } from "~/components/Card";
 import AnimatedScreen from "~/components/AnimatedScreen";
+import SubNavBar from "~/components/SubNavBar";
 import { theme } from "~/theme";
 import { fetchCommonLocations, deleteCommonLocation } from "~/services/commonLocations";
 import { Ionicons } from "@expo/vector-icons";
@@ -120,6 +121,12 @@ export default function ManagerCommonLocations() {
 
   return (
     <AnimatedScreen>
+      <SubNavBar items={[
+        { label: 'Projects', href: '/(manager)/projects' },
+        { label: 'Common Locations', href: '/(manager)/common-locations' },
+        { label: 'Live Map', href: '/(manager)/map-overview' },
+        { label: 'Location Replay', href: '/(manager)/location-replay' },
+      ]} />
       <View style={styles.pageHeader}>
         <Text style={styles.pageTitle} fontType="bold">Common Locations</Text>
         <Text style={styles.pageSubtitle} fontType="regular">Manage reusable locations like warehouses or office branches.</Text>
