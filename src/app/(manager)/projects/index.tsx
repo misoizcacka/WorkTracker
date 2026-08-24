@@ -203,13 +203,14 @@ export default function ManagerProjects() {
   };
 
   return (
-    <AnimatedScreen>
+    <View style={{ flex: 1 }}>
       <SubNavBar items={[
         { label: 'Projects', href: '/(manager)/projects' },
         { label: 'Common Locations', href: '/(manager)/common-locations' },
         { label: 'Live Map', href: '/(manager)/map-overview' },
         { label: 'Location Replay', href: '/(manager)/location-replay' },
       ]} />
+      <AnimatedScreen>
       <View style={styles.pageHeader}>
         <Text style={styles.pageTitle} fontType="bold">Projects</Text>
         <Text style={styles.pageSubtitle} fontType="regular">Manage your ongoing projects and assign workers.</Text>
@@ -298,7 +299,8 @@ export default function ManagerProjects() {
         mode={editingProject ? 'edit' : 'create'}
         project={editingProject}
       />
-    </AnimatedScreen>
+      </AnimatedScreen>
+    </View>
   );
 }
 

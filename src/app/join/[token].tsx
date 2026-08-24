@@ -14,7 +14,7 @@ function WebInviteRedirect({ token }: { token: string }) {
       return;
     }
 
-    const appUrl = `Koord://join/${token}`;
+    const appUrl = `koordinate://join/${token}`;
     const userAgent = window.navigator.userAgent || '';
     const isAndroid = /Android/i.test(userAgent);
     const isIOS = /iPhone|iPad|iPod/i.test(userAgent);
@@ -37,7 +37,7 @@ function WebInviteRedirect({ token }: { token: string }) {
   return (
     <View style={styles.webContainer}>
       <ActivityIndicator size="large" color={theme.colors.primary} />
-      <Text style={styles.webTitle} fontType="bold">Opening Koord…</Text>
+      <Text style={styles.webTitle} fontType="bold">Opening Koordinate…</Text>
       <Text style={styles.webSubtitle} fontType="regular">
         If the app does not open automatically, install it and reopen this invite on your phone.
       </Text>

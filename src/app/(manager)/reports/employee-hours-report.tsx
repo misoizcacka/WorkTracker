@@ -50,6 +50,14 @@ const EmployeeHoursReport = () => {
                 setReportData([]);
                 return;
             }
+            if (endDate < startDate) {
+                setReportData([]);
+                return;
+            }
+            if (endDate < startDate) {
+                setReportData([]);
+                return;
+            }
 
             setLoading(true);
             const { data, error } = await supabase.rpc('get_monthly_payroll_report', {
@@ -123,15 +131,20 @@ const EmployeeHoursReport = () => {
                     {/* --- Left Panel: Worker Selection --- */}
                     <View style={styles.leftPanel}>
                         <Text style={styles.panelTitle} fontType="bold">Date Range</Text>
+                        {endDate < startDate && (
+                          <View style={styles.dateErrorBanner}>
+                            <Ionicons name="warning-outline" size={14} color={theme.colors.danger} />
+                            <Text style={styles.dateErrorText} fontType="medium"> End date must be after start date.</Text>
+                          </View>
+                        )}
                         <View style={styles.datePickerContainer}>
+                            <Text style={styles.dateLabel} fontType="bold">From</Text>
                             <CrossPlatformDatePicker
                                 date={startDate}
                                 onDateChange={setStartDate}
                                 mode="date"
                             />
-                            <View style={styles.dateSeparator}>
-                                <Text style={styles.dateSeparatorText} fontType="regular">to</Text>
-                            </View>
+                            <Text style={styles.dateLabel} fontType="bold">To</Text>
                             <CrossPlatformDatePicker
                                 date={endDate}
                                 onDateChange={setEndDate}
@@ -307,12 +320,52 @@ const styles = StyleSheet.create({
         textTransform: 'uppercase',
         letterSpacing: 0.5,
     },
+    dateErrorBanner: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#FEE2E2',
+        borderRadius: theme.radius.sm,
+        padding: theme.spacing(1),
+        marginBottom: theme.spacing(1),
+    },
+    dateErrorText: {
+        fontSize: theme.fontSizes.xs,
+        color: theme.colors.danger,
+    },
+    dateLabel: {
+        fontSize: theme.fontSizes.xs,
+        color: theme.colors.bodyText,
+        textTransform: 'uppercase',
+        letterSpacing: 0.5,
+        marginBottom: theme.spacing(0.5),
+        marginTop: theme.spacing(1),
+    },
     datePickerContainer: {
         backgroundColor: theme.colors.pageBackground,
         borderRadius: theme.radius.md,
         padding: theme.spacing(1.5),
         borderWidth: 1,
         borderColor: theme.colors.borderColor,
+    },
+    dateErrorBanner: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#FEE2E2',
+        borderRadius: theme.radius.sm,
+        padding: theme.spacing(1),
+        marginBottom: theme.spacing(1),
+    },
+    dateErrorText: {
+        fontSize: theme.fontSizes.xs,
+        color: theme.colors.danger,
+    },
+    dateLabel: {
+        fontSize: theme.fontSizes.xs,
+        color: theme.colors.bodyText,
+        textTransform: 'uppercase',
+        letterSpacing: 0.5,
+        marginBottom: theme.spacing(0.5),
+        marginTop: theme.spacing(1),
     },
     dateSeparator: {
         alignItems: 'center',

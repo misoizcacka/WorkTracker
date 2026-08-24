@@ -8,6 +8,8 @@ import { theme } from '../../theme';
 import { useTranslation } from 'react-i18next';
 import AnimatedScreen from '../../components/AnimatedScreen';
 import { Logo } from '~/components/Logo';
+import { GuestHeader } from '~/components/GuestHeader';
+import { GuestFooter } from '~/components/GuestFooter';
 import { Ionicons } from '@expo/vector-icons';
 
 const { width } = Dimensions.get('window');
@@ -37,26 +39,7 @@ export default function PricingPage() {
   return (
     <AnimatedScreen>
       <View style={styles.container}>
-        {/* Header */}
-        <View style={styles.header}>
-          <Link href="/(guest)" asChild>
-            <TouchableOpacity activeOpacity={0.7}>
-              <Logo style={styles.logo} />
-            </TouchableOpacity>
-          </Link>
-          <View style={styles.navLinks}>
-            <Link href="/(guest)/pricing" asChild>
-              <TouchableOpacity>
-                <Text style={styles.navLinkText} fontType="medium">{t('common.pricing')}</Text>
-              </TouchableOpacity>
-            </Link>
-            <Link href="/(guest)/login" asChild>
-              <TouchableOpacity style={styles.signInButton}>
-                <Text style={styles.signInButtonText} fontType="medium">{t('common.signIn')}</Text>
-              </TouchableOpacity>
-            </Link>
-          </View>
-        </View>
+        <GuestHeader variant="landing" />
 
         <ScrollView contentContainerStyle={styles.scrollContent}>
           <View style={styles.pricingSection}>
@@ -129,11 +112,8 @@ export default function PricingPage() {
               </View>
             </View>
           </View>
+          <GuestFooter />
         </ScrollView>
-
-        <View style={styles.footer}>
-          <Text style={styles.footerText} fontType="regular">© {new Date().getFullYear()} Koord. {t('common.allRightsReserved')}</Text>
-        </View>
       </View>
     </AnimatedScreen>
   );
@@ -161,45 +141,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: theme.colors.pageBackground,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: theme.spacing(4),
-    paddingVertical: theme.spacing(3),
-    backgroundColor: theme.colors.cardBackground,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.borderColor,
-    zIndex: 10,
-    ...Platform.select({
-      web: {
-        width: '100%',
-        maxWidth: 1400,
-        alignSelf: 'center',
-      },
-    }),
-  },
-  logo: {
-  },
-  navLinks: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: theme.spacing(4),
-  },
-  navLinkText: {
-    fontSize: 16,
-    color: theme.colors.bodyText,
-  },
-  signInButton: {
-    backgroundColor: theme.colors.primary,
-    paddingHorizontal: theme.spacing(3),
-    paddingVertical: theme.spacing(1.5),
-    borderRadius: theme.radius.md,
-  },
-  signInButtonText: {
-    color: 'white',
-    fontSize: 15,
   },
   scrollContent: {
     flexGrow: 1,
@@ -392,13 +333,5 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: theme.colors.bodyText,
     lineHeight: 24,
-  },
-  footer: {
-    padding: theme.spacing(5),
-    alignItems: 'center',
-  },
-  footerText: {
-    fontSize: 12,
-    color: theme.colors.disabledText,
   },
 });

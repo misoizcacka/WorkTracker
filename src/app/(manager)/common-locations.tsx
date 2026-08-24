@@ -1,5 +1,5 @@
 import React, { useState, useContext, useMemo, useEffect } from "react";
-import { View, StyleSheet, useWindowDimensions, TextInput, TouchableOpacity, Platform, ActivityIndicator } from "react-native";
+import { View, StyleSheet, useWindowDimensions, TextInput, TouchableOpacity, Platform, ActivityIndicator, Alert } from "react-native";
 import { Text } from "~/components/Themed";
 import { Card } from "~/components/Card";
 import AnimatedScreen from "~/components/AnimatedScreen";
@@ -74,14 +74,27 @@ export default function ManagerCommonLocations() {
     );
   }, [locations, searchTerm]);
 
-  const handleDeleteLocation = async (id: string) => {
-    try {
-      await deleteCommonLocation(id);
-      Toast.show({ type: 'success', text1: 'Success', text2: 'Location deleted.' });
-      loadLocations();
-    } catch (error) {
-      Toast.show({ type: 'error', text1: 'Error', text2: 'Failed to delete location.' });
-    }
+  const handleDeleteLocation = async (id: string, name: string) => {
+    Alert.alert(
+      'Delete Location',
+      `Are you sure you want to delete "${name}"? This cannot be undone.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await deleteCommonLocation(id);
+              Toast.show({ type: 'success', text1: 'Success', text2: 'Location deleted.' });
+              loadLocations();
+            } catch (error) {
+              Toast.show({ type: 'error', text1: 'Error', text2: 'Failed to delete location.' });
+            }
+          },
+        },
+      ]
+    );
   };
 
   const LocationCardItem = ({ item }: { item: CommonLocation }) => {
@@ -94,7 +107,7 @@ export default function ManagerCommonLocations() {
             <View style={styles.iconContainer}>
               <Ionicons name="location-outline" size={24} color={theme.colors.primary} />
             </View>
-            <TouchableOpacity onPress={() => handleDeleteLocation(item.id)} style={styles.deleteButton}>
+            <TouchableOpacity onPress={() => handleDeleteLocation(item.id, item.name)} style={styles.deleteButton}>
               <Ionicons name="trash-outline" size={20} color={theme.colors.danger} />
             </TouchableOpacity>
           </View>
@@ -120,13 +133,14 @@ export default function ManagerCommonLocations() {
   };
 
   return (
-    <AnimatedScreen>
+    <View style={{ flex: 1 }}>
       <SubNavBar items={[
         { label: 'Projects', href: '/(manager)/projects' },
         { label: 'Common Locations', href: '/(manager)/common-locations' },
         { label: 'Live Map', href: '/(manager)/map-overview' },
         { label: 'Location Replay', href: '/(manager)/location-replay' },
       ]} />
+      <AnimatedScreen>
       <View style={styles.pageHeader}>
         <Text style={styles.pageTitle} fontType="bold">Common Locations</Text>
         <Text style={styles.pageSubtitle} fontType="regular">Manage reusable locations like warehouses or office branches.</Text>
@@ -171,7 +185,8 @@ export default function ManagerCommonLocations() {
         onClose={() => setModalVisible(false)} 
         onCreated={loadLocations}
       />
-    </AnimatedScreen>
+      </AnimatedScreen>
+    </View>
   );
 }
 

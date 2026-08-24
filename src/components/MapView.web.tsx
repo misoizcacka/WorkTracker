@@ -1,5 +1,5 @@
 import React, { useRef, useEffect, useState, useMemo, useCallback } from 'react';
-import Map, { Marker as MapLibreMarker, NavigationControl, ViewStateChangeEvent, ViewState } from 'react-map-gl/maplibre';
+import Map, { Marker as MapLibreMarker, NavigationControl, ViewStateChangeEvent, ViewState, Source, Layer } from 'react-map-gl/maplibre';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { View, Image, StyleSheet, Text, ImageStyle } from 'react-native';
 import { theme } from '../theme';
@@ -42,6 +42,7 @@ interface MapViewProps {
   showNameTag?: boolean;
   disableWorkerHover?: boolean;
   disableWorkerPopup?: boolean;
+  polylineCoordinates?: { latitude: number; longitude: number }[]; // Trail path for replay
 }
 
 // --- MARKERS ---
@@ -206,12 +207,13 @@ export const MapView = React.forwardRef<any, MapViewProps>(({
   selectedProjects = [],
   initialRegion,
   region,
-  zoom: zoomProp, // Renamed to avoid conflict with internal 'zoom' variable
+  zoom: zoomProp,
   onRegionChangeComplete,
-  onWebZoomChange, // New prop
+  onWebZoomChange,
   showNameTag = true,
   disableWorkerHover = false,
   disableWorkerPopup = false,
+  polylineCoordinates,
 }, ref) => {
   const mapRef = useRef<any>(null);
 
@@ -614,6 +616,36 @@ export const MapView = React.forwardRef<any, MapViewProps>(({
 
         <CustomPopup popupInfo={popupInfo} map={mapRef.current} />
         <HoverPopup hoverInfo={hoverInfo} map={mapRef.current} />
+
+        {/* Polyline trail for location replay */}
+        {polylineCoordinates && polylineCoordinates.length >= 2 && (
+          <Source
+            id="replay-trail"
+            type="geojson"
+            data={{
+              type: 'Feature',
+              geometry: {
+                type: 'LineString',
+                coordinates: polylineCoordinates.map(c => [c.longitude, c.latitude]),
+              },
+              properties: {},
+            }}
+          >
+            <Layer
+              id="replay-trail-layer"
+              type="line"
+              paint={{
+                'line-color': '#2563EB',
+                'line-width': 3,
+                'line-opacity': 0.75,
+              }}
+              layout={{
+                'line-join': 'round',
+                'line-cap': 'round',
+              }}
+            />
+          </Source>
+        )}
 
         <NavigationControl />
         {spiderfiedMarkers.length > 0 && (

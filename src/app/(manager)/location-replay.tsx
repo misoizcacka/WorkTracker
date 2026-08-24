@@ -54,13 +54,14 @@ const LocationReplayPage = () => {
   };
 
   return (
-    <AnimatedScreen>
+    <View style={{ flex: 1 }}>
       <SubNavBar items={[
         { label: 'Projects', href: '/(manager)/projects' },
         { label: 'Common Locations', href: '/(manager)/common-locations' },
         { label: 'Live Map', href: '/(manager)/map-overview' },
         { label: 'Location Replay', href: '/(manager)/location-replay' },
       ]} />
+      <AnimatedScreen>
       <View style={styles.pageHeader}>
         <Text style={styles.pageTitle} fontType="bold">Location Replay</Text>
         <Text style={styles.pageSubtitle}>Review historical worker locations.</Text>
@@ -81,7 +82,8 @@ const LocationReplayPage = () => {
           </View>
         </View>
       </View>
-    </AnimatedScreen>
+      </AnimatedScreen>
+    </View>
   );
 };
 

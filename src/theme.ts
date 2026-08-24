@@ -1,8 +1,8 @@
 export const theme = {
   colors: {
     // User-defined colors
-    pageBackground: "#E0E0E0",
-    cardBackground: "#E0E0E0",
+    pageBackground: "#f3f2f2",
+    cardBackground: "#f3f2f2",
     headingText: "#1A1A1C",
     bodyText: "#3A3A3C",
     iconColor: "#5A5A5C",
@@ -13,24 +13,24 @@ export const theme = {
     primary: "#000000", // navy
     primaryDark: "#000000", // navy
     primaryMuted: "#E5E7EB", // light blue for muted primary
-    secondary: "#FFA500", // orange
+    secondary: "#c00000", // red
     accent: "#bbbbbbff", // light gray accent for highlights
 
     success: "#16A34A", // balanced green
     warning: "#F59E0B", // subtle amber
     warningMuted: "#FFF3E0", // light orange background
-    danger: "#DC2626", // standard red for errors
+    danger: "#c00000", // standard red for errors
     errorBackground: "#FFEBEE", // light red for error backgrounds
-    errorText: "#D32F2F", // dark red for error text
-    background: "#E0E0E0",
+    errorText: "#c00000", // dark red for error text
+    background: "#f3f2f2",
   },
 
   branding: {
-    logoWidth: 70,
+    logoWidth: 90,
     logoHeight: 24,
     logoWidthSmall: 60,
     logoHeightSmall: 20,
-    logoWidthMedium: 70,
+    logoWidthMedium: 90,
     logoHeightMedium: 24 ,
   },
 

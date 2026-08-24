@@ -11,6 +11,8 @@ import { setStorageItemAsync } from '../../hooks/useStorageState';
 import { supabase } from '../../utils/supabase';
 import AnimatedScreen from '../../components/AnimatedScreen';
 import { Logo } from '~/components/Logo';
+import { GuestHeader } from '~/components/GuestHeader';
+import { GuestFooter } from '~/components/GuestFooter';
 
 const { width } = Dimensions.get('window');
 const isLargeScreen = width > 900;
@@ -150,10 +152,7 @@ export default function SubscriptionSetupPage() {
   return (
     <AnimatedScreen>
       <View style={styles.container}>
-        {/* Header with Logo in top left */}
-        <View style={styles.header}>
-          <Logo style={styles.logo} />
-        </View>
+        <GuestHeader variant="content" />
 
         <ScrollView contentContainerStyle={styles.scrollContent}>
           <View style={styles.mainContent}>
@@ -222,11 +221,8 @@ export default function SubscriptionSetupPage() {
               </TouchableOpacity>
             </Card>
           </View>
+          <GuestFooter />
         </ScrollView>
-
-        <View style={styles.footer}>
-          <Text style={styles.footerText} fontType="regular">(c) {new Date().getFullYear()} Koord. {t('common.allRightsReserved')}</Text>
-        </View>
       </View>
     </AnimatedScreen>
   );
@@ -237,20 +233,10 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: theme.colors.pageBackground,
   },
-  header: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    padding: theme.spacing(4),
-    zIndex: 10,
-  },
-  logo: {
-  },
   scrollContent: {
     flexGrow: 1,
     justifyContent: 'center',
     padding: theme.spacing(3),
-    paddingTop: theme.spacing(12),
     paddingBottom: theme.spacing(10),
   },
   mainContent: {
@@ -401,18 +387,6 @@ const styles = StyleSheet.create({
   cancelButtonText: {
     color: theme.colors.disabledText,
     fontSize: 14,
-  },
-  footer: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    padding: theme.spacing(3),
-    alignItems: 'center',
-  },
-  footerText: {
-    fontSize: 12,
-    color: theme.colors.disabledText,
   },
   fullscreenLoading: {
     flex: 1,

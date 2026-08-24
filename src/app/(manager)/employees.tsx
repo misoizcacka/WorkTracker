@@ -306,12 +306,13 @@ export default function ManagerEmployees() {
   );
 
   return (
-    <AnimatedScreen>
+    <View style={{ flex: 1 }}>
       <SubNavBar items={[
         { label: 'Employees', href: '/(manager)/employees' },
         { label: 'Assignments', href: '/(manager)/worker-assignments' },
         { label: 'Corrections', href: '/(manager)/corrections' },
       ]} />
+      <AnimatedScreen>
       <View style={styles.pageHeader}>
         <Text style={styles.pageTitle} fontType="bold">Team</Text>
         <Text style={styles.pageSubtitle}>Manage your workers and their roles.</Text>
@@ -438,7 +439,8 @@ export default function ManagerEmployees() {
           </View>
         </View>
       </Modal>
-    </AnimatedScreen>
+      </AnimatedScreen>
+    </View>
   );
 }
 

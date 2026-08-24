@@ -14,6 +14,7 @@ import ThemedInput from '~/components/ThemedInput';
 import { Ionicons } from '@expo/vector-icons';
 import { Button } from '~/components/Button';
 import UserAvatar from '~/components/UserAvatar';
+import CrossPlatformDatePicker from '../../components/CrossPlatformDatePicker';
 
 
 const CorrectionsPage = () => {
@@ -30,6 +31,8 @@ const CorrectionsPage = () => {
     const [editingSession, setEditingSession] = useState<WorkSession | null>(null);
     const [editBreak, setEditBreak] = useState('');
     const [editCorrection, setEditCorrection] = useState('');
+    const [editStartTime, setEditStartTime] = useState<Date>(new Date());
+    const [editEndTime, setEditEndTime] = useState<Date | null>(null);
     const [isSaving, setIsSaving] = useState(false);
     const [checkOutLoading, setCheckOutLoading] = useState<string | null>(null);
 
@@ -87,6 +90,8 @@ const CorrectionsPage = () => {
         setEditingSession(session);
         setEditBreak((session.total_break_minutes || 0).toString());
         setEditCorrection((session.correction_minutes || 0).toString());
+        setEditStartTime(new Date(session.start_time));
+        setEditEndTime(session.end_time ? new Date(session.end_time) : null);
         setModalVisible(true);
     };
 
@@ -128,6 +133,8 @@ const CorrectionsPage = () => {
             const { error } = await supabase
                 .from('work_sessions')
                 .update({
+                    start_time: editStartTime.toISOString(),
+                    end_time: editEndTime ? editEndTime.toISOString() : null,
                     total_break_minutes: parseInt(editBreak) || 0,
                     correction_minutes: parseInt(editCorrection) || 0,
                 })
@@ -175,12 +182,13 @@ const CorrectionsPage = () => {
     );
 
     return (
-        <AnimatedScreen>
+        <View style={{ flex: 1 }}>
           <SubNavBar items={[
             { label: 'Employees', href: '/(manager)/employees' },
             { label: 'Assignments', href: '/(manager)/worker-assignments' },
             { label: 'Corrections', href: '/(manager)/corrections' },
           ]} />
+          <AnimatedScreen>
           <View style={styles.pageHeader}>
             <Text style={styles.pageTitle} fontType="bold">Corrections</Text>
             <Text style={styles.pageSubtitle}>Adjust recorded work sessions for your team.</Text>
@@ -313,6 +321,32 @@ const CorrectionsPage = () => {
                             
                             <View style={styles.fieldRow}>
                                 <View style={styles.fieldContainer}>
+                                    <Text style={styles.label} fontType="bold">Start Time</Text>
+                                    <CrossPlatformDatePicker
+                                        date={editStartTime}
+                                        onDateChange={setEditStartTime}
+                                        mode="date"
+                                    />
+                                    <Text style={styles.fieldHint}>Date and time the session started.</Text>
+                                </View>
+                            </View>
+
+                            {editEndTime && (
+                              <View style={styles.fieldRow}>
+                                  <View style={styles.fieldContainer}>
+                                      <Text style={styles.label} fontType="bold">End Time</Text>
+                                      <CrossPlatformDatePicker
+                                          date={editEndTime}
+                                          onDateChange={(d) => setEditEndTime(d)}
+                                          mode="date"
+                                      />
+                                      <Text style={styles.fieldHint}>Date and time the session ended.</Text>
+                                  </View>
+                              </View>
+                            )}
+
+                            <View style={styles.fieldRow}>
+                                <View style={styles.fieldContainer}>
                                     <Text style={styles.label} fontType="bold">Break Minutes</Text>
                                     <ThemedInput
                                         style={styles.modalInput}
@@ -352,7 +386,8 @@ const CorrectionsPage = () => {
                     </View>
                 </Modal>
             </View>
-        </AnimatedScreen>
+          </AnimatedScreen>
+        </View>
     );
 };
 

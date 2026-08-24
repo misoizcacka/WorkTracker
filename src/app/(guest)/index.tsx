@@ -1,249 +1,487 @@
-import React from 'react';
-import { View, StyleSheet, Image, Platform, ScrollView, TouchableOpacity, useWindowDimensions } from 'react-native';
+import React, { useState } from 'react';
+import { View, StyleSheet, Platform, ScrollView, TouchableOpacity, useWindowDimensions } from 'react-native';
 import { Text } from '../../components/Themed';
 import { Link, useRouter } from 'expo-router';
-import { Button } from '../../components/Button';
 import { theme } from '../../theme';
-import AnimatedScreen from '../../components/AnimatedScreen';
 import { Logo } from '~/components/Logo';
+import { GuestHeader } from '~/components/GuestHeader';
+import { GuestFooter } from '~/components/GuestFooter';
 import { Ionicons } from '@expo/vector-icons';
 
-const fallbackImage = require('../../../assets/landing/locationreplay.png');
-
-const FEATURES = [
-  { icon: 'calendar-outline' as const, title: 'Daily Scheduling', description: 'Drag-and-drop assignments for each worker. Every crew member knows exactly where to be and when.' },
-  { icon: 'location-outline' as const, title: 'Live Location', description: 'See who is on-site, who is in transit, and replay the full day on a map — no phone calls needed.' },
-  { icon: 'time-outline' as const, title: 'Automatic Time Tracking', description: 'Work sessions start and end at the job site. Hours are logged without workers touching a timesheet.' },
-  { icon: 'document-text-outline' as const, title: 'Payroll & Reports', description: 'Export accurate payroll summaries and project costing reports in seconds, not hours.' },
-];
-
-const STATS = [
-  { value: 'Real-time', label: 'location updates' },
-  { value: 'GDPR', label: 'compliant' },
-  { value: 'iOS & Android', label: 'worker app' },
-  { value: '10 yr', label: 'record retention' },
-];
-
-const STEPS = [
-  { n: '1', title: 'Create your company', desc: 'Sign up, set up your company, and invite your first workers by email or invite code.' },
-  { n: '2', title: 'Assign the day', desc: 'Each morning, drag workers onto projects and locations. They see their schedule instantly in the app.' },
-  { n: '3', title: 'Track in real time', desc: 'Workers check in on arrival. You see live locations, active sessions, and any issues from your dashboard.' },
-  { n: '4', title: 'Export and pay', desc: 'At month end, pull a payroll report. Hours are already calculated, broken down by worker and project.' },
-];
-
-const MAX_W = 1200;
+const MAX_W = 1160;
 const BREAKPOINT = 900;
+
+// ─── Hoverable card wrapper ───────────────────────────────────────────────────
+const HoverCard: React.FC<{ style?: any; children: React.ReactNode }> = ({ style, children }) => {
+  const [hovered, setHovered] = useState(false);
+  return (
+    <View
+      style={[styles.hoverCard, style, hovered && styles.hoverCardActive]}
+      // @ts-ignore
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+    >
+      {children}
+    </View>
+  );
+};
+
+// ─── Feature bento cards ──────────────────────────────────────────────────────
+
+const CardScheduling = () => (
+  <HoverCard style={{ flex: 2, minWidth: 280 }}>
+    <View style={styles.cardIconRow}>
+      <View style={styles.cardIconWrap}>
+        <Ionicons name="calendar-outline" size={20} color={theme.colors.primary} />
+      </View>
+    </View>
+    <Text style={styles.cardTitle} fontType="bold">Daily scheduling</Text>
+    <Text style={styles.cardDesc} fontType="regular">
+      Drag workers onto job sites each morning. They see the assignment instantly in their app — no WhatsApp groups, no confusion.
+    </Text>
+    {/* Mini visual */}
+    <View style={styles.scheduleMockup}>
+      {['Anna M.', 'Carlos R.', 'Tomas K.'].map((name, i) => (
+        <View key={i} style={styles.scheduleRow}>
+          <View style={[styles.scheduleAvatar, { backgroundColor: i === 0 ? theme.colors.primary : theme.colors.primaryMuted }]} />
+          <View style={{ flex: 1 }}>
+            <View style={[styles.scheduleBar, { width: `${70 + i * 10}%` as any, opacity: i === 0 ? 1 : 0.5 }]} />
+          </View>
+          <View style={[styles.scheduleBadge, i === 0 && styles.scheduleBadgeActive]}>
+            <Text style={[styles.scheduleBadgeText, i === 0 && { color: theme.colors.primary }]} fontType="medium">
+              {i === 0 ? 'On site' : 'Scheduled'}
+            </Text>
+          </View>
+        </View>
+      ))}
+    </View>
+  </HoverCard>
+);
+
+const CardLiveMap = () => (
+  <HoverCard style={{ flex: 1, minWidth: 220 }}>
+    <View style={styles.cardIconRow}>
+      <View style={styles.cardIconWrap}>
+        <Ionicons name="location-outline" size={20} color={theme.colors.primary} />
+      </View>
+    </View>
+    <Text style={styles.cardTitle} fontType="bold">Live map</Text>
+    <Text style={styles.cardDesc} fontType="regular">
+      See every worker in real time. Know who is on-site and who hasn't arrived.
+    </Text>
+    {/* Mini map visual */}
+    <View style={styles.mapMockup}>
+      <View style={styles.mapGrid}>
+        {[...Array(9)].map((_, i) => <View key={i} style={styles.mapGridCell} />)}
+      </View>
+      <View style={[styles.mapDot, { top: '30%', left: '40%' }]}>
+        <Ionicons name="person" size={10} color="#fff" />
+      </View>
+      <View style={[styles.mapDot, styles.mapDotSecondary, { top: '55%', left: '65%' }]}>
+        <Ionicons name="person" size={10} color="#fff" />
+      </View>
+      <View style={[styles.mapDot, styles.mapDotTertiary, { top: '20%', left: '70%' }]}>
+        <Ionicons name="person" size={10} color="#fff" />
+      </View>
+    </View>
+  </HoverCard>
+);
+
+const CardTimeTracking = () => (
+  <HoverCard style={{ flex: 1, minWidth: 220 }}>
+    <View style={styles.cardIconRow}>
+      <View style={styles.cardIconWrap}>
+        <Ionicons name="time-outline" size={20} color={theme.colors.primary} />
+      </View>
+    </View>
+    <Text style={styles.cardTitle} fontType="bold">Automatic time tracking</Text>
+    <Text style={styles.cardDesc} fontType="regular">
+      Sessions start at check-in, close at checkout. Hours log themselves.
+    </Text>
+    {/* Timer visual */}
+    <View style={styles.timerMockup}>
+      <View style={styles.timerRow}>
+        <View style={styles.timerDot} />
+        <Text style={styles.timerLabel} fontType="medium">Active session</Text>
+        <Text style={styles.timerValue} fontType="bold">6h 42m</Text>
+      </View>
+      <View style={styles.timerBar}>
+        <View style={[styles.timerBarFill, { width: '72%' }]} />
+      </View>
+      <Text style={styles.timerSub} fontType="regular">Started 07:18 · Site B</Text>
+    </View>
+  </HoverCard>
+);
+
+const CardPayroll = () => (
+  <HoverCard style={{ flex: 1, minWidth: 220 }}>
+    <View style={styles.cardIconRow}>
+      <View style={styles.cardIconWrap}>
+        <Ionicons name="cash-outline" size={20} color={theme.colors.primary} />
+      </View>
+    </View>
+    <Text style={styles.cardTitle} fontType="bold">One-click payroll</Text>
+    <Text style={styles.cardDesc} fontType="regular">
+      Pull a formatted export at month end. Hours already calculated per worker and project.
+    </Text>
+    {/* Payroll rows */}
+    <View style={styles.payrollMockup}>
+      {[
+        { name: 'Anna M.', hours: '168h', pay: '€2,100' },
+        { name: 'Carlos R.', hours: '152h', pay: '€1,900' },
+        { name: 'Tomas K.', hours: '160h', pay: '€2,000' },
+      ].map((row, i) => (
+        <View key={i} style={styles.payrollRow}>
+          <Text style={styles.payrollName} fontType="medium" numberOfLines={1}>{row.name}</Text>
+          <Text style={styles.payrollHours} fontType="regular">{row.hours}</Text>
+          <Text style={styles.payrollPay} fontType="bold">{row.pay}</Text>
+        </View>
+      ))}
+    </View>
+  </HoverCard>
+);
+
+const CardReplay = () => (
+  <HoverCard style={{ flex: 2, minWidth: 280 }}>
+    <View style={styles.cardIconRow}>
+      <View style={styles.cardIconWrap}>
+        <Ionicons name="play-outline" size={20} color={theme.colors.primary} />
+      </View>
+    </View>
+    <Text style={styles.cardTitle} fontType="bold">Location replay</Text>
+    <Text style={styles.cardDesc} fontType="regular">
+      Rewind any worker's full day on the map. Resolve disputes and verify presence with a timeline slider.
+    </Text>
+    {/* Timeline visual */}
+    <View style={styles.replayMockup}>
+      <View style={styles.replayTrack}>
+        <View style={styles.replayFill} />
+        <View style={styles.replayThumb} />
+      </View>
+      <View style={styles.replayLabels}>
+        <Text style={styles.replayLabel} fontType="regular">07:00</Text>
+        <Text style={styles.replayLabelActive} fontType="bold">13:24</Text>
+        <Text style={styles.replayLabel} fontType="regular">18:00</Text>
+      </View>
+      <View style={styles.replayEvents}>
+        {['Entered Site A', 'Exited Site A', 'Entered Site B'].map((ev, i) => (
+          <View key={i} style={[styles.replayEvent, i === 1 && styles.replayEventActive]}>
+            <View style={[styles.replayEventDot, i === 1 && styles.replayEventDotActive]} />
+            <Text style={[styles.replayEventText, i === 1 && { color: theme.colors.primary }]} fontType={i === 1 ? 'bold' : 'regular'}>{ev}</Text>
+          </View>
+        ))}
+      </View>
+    </View>
+  </HoverCard>
+);
+
+
+// ─── Main page ────────────────────────────────────────────────────────────────
 
 export default function LandingPage() {
   const router = useRouter();
   const { width } = useWindowDimensions();
   const lg = width >= BREAKPOINT;
+  const pad = lg ? theme.spacing(5) : theme.spacing(3);
 
   return (
-    <AnimatedScreen>
-      <View style={s.container}>
-        {/* NAV */}
-        <View style={s.nav}>
-          <View style={s.navInner}>
-            <Link href="/(guest)" asChild>
-              <TouchableOpacity activeOpacity={0.7}><Logo style={{ width: 90, height: 30 }} /></TouchableOpacity>
+    <View style={styles.root}>
+
+      <GuestHeader variant="landing" />
+
+      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+
+        {/* HERO */}
+        <View style={[styles.hero, { paddingHorizontal: pad }]}>
+          {/* Animated background — CSS orbs + grid, web only */}
+          {Platform.OS === 'web' && (
+            // @ts-ignore
+            <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', pointerEvents: 'none', zIndex: 0 }}>
+              <style>{`
+                @keyframes orb1 {
+                  0%, 100% { transform: translate(0px, 0px) scale(1); }
+                  33% { transform: translate(40px, -30px) scale(1.08); }
+                  66% { transform: translate(-20px, 20px) scale(0.95); }
+                }
+                @keyframes orb2 {
+                  0%, 100% { transform: translate(0px, 0px) scale(1); }
+                  33% { transform: translate(-50px, 30px) scale(1.05); }
+                  66% { transform: translate(30px, -20px) scale(0.97); }
+                }
+                @keyframes orb3 {
+                  0%, 100% { transform: translate(0px, 0px) scale(1); }
+                  50% { transform: translate(20px, 40px) scale(1.1); }
+                }
+              `}</style>
+              {/* Dot grid */}
+              <div style={{
+                position: 'absolute', inset: 0,
+                backgroundImage: `radial-gradient(circle, ${theme.colors.primary}22 1px, transparent 1px)`,
+                backgroundSize: '28px 28px',
+                maskImage: 'radial-gradient(ellipse 80% 80% at 50% 0%, black 30%, transparent 100%)',
+                WebkitMaskImage: 'radial-gradient(ellipse 80% 80% at 50% 0%, black 30%, transparent 100%)',
+              }} />
+              {/* Orb 1 — top left */}
+              <div style={{
+                position: 'absolute', top: '-80px', left: '5%',
+                width: 420, height: 420, borderRadius: '50%',
+                background: `radial-gradient(circle, ${theme.colors.primary}28 0%, transparent 70%)`,
+                filter: 'blur(40px)',
+                animation: 'orb1 12s ease-in-out infinite',
+              }} />
+              {/* Orb 2 — top right */}
+              <div style={{
+                position: 'absolute', top: '-60px', right: '10%',
+                width: 360, height: 360, borderRadius: '50%',
+                background: `radial-gradient(circle, ${theme.colors.primary}1A 0%, transparent 70%)`,
+                filter: 'blur(50px)',
+                animation: 'orb2 15s ease-in-out infinite',
+              }} />
+              {/* Orb 3 — center */}
+              <div style={{
+                position: 'absolute', top: '10%', left: '35%',
+                width: 500, height: 300, borderRadius: '50%',
+                background: `radial-gradient(circle, ${theme.colors.primary}12 0%, transparent 70%)`,
+                filter: 'blur(60px)',
+                animation: 'orb3 18s ease-in-out infinite',
+              }} />
+            </div>
+          )}
+          {/* Content above the animation layer */}
+          <View style={{ zIndex: 1, alignItems: 'center', gap: theme.spacing(3), width: '100%' }}>
+          <View style={styles.heroPill}>
+            <View style={styles.heroPillDot} />
+            <Text style={styles.heroPillText} fontType="medium">For construction & field teams</Text>
+          </View>
+          <Text style={[styles.heroTitle, { fontSize: lg ? 72 : 42, lineHeight: lg ? 84 : 52 }]} fontType="bold">
+            Your crew.{'\n'}Your sites.{'\n'}
+            <Text style={[styles.heroTitle, styles.heroTitleAccent, { fontSize: lg ? 72 : 42, lineHeight: lg ? 84 : 52 }]} fontType="bold">
+              Under control.
+            </Text>
+          </Text>
+          <Text style={[styles.heroSub, { maxWidth: lg ? 600 : undefined }]} fontType="regular">
+            Koordinate gives field managers a live view of every worker and every job site — with automatic time tracking, smart scheduling, and one-click payroll.
+          </Text>
+          <View style={[styles.heroCTA, { flexDirection: lg ? 'row' : 'column', alignItems: lg ? 'center' : 'stretch', justifyContent: 'center' }]}>
+            <TouchableOpacity style={styles.heroBtn} onPress={() => router.push('/auth/signup')}>
+              <Text style={styles.heroBtnLabel} fontType="medium">Get Started</Text>
+              <Ionicons name="arrow-forward" size={15} color="#fff" />
+            </TouchableOpacity>
+            <Link href="/(guest)/pricing" asChild>
+              <TouchableOpacity style={styles.heroGhostBtn}>
+                <Text style={styles.heroGhostBtnLabel} fontType="medium">See Pricing</Text>
+              </TouchableOpacity>
             </Link>
-            <View style={s.navLinks}>
-              <Link href="/(guest)/pricing" asChild>
-                <TouchableOpacity><Text style={s.navLink} fontType="medium">Pricing</Text></TouchableOpacity>
-              </Link>
-              <Link href="/(guest)/login" asChild>
-                <TouchableOpacity style={s.navSignIn}>
-                  <Text style={s.navSignInText} fontType="medium">Sign In</Text>
-                </TouchableOpacity>
-              </Link>
-            </View>
+          </View>
+          <Text style={styles.heroNote} fontType="regular">Set up in under 5 minutes</Text>
+          </View>{/* end inner content View */}
+        </View>
+
+        <View style={styles.divider} />
+
+        {/* BENTO FEATURES */}
+        <View style={[styles.section, { paddingHorizontal: pad }]}>
+          <View style={styles.sectionHead}>
+            <Text style={styles.eyebrow} fontType="bold">FEATURES</Text>
+            <Text style={[styles.sectionTitle, { fontSize: lg ? 40 : 28 }]} fontType="bold">
+              Everything a field manager needs.
+            </Text>
+            <Text style={styles.sectionSub} fontType="regular">
+              No integrations. No stitching together four apps. Scheduling, tracking, and payroll — end to end.
+            </Text>
+          </View>
+
+          {/* Row 1 */}
+          <View style={[styles.bentoRow, { flexDirection: lg ? 'row' : 'column' }]}>
+            <CardScheduling />
+            <CardLiveMap />
+          </View>
+
+          {/* Row 2 */}
+          <View style={[styles.bentoRow, { flexDirection: lg ? 'row' : 'column' }]}>
+            <CardTimeTracking />
+            <CardPayroll />
+            <CardReplay />
           </View>
         </View>
 
-        <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
+        <View style={styles.divider} />
 
-          {/* HERO */}
-          <View style={s.heroSection}>
-            <View style={[s.heroInner, { flexDirection: lg ? 'row' : 'column' }]}>
-              <View style={{ flex: lg ? 1 : undefined, width: '100%' }}>
-                <View style={s.badge}>
-                  <Text style={s.badgeText} fontType="bold">FOR CONSTRUCTION & FIELD TEAMS</Text>
-                </View>
-                <Text style={[s.heroTitle, { fontSize: lg ? 56 : 36, lineHeight: lg ? 64 : 44 }]} fontType="bold">
-                  Run your crew.{'\n'}Not your inbox.
-                </Text>
-                <Text style={s.heroSubtitle} fontType="regular">
-                  Koord gives managers a live view of every worker, every job site, and every hour — from one screen.
-                </Text>
-                <View style={[s.heroCTA, { flexDirection: lg ? 'row' : 'column', alignItems: lg ? 'center' : 'stretch' }]}>
-                  <Button title="Get Started" onPress={() => router.push('/auth/signup')} style={s.primaryBtn} />
-                  <TouchableOpacity style={s.ghostBtn} onPress={() => router.push('/(guest)/pricing')}>
-                    <Text style={s.ghostBtnText} fontType="medium">See Plans</Text>
-                    <Ionicons name="arrow-forward" size={16} color={theme.colors.headingText} />
-                  </TouchableOpacity>
-                </View>
-              </View>
-              <View style={[s.heroImageWrap, { flex: lg ? 1 : undefined, width: lg ? undefined : '100%' }]}>
-                <Image source={fallbackImage} style={[s.heroImage, { height: lg ? 420 : 220 }]} resizeMode="cover" />
-              </View>
-            </View>
+        {/* HOW IT WORKS */}
+        <View style={[styles.section, { paddingHorizontal: pad }]}>
+          <View style={styles.sectionHead}>
+            <Text style={styles.eyebrow} fontType="bold">HOW IT WORKS</Text>
+            <Text style={[styles.sectionTitle, { fontSize: lg ? 40 : 28 }]} fontType="bold">Up and running today.</Text>
           </View>
-
-          {/* STATS BAR */}
-          <View style={[s.statsBar, { flexDirection: lg ? 'row' : 'row', flexWrap: lg ? 'nowrap' : 'wrap' }]}>
-            {STATS.map((s2, i) => (
-              <View key={i} style={[
-                s.statItem,
-                lg ? { flex: 1 } : { width: '48%' },
-                lg && i < STATS.length - 1 && s.statDivider,
-              ]}>
-                <Text style={s.statValue} fontType="bold">{s2.value}</Text>
-                <Text style={s.statLabel} fontType="regular">{s2.label}</Text>
-              </View>
+          <View style={[styles.stepsRow, { flexDirection: lg ? 'row' : 'column' }]}>
+            {[
+              { n: '01', title: 'Set up your company', desc: 'Create your account, add projects and locations. Takes under 5 minutes.' },
+              { n: '02', title: 'Invite your workers', desc: 'Send an invite link or code. Workers download the app and are ready.' },
+              { n: '03', title: 'Assign the day', desc: 'Drag workers onto assignments each morning. They see it instantly.' },
+              { n: '04', title: 'Watch it run', desc: 'Live map, live sessions, full visibility without lifting the phone.' },
+            ].map((step, i) => (
+              <HoverCard key={i} style={[styles.stepCard, lg && { flex: 1 }]}>
+                <Text style={styles.stepNum} fontType="bold">{step.n}</Text>
+                <Text style={styles.stepTitle} fontType="bold">{step.title}</Text>
+                <Text style={styles.stepDesc} fontType="regular">{step.desc}</Text>
+              </HoverCard>
             ))}
           </View>
+        </View>
 
-          {/* FEATURES */}
-          <View style={s.featuresSection}>
-            <View style={s.sectionHead}>
-              <Text style={s.eyebrow} fontType="bold">WHAT KOORD DOES</Text>
-              <Text style={[s.sectionTitle, { fontSize: lg ? 36 : 26, lineHeight: lg ? 44 : 34 }]} fontType="bold">
-                Everything a field manager needs.{'\n'}Nothing they don't.
-              </Text>
-            </View>
-            <View style={[s.featuresGrid, { flexDirection: lg ? 'row' : 'column' }]}>
-              {FEATURES.map((f, i) => (
-                <View key={i} style={[s.featureCard, lg && { flex: 1 }]}>
-                  <View style={s.featureIcon}>
-                    <Ionicons name={f.icon} size={22} color={theme.colors.primary} />
-                  </View>
-                  <Text style={s.featureTitle} fontType="bold">{f.title}</Text>
-                  <Text style={s.featureDesc} fontType="regular">{f.description}</Text>
-                </View>
-              ))}
-            </View>
-          </View>
+        <View style={styles.divider} />
 
-          {/* HOW IT WORKS */}
-          <View style={s.howSection}>
-            <View style={s.howInner}>
-              <View style={s.sectionHead}>
-                <Text style={s.eyebrow} fontType="bold">HOW IT WORKS</Text>
-                <Text style={[s.sectionTitle, { fontSize: lg ? 36 : 26, lineHeight: lg ? 44 : 34 }]} fontType="bold">
-                  Up and running in minutes.
-                </Text>
-              </View>
-              <View style={s.steps}>
-                {STEPS.map((step, i) => (
-                  <View key={i} style={s.step}>
-                    <View style={s.stepNumber}>
-                      <Text style={s.stepNumberText} fontType="bold">{step.n}</Text>
-                    </View>
-                    <View style={s.stepContent}>
-                      <Text style={s.stepTitle} fontType="bold">{step.title}</Text>
-                      <Text style={s.stepDesc} fontType="regular">{step.desc}</Text>
-                    </View>
-                  </View>
-                ))}
-              </View>
-            </View>
-          </View>
+        {/* CTA */}
+        <View style={[styles.ctaSection, { paddingHorizontal: pad }]}>
+          <HoverCard style={[styles.ctaBox, { padding: lg ? theme.spacing(8) : theme.spacing(5) }]}>
+            <Text style={[styles.ctaTitle, { fontSize: lg ? 40 : 26 }]} fontType="bold">
+              Ready to get your crew organised?
+            </Text>
+            <Text style={styles.ctaSub} fontType="regular">
+              Join construction companies using Koordinate to run cleaner, faster field operations.
+            </Text>
+            <TouchableOpacity style={styles.ctaBtn} onPress={() => router.push('/auth/signup')}>
+              <Text style={styles.ctaBtnLabel} fontType="medium">Create Your Account</Text>
+              <Ionicons name="arrow-forward" size={16} color={theme.colors.primary} />
+            </TouchableOpacity>
+          </HoverCard>
+        </View>
 
-          {/* CTA BANNER */}
-          <View style={s.ctaSection}>
-            <View style={[s.ctaBanner, { padding: lg ? theme.spacing(8) : theme.spacing(5) }]}>
-              <Text style={[s.ctaTitle, { fontSize: lg ? 36 : 24, lineHeight: lg ? 44 : 32 }]} fontType="bold">
-                Stop managing your crew with WhatsApp and spreadsheets.
-              </Text>
-              <Text style={s.ctaSubtitle} fontType="regular">
-                Join construction companies already using Koord to run cleaner, faster field operations.
-              </Text>
-              <Button title="Create Your Account" onPress={() => router.push('/auth/signup')} style={s.ctaBtn} />
-              <Text style={s.ctaNote} fontType="regular">Set up takes less than 5 minutes.</Text>
-            </View>
-          </View>
+        {/* FOOTER */}
+        <GuestFooter />
 
-          {/* FOOTER */}
-          <View style={s.footer}>
-            <View style={s.footerInner}>
-              <Logo />
-              <Text style={s.footerTagline} fontType="regular">Workforce management for field teams.</Text>
-            </View>
-            <View style={[s.footerBottom, { flexDirection: lg ? 'row' : 'column', alignItems: lg ? 'center' : 'flex-start' }]}>
-              <Text style={s.footerCopy} fontType="regular">© {new Date().getFullYear()} Koord. All rights reserved.</Text>
-              <View style={s.footerLinks}>
-                <Link href="/(guest)/terms" asChild><TouchableOpacity><Text style={s.footerLink} fontType="regular">Terms of Service</Text></TouchableOpacity></Link>
-                <Text style={s.footerDot} fontType="regular">·</Text>
-                <Link href="/(guest)/privacy" asChild><TouchableOpacity><Text style={s.footerLink} fontType="regular">Privacy Policy</Text></TouchableOpacity></Link>
-                <Text style={s.footerDot} fontType="regular">·</Text>
-                <Link href="/(guest)/legal-notice" asChild><TouchableOpacity><Text style={s.footerLink} fontType="regular">Legal Notice</Text></TouchableOpacity></Link>
-              </View>
-            </View>
-          </View>
-
-        </ScrollView>
-      </View>
-    </AnimatedScreen>
+      </ScrollView>
+    </View>
   );
 }
 
-const s = StyleSheet.create({
-  container: { flex: 1, backgroundColor: theme.colors.pageBackground },
-  nav: { backgroundColor: theme.colors.cardBackground, borderBottomWidth: 1, borderBottomColor: theme.colors.borderColor, zIndex: 10 },
-  navInner: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: theme.spacing(4), paddingVertical: theme.spacing(2.5), maxWidth: MAX_W, width: '100%', alignSelf: 'center' },
-  navLinks: { flexDirection: 'row', alignItems: 'center', gap: theme.spacing(3) },
-  navLink: { fontSize: 15, color: theme.colors.bodyText },
-  navSignIn: { borderWidth: 1, borderColor: theme.colors.borderColor, paddingHorizontal: theme.spacing(2.5), paddingVertical: theme.spacing(1.25), borderRadius: theme.radius.md },
-  navSignInText: { fontSize: 14, color: theme.colors.headingText },
+// ─── Styles ───────────────────────────────────────────────────────────────────
+
+const styles = StyleSheet.create({
+  root: { flex: 1, backgroundColor: theme.colors.pageBackground },
+
+  // NAV
   scroll: { flexGrow: 1 },
-  heroSection: { backgroundColor: theme.colors.cardBackground, borderBottomWidth: 1, borderBottomColor: theme.colors.borderColor, paddingVertical: theme.spacing(8), paddingHorizontal: theme.spacing(4) },
-  heroInner: { maxWidth: MAX_W, width: '100%', alignSelf: 'center', alignItems: 'center', gap: theme.spacing(6) },
-  badge: { alignSelf: 'flex-start', backgroundColor: theme.colors.primaryMuted, borderRadius: theme.radius.pill, paddingHorizontal: theme.spacing(1.5), paddingVertical: theme.spacing(0.75), marginBottom: theme.spacing(2.5) },
-  badgeText: { fontSize: 10, letterSpacing: 1.2, color: theme.colors.primary },
-  heroTitle: { color: theme.colors.headingText, marginBottom: theme.spacing(2.5) },
-  heroSubtitle: { fontSize: 17, lineHeight: 28, color: theme.colors.bodyText, marginBottom: theme.spacing(4) },
-  heroCTA: { gap: theme.spacing(2) },
-  primaryBtn: { height: 52, paddingHorizontal: theme.spacing(4), borderRadius: theme.radius.lg },
-  ghostBtn: { height: 52, paddingHorizontal: theme.spacing(3), borderRadius: theme.radius.lg, borderWidth: 1, borderColor: theme.colors.borderColor, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: theme.spacing(1) },
-  ghostBtnText: { fontSize: 15, color: theme.colors.headingText },
-  heroImageWrap: { borderRadius: theme.radius.xl, overflow: 'hidden', borderWidth: 1, borderColor: theme.colors.borderColor },
-  heroImage: { width: '100%' },
-  statsBar: { backgroundColor: theme.colors.headingText, paddingVertical: theme.spacing(3), paddingHorizontal: theme.spacing(2), justifyContent: 'center' },
-  statItem: { alignItems: 'center', paddingVertical: theme.spacing(1.5), paddingHorizontal: theme.spacing(1) },
-  statDivider: { borderRightWidth: 1, borderRightColor: 'rgba(255,255,255,0.15)' },
-  statValue: { fontSize: 18, color: '#ffffff', marginBottom: 2 },
-  statLabel: { fontSize: 11, color: 'rgba(255,255,255,0.55)', textAlign: 'center' },
-  featuresSection: { paddingVertical: theme.spacing(8), paddingHorizontal: theme.spacing(4), maxWidth: MAX_W, width: '100%', alignSelf: 'center' },
-  sectionHead: { alignItems: 'center', marginBottom: theme.spacing(5) },
-  eyebrow: { fontSize: 11, letterSpacing: 1.4, color: theme.colors.primary, marginBottom: theme.spacing(1.5) },
+  divider: { height: 1, backgroundColor: theme.colors.borderColor },
+
+  // HERO
+  hero: {
+    paddingTop: theme.spacing(16),
+    paddingBottom: theme.spacing(16),
+    width: '100%',
+    alignItems: 'center',
+    gap: theme.spacing(3),
+    position: 'relative',
+    overflow: 'hidden',
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.borderColor,
+    ...Platform.select({
+      web: {
+        background: `radial-gradient(ellipse 80% 50% at 50% 0%, ${theme.colors.primaryMuted}CC 0%, ${theme.colors.pageBackground} 70%)`,
+      } as any,
+    }),
+  },
+  heroPill: { flexDirection: 'row', alignItems: 'center', gap: theme.spacing(1), backgroundColor: theme.colors.primaryMuted, borderRadius: theme.radius.pill, paddingHorizontal: theme.spacing(1.5), paddingVertical: theme.spacing(0.75), borderWidth: 1, borderColor: theme.colors.primary + '30' },
+  heroPillDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: theme.colors.primary },
+  heroPillText: { fontSize: 11, color: theme.colors.primary, letterSpacing: 0.5 },
+  heroTitle: { color: theme.colors.headingText, textAlign: 'center' },
+  heroTitleAccent: { color: theme.colors.primary },
+  heroSub: { fontSize: 18, lineHeight: 30, color: theme.colors.bodyText, textAlign: 'center' },
+  heroCTA: { gap: theme.spacing(1.5), width: '100%' },
+  heroBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: theme.spacing(1), backgroundColor: theme.colors.primary, paddingHorizontal: theme.spacing(4), paddingVertical: theme.spacing(1.75), borderRadius: theme.radius.lg },
+  heroBtnLabel: { fontSize: 15, color: '#fff' },
+  heroGhostBtn: { paddingHorizontal: theme.spacing(4), paddingVertical: theme.spacing(1.75), borderRadius: theme.radius.lg, borderWidth: 1, borderColor: theme.colors.borderColor, alignItems: 'center', justifyContent: 'center' },
+  heroGhostBtnLabel: { fontSize: 15, color: theme.colors.headingText },
+  heroNote: { fontSize: 12, color: theme.colors.disabledText },
+
+  // SECTION
+  section: { paddingVertical: theme.spacing(10), maxWidth: MAX_W, width: '100%', alignSelf: 'center' },
+  sectionHead: { alignItems: 'center', marginBottom: theme.spacing(6), gap: theme.spacing(1.5) },
+  eyebrow: { fontSize: 11, letterSpacing: 1.5, color: theme.colors.primary },
   sectionTitle: { color: theme.colors.headingText, textAlign: 'center' },
-  featuresGrid: { gap: theme.spacing(2) },
-  featureCard: { backgroundColor: theme.colors.cardBackground, borderRadius: theme.radius.lg, borderWidth: 1, borderColor: theme.colors.borderColor, padding: theme.spacing(3), gap: theme.spacing(1.5) },
-  featureIcon: { width: 44, height: 44, borderRadius: theme.radius.md, backgroundColor: theme.colors.primaryMuted, alignItems: 'center', justifyContent: 'center', marginBottom: theme.spacing(0.5) },
-  featureTitle: { fontSize: 17, color: theme.colors.headingText },
-  featureDesc: { fontSize: 14, lineHeight: 22, color: theme.colors.bodyText },
-  howSection: { backgroundColor: theme.colors.cardBackground, borderTopWidth: 1, borderBottomWidth: 1, borderColor: theme.colors.borderColor, paddingVertical: theme.spacing(8), paddingHorizontal: theme.spacing(4) },
-  howInner: { maxWidth: MAX_W, width: '100%', alignSelf: 'center' },
-  steps: { gap: theme.spacing(4), maxWidth: 680, alignSelf: 'center', width: '100%' },
-  step: { flexDirection: 'row', gap: theme.spacing(3), alignItems: 'flex-start' },
-  stepNumber: { width: 40, height: 40, borderRadius: 20, backgroundColor: theme.colors.headingText, alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: 2 },
-  stepNumberText: { color: '#ffffff', fontSize: 16 },
-  stepContent: { flex: 1 },
-  stepTitle: { fontSize: 17, color: theme.colors.headingText, marginBottom: theme.spacing(0.75) },
-  stepDesc: { fontSize: 15, lineHeight: 24, color: theme.colors.bodyText },
-  ctaSection: { paddingVertical: theme.spacing(8), paddingHorizontal: theme.spacing(4), maxWidth: MAX_W, width: '100%', alignSelf: 'center' },
-  ctaBanner: { backgroundColor: theme.colors.headingText, borderRadius: theme.radius.xl, alignItems: 'center', gap: theme.spacing(2) },
-  ctaTitle: { color: '#ffffff', textAlign: 'center', maxWidth: 640 },
-  ctaSubtitle: { fontSize: 15, color: 'rgba(255,255,255,0.65)', textAlign: 'center', maxWidth: 520, lineHeight: 24 },
-  ctaBtn: { backgroundColor: '#ffffff', height: 52, paddingHorizontal: theme.spacing(5), borderRadius: theme.radius.lg, marginTop: theme.spacing(1) },
-  ctaNote: { fontSize: 12, color: 'rgba(255,255,255,0.45)' },
-  footer: { borderTopWidth: 1, borderTopColor: theme.colors.borderColor, paddingVertical: theme.spacing(5), paddingHorizontal: theme.spacing(4) },
-  footerInner: { maxWidth: MAX_W, width: '100%', alignSelf: 'center', alignItems: 'flex-start', gap: theme.spacing(1), marginBottom: theme.spacing(4) },
-  footerTagline: { fontSize: 13, color: theme.colors.disabledText },
-  footerBottom: { maxWidth: MAX_W, width: '100%', alignSelf: 'center', justifyContent: 'space-between', gap: theme.spacing(1.5) },
-  footerCopy: { fontSize: 12, color: theme.colors.disabledText },
-  footerLinks: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: theme.spacing(1.5) },
-  footerLink: { fontSize: 12, color: theme.colors.primary },
-  footerDot: { fontSize: 12, color: theme.colors.disabledText },
+  sectionSub: { fontSize: 16, lineHeight: 26, color: theme.colors.bodyText, textAlign: 'center', maxWidth: 560 },
+
+  // BENTO
+  bentoRow: { gap: theme.spacing(2), marginBottom: theme.spacing(2) },
+  hoverCard: {
+    backgroundColor: theme.colors.cardBackground,
+    borderRadius: theme.radius.xl,
+    borderWidth: 1,
+    borderColor: theme.colors.borderColor,
+    padding: theme.spacing(3),
+    gap: theme.spacing(1.5),
+    overflow: 'hidden',
+  },
+  hoverCardActive: {
+    borderColor: theme.colors.primary,
+    ...Platform.select({ web: { boxShadow: '0 0 0 1px ' + theme.colors.primary + '40, 0 8px 24px rgba(0,0,0,0.08)' } as any }),
+  },
+  cardIconRow: { marginBottom: theme.spacing(0.5) },
+  cardIconWrap: { width: 40, height: 40, borderRadius: theme.radius.md, backgroundColor: theme.colors.primaryMuted, alignItems: 'center', justifyContent: 'center' },
+  cardTitle: { fontSize: 18, color: theme.colors.headingText },
+  cardDesc: { fontSize: 14, lineHeight: 22, color: theme.colors.bodyText },
+
+  // SCHEDULING MOCK
+  scheduleMockup: { marginTop: theme.spacing(2), gap: theme.spacing(1.5), backgroundColor: theme.colors.pageBackground, borderRadius: theme.radius.md, padding: theme.spacing(2) },
+  scheduleRow: { flexDirection: 'row', alignItems: 'center', gap: theme.spacing(1.5) },
+  scheduleAvatar: { width: 28, height: 28, borderRadius: 14 },
+  scheduleBar: { height: 8, backgroundColor: theme.colors.primary, borderRadius: 4, opacity: 0.3 },
+  scheduleBadge: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: theme.radius.pill, backgroundColor: theme.colors.pageBackground, borderWidth: 1, borderColor: theme.colors.borderColor },
+  scheduleBadgeActive: { backgroundColor: theme.colors.primaryMuted, borderColor: theme.colors.primary },
+  scheduleBadgeText: { fontSize: 10, color: theme.colors.disabledText },
+
+  // MAP MOCK
+  mapMockup: { marginTop: theme.spacing(2), height: 120, backgroundColor: '#E8F0F8', borderRadius: theme.radius.md, overflow: 'hidden', position: 'relative' },
+  mapGrid: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, flexDirection: 'row', flexWrap: 'wrap' },
+  mapGridCell: { width: '33%', height: '33%', borderWidth: 0.5, borderColor: 'rgba(0,0,0,0.05)' },
+  mapDot: { position: 'absolute', width: 24, height: 24, borderRadius: 12, backgroundColor: theme.colors.primary, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: '#fff' },
+  mapDotSecondary: { backgroundColor: theme.colors.secondary },
+  mapDotTertiary: { backgroundColor: theme.colors.success },
+
+  // TIMER MOCK
+  timerMockup: { marginTop: theme.spacing(2), backgroundColor: theme.colors.pageBackground, borderRadius: theme.radius.md, padding: theme.spacing(2), gap: theme.spacing(1) },
+  timerRow: { flexDirection: 'row', alignItems: 'center', gap: theme.spacing(1) },
+  timerDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: theme.colors.success },
+  timerLabel: { flex: 1, fontSize: 12, color: theme.colors.bodyText },
+  timerValue: { fontSize: 18, color: theme.colors.headingText },
+  timerBar: { height: 6, backgroundColor: theme.colors.borderColor, borderRadius: 3, overflow: 'hidden' },
+  timerBarFill: { height: '100%', backgroundColor: theme.colors.primary, borderRadius: 3 },
+  timerSub: { fontSize: 11, color: theme.colors.disabledText },
+
+  // PAYROLL MOCK
+  payrollMockup: { marginTop: theme.spacing(2), backgroundColor: theme.colors.pageBackground, borderRadius: theme.radius.md, padding: theme.spacing(1.5), gap: theme.spacing(1) },
+  payrollRow: { flexDirection: 'row', alignItems: 'center', gap: theme.spacing(1) },
+  payrollName: { flex: 1, fontSize: 12, color: theme.colors.headingText },
+  payrollHours: { fontSize: 11, color: theme.colors.bodyText, width: 36 },
+  payrollPay: { fontSize: 13, color: theme.colors.success, width: 52, textAlign: 'right' },
+
+  // REPLAY MOCK
+  replayMockup: { marginTop: theme.spacing(2), backgroundColor: theme.colors.pageBackground, borderRadius: theme.radius.md, padding: theme.spacing(2), gap: theme.spacing(1.5) },
+  replayTrack: { height: 6, backgroundColor: theme.colors.borderColor, borderRadius: 3, overflow: 'hidden', position: 'relative' },
+  replayFill: { position: 'absolute', left: 0, top: 0, bottom: 0, width: '55%', backgroundColor: theme.colors.primary, borderRadius: 3 },
+  replayThumb: { position: 'absolute', top: -5, left: '54%', width: 16, height: 16, borderRadius: 8, backgroundColor: theme.colors.primary, borderWidth: 2, borderColor: '#fff' },
+  replayLabels: { flexDirection: 'row', justifyContent: 'space-between' },
+  replayLabel: { fontSize: 10, color: theme.colors.disabledText },
+  replayLabelActive: { fontSize: 10, color: theme.colors.primary },
+  replayEvents: { gap: theme.spacing(0.75) },
+  replayEvent: { flexDirection: 'row', alignItems: 'center', gap: theme.spacing(1) },
+  replayEventActive: {},
+  replayEventDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: theme.colors.borderColor },
+  replayEventDotActive: { backgroundColor: theme.colors.primary },
+  replayEventText: { fontSize: 11, color: theme.colors.bodyText },
+
+  // STEPS
+  stepsRow: { gap: theme.spacing(2) },
+  stepCard: { padding: theme.spacing(3), gap: theme.spacing(1) },
+  stepNum: { fontSize: 32, color: theme.colors.primary, lineHeight: 40 },
+  stepTitle: { fontSize: 16, color: theme.colors.headingText },
+  stepDesc: { fontSize: 14, lineHeight: 22, color: theme.colors.bodyText },
+
+  // CTA
+  ctaSection: { paddingVertical: theme.spacing(10), maxWidth: MAX_W, width: '100%', alignSelf: 'center' },
+  ctaBox: { alignItems: 'center', gap: theme.spacing(2) },
+  ctaTitle: { color: theme.colors.headingText, textAlign: 'center', maxWidth: 580 },
+  ctaSub: { fontSize: 16, color: theme.colors.bodyText, textAlign: 'center', maxWidth: 480, lineHeight: 26 },
+  ctaBtn: { flexDirection: 'row', alignItems: 'center', gap: theme.spacing(1), backgroundColor: theme.colors.primaryMuted, paddingHorizontal: theme.spacing(4), paddingVertical: theme.spacing(1.75), borderRadius: theme.radius.lg, borderWidth: 1, borderColor: theme.colors.primary, marginTop: theme.spacing(1) },
+  ctaBtnLabel: { fontSize: 15, color: theme.colors.primary },
 });

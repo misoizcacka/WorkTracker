@@ -319,7 +319,7 @@ const PayrollReport = () => {
     const wb = XLSX.utils.book_new();
 
     const summaryRows = [
-      ['KOORD OFFICIAL PAYROLL REPORT'],
+      ['KOORDINATE OFFICIAL PAYROLL REPORT'],
       ['Organization', reportCompanyName],
       ['Reporting Period', periodLabel],
       ['Generated On', generatedAt],
@@ -385,7 +385,7 @@ const PayrollReport = () => {
 
     applyWorkbookStyling(summarySheet, payrollSheet, definitionsSheet);
 
-    const fileName = `Koord_Payroll_Report_${period.format('MMMM_YYYY')}`;
+    const fileName = `Koordinate_Payroll_Report_${period.format('MMMM_YYYY')}`;
     await exportWorkbookToExcel(wb, fileName);
   };
 

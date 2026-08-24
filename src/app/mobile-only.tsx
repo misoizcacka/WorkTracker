@@ -95,7 +95,7 @@ export default function MobileOnlyScreen() {
               </View>
 
               <Text style={styles.helperText} fontType="regular">
-                Zoom back out or click the Koord logo to return to the default page.
+                Zoom back out or click the Koordinate logo to return to the default page.
               </Text>
             </View>
           )}

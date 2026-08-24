@@ -285,7 +285,7 @@ export function InviteAcceptanceScreen({ token }: InviteAcceptanceScreenProps) {
             {formError && <Text style={styles.formErrorText} fontType="regular">{formError}</Text>}
 
             <Text style={styles.legalConsent} fontType="regular">
-              By joining, you agree to Koord's{' '}
+              By joining, you agree to Koordinate's{' '}
               <Link href="/(guest)/terms" asChild>
                 <Text style={styles.legalLink} fontType="regular">Terms of Service</Text>
               </Link>

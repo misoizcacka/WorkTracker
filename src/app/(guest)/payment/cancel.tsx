@@ -6,7 +6,8 @@ import { Card } from '../../../components/Card';
 import { theme } from '../../../theme';
 import AnimatedScreen from '../../../components/AnimatedScreen';
 import { Text } from '../../../components/Themed';
-import { Logo } from '~/components/Logo';
+import { GuestHeader } from '~/components/GuestHeader';
+import { GuestFooter } from '~/components/GuestFooter';
 
 const { width } = Dimensions.get('window');
 
@@ -16,10 +17,7 @@ export default function PaymentCancel() {
   return (
     <AnimatedScreen>
       <View style={styles.container}>
-        {/* Header with Logo in top left */}
-        <View style={styles.header}>
-          <Logo style={styles.logo} />
-        </View>
+        <GuestHeader variant="content" />
 
         <ScrollView contentContainerStyle={styles.scrollContent}>
           <View style={styles.mainContent}>
@@ -38,11 +36,8 @@ export default function PaymentCancel() {
                 />
             </Card>
           </View>
+          <GuestFooter />
         </ScrollView>
-
-        <View style={styles.footer}>
-            <Text style={styles.footerText} fontType="regular">© {new Date().getFullYear()} Koord. All Rights Reserved</Text>
-        </View>
       </View>
     </AnimatedScreen>
   );
@@ -53,20 +48,10 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: theme.colors.pageBackground,
   },
-  header: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    padding: theme.spacing(4),
-    zIndex: 10,
-  },
-  logo: {
-  },
   scrollContent: {
     flexGrow: 1,
     justifyContent: 'center',
     padding: theme.spacing(3),
-    paddingTop: theme.spacing(12),
     paddingBottom: theme.spacing(8),
   },
   mainContent: {
@@ -127,17 +112,5 @@ const styles = StyleSheet.create({
     width: '100%',
     height: 52,
     justifyContent: 'center',
-  },
-  footer: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    padding: theme.spacing(3),
-    alignItems: 'center',
-  },
-  footerText: {
-    fontSize: 12,
-    color: theme.colors.disabledText,
   },
 });

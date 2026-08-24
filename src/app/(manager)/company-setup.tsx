@@ -161,7 +161,7 @@ export default function CompanySetup() {
                 <Text style={styles.label} fontType="medium">Company Name *</Text>
                 <TextInput
                   style={styles.input}
-                  placeholder="e.g. Koord Tech"
+                  placeholder="e.g. Koordinate Tech"
                   value={companyName}
                   onChangeText={setCompanyName}
                   autoCapitalize="words"
@@ -211,7 +211,7 @@ export default function CompanySetup() {
         </ScrollView>
 
         <View style={styles.footer}>
-          <Text style={styles.footerText} fontType="regular">© {new Date().getFullYear()} Koord. All Rights Reserved</Text>
+          <Text style={styles.footerText} fontType="regular">© {new Date().getFullYear()} Koordinate. All Rights Reserved</Text>
         </View>
       </View>
     </AnimatedScreen>

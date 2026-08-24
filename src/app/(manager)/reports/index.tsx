@@ -13,24 +13,28 @@ const reports = [
     description: 'Drill down into daily breakdowns of employee work hours.',
     icon: 'time-outline',
     path: 'employee-hours-report',
+    comingSoon: false,
   },
   {
     title: 'Payroll Summary',
     description: 'View and export payable hours for each employee for the month.',
     icon: 'cash-outline',
     path: 'payroll-report',
+    comingSoon: false,
   },
   {
     title: 'Project Labor Report',
     description: 'Analyze labor costs and hours for each project.',
     icon: 'briefcase-outline',
     path: 'project-labor-report',
+    comingSoon: true,
   },
   {
     title: 'Daily Detailed Report',
     description: "Get a detailed, chronological breakdown of each worker's day.",
     icon: 'analytics-outline',
     path: 'daily-detailed-report',
+    comingSoon: false,
   },
 ];
 
@@ -54,10 +58,15 @@ export default function ReportsHub() {
             <View style={styles.grid}>
             {reports.map((report) => (
                 <View key={report.title} style={[styles.cardContainer, isLargeScreen ? styles.cardContainerLarge : styles.cardContainerSmall]}>
-                <TouchableOpacity onPress={() => handlePress(report.path)}>
-                    <Card style={styles.reportCard}>
-                    <Ionicons name={report.icon as any} size={32} color={theme.colors.primary} style={styles.icon} />
-                    <Text style={styles.cardTitle} fontType="bold">{report.title}</Text>
+                <TouchableOpacity onPress={() => !report.comingSoon && handlePress(report.path)} disabled={report.comingSoon} activeOpacity={report.comingSoon ? 1 : 0.7}>
+                    <Card style={[styles.reportCard, report.comingSoon && styles.reportCardDisabled]}>
+                    {report.comingSoon && (
+                      <View style={styles.comingSoonBadge}>
+                        <Text style={styles.comingSoonText} fontType="bold">Coming Soon</Text>
+                      </View>
+                    )}
+                    <Ionicons name={report.icon as any} size={32} color={report.comingSoon ? theme.colors.disabledText : theme.colors.primary} style={styles.icon} />
+                    <Text style={[styles.cardTitle, report.comingSoon && { color: theme.colors.disabledText }]} fontType="bold">{report.title}</Text>
                     <Text style={styles.cardDescription}>{report.description}</Text>
                     </Card>
                 </TouchableOpacity>
@@ -126,6 +135,26 @@ const styles = StyleSheet.create({
         height: '100%',
         borderWidth: 1,
         borderColor: theme.colors.borderColor,
+        position: 'relative',
+        overflow: 'hidden',
+    },
+    reportCardDisabled: {
+        opacity: 0.6,
+        backgroundColor: theme.colors.pageBackground,
+    },
+    comingSoonBadge: {
+        position: 'absolute',
+        top: theme.spacing(1.5),
+        right: theme.spacing(1.5),
+        backgroundColor: theme.colors.primaryMuted,
+        borderRadius: theme.radius.pill,
+        paddingHorizontal: 8,
+        paddingVertical: 3,
+    },
+    comingSoonText: {
+        fontSize: 10,
+        color: theme.colors.primary,
+        letterSpacing: 0.5,
     },
     icon: {
         marginBottom: theme.spacing(1.5),

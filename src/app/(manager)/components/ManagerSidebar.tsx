@@ -36,7 +36,7 @@ const SidebarItem = ({ icon, label, href, isActive, isExpanded }: SidebarItemPro
         <Ionicons 
           name={icon} 
           size={22} 
-          color={isActive ? "#2563EB" : (isHovered ? "#1F2937" : theme.colors.iconColor)} 
+          color={isActive ? theme.colors.primary : (isHovered ? theme.colors.headingText : theme.colors.iconColor)} 
         />
         {isExpanded && (
           <Text 
@@ -144,7 +144,7 @@ export const ManagerSidebar = () => {
               </Animated.View>
               {/* Full logo left-aligned with nav items — fades in on expand */}
               <Animated.View style={[styles.logoFull, { opacity: fullOpacity }]}>
-                <Logo variant="full" size="small" />
+                <Logo variant="full" size="medium" />
               </Animated.View>
             </Pressable>
           </Link>
@@ -177,7 +177,7 @@ export const ManagerSidebar = () => {
             <Ionicons 
               name="log-out-outline" 
               size={22} 
-              color={isSignOutHovered ? "#1F2937" : theme.colors.iconColor} 
+              color={isSignOutHovered ? theme.colors.headingText : theme.colors.iconColor} 
             />
             {isExpanded && (
               <Text 
@@ -248,7 +248,7 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.primaryMuted,
   },
   hoveredItem: {
-    backgroundColor: "#F3F4F6",
+    backgroundColor: theme.colors.pageBackground,
   },
   label: {
     marginLeft: 12,
@@ -258,11 +258,11 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   activeLabel: {
-    color: "#2563EB",
+    color: theme.colors.primary,
     fontWeight: '600',
   },
   hoveredLabel: {
-    color: "#1F2937",
+    color: theme.colors.headingText,
   },
   bottomSection: {
     paddingTop: 16,

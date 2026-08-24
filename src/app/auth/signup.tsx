@@ -9,6 +9,7 @@ import { Text } from '../../components/Themed';
 import { theme } from '../../theme';
 import AnimatedScreen from '../../components/AnimatedScreen';
 import { Logo } from '~/components/Logo';
+import { GuestHeader } from '~/components/GuestHeader';
 import { supabase } from '../../utils/supabase';
 import { useTranslation } from 'react-i18next';
 
@@ -99,14 +100,7 @@ export default function Signup() {
   return (
     <AnimatedScreen>
       <View style={styles.container}>
-        {/* Logo Header */}
-        <View style={styles.header}>
-          <Link href="/(guest)" asChild>
-            <TouchableOpacity activeOpacity={0.7}>
-              <Logo style={styles.logo} />
-            </TouchableOpacity>
-          </Link>
-        </View>
+        <GuestHeader variant="auth" authAction="signin" />
 
         <ScrollView contentContainerStyle={styles.scrollContent}>
           <View style={styles.mainLayout}>
@@ -118,7 +112,7 @@ export default function Signup() {
                     You're one step away from running a tighter operation.
                   </Text>
                   <Text style={styles.reassuranceSubtitle} fontType="regular">
-                    Koord gives you a live view of your crew, automatic time tracking, and payroll-ready reports — without the spreadsheets.
+                  Koordinate gives you a live view of your crew, automatic time tracking, and payroll-ready reports — without the spreadsheets.
                   </Text>
 
                   <View style={styles.trustList}>
@@ -245,19 +239,9 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: theme.colors.pageBackground,
   },
-  header: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    padding: theme.spacing(4),
-    zIndex: 10,
-  },
-  logo: {
-  },
   scrollContent: {
     flexGrow: 1,
     padding: theme.spacing(3),
-    paddingTop: theme.spacing(10),
     justifyContent: 'center',
   },
   mainLayout: {

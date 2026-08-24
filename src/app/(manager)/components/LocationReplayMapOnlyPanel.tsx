@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { View, StyleSheet, ActivityIndicator } from 'react-native';
 import { Text } from '~/components/Themed';
 import Slider from '@react-native-community/slider';
@@ -114,7 +114,7 @@ const LocationReplayMapOnlyPanel = ({ workerId, date }: LocationReplayMapOnlyPan
             setMapRegion({
                 latitude: data[0].latitude,
                 longitude: data[0].longitude,
-                latitudeDelta: 0.0922,
+                latitudeDelta: 0.015,
                 longitudeDelta: 0.0421,
             });
             // Update kilometers in summary after events are fetched - not needed here as no summary displayed
@@ -186,7 +186,7 @@ const LocationReplayMapOnlyPanel = ({ workerId, date }: LocationReplayMapOnlyPan
         setMapRegion({
             latitude: inferredLocation.latitude,
             longitude: inferredLocation.longitude,
-            latitudeDelta: 0.0922,
+            latitudeDelta: 0.015,
             longitudeDelta: 0.0421,
         });
         setMapZoom(12);
@@ -229,12 +229,27 @@ const LocationReplayMapOnlyPanel = ({ workerId, date }: LocationReplayMapOnlyPan
       setMapRegion(prevRegion => ({
         latitude: inferredLocation.latitude,
         longitude: inferredLocation.longitude,
-        latitudeDelta: prevRegion?.latitudeDelta || 0.0922,
+        latitudeDelta: prevRegion?.latitudeDelta || 0.015,
         longitudeDelta: prevRegion?.longitudeDelta || 0.0421,
         zoom: mapZoom ?? 12,
       }));
     }
   }, [inferredLocation, mapZoom]);
+
+  const trailCoordinates = useMemo(() => {
+    if (!inferredLocation || events.length === 0) return [];
+    const idx = events.findIndex(e => e.event_id === inferredLocation.event_id);
+    const sliceEnd = idx >= 0 ? idx + 1 : events.length;
+    return events.slice(0, sliceEnd).map(e => ({ latitude: e.latitude, longitude: e.longitude }));
+  }, [events, inferredLocation]);
+
+  const eventLabel = useMemo(() => {
+    if (!inferredLocation) return null;
+    const name = inferredLocation.ref_name;
+    if (inferredLocation.event_type === 'enter_geofence') return `Entered ${name}`;
+    if (inferredLocation.event_type === 'exit_geofence') return `Left ${name}`;
+    return name || null;
+  }, [inferredLocation]);
 
   if (!workerId || !date) {
     return (
@@ -272,6 +287,7 @@ const LocationReplayMapOnlyPanel = ({ workerId, date }: LocationReplayMapOnlyPan
                               onWebZoomChange={setMapZoom}
                               disableWorkerHover
                               disableWorkerPopup
+                              polylineCoordinates={trailCoordinates}
                           >
                           </MapView>
                       </View>
@@ -286,13 +302,15 @@ const LocationReplayMapOnlyPanel = ({ workerId, date }: LocationReplayMapOnlyPan
                                       hour12: false,
                                   }).format(new Date(temporarySelectedMapTime)) : 'N/A'}
                               </Text>
+                              {eventLabel && (
+                                  <Text style={styles.eventLabel} fontType="medium">{eventLabel}</Text>
+                              )}
                               <Slider
                                   style={styles.timelineSlider}
                                   minimumValue={sliderMinTime}
                                   maximumValue={sliderMaxTime}
                                   value={temporarySelectedMapTime || sliderMinTime} // Use temporary value
-                                  onValueChange={setTemporarySelectedMapTime} // Update temporary value continuously
-                                  onSlidingComplete={setSelectedMapTime} // Update final value on release
+                                  onValueChange={(val) => { setTemporarySelectedMapTime(val); setSelectedMapTime(val); }}
                                   minimumTrackTintColor={theme.colors.primary}
                                   maximumTrackTintColor={theme.colors.borderColor}
                                   thumbTintColor={theme.colors.primary}
@@ -348,6 +366,12 @@ const styles = StyleSheet.create({
     timeLabel: {
         fontSize: 12,
         color: theme.colors.bodyText,
+    },
+    eventLabel: {
+        fontSize: 13,
+        color: theme.colors.primary,
+        textAlign: 'center',
+        marginBottom: theme.spacing(1),
     },
 });
 

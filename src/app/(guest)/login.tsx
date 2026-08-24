@@ -8,6 +8,8 @@ import { Text } from '../../components/Themed';
 import { theme } from '../../theme';
 import AnimatedScreen from '../../components/AnimatedScreen';
 import { Logo } from '~/components/Logo';
+import { GuestHeader } from '~/components/GuestHeader';
+import { GuestFooter } from '~/components/GuestFooter';
 import { supabase } from '../../utils/supabase';
 import { useSession } from '../../context/AuthContext';
 import { useTranslation } from 'react-i18next';
@@ -113,7 +115,7 @@ export default function Login() {
       <AnimatedScreen>
         <View style={styles.container}>
           <View style={styles.header}>
-            <Logo style={styles.logo} />
+            <Logo />
           </View>
 
           <ScrollView contentContainerStyle={styles.scrollContent}>
@@ -161,18 +163,7 @@ export default function Login() {
   return (
     <AnimatedScreen>
       <View style={styles.container}>
-        {/* Header with Logo in top left */}
-        <View style={styles.header}>
-          {Platform.OS === 'web' ? (
-            <Link href="/(guest)" asChild>
-              <TouchableOpacity activeOpacity={0.7}>
-                <Logo style={styles.logo} />
-              </TouchableOpacity>
-            </Link>
-          ) : (
-            <Logo style={styles.logo} />
-          )}
-        </View>
+        <GuestHeader variant="auth" authAction="signup" />
 
         <ScrollView contentContainerStyle={styles.scrollContent}>
           <Card style={styles.loginCard}>
@@ -274,33 +265,24 @@ export default function Login() {
               textStyle={styles.signUpButtonText}
             />
           </Card>
+          <GuestFooter />
         </ScrollView>
       </View>
     </AnimatedScreen>
   );
 }
 
-              const styles = StyleSheet.create({
+const styles = StyleSheet.create({
 
   container: {
     flex: 1,
     backgroundColor: theme.colors.pageBackground,
-  },
-  header: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    padding: theme.spacing(4),
-    zIndex: 10,
-  },
-  logo: {
   },
   scrollContent: {
     flexGrow: 1,
     justifyContent: 'center',
     alignItems: 'center',
     padding: theme.spacing(3),
-    paddingTop: theme.spacing(10), // Space for header
   },
   loginCard: {
     width: '100%',

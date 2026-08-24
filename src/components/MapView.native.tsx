@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useRef, useEffect } from 'react';
-import RNMapView, { Marker, Callout, Circle, MapViewProps as RNMapViewProps, LatLng, FitToOptions, Region, PROVIDER_GOOGLE } from 'react-native-maps';
+import RNMapView, { Marker, Callout, Circle, Polyline, MapViewProps as RNMapViewProps, LatLng, FitToOptions, Region, PROVIDER_GOOGLE } from 'react-native-maps';
 import { View, Image, Text, StyleSheet, Dimensions } from 'react-native';
 import { theme } from '../theme';
 import Supercluster from 'supercluster';
@@ -24,6 +24,7 @@ interface NativeMapViewProps extends RNMapViewProps {
     longitudeDelta: number;
     zoom?: number;
   };
+  polylineCoordinates?: { latitude: number; longitude: number }[];
 }
 
 interface MapViewHandle {
@@ -32,7 +33,7 @@ interface MapViewHandle {
 }
 
 export const MapView = React.forwardRef<MapViewHandle, NativeMapViewProps>(
-  ({ selectedWorkers = [], selectedProjects = [], initialRegion, children, ...props }, ref) => {
+  ({ selectedWorkers = [], selectedProjects = [], initialRegion, polylineCoordinates, children, ...props }, ref) => {
     const { region, ...restProps } = props;
     const mapViewRef = useRef<RNMapView>(null);
     const isMounted = useRef(false);
@@ -191,6 +192,14 @@ export const MapView = React.forwardRef<MapViewHandle, NativeMapViewProps>(
           </Marker>
         ) : null
       ))}
+      {polylineCoordinates && polylineCoordinates.length >= 2 && (
+        <Polyline
+          coordinates={polylineCoordinates}
+          strokeColor="#2563EB"
+          strokeWidth={3}
+          lineDashPattern={undefined}
+        />
+      )}
       {children}
     </RNMapView>
   );

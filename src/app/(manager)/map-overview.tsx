@@ -241,13 +241,14 @@ export default function MapOverviewScreen() {
 
 
   return (
-    <AnimatedScreen>
+    <View style={{ flex: 1 }}>
       <SubNavBar items={[
         { label: 'Projects', href: '/(manager)/projects' },
         { label: 'Common Locations', href: '/(manager)/common-locations' },
         { label: 'Live Map', href: '/(manager)/map-overview' },
         { label: 'Location Replay', href: '/(manager)/location-replay' },
       ]} />
+      <AnimatedScreen>
       <View style={styles.pageHeader}>
         <Text style={styles.pageTitle} fontType="bold">Map Overview</Text>
         <Text style={styles.pageSubtitle}>Visualize worker and project locations.</Text>
@@ -306,7 +307,8 @@ export default function MapOverviewScreen() {
           </View>
         </View>
       </View>
-    </AnimatedScreen>
+      </AnimatedScreen>
+    </View>
   );
 }
 

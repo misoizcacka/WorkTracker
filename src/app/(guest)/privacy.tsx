@@ -3,10 +3,11 @@ import { ScrollView, View, StyleSheet, TouchableOpacity } from 'react-native';
 import { Text } from '../../components/Themed';
 import { theme } from '../../theme';
 import { Link } from 'expo-router';
-import { Logo } from '~/components/Logo';
+import { GuestHeader } from '~/components/GuestHeader';
+import { GuestFooter } from '~/components/GuestFooter';
 
-const LAST_UPDATED = '10 May 2026';
-const CONTACT_EMAIL = 'info@koord.app';
+const LAST_UPDATED = '20 August 2026';
+const CONTACT_EMAIL = 'info@koordinate.app';
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -33,26 +34,20 @@ function Li({ children }: { children: React.ReactNode }) {
 export default function PrivacyPolicy() {
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <Link href="/(guest)" asChild>
-          <TouchableOpacity activeOpacity={0.7}>
-            <Logo />
-          </TouchableOpacity>
-        </Link>
-      </View>
+      <GuestHeader variant="content" />
 
       <ScrollView contentContainerStyle={styles.content}>
         <Text style={styles.pageTitle} fontType="bold">Privacy Policy</Text>
         <Text style={styles.lastUpdated} fontType="regular">Last updated: {LAST_UPDATED}</Text>
 
         <P>
-          This Privacy Policy explains how Koord ("we", "us", "our") collects, uses, and protects personal data when you use our workforce management platform ("the Service"). We are committed to protecting your privacy and complying with the General Data Protection Regulation (GDPR) and applicable national data protection laws in Germany and Sweden.
+          This Privacy Policy explains how Koordinate ("we", "us", "our") collects, uses, and protects personal data when you use our workforce management platform ("the Service") at koordinate.app. We are committed to protecting your privacy and complying with the General Data Protection Regulation (GDPR) and the German Federal Data Protection Act (BDSG).
         </P>
 
         <Section title="1. Data Controller">
           <P>
-            Koord is the data controller for personal data of company owners and managers who register for the Service.{'\n\n'}
-            For personal data of workers processed on behalf of a company using Koord, the company is the data controller and Koord acts as a data processor under a Data Processing Agreement (DPA).
+            Koordinate (operated by Milos Bugaric, Einzelunternehmer) is the data controller for personal data of company owners and managers who register for the Service.{'\n\n'}
+            For personal data of workers processed on behalf of a company using Koordinate, the company is the data controller and Koordinate acts as a data processor under a Data Processing Agreement (DPA). Our DPA is available at koordinate.app/dpa.
           </P>
           <P>Contact: {CONTACT_EMAIL}</P>
         </Section>
@@ -88,68 +83,71 @@ export default function PrivacyPolicy() {
           </P>
           <P>
             <Text fontType="bold">Legitimate interests (GDPR Art. 6(1)(f)):{'\n'}</Text>
-            Work session and location data is processed on behalf of the employing company for workforce management, payroll preparation, and project costing. The company is responsible for ensuring it has a lawful basis under applicable employment law to conduct location monitoring of its workers.
+            Work session and location data is processed on behalf of the employing company for workforce management, payroll preparation, and project costing. The company is responsible for ensuring it has a lawful basis under applicable employment law (in Germany: §26 BDSG or a works agreement under §87 BetrVG) to conduct location monitoring of its workers.
           </P>
           <P>
             <Text fontType="bold">Legal obligation (GDPR Art. 6(1)(c)):{'\n'}</Text>
-            Work hour records are retained to comply with accounting obligations under German law (§257 HGB, §147 AO) and Swedish law (Bokföringslagen).
+            Work hour records are retained to comply with accounting obligations under German law (§257 HGB, §147 AO).
           </P>
         </Section>
 
         <Section title="4. Background Location Tracking">
           <P>
-            The Koord mobile app collects GPS location data in the background when a worker is checked in to a work session. This means location data may be collected even when the app is not actively open on screen.
+            The Koordinate mobile app collects GPS location data in the background when a worker is checked in to a work session. This means location data may be collected even when the app is not actively open on screen.
           </P>
           <P>
             Location tracking only occurs during active work sessions. Workers are informed of this tracking through the app before the device location permission is requested. Location data is visible to the worker's employer (managers and owners of their company) and is used solely for workforce management purposes.
+          </P>
+          <P>
+            Employers deploying Koordinate to their workers are responsible for fulfilling their information obligations under GDPR Art. 13 towards their employees, including disclosure of the location monitoring. A model worker notice is available in our DPA at koordinate.app/dpa.
           </P>
           <P>Raw GPS location data is automatically deleted after 90 days.</P>
         </Section>
 
         <Section title="5. How Long We Keep Your Data">
           <Li>GPS location events: deleted automatically after 90 days</Li>
-          <Li>Work session records (hours, payroll): retained for up to 10 years to comply with accounting law</Li>
+          <Li>Work session records (hours, payroll): retained for up to 10 years to comply with German accounting law (§257 HGB, §147 AO)</Li>
           <Li>Employee personal data: deleted when the company account is closed or upon a valid erasure request</Li>
           <Li>Expired invitations: deleted 30 days after expiry</Li>
-          <Li>Account data: deleted immediately upon subscription cancellation</Li>
+          <Li>Account data: deleted upon subscription cancellation</Li>
         </Section>
 
         <Section title="6. Who We Share Data With">
-          <P>We use the following third-party processors to operate the Service:</P>
-          <Li>Supabase (database and authentication) — data stored in the EU</Li>
-          <Li>Stripe (payment processing)</Li>
-          <Li>Google Maps / MapLibre (map display — location data is not sent to Google for worker tracking)</Li>
-          <Li>Vercel (web hosting)</Li>
-          <P>We do not sell personal data to third parties.</P>
+          <P>We use the following third-party sub-processors to operate the Service:</P>
+          <Li>Supabase (database and authentication) — data stored in the EU (Frankfurt)</Li>
+          <Li>Stripe (payment processing) — governed by Stripe's own GDPR commitments</Li>
+          <Li>Google Maps / MapLibre (map rendering — GPS coordinates are not forwarded to Google for worker tracking purposes)</Li>
+          <Li>Vercel (web hosting) — EU data processing available</Li>
+          <P>We do not sell personal data to third parties. The full list of sub-processors is included in our DPA at koordinate.app/dpa.</P>
         </Section>
 
         <Section title="7. Your Rights Under GDPR">
           <P>If you are located in the EEA, you have the following rights:</P>
-          <Li>Right of access — request a copy of your personal data</Li>
-          <Li>Right to rectification — correct inaccurate data</Li>
-          <Li>Right to erasure — request deletion of your data ("right to be forgotten")</Li>
-          <Li>Right to data portability — receive your data in a machine-readable format</Li>
-          <Li>Right to object — object to processing based on legitimate interests</Li>
-          <Li>Right to restriction — request that we limit how we use your data</Li>
+          <Li>Right of access (Art. 15) — request a copy of your personal data</Li>
+          <Li>Right to rectification (Art. 16) — correct inaccurate data</Li>
+          <Li>Right to erasure (Art. 17) — request deletion of your data ("right to be forgotten")</Li>
+          <Li>Right to data portability (Art. 20) — receive your data in a machine-readable format</Li>
+          <Li>Right to object (Art. 21) — object to processing based on legitimate interests</Li>
+          <Li>Right to restriction (Art. 18) — request that we limit how we use your data</Li>
           <P>
             To exercise any of these rights, contact us at {CONTACT_EMAIL}. We will respond within 30 days.
           </P>
           <P>
-            You also have the right to lodge a complaint with your national supervisory authority:{'\n'}
-            • Germany: Bundesbeauftragte für den Datenschutz (BfDI) — bfdi.bund.de{'\n'}
-            • Sweden: Integritetsskyddsmyndigheten (IMY) — imy.se
+            You also have the right to lodge a complaint with your national supervisory authority (Art. 77 GDPR):{'\n'}
+            • Germany: Bundesbeauftragte für den Datenschutz (BfDI) — https://www.bfdi.bund.de{'\n'}
+            • Berlin state authority: Berliner Beauftragte für Datenschutz und Informationsfreiheit — https://www.datenschutz-berlin.de
           </P>
         </Section>
 
         <Section title="8. Cookies and Web Tracking">
           <P>
-            The Koord web app uses only technically necessary cookies required for authentication and session management. We do not use advertising or analytics cookies. No cookie consent banner is required for strictly necessary cookies under the ePrivacy Directive.
+            The Koordinate web app uses only technically necessary cookies required for authentication and session management. We do not use advertising or analytics cookies. No cookie consent banner is required for strictly necessary cookies under the ePrivacy Directive and §25 TDDDG (formerly TTDSG).
           </P>
         </Section>
 
         <Section title="9. Data Security">
           <P>
-            We implement appropriate technical and organisational measures to protect personal data, including encrypted data transmission (TLS), row-level security on all database tables, hashed passwords, and device-based authentication tokens for worker check-ins.
+            We implement appropriate technical and organisational measures (TOMs) to protect personal data, including encrypted data transmission (TLS 1.2+), row-level security (RLS) on all database tables, hashed passwords (bcrypt via Supabase Auth), and device-based authentication tokens for worker check-ins.
           </P>
         </Section>
 
@@ -159,20 +157,29 @@ export default function PrivacyPolicy() {
           </P>
         </Section>
 
-        <Section title="11. Changes to This Policy">
+        <Section title="11. Data Processing Agreement">
+          <P>
+            Companies using Koordinate to process their employees' personal data act as data controllers. Koordinate acts as a data processor under GDPR Art. 28. Our standard Data Processing Agreement, which is incorporated into the Terms of Service, is available at{' '}
+            <Link href="/(guest)/dpa" asChild>
+              <Text style={styles.inlineLink} fontType="regular">koordinate.app/dpa</Text>
+            </Link>
+            .
+          </P>
+        </Section>
+
+        <Section title="12. Changes to This Policy">
           <P>
             We may update this Privacy Policy from time to time. We will notify you of material changes by email or via an in-app notice at least 14 days before the changes take effect.
           </P>
         </Section>
 
-        <Section title="12. Contact">
+        <Section title="13. Contact">
           <P>
-            For any privacy-related questions or to exercise your rights:{'\n'}{CONTACT_EMAIL}
+            For any privacy-related questions or to exercise your rights:{'\n'}{CONTACT_EMAIL}{'\n'}koordinate.app
           </P>
         </Section>
 
         <View style={styles.footer}>
-          <Text style={styles.footerText} fontType="regular">© {new Date().getFullYear()} Koord. All rights reserved.</Text>
           <Link href="/(guest)" asChild>
             <TouchableOpacity>
               <Text style={styles.footerLink} fontType="regular">← Back to home</Text>
@@ -180,6 +187,7 @@ export default function PrivacyPolicy() {
           </Link>
         </View>
       </ScrollView>
+      <GuestFooter />
     </View>
   );
 }
@@ -188,12 +196,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: theme.colors.pageBackground,
-  },
-  header: {
-    padding: theme.spacing(4),
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.borderColor,
-    backgroundColor: theme.colors.cardBackground,
   },
   content: {
     maxWidth: 760,
@@ -249,14 +251,15 @@ const styles = StyleSheet.create({
     color: theme.colors.bodyText,
     lineHeight: 24,
   },
+  inlineLink: {
+    fontSize: 15,
+    color: theme.colors.primary,
+    lineHeight: 24,
+  },
   footer: {
     marginTop: theme.spacing(10),
     alignItems: 'center',
     gap: theme.spacing(2),
-  },
-  footerText: {
-    fontSize: 12,
-    color: theme.colors.disabledText,
   },
   footerLink: {
     fontSize: 14,

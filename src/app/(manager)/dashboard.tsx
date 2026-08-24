@@ -451,7 +451,17 @@ export default function NewManagerDashboard() {
                         {(session.employees as any)?.full_name || 'Worker'}
                       </Text>
                       <Text style={styles.workerStatus}>
-                        since {moment(session.start_time).format('hh:mm A')}
+                        {(() => {
+                          const assignment = Array.isArray(session.worker_assignments) ? session.worker_assignments[0] : session.worker_assignments;
+                          const projectName = assignment?.ref_type === 'project'
+                            ? (stats.allProjects[assignment.ref_id] || null)
+                            : assignment?.ref_type === 'common_location'
+                            ? (stats.allLocations[assignment.ref_id] || null)
+                            : null;
+                          const elapsed = moment().diff(moment(session.start_time), 'minutes');
+                          const elapsedStr = elapsed >= 60 ? `${Math.floor(elapsed/60)}h ${elapsed%60}m` : `${elapsed}m`;
+                          return projectName ? `${projectName} · ${elapsedStr}` : `${moment(session.start_time).format('HH:mm')} · ${elapsedStr}`;
+                        })()}
                       </Text>
                     </View>
                     <TouchableOpacity 
@@ -495,28 +505,38 @@ export default function NewManagerDashboard() {
           </View>
 
           <View style={styles.column}>
-            {/* NEW: 5. Map Preview */}
+            {/* 5. Workers Not Yet Clocked In */}
             <Card style={styles.sectionCard}>
               <View style={styles.cardHeaderRow}>
-                <Text style={styles.sectionTitle} fontType="bold">Live Map Preview</Text>
-                <Ionicons name="map-outline" size={18} color={theme.colors.primary} />
+                <Text style={styles.sectionTitle} fontType="bold">Not Yet Clocked In</Text>
+                <TouchableOpacity onPress={() => router.push('/(manager)/worker-assignments')}>
+                  <Text style={{ fontSize: theme.fontSizes.sm, color: theme.colors.primary }}>View Schedule</Text>
+                </TouchableOpacity>
               </View>
-              <TouchableOpacity 
-                style={styles.mapPreviewPlaceholder}
-                onPress={() => router.push('/(manager)/map-overview')}
-              >
-                <View style={styles.mapOverlay}>
-                  <Ionicons name="expand-outline" size={24} color="white" />
-                  <Text style={styles.mapOverlayText}>Open Full Map</Text>
-                </View>
-                {/* Visual placeholder for map */}
-                <View style={styles.mapGridLines}>
-                  {[1,2,3,4,5].map(i => <View key={i} style={styles.gridLineH} />)}
-                  {[1,2,3,4,5].map(i => <View key={i} style={styles.gridLineV} />)}
-                  <View style={[styles.mapDot, { top: '30%', left: '40%' }]} />
-                  <View style={[styles.mapDot, { top: '60%', left: '70%', backgroundColor: theme.colors.secondary }]} />
-                </View>
-              </TouchableOpacity>
+              {(() => {
+                const onlineIds = new Set(stats.activeSessions.map((s: any) => s.worker_id));
+                const notClockedIn = workers.filter(w => !onlineIds.has(w.id));
+                if (notClockedIn.length === 0) {
+                  return <Text style={styles.emptyText}>All workers are clocked in 🎉</Text>;
+                }
+                return (
+                  <View>
+                    {notClockedIn.slice(0, 8).map(w => (
+                      <View key={w.id} style={styles.workerItem}>
+                        <View style={styles.workerInfo}>
+                          <Text style={styles.workerName} fontType="medium">{w.full_name}</Text>
+                        </View>
+                        <Ionicons name="ellipse-outline" size={16} color={theme.colors.disabledText} />
+                      </View>
+                    ))}
+                    {notClockedIn.length > 8 && (
+                      <Text style={{ fontSize: theme.fontSizes.xs, color: theme.colors.disabledText, marginTop: 4 }}>
+                        +{notClockedIn.length - 8} more
+                      </Text>
+                    )}
+                  </View>
+                );
+              })()}
             </Card>
 
             {/* 6. Real-time Activity Feed */}

@@ -1,5 +1,5 @@
-import React from 'react';
-import { View, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
+import React, { useState } from 'react';
+import { View, TouchableOpacity, ScrollView, StyleSheet } from 'react-native';
 import { useRouter, usePathname } from 'expo-router';
 import { theme } from '../theme';
 import { Text } from './Themed';
@@ -13,10 +13,45 @@ interface SubNavBarProps {
   items: SubNavItem[];
 }
 
-/**
- * Horizontal tab bar rendered at the top of pages that belong to a sidebar group.
- * Matches active state by checking if the current pathname starts with each item's href.
- */
+// Expo Router strips route group segments like "(manager)" from the URL.
+// e.g. "/(manager)/projects" → "/projects" to match against pathname.
+const stripGroup = (href: string) => href.replace(/\/\([^)]+\)/g, '');
+
+interface TabItemProps {
+  item: SubNavItem;
+  isActive: boolean;
+  onPress: () => void;
+}
+
+const TabItem: React.FC<TabItemProps> = ({ item, isActive, onPress }) => {
+  const [hovered, setHovered] = useState(false);
+
+  return (
+    <TouchableOpacity
+      onPress={onPress}
+      activeOpacity={0.7}
+      style={[
+        styles.tab,
+        isActive ? styles.tabActive : styles.tabInactive,
+        hovered && !isActive && styles.tabHovered,
+      ]}
+      // @ts-ignore — onMouseEnter/Leave are valid on React Native Web
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+    >
+      <Text
+        fontType={isActive ? 'bold' : 'regular'}
+        style={[
+          isActive ? styles.labelActive : styles.labelInactive,
+          hovered && !isActive && styles.labelHovered,
+        ]}
+      >
+        {item.label}
+      </Text>
+    </TouchableOpacity>
+  );
+};
+
 const SubNavBar: React.FC<SubNavBarProps> = ({ items }) => {
   const router = useRouter();
   const pathname = usePathname();
@@ -26,25 +61,17 @@ const SubNavBar: React.FC<SubNavBarProps> = ({ items }) => {
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={styles.row}
       >
         {items.map((item) => {
-          const isActive = pathname.startsWith(item.href);
+          const isActive = pathname.startsWith(stripGroup(item.href));
           return (
-            <TouchableOpacity
+            <TabItem
               key={item.href}
-              style={[styles.tab, isActive && styles.activeTab]}
+              item={item}
+              isActive={isActive}
               onPress={() => router.push(item.href as any)}
-              activeOpacity={0.7}
-            >
-              <Text
-                style={[styles.tabText, isActive && styles.activeTabText]}
-                fontType={isActive ? 'bold' : 'regular'}
-              >
-                {item.label}
-              </Text>
-              {isActive && <View style={styles.activeIndicator} />}
-            </TouchableOpacity>
+            />
           );
         })}
       </ScrollView>
@@ -58,35 +85,37 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: theme.colors.borderColor,
   },
-  scrollContent: {
-    paddingHorizontal: theme.spacing(2),
+  row: {
     flexDirection: 'row',
-    gap: theme.spacing(0.5),
+    paddingHorizontal: theme.spacing(2),
   },
   tab: {
     paddingHorizontal: theme.spacing(2),
     paddingVertical: theme.spacing(1.5),
-    position: 'relative',
-    alignItems: 'center',
+    marginBottom: -1,
+    borderBottomWidth: 3,
+    borderRadius: 0,
   },
-  activeTab: {
-    // active indicator is the bottom border line
+  tabActive: {
+    borderBottomColor: theme.colors.primary,
   },
-  tabText: {
+  tabInactive: {
+    borderBottomColor: 'transparent',
+  },
+  tabHovered: {
+    borderBottomColor: theme.colors.primaryMuted,
+    backgroundColor: theme.colors.primaryMuted,
+  },
+  labelActive: {
+    fontSize: theme.fontSizes.sm,
+    color: theme.colors.primary,
+  },
+  labelInactive: {
     fontSize: theme.fontSizes.sm,
     color: theme.colors.bodyText,
   },
-  activeTabText: {
+  labelHovered: {
     color: theme.colors.primary,
-  },
-  activeIndicator: {
-    position: 'absolute',
-    bottom: 0,
-    left: theme.spacing(2),
-    right: theme.spacing(2),
-    height: 2,
-    backgroundColor: theme.colors.primary,
-    borderRadius: 1,
   },
 });
 

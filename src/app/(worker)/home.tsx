@@ -616,7 +616,7 @@ export default function Home() {
       >
         {/* Header */}
         <View style={styles.pageHeader}>
-          <Logo style={styles.logo} />
+          <Logo />
           <View style={styles.headerRight}>
             {isSyncingToCloud && (
               <View style={styles.syncPill}>
@@ -811,10 +811,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     backgroundColor: theme.colors.pageBackground,
-  },
-  logo: {
-    width: theme.branding.logoWidth,
-    height: theme.branding.logoHeight,
   },
   headerRight: {
     flexDirection: 'row',
