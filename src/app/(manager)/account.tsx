@@ -16,6 +16,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { uploadAvatar, updateEmployeeProfile } from "../../services/profile";
 import { supabase } from "../../utils/supabase";
+import { LanguagePicker } from "../../components/LanguagePicker";
 
 export default function ManagerAccount() {
   const { width } = useWindowDimensions();
@@ -461,7 +462,22 @@ export default function ManagerAccount() {
               </View>
             </Card>
 
-            {/* 5. Logout */}
+            {/* 5. Preferences */}
+            <Card style={styles.sectionCard}>
+              <Text style={styles.sectionTitle} fontType="bold">Preferences</Text>
+              <View style={styles.preferenceRow}>
+                <View style={styles.preferenceInfo}>
+                  <Ionicons name="globe-outline" size={20} color={theme.colors.primary} />
+                  <View>
+                    <Text style={styles.preferenceLabel} fontType="medium">Language</Text>
+                    <Text style={styles.preferenceSubtitle}>Choose your display language</Text>
+                  </View>
+                </View>
+                <LanguagePicker />
+              </View>
+            </Card>
+
+            {/* 6. Logout */}
             <Button 
               title="Sign Out" 
               onPress={() => signOut()} 
@@ -475,6 +491,26 @@ export default function ManagerAccount() {
 }
 
 const styles = StyleSheet.create({
+  preferenceRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: theme.spacing(1),
+  },
+  preferenceInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing(1.5),
+  },
+  preferenceLabel: {
+    fontSize: 15,
+    color: theme.colors.headingText,
+  },
+  preferenceSubtitle: {
+    fontSize: 12,
+    color: theme.colors.disabledText,
+    marginTop: 2,
+  },
   scrollContent: {
     paddingBottom: theme.spacing(4),
     ...Platform.select({

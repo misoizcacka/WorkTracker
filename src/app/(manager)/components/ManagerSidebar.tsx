@@ -71,17 +71,18 @@ export const ManagerSidebar = () => {
       Animated.spring(animation, {
         toValue: expand ? SIDEBAR_EXPANDED_WIDTH : SIDEBAR_COLLAPSED_WIDTH,
         useNativeDriver: false,
-        friction: 8,
-        tension: 40,
+        friction: 7,
+        tension: 50,
       }),
       Animated.timing(iconOpacity, {
         toValue: expand ? 0 : 1,
-        duration: 80,
+        duration: 150,
         useNativeDriver: true,
       }),
       Animated.timing(fullOpacity, {
         toValue: expand ? 1 : 0,
-        duration: 80,
+        duration: 200,
+        delay: expand ? 80 : 0,
         useNativeDriver: true,
       }),
     ]).start();
@@ -211,21 +212,26 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   logoContainer: {
-    width: SIDEBAR_COLLAPSED_WIDTH,
-    marginBottom: 32,
-    height: 18,
+    height: 40,
+    marginBottom: 24,
+    justifyContent: 'center',
+    overflow: 'hidden',
   },
-  // K: absolutely centered in the 64px collapsed bar
+  // K icon: centered in the 64px collapsed bar
   logoIcon: {
     position: 'absolute',
-    top: 0,
-    left: (SIDEBAR_COLLAPSED_WIDTH - 10) / 2,
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  // Full logo: left-aligned matching nav item icon position (paddingHorizontal:16 + marginHorizontal:8 = 24)
+  // Full logo: left-aligned matching nav item padding
   logoFull: {
     position: 'absolute',
     top: 0,
-    left: 24,
+    bottom: 0,
+    left: 20,
+    justifyContent: 'center',
   },
   navContainer: {
     flex: 1,

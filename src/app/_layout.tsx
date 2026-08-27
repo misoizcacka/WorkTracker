@@ -12,7 +12,7 @@ import { Platform, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 
 import { I18nextProvider } from 'react-i18next';
-import i18n from '../i18n';
+import i18n, { loadPersistedLanguage } from '../i18n';
 import { theme } from '../theme';
 
 import Toast, { BaseToast, ErrorToast, ToastConfig } from 'react-native-toast-message';
@@ -136,8 +136,17 @@ export default function RootLayout() {
     // Add other fonts if necessary
   });
 
+  // Re-render the entire tree when language changes so hardcoded strings update
+  const [langKey, setLangKey] = useState(i18n.language);
+  useEffect(() => {
+    const handler = (lng: string) => setLangKey(lng);
+    i18n.on('languageChanged', handler);
+    return () => { i18n.off('languageChanged', handler); };
+  }, []);
+
   useEffect(() => {
     if (fontsLoaded) {
+      loadPersistedLanguage();
       SplashScreen.hideAsync();
     }
   }, [fontsLoaded]);
@@ -157,7 +166,7 @@ export default function RootLayout() {
   return (
     <SafeAreaProvider>
       <SessionProvider>
-        <I18nextProvider i18n={i18n}>
+        <I18nextProvider i18n={i18n} key={langKey}>
           <EmployeesProvider>
             <ProjectsProvider>
               <AssignmentsProvider>

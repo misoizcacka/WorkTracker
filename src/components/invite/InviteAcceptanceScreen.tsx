@@ -284,16 +284,24 @@ export function InviteAcceptanceScreen({ token }: InviteAcceptanceScreenProps) {
 
             {formError && <Text style={styles.formErrorText} fontType="regular">{formError}</Text>}
 
+            {/* GDPR Art. 13 notice — must appear before data collection begins */}
+            <View style={styles.privacyNotice}>
+              <Ionicons name="location-outline" size={16} color={theme.colors.primary} style={{ marginTop: 2 }} />
+              <Text style={styles.privacyNoticeText} fontType="regular">
+                Koordinate collects your GPS location in the background during active work sessions. Location data is visible to your employer and deleted after 90 days.
+              </Text>
+            </View>
+
             <Text style={styles.legalConsent} fontType="regular">
               By joining, you agree to Koordinate's{' '}
-              <Link href="/(guest)/terms" asChild>
+              <Link href={Platform.OS === 'web' ? '/(guest)/terms' : 'https://koordinate.app/terms'} asChild>
                 <Text style={styles.legalLink} fontType="regular">Terms of Service</Text>
               </Link>
-              {' '}and{' '}
-              <Link href="/(guest)/privacy" asChild>
+              {' and '}
+              <Link href={Platform.OS === 'web' ? '/(guest)/privacy' : 'https://koordinate.app/privacy'} asChild>
                 <Text style={styles.legalLink} fontType="regular">Privacy Policy</Text>
               </Link>
-              , including background location tracking during work sessions.
+              .
             </Text>
 
             <Button
@@ -466,6 +474,23 @@ const styles = StyleSheet.create({
   legalLink: {
     fontSize: 12,
     color: theme.colors.primary,
+  },
+  privacyNotice: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: theme.spacing(1),
+    backgroundColor: theme.colors.primaryMuted,
+    borderWidth: 1,
+    borderColor: theme.colors.primary + '30',
+    borderRadius: theme.radius.md,
+    padding: theme.spacing(1.5),
+    marginBottom: theme.spacing(2),
+  },
+  privacyNoticeText: {
+    flex: 1,
+    fontSize: 12,
+    color: theme.colors.bodyText,
+    lineHeight: 18,
   },
   stateScreen: {
     flex: 1,

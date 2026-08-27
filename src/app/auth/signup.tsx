@@ -109,22 +109,22 @@ export default function Signup() {
               <View style={styles.marketingColumn}>
                 <View style={styles.reassurancePanel}>
                   <Text style={styles.reassuranceTitle} fontType="bold">
-                    You're one step away from running a tighter operation.
+                    {t('signup.reassuranceTitle')}
                   </Text>
                   <Text style={styles.reassuranceSubtitle} fontType="regular">
-                  Koordinate gives you a live view of your crew, automatic time tracking, and payroll-ready reports — without the spreadsheets.
+                    {t('signup.reassuranceSubtitle')}
                   </Text>
 
                   <View style={styles.trustList}>
                     {[
-                      { icon: 'checkmark-circle-outline', text: 'Set up your company in under 5 minutes' },
-                      { icon: 'phone-portrait-outline', text: 'Workers download the app and join with an invite code' },
-                      { icon: 'shield-checkmark-outline', text: 'GDPR compliant — data stays in the EU' },
-                      { icon: 'close-circle-outline', text: 'Cancel your subscription any time, no lock-in' },
+                      { icon: 'checkmark-circle-outline', key: 'signup.trustSetupTime' },
+                      { icon: 'phone-portrait-outline', key: 'signup.trustInviteWorkers' },
+                      { icon: 'shield-checkmark-outline', key: 'signup.trustGdpr' },
+                      { icon: 'close-circle-outline', key: 'signup.trustNoLockIn' },
                     ].map((item, i) => (
                       <View key={i} style={styles.trustItem}>
                         <Ionicons name={item.icon as any} size={20} color={theme.colors.primary} />
-                        <Text style={styles.trustText} fontType="regular">{item.text}</Text>
+                        <Text style={styles.trustText} fontType="regular">{t(item.key)}</Text>
                       </View>
                     ))}
                   </View>
@@ -206,13 +206,17 @@ export default function Signup() {
                 </Button>
 
                 <Text style={styles.legalConsent} fontType="regular">
-                  By creating an account you agree to our{' '}
+                  {t('signup.legalConsent')}{' '}
                   <Link href="/(guest)/terms" asChild>
-                    <Text style={styles.legalLink} fontType="regular">Terms of Service</Text>
+                    <Text style={styles.legalLink} fontType="regular">{t('signup.termsOfService')}</Text>
                   </Link>
-                  {' '}and{' '}
+                  {t('signup.legalConsentComma')}
                   <Link href="/(guest)/privacy" asChild>
-                    <Text style={styles.legalLink} fontType="regular">Privacy Policy</Text>
+                    <Text style={styles.legalLink} fontType="regular">{t('signup.privacyPolicy')}</Text>
+                  </Link>
+                  {' '}{t('signup.legalConsentAnd')}{' '}
+                  <Link href="/(guest)/dpa" asChild>
+                    <Text style={styles.legalLink} fontType="regular">{t('signup.dataProcessingAgreement')}</Text>
                   </Link>
                   .
                 </Text>

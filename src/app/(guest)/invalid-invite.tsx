@@ -1,20 +1,24 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, StyleSheet } from 'react-native';
 import { Link } from 'expo-router';
 import { theme } from '../../theme';
 import { Button } from '../../components/Button';
+import { Text } from '../../components/Themed';
 import AnimatedScreen from '../../components/AnimatedScreen';
+import { useTranslation } from 'react-i18next';
 
 export default function InvalidInviteScreen() {
+  const { t } = useTranslation();
+
   return (
     <AnimatedScreen>
       <View style={styles.container}>
-        <Text style={styles.title}>Invalid Invitation</Text>
-        <Text style={styles.message}>
-          The invitation link is either invalid or has already been used. Please request a new invite.
+        <Text style={styles.title} fontType="bold">{t('invalidInvite.title')}</Text>
+        <Text style={styles.message} fontType="regular">
+          {t('invalidInvite.message')}
         </Text>
         <Link href="/(guest)/login" asChild>
-          <Button title="Back to Login" />
+          <Button title={t('invalidInvite.backToLogin')} />
         </Link>
       </View>
     </AnimatedScreen>
@@ -31,7 +35,6 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 24,
-    fontWeight: 'bold',
     color: theme.colors.danger,
     marginBottom: 20,
   },

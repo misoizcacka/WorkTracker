@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, StyleSheet, ScrollView, Platform, Image, Dimensions } from 'react-native';
+import { View, StyleSheet, ScrollView, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Button } from '../../../components/Button';
 import { Card } from '../../../components/Card';
@@ -7,12 +7,12 @@ import { theme } from '../../../theme';
 import AnimatedScreen from '../../../components/AnimatedScreen';
 import { Text } from '../../../components/Themed';
 import { GuestHeader } from '~/components/GuestHeader';
-import { GuestFooter } from '~/components/GuestFooter';
-
-const { width } = Dimensions.get('window');
+import { useTranslation } from 'react-i18next';
+import { Ionicons } from '@expo/vector-icons';
 
 export default function PaymentCancel() {
   const router = useRouter();
+  const { t } = useTranslation();
 
   return (
     <AnimatedScreen>
@@ -22,21 +22,20 @@ export default function PaymentCancel() {
         <ScrollView contentContainerStyle={styles.scrollContent}>
           <View style={styles.mainContent}>
             <Card style={styles.statusCard}>
-                <View style={[styles.iconCircle, { backgroundColor: theme.colors.errorBackground }]}>
-                    <Text style={styles.statusIcon}>⚠️</Text>
+                <View style={[styles.iconCircle, { backgroundColor: '#FEF3C7' }]}>
+                    <Ionicons name="warning-outline" size={40} color="#D97706" />
                 </View>
-                <Text style={styles.title} fontType='bold'>Payment Cancelled</Text>
+                <Text style={styles.title} fontType='bold'>{t('payment.cancelTitle')}</Text>
                 <Text style={styles.description} fontType='regular'>
-                    Your payment was not completed. No charges were made. You can try again whenever you're ready.
+                    {t('payment.cancelDescription')}
                 </Text>
                 <Button
-                    title="Return to Subscription Setup"
+                    title={t('payment.returnToSetup')}
                     onPress={() => router.replace('/subscription/setup')}
                     style={styles.ctaButton}
                 />
             </Card>
           </View>
-          <GuestFooter />
         </ScrollView>
       </View>
     </AnimatedScreen>
@@ -85,13 +84,9 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: '#FFFBEB', // Light yellow/amber
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: theme.spacing(3),
-  },
-  statusIcon: {
-    fontSize: 40,
   },
   title: {
     fontSize: 28,

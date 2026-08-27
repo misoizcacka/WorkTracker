@@ -9,7 +9,6 @@ import { theme } from '../../theme';
 import AnimatedScreen from '../../components/AnimatedScreen';
 import { Logo } from '~/components/Logo';
 import { GuestHeader } from '~/components/GuestHeader';
-import { GuestFooter } from '~/components/GuestFooter';
 import { supabase } from '../../utils/supabase';
 import { useSession } from '../../context/AuthContext';
 import { useTranslation } from 'react-i18next';
@@ -265,7 +264,6 @@ export default function Login() {
               textStyle={styles.signUpButtonText}
             />
           </Card>
-          <GuestFooter />
         </ScrollView>
       </View>
     </AnimatedScreen>

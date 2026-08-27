@@ -12,7 +12,6 @@ import { supabase } from '../../utils/supabase';
 import AnimatedScreen from '../../components/AnimatedScreen';
 import { Logo } from '~/components/Logo';
 import { GuestHeader } from '~/components/GuestHeader';
-import { GuestFooter } from '~/components/GuestFooter';
 
 const { width } = Dimensions.get('window');
 const isLargeScreen = width > 900;
@@ -221,7 +220,6 @@ export default function SubscriptionSetupPage() {
               </TouchableOpacity>
             </Card>
           </View>
-          <GuestFooter />
         </ScrollView>
       </View>
     </AnimatedScreen>

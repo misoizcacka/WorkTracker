@@ -1,35 +1,38 @@
-import { View, Text, StyleSheet } from 'react-native';
+import { View, StyleSheet } from 'react-native';
 import { Link } from 'expo-router';
 import { StoreButtons } from '../../components/StoreButtons';
-import { View as ThemedView } from '../../components/Themed';
+import { View as ThemedView, Text } from '../../components/Themed';
 import { Button } from '../../components/Button';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 
 // TODO: Replace with your actual app's deep link scheme. For Expo Go testing, use your local Expo Go URL (e.g., 'exp://192.168.1.XXX:19000').
 const DEEP_LINK_URL = 'exp://YOUR_LOCAL_IP:PORT';
 
 export default function SignupSuccessScreen() {
+  const { t } = useTranslation();
+
   return (
     <ThemedView style={styles.container}>
       <SafeAreaView style={styles.content}>
         <Text style={styles.icon}>🎉</Text>
-        <Text style={styles.title}>Your account has been created!</Text>
-        <Text style={styles.subtitle}>
-          To continue, please download the mobile app and log in there.
+        <Text style={styles.title} fontType="bold">{t('signupSuccess.title')}</Text>
+        <Text style={styles.subtitle} fontType="regular">
+          {t('signupSuccess.subtitle')}
         </Text>
-        
+
         <StoreButtons />
 
         <View style={styles.buttonContainer}>
           <Link href={DEEP_LINK_URL} asChild>
             <Button>
-                <Text>Open the App</Text>
+              <Text fontType="regular">{t('signupSuccess.openApp')}</Text>
             </Button>
           </Link>
           <View style={{ height: 10 }} />
           <Link href="/(guest)/login" asChild>
             <Button type="secondary">
-                <Text>I'll open the app later</Text>
+              <Text fontType="regular">{t('signupSuccess.laterLink')}</Text>
             </Button>
           </Link>
         </View>
@@ -55,7 +58,6 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 24,
-    fontWeight: 'bold',
     textAlign: 'center',
     marginBottom: 10,
   },

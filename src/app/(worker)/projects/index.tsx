@@ -8,6 +8,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useAssignments } from '../../../context/AssignmentsContext';
 import { useSession } from '~/context/AuthContext';
 import { ProcessedAssignmentStepWithStatus, AssignmentStatus } from '~/types';
+import { useTranslation } from 'react-i18next';
 import moment from 'moment';
 
 // Combined and enriched data structure for project list
@@ -24,6 +25,7 @@ interface AssignmentItem {
 const AssignmentCard = ({ item, onPress }: { item: AssignmentItem; onPress: (refId: string) => void }) => {
   const visited = item.status === 'completed' || item.status === 'active';
   const isActive = item.status === 'active';
+  const { t } = useTranslation();
 
   return (
     <TouchableOpacity
@@ -48,7 +50,7 @@ const AssignmentCard = ({ item, onPress }: { item: AssignmentItem; onPress: (ref
         <View style={styles.assignmentRight}>
           {isActive && (
             <View style={styles.activePill}>
-              <Text style={styles.activePillText} fontType="bold">Active</Text>
+              <Text style={styles.activePillText} fontType="bold">{t('worker.projects.active')}</Text>
             </View>
           )}
           {item.type === 'project' && (
@@ -65,6 +67,7 @@ export default function ProjectsScreen() {
   const { user } = useSession()!;
   const { processedAssignments, loadAssignmentsForDate, isLoading: assignmentsLoading } = useAssignments();
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const { t } = useTranslation();
 
   const fetchData = useCallback(async (forceFetchFromSupabase = false) => {
     if (user?.id) {
@@ -116,7 +119,7 @@ export default function ProjectsScreen() {
         }
       >
         <View style={styles.header}>
-          <Text style={styles.headerTitle} fontType="bold">Today's Schedule</Text>
+          <Text style={styles.headerTitle} fontType="bold">{t('worker.projects.title')}</Text>
           <Text style={styles.headerSubtitle}>{moment().format('dddd, MMMM D')}</Text>
         </View>
         
@@ -129,8 +132,8 @@ export default function ProjectsScreen() {
             <View style={styles.emptyIconWrap}>
               <Ionicons name="calendar-outline" size={32} color={theme.colors.disabledText} />
             </View>
-            <Text style={styles.emptyText} fontType="bold">No assignments today</Text>
-            <Text style={styles.emptySubText}>Your schedule will appear here once your manager assigns you to a site.</Text>
+            <Text style={styles.emptyText} fontType="bold">{t('worker.projects.noAssignments')}</Text>
+            <Text style={styles.emptySubText}>{t('worker.projects.noAssignmentsSub')}</Text>
           </View>
         ) : (
           <View style={styles.listContainer}>

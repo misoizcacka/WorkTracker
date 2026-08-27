@@ -4,6 +4,7 @@ import { Link, useRouter } from 'expo-router';
 import { Text } from './Themed';
 import { Logo } from './Logo';
 import { theme } from '../theme';
+import { useTranslation } from 'react-i18next';
 
 type GuestHeaderVariant = 'landing' | 'auth' | 'content';
 
@@ -23,6 +24,7 @@ interface GuestHeaderProps {
 
 export function GuestHeader({ variant = 'content', authAction = 'signin' }: GuestHeaderProps) {
   const router = useRouter();
+  const { t } = useTranslation();
 
   return (
     <View style={styles.header}>
@@ -43,26 +45,26 @@ export function GuestHeader({ variant = 'content', authAction = 'signin' }: Gues
           <View style={styles.right}>
             <Link href="/(guest)/pricing" asChild>
               <TouchableOpacity>
-                <Text style={styles.navLink} fontType="medium">Pricing</Text>
+                <Text style={styles.navLink} fontType="medium">{t('common.pricing')}</Text>
               </TouchableOpacity>
             </Link>
             <Link href="/(guest)/login" asChild>
               <TouchableOpacity style={styles.ghostBtn}>
-                <Text style={styles.ghostBtnLabel} fontType="medium">Sign In</Text>
+                <Text style={styles.ghostBtnLabel} fontType="medium">{t('common.signIn')}</Text>
               </TouchableOpacity>
             </Link>
             <TouchableOpacity style={styles.primaryBtn} onPress={() => router.push('/auth/signup')}>
-              <Text style={styles.primaryBtnLabel} fontType="medium">Get Started</Text>
+              <Text style={styles.primaryBtnLabel} fontType="medium">{t('guestHeader.getStarted')}</Text>
             </TouchableOpacity>
           </View>
         )}
 
         {variant === 'auth' && authAction === 'signin' && (
           <View style={styles.right}>
-            <Text style={styles.subtleText} fontType="regular">Already have an account?</Text>
+            <Text style={styles.subtleText} fontType="regular">{t('guestHeader.alreadyHaveAccount')}</Text>
             <Link href="/(guest)/login" asChild>
               <TouchableOpacity style={styles.ghostBtn}>
-                <Text style={styles.ghostBtnLabel} fontType="medium">Sign In</Text>
+                <Text style={styles.ghostBtnLabel} fontType="medium">{t('common.signIn')}</Text>
               </TouchableOpacity>
             </Link>
           </View>
@@ -70,9 +72,9 @@ export function GuestHeader({ variant = 'content', authAction = 'signin' }: Gues
 
         {variant === 'auth' && authAction === 'signup' && (
           <View style={styles.right}>
-            <Text style={styles.subtleText} fontType="regular">No account yet?</Text>
+            <Text style={styles.subtleText} fontType="regular">{t('guestHeader.noAccountYet')}</Text>
             <TouchableOpacity style={styles.ghostBtn} onPress={() => router.push('/auth/signup')}>
-              <Text style={styles.ghostBtnLabel} fontType="medium">Get Started</Text>
+              <Text style={styles.ghostBtnLabel} fontType="medium">{t('guestHeader.getStarted')}</Text>
             </TouchableOpacity>
           </View>
         )}

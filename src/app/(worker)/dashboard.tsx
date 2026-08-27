@@ -12,8 +12,10 @@ import { fetchWorkSessionsByDateRange } from '../../services/workSessions';
 import moment from 'moment';
 import CustomMonthPicker from '../../components/time/CustomMonthPicker';
 
-const FILTERS = ["Yesterday", "Last 7 Days", "Last 30 Days", "This Month", "Custom"] as const;
-type FilterType = (typeof FILTERS)[number];
+import { useTranslation } from 'react-i18next';
+
+const FILTER_KEYS = ["filterYesterday", "filterLast7", "filterLast30", "filterThisMonth", "filterCustom"] as const;
+type FilterKey = (typeof FILTER_KEYS)[number];
 
 interface ProcessedSession {
   id: string;
@@ -37,7 +39,8 @@ interface DailySummary {
 }
 
 export default function WorkerDashboardScreen() {
-  const [selectedFilter, setSelectedFilter] = useState<FilterType>("Last 7 Days");
+  const [selectedFilter, setSelectedFilter] = useState<FilterKey>("filterLast7");
+  const { t } = useTranslation();
   const [workSessions, setWorkSessions] = useState<ProcessedSession[]>([]);
   const [loading, setLoading] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -66,23 +69,23 @@ export default function WorkerDashboardScreen() {
     const today = moment();
 
     switch (selectedFilter) {
-      case "Yesterday":
+      case "filterYesterday":
         startDate = today.clone().subtract(1, 'days').startOf('day');
         endDate = today.clone().subtract(1, 'days').endOf('day');
         break;
-      case "Last 7 Days":
+      case "filterLast7":
         startDate = today.clone().subtract(6, 'days').startOf('day');
         endDate = today.clone().endOf('day');
         break;
-      case "Last 30 Days":
+      case "filterLast30":
         startDate = today.clone().subtract(29, 'days').startOf('day');
         endDate = today.clone().endOf('day');
         break;
-      case "This Month":
+      case "filterThisMonth":
         startDate = today.clone().startOf('month');
         endDate = today.clone().endOf('month');
         break;
-      case "Custom":
+      case "filterCustom":
         startDate = moment(customDateRange.startDate);
         endDate = moment(customDateRange.endDate);
         break;
@@ -151,7 +154,7 @@ export default function WorkerDashboardScreen() {
       setWorkSessions(processed);
     } catch (err: any) {
       console.error("Error fetching work sessions:", err);
-      setError("Failed to load work sessions.");
+      setError(t('worker.dashboard.failedToLoad'));
     } finally {
       setLoading(false);
       setIsRefreshing(false);
@@ -220,10 +223,10 @@ export default function WorkerDashboardScreen() {
   );
 
   const getSummaryPeriodText = () => {
-    if (selectedFilter === 'Custom') {
+    if (selectedFilter === 'filterCustom') {
       return moment(customDateRange.startDate).format('MMMM YYYY');
     }
-    return selectedFilter;
+    return t(`worker.dashboard.${selectedFilter}`);
   }
 
   const handleMonthSelect = (startDate: Date, endDate: Date) => {
@@ -243,20 +246,20 @@ export default function WorkerDashboardScreen() {
           ListHeaderComponent={
             <View style={styles.headerContainer}>
               <View style={styles.pageHeader}>
-                <Text style={styles.title} fontType="bold">Personal Dashboard</Text>
-                <Text style={styles.subtitle}>{userCompanyName || 'Activity Overview'}</Text>
+                <Text style={styles.title} fontType="bold">{t('worker.dashboard.title')}</Text>
+                <Text style={styles.subtitle}>{userCompanyName || t('worker.dashboard.title')}</Text>
               </View>
 
               {/* Summary Stats Card */}
               <Card style={styles.summaryCard}>
                 <View style={styles.summaryHeader}>
                   <TouchableOpacity
-                    onPress={() => selectedFilter === 'Custom' && setIsMonthPickerVisible(true)}
+                    onPress={() => selectedFilter === 'filterCustom' && setIsMonthPickerVisible(true)}
                     style={styles.periodPicker}
-                    disabled={selectedFilter !== 'Custom'}
+                    disabled={selectedFilter !== 'filterCustom'}
                   >
                     <Text style={styles.periodText} fontType="bold">{getSummaryPeriodText()}</Text>
-                    {selectedFilter === 'Custom' && (
+                    {selectedFilter === 'filterCustom' && (
                       <Ionicons name="chevron-down" size={16} color={theme.colors.primary} style={{ marginLeft: 4 }} />
                     )}
                   </TouchableOpacity>
@@ -269,39 +272,39 @@ export default function WorkerDashboardScreen() {
                   <View style={styles.statsGrid}>
                     <View style={styles.statItem}>
                       <Text style={styles.statValue} fontType="bold">{totalHours.toFixed(1)}h</Text>
-                      <Text style={styles.statLabel}>Total Hours</Text>
+                      <Text style={styles.statLabel}>{t('worker.dashboard.totalHours')}</Text>
                     </View>
                     <View style={styles.divider} />
                     <View style={styles.statItem}>
                       <Text style={styles.statValue} fontType="bold">{avgDailyHours.toFixed(1)}h</Text>
-                      <Text style={styles.statLabel}>Avg. Daily</Text>
+                      <Text style={styles.statLabel}>{t('worker.dashboard.avgDaily')}</Text>
                     </View>
                   </View>
                 )}
               </Card>
 
               {/* Filters Scroll */}
-              <ScrollView 
-                horizontal 
-                showsHorizontalScrollIndicator={false} 
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
                 style={styles.filterScroll}
                 contentContainerStyle={styles.filterContent}
               >
-                {FILTERS.map((item) => (
+                {FILTER_KEYS.map((key) => (
                   <TouchableOpacity
-                    key={item}
-                    style={[styles.filterPill, selectedFilter === item && styles.filterPillActive]}
-                    onPress={() => setSelectedFilter(item)}
+                    key={key}
+                    style={[styles.filterPill, selectedFilter === key && styles.filterPillActive]}
+                    onPress={() => setSelectedFilter(key)}
                   >
-                    <Text style={[styles.filterLabel, selectedFilter === item && styles.filterLabelActive]} fontType="medium">
-                      {item}
+                    <Text style={[styles.filterLabel, selectedFilter === key && styles.filterLabelActive]} fontType="medium">
+                      {t(`worker.dashboard.${key}`)}
                     </Text>
                   </TouchableOpacity>
                 ))}
               </ScrollView>
 
               <View style={styles.sectionHeader}>
-                <Text style={styles.sectionTitle} fontType="bold">Work History</Text>
+                <Text style={styles.sectionTitle} fontType="bold">{t('worker.dashboard.workHistory')}</Text>
                 {loading && <ActivityIndicator size="small" color={theme.colors.primary} />}
               </View>
             </View>
@@ -311,7 +314,7 @@ export default function WorkerDashboardScreen() {
             !loading ? (
               <View style={styles.emptyState}>
                 <Ionicons name="document-text-outline" size={48} color={theme.colors.borderColor} />
-                <Text style={styles.emptyText} fontType="medium">No history found for this period.</Text>
+                <Text style={styles.emptyText} fontType="medium">{t('worker.dashboard.noHistory')}</Text>
               </View>
             ) : null
           }

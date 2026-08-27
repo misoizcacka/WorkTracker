@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, ActivityIndicator, ScrollView, Platform, Image, Dimensions } from 'react-native';
+import { View, StyleSheet, ActivityIndicator, ScrollView, Platform, Dimensions } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { supabase } from '../../../utils/supabase';
 import { Button } from '../../../components/Button';
@@ -10,7 +10,7 @@ import { useSession } from '../../../context/AuthContext';
 import { Text } from '../../../components/Themed';
 import { useTranslation } from 'react-i18next';
 import { GuestHeader } from '~/components/GuestHeader';
-import { GuestFooter } from '~/components/GuestFooter';
+import { Ionicons } from '@expo/vector-icons';
 
 const { width } = Dimensions.get('window');
 
@@ -87,19 +87,19 @@ export default function PaymentSuccess() {
         return (
           <>
             <View style={styles.iconCircle}>
-                <Text style={styles.statusIcon}>OK</Text>
+              <Ionicons name="checkmark" size={40} color="#059669" />
             </View>
             <Text style={styles.title} fontType='bold'>
-                {isUpdate ? 'Capacity Updated!' : t('payment.successTitle', 'Payment Successful!')}
+                {isUpdate ? t('payment.capacityUpdatedTitle') : t('payment.successTitle')}
             </Text>
             <Text style={styles.description} fontType='regular'>
                 {isUpdate
-                    ? 'Your new worker seats are now active and ready to use.'
-                    : t('payment.successDescription', 'Your payment was successful. Click below to continue to your company setup.')
+                    ? t('payment.capacityUpdatedDescription')
+                    : t('payment.successDescription')
                 }
             </Text>
             <Button
-              title={isUpdate ? 'Back to Account' : t('payment.continueToSetup', 'Continue to Company Setup')}
+              title={isUpdate ? t('payment.backToAccount') : t('payment.continueToSetup')}
               onPress={() => router.replace(isUpdate ? '/(manager)/account' : '/(manager)/company-setup')}
               style={styles.ctaButton}
             />
@@ -109,7 +109,7 @@ export default function PaymentSuccess() {
         return (
           <>
             <View style={[styles.iconCircle, { backgroundColor: theme.colors.errorBackground }]}>
-                <Text style={styles.statusIcon}>!</Text>
+              <Ionicons name="close" size={40} color={theme.colors.errorText} />
             </View>
             <Text style={styles.title} fontType='bold'>{t('payment.failedTitle', 'Payment Failed')}</Text>
             <View style={styles.errorContainer}>
@@ -138,7 +138,6 @@ export default function PaymentSuccess() {
                 {renderContent()}
             </Card>
           </View>
-          <GuestFooter />
         </ScrollView>
       </View>
     </AnimatedScreen>
@@ -187,13 +186,10 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: '#D1FAE5', // Light green
+    backgroundColor: '#D1FAE5',
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: theme.spacing(3),
-  },
-  statusIcon: {
-    fontSize: 40,
   },
   title: {
     fontSize: 28,

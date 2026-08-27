@@ -7,6 +7,7 @@ import { Logo } from '~/components/Logo';
 import { GuestHeader } from '~/components/GuestHeader';
 import { GuestFooter } from '~/components/GuestFooter';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 
 const MAX_W = 1160;
 const BREAKPOINT = 900;
@@ -28,152 +29,167 @@ const HoverCard: React.FC<{ style?: any; children: React.ReactNode }> = ({ style
 
 // ─── Feature bento cards ──────────────────────────────────────────────────────
 
-const CardScheduling = () => (
-  <HoverCard style={{ flex: 2, minWidth: 280 }}>
-    <View style={styles.cardIconRow}>
-      <View style={styles.cardIconWrap}>
-        <Ionicons name="calendar-outline" size={20} color={theme.colors.primary} />
-      </View>
-    </View>
-    <Text style={styles.cardTitle} fontType="bold">Daily scheduling</Text>
-    <Text style={styles.cardDesc} fontType="regular">
-      Drag workers onto job sites each morning. They see the assignment instantly in their app — no WhatsApp groups, no confusion.
-    </Text>
-    {/* Mini visual */}
-    <View style={styles.scheduleMockup}>
-      {['Anna M.', 'Carlos R.', 'Tomas K.'].map((name, i) => (
-        <View key={i} style={styles.scheduleRow}>
-          <View style={[styles.scheduleAvatar, { backgroundColor: i === 0 ? theme.colors.primary : theme.colors.primaryMuted }]} />
-          <View style={{ flex: 1 }}>
-            <View style={[styles.scheduleBar, { width: `${70 + i * 10}%` as any, opacity: i === 0 ? 1 : 0.5 }]} />
-          </View>
-          <View style={[styles.scheduleBadge, i === 0 && styles.scheduleBadgeActive]}>
-            <Text style={[styles.scheduleBadgeText, i === 0 && { color: theme.colors.primary }]} fontType="medium">
-              {i === 0 ? 'On site' : 'Scheduled'}
-            </Text>
-          </View>
+const CardScheduling = () => {
+  const { t } = useTranslation();
+  return (
+    <HoverCard style={{ flex: 2, minWidth: 280 }}>
+      <View style={styles.cardIconRow}>
+        <View style={styles.cardIconWrap}>
+          <Ionicons name="calendar-outline" size={20} color={theme.colors.primary} />
         </View>
-      ))}
-    </View>
-  </HoverCard>
-);
-
-const CardLiveMap = () => (
-  <HoverCard style={{ flex: 1, minWidth: 220 }}>
-    <View style={styles.cardIconRow}>
-      <View style={styles.cardIconWrap}>
-        <Ionicons name="location-outline" size={20} color={theme.colors.primary} />
       </View>
-    </View>
-    <Text style={styles.cardTitle} fontType="bold">Live map</Text>
-    <Text style={styles.cardDesc} fontType="regular">
-      See every worker in real time. Know who is on-site and who hasn't arrived.
-    </Text>
-    {/* Mini map visual */}
-    <View style={styles.mapMockup}>
-      <View style={styles.mapGrid}>
-        {[...Array(9)].map((_, i) => <View key={i} style={styles.mapGridCell} />)}
-      </View>
-      <View style={[styles.mapDot, { top: '30%', left: '40%' }]}>
-        <Ionicons name="person" size={10} color="#fff" />
-      </View>
-      <View style={[styles.mapDot, styles.mapDotSecondary, { top: '55%', left: '65%' }]}>
-        <Ionicons name="person" size={10} color="#fff" />
-      </View>
-      <View style={[styles.mapDot, styles.mapDotTertiary, { top: '20%', left: '70%' }]}>
-        <Ionicons name="person" size={10} color="#fff" />
-      </View>
-    </View>
-  </HoverCard>
-);
-
-const CardTimeTracking = () => (
-  <HoverCard style={{ flex: 1, minWidth: 220 }}>
-    <View style={styles.cardIconRow}>
-      <View style={styles.cardIconWrap}>
-        <Ionicons name="time-outline" size={20} color={theme.colors.primary} />
-      </View>
-    </View>
-    <Text style={styles.cardTitle} fontType="bold">Automatic time tracking</Text>
-    <Text style={styles.cardDesc} fontType="regular">
-      Sessions start at check-in, close at checkout. Hours log themselves.
-    </Text>
-    {/* Timer visual */}
-    <View style={styles.timerMockup}>
-      <View style={styles.timerRow}>
-        <View style={styles.timerDot} />
-        <Text style={styles.timerLabel} fontType="medium">Active session</Text>
-        <Text style={styles.timerValue} fontType="bold">6h 42m</Text>
-      </View>
-      <View style={styles.timerBar}>
-        <View style={[styles.timerBarFill, { width: '72%' }]} />
-      </View>
-      <Text style={styles.timerSub} fontType="regular">Started 07:18 · Site B</Text>
-    </View>
-  </HoverCard>
-);
-
-const CardPayroll = () => (
-  <HoverCard style={{ flex: 1, minWidth: 220 }}>
-    <View style={styles.cardIconRow}>
-      <View style={styles.cardIconWrap}>
-        <Ionicons name="cash-outline" size={20} color={theme.colors.primary} />
-      </View>
-    </View>
-    <Text style={styles.cardTitle} fontType="bold">One-click payroll</Text>
-    <Text style={styles.cardDesc} fontType="regular">
-      Pull a formatted export at month end. Hours already calculated per worker and project.
-    </Text>
-    {/* Payroll rows */}
-    <View style={styles.payrollMockup}>
-      {[
-        { name: 'Anna M.', hours: '168h', pay: '€2,100' },
-        { name: 'Carlos R.', hours: '152h', pay: '€1,900' },
-        { name: 'Tomas K.', hours: '160h', pay: '€2,000' },
-      ].map((row, i) => (
-        <View key={i} style={styles.payrollRow}>
-          <Text style={styles.payrollName} fontType="medium" numberOfLines={1}>{row.name}</Text>
-          <Text style={styles.payrollHours} fontType="regular">{row.hours}</Text>
-          <Text style={styles.payrollPay} fontType="bold">{row.pay}</Text>
-        </View>
-      ))}
-    </View>
-  </HoverCard>
-);
-
-const CardReplay = () => (
-  <HoverCard style={{ flex: 2, minWidth: 280 }}>
-    <View style={styles.cardIconRow}>
-      <View style={styles.cardIconWrap}>
-        <Ionicons name="play-outline" size={20} color={theme.colors.primary} />
-      </View>
-    </View>
-    <Text style={styles.cardTitle} fontType="bold">Location replay</Text>
-    <Text style={styles.cardDesc} fontType="regular">
-      Rewind any worker's full day on the map. Resolve disputes and verify presence with a timeline slider.
-    </Text>
-    {/* Timeline visual */}
-    <View style={styles.replayMockup}>
-      <View style={styles.replayTrack}>
-        <View style={styles.replayFill} />
-        <View style={styles.replayThumb} />
-      </View>
-      <View style={styles.replayLabels}>
-        <Text style={styles.replayLabel} fontType="regular">07:00</Text>
-        <Text style={styles.replayLabelActive} fontType="bold">13:24</Text>
-        <Text style={styles.replayLabel} fontType="regular">18:00</Text>
-      </View>
-      <View style={styles.replayEvents}>
-        {['Entered Site A', 'Exited Site A', 'Entered Site B'].map((ev, i) => (
-          <View key={i} style={[styles.replayEvent, i === 1 && styles.replayEventActive]}>
-            <View style={[styles.replayEventDot, i === 1 && styles.replayEventDotActive]} />
-            <Text style={[styles.replayEventText, i === 1 && { color: theme.colors.primary }]} fontType={i === 1 ? 'bold' : 'regular'}>{ev}</Text>
+      <Text style={styles.cardTitle} fontType="bold">{t('landing.cardSchedulingTitle')}</Text>
+      <Text style={styles.cardDesc} fontType="regular">
+        {t('landing.cardSchedulingDesc')}
+      </Text>
+      {/* Mini visual */}
+      <View style={styles.scheduleMockup}>
+        {['Anna M.', 'Carlos R.', 'Tomas K.'].map((name, i) => (
+          <View key={i} style={styles.scheduleRow}>
+            <View style={[styles.scheduleAvatar, { backgroundColor: i === 0 ? theme.colors.primary : theme.colors.primaryMuted }]} />
+            <View style={{ flex: 1 }}>
+              <View style={[styles.scheduleBar, { width: `${70 + i * 10}%` as any, opacity: i === 0 ? 1 : 0.5 }]} />
+            </View>
+            <View style={[styles.scheduleBadge, i === 0 && styles.scheduleBadgeActive]}>
+              <Text style={[styles.scheduleBadgeText, i === 0 && { color: theme.colors.primary }]} fontType="medium">
+                {i === 0 ? t('landing.cardScheduleBadgeOnSite') : t('landing.cardScheduleBadgeScheduled')}
+              </Text>
+            </View>
           </View>
         ))}
       </View>
-    </View>
-  </HoverCard>
-);
+    </HoverCard>
+  );
+};
+
+const CardLiveMap = () => {
+  const { t } = useTranslation();
+  return (
+    <HoverCard style={{ flex: 1, minWidth: 220 }}>
+      <View style={styles.cardIconRow}>
+        <View style={styles.cardIconWrap}>
+          <Ionicons name="location-outline" size={20} color={theme.colors.primary} />
+        </View>
+      </View>
+      <Text style={styles.cardTitle} fontType="bold">{t('landing.cardLiveMapTitle')}</Text>
+      <Text style={styles.cardDesc} fontType="regular">
+        {t('landing.cardLiveMapDesc')}
+      </Text>
+      {/* Mini map visual */}
+      <View style={styles.mapMockup}>
+        <View style={styles.mapGrid}>
+          {[...Array(9)].map((_, i) => <View key={i} style={styles.mapGridCell} />)}
+        </View>
+        <View style={[styles.mapDot, { top: '30%', left: '40%' }]}>
+          <Ionicons name="person" size={10} color="#fff" />
+        </View>
+        <View style={[styles.mapDot, styles.mapDotSecondary, { top: '55%', left: '65%' }]}>
+          <Ionicons name="person" size={10} color="#fff" />
+        </View>
+        <View style={[styles.mapDot, styles.mapDotTertiary, { top: '20%', left: '70%' }]}>
+          <Ionicons name="person" size={10} color="#fff" />
+        </View>
+      </View>
+    </HoverCard>
+  );
+};
+
+const CardTimeTracking = () => {
+  const { t } = useTranslation();
+  return (
+    <HoverCard style={{ flex: 1, minWidth: 220 }}>
+      <View style={styles.cardIconRow}>
+        <View style={styles.cardIconWrap}>
+          <Ionicons name="time-outline" size={20} color={theme.colors.primary} />
+        </View>
+      </View>
+      <Text style={styles.cardTitle} fontType="bold">{t('landing.cardTimeTrackingTitle')}</Text>
+      <Text style={styles.cardDesc} fontType="regular">
+        {t('landing.cardTimeTrackingDesc')}
+      </Text>
+      {/* Timer visual */}
+      <View style={styles.timerMockup}>
+        <View style={styles.timerRow}>
+          <View style={styles.timerDot} />
+          <Text style={styles.timerLabel} fontType="medium">{t('landing.cardTimerActiveSession')}</Text>
+          <Text style={styles.timerValue} fontType="bold">6h 42m</Text>
+        </View>
+        <View style={styles.timerBar}>
+          <View style={[styles.timerBarFill, { width: '72%' }]} />
+        </View>
+        <Text style={styles.timerSub} fontType="regular">Started 07:18 · Site B</Text>
+      </View>
+    </HoverCard>
+  );
+};
+
+const CardPayroll = () => {
+  const { t } = useTranslation();
+  return (
+    <HoverCard style={{ flex: 1, minWidth: 220 }}>
+      <View style={styles.cardIconRow}>
+        <View style={styles.cardIconWrap}>
+          <Ionicons name="cash-outline" size={20} color={theme.colors.primary} />
+        </View>
+      </View>
+      <Text style={styles.cardTitle} fontType="bold">{t('landing.cardPayrollTitle')}</Text>
+      <Text style={styles.cardDesc} fontType="regular">
+        {t('landing.cardPayrollDesc')}
+      </Text>
+      {/* Payroll rows */}
+      <View style={styles.payrollMockup}>
+        {[
+          { name: 'Anna M.', hours: '168h', pay: '€2,100' },
+          { name: 'Carlos R.', hours: '152h', pay: '€1,900' },
+          { name: 'Tomas K.', hours: '160h', pay: '€2,000' },
+        ].map((row, i) => (
+          <View key={i} style={styles.payrollRow}>
+            <Text style={styles.payrollName} fontType="medium" numberOfLines={1}>{row.name}</Text>
+            <Text style={styles.payrollHours} fontType="regular">{row.hours}</Text>
+            <Text style={styles.payrollPay} fontType="bold">{row.pay}</Text>
+          </View>
+        ))}
+      </View>
+    </HoverCard>
+  );
+};
+
+const CardReplay = () => {
+  const { t } = useTranslation();
+  return (
+    <HoverCard style={{ flex: 2, minWidth: 280 }}>
+      <View style={styles.cardIconRow}>
+        <View style={styles.cardIconWrap}>
+          <Ionicons name="play-outline" size={20} color={theme.colors.primary} />
+        </View>
+      </View>
+      <Text style={styles.cardTitle} fontType="bold">{t('landing.cardReplayTitle')}</Text>
+      <Text style={styles.cardDesc} fontType="regular">
+        {t('landing.cardReplayDesc')}
+      </Text>
+      {/* Timeline visual */}
+      <View style={styles.replayMockup}>
+        <View style={styles.replayTrack}>
+          <View style={styles.replayFill} />
+          <View style={styles.replayThumb} />
+        </View>
+        <View style={styles.replayLabels}>
+          <Text style={styles.replayLabel} fontType="regular">07:00</Text>
+          <Text style={styles.replayLabelActive} fontType="bold">13:24</Text>
+          <Text style={styles.replayLabel} fontType="regular">18:00</Text>
+        </View>
+        <View style={styles.replayEvents}>
+          {[t('landing.cardReplayEvent1'), t('landing.cardReplayEvent2'), t('landing.cardReplayEvent3')].map((ev, i) => (
+            <View key={i} style={[styles.replayEvent, i === 1 && styles.replayEventActive]}>
+              <View style={[styles.replayEventDot, i === 1 && styles.replayEventDotActive]} />
+              <Text style={[styles.replayEventText, i === 1 && { color: theme.colors.primary }]} fontType={i === 1 ? 'bold' : 'regular'}>{ev}</Text>
+            </View>
+          ))}
+        </View>
+      </View>
+    </HoverCard>
+  );
+};
 
 
 // ─── Main page ────────────────────────────────────────────────────────────────
@@ -183,6 +199,7 @@ export default function LandingPage() {
   const { width } = useWindowDimensions();
   const lg = width >= BREAKPOINT;
   const pad = lg ? theme.spacing(5) : theme.spacing(3);
+  const { t } = useTranslation();
 
   return (
     <View style={styles.root}>
@@ -251,29 +268,29 @@ export default function LandingPage() {
           <View style={{ zIndex: 1, alignItems: 'center', gap: theme.spacing(3), width: '100%' }}>
           <View style={styles.heroPill}>
             <View style={styles.heroPillDot} />
-            <Text style={styles.heroPillText} fontType="medium">For construction & field teams</Text>
+            <Text style={styles.heroPillText} fontType="medium">{t('landing.heroPill')}</Text>
           </View>
           <Text style={[styles.heroTitle, { fontSize: lg ? 72 : 42, lineHeight: lg ? 84 : 52 }]} fontType="bold">
-            Your crew.{'\n'}Your sites.{'\n'}
+            {t('landing.heroTitle').split('\n').slice(0, 2).join('\n')}{'\n'}
             <Text style={[styles.heroTitle, styles.heroTitleAccent, { fontSize: lg ? 72 : 42, lineHeight: lg ? 84 : 52 }]} fontType="bold">
-              Under control.
+              {t('landing.heroTitleAccent')}
             </Text>
           </Text>
           <Text style={[styles.heroSub, { maxWidth: lg ? 600 : undefined }]} fontType="regular">
-            Koordinate gives field managers a live view of every worker and every job site — with automatic time tracking, smart scheduling, and one-click payroll.
+            {t('landing.heroSub')}
           </Text>
           <View style={[styles.heroCTA, { flexDirection: lg ? 'row' : 'column', alignItems: lg ? 'center' : 'stretch', justifyContent: 'center' }]}>
             <TouchableOpacity style={styles.heroBtn} onPress={() => router.push('/auth/signup')}>
-              <Text style={styles.heroBtnLabel} fontType="medium">Get Started</Text>
+              <Text style={styles.heroBtnLabel} fontType="medium">{t('landing.heroCTA')}</Text>
               <Ionicons name="arrow-forward" size={15} color="#fff" />
             </TouchableOpacity>
             <Link href="/(guest)/pricing" asChild>
               <TouchableOpacity style={styles.heroGhostBtn}>
-                <Text style={styles.heroGhostBtnLabel} fontType="medium">See Pricing</Text>
+                <Text style={styles.heroGhostBtnLabel} fontType="medium">{t('landing.heroSeePricing')}</Text>
               </TouchableOpacity>
             </Link>
           </View>
-          <Text style={styles.heroNote} fontType="regular">Set up in under 5 minutes</Text>
+          <Text style={styles.heroNote} fontType="regular">{t('landing.heroNote')}</Text>
           </View>{/* end inner content View */}
         </View>
 
@@ -282,12 +299,12 @@ export default function LandingPage() {
         {/* BENTO FEATURES */}
         <View style={[styles.section, { paddingHorizontal: pad }]}>
           <View style={styles.sectionHead}>
-            <Text style={styles.eyebrow} fontType="bold">FEATURES</Text>
+            <Text style={styles.eyebrow} fontType="bold">{t('landing.featuresEyebrow')}</Text>
             <Text style={[styles.sectionTitle, { fontSize: lg ? 40 : 28 }]} fontType="bold">
-              Everything a field manager needs.
+              {t('landing.featuresTitle')}
             </Text>
             <Text style={styles.sectionSub} fontType="regular">
-              No integrations. No stitching together four apps. Scheduling, tracking, and payroll — end to end.
+              {t('landing.featuresSub')}
             </Text>
           </View>
 
@@ -310,15 +327,15 @@ export default function LandingPage() {
         {/* HOW IT WORKS */}
         <View style={[styles.section, { paddingHorizontal: pad }]}>
           <View style={styles.sectionHead}>
-            <Text style={styles.eyebrow} fontType="bold">HOW IT WORKS</Text>
-            <Text style={[styles.sectionTitle, { fontSize: lg ? 40 : 28 }]} fontType="bold">Up and running today.</Text>
+            <Text style={styles.eyebrow} fontType="bold">{t('landing.howItWorksEyebrow')}</Text>
+            <Text style={[styles.sectionTitle, { fontSize: lg ? 40 : 28 }]} fontType="bold">{t('landing.howItWorksTitle')}</Text>
           </View>
           <View style={[styles.stepsRow, { flexDirection: lg ? 'row' : 'column' }]}>
             {[
-              { n: '01', title: 'Set up your company', desc: 'Create your account, add projects and locations. Takes under 5 minutes.' },
-              { n: '02', title: 'Invite your workers', desc: 'Send an invite link or code. Workers download the app and are ready.' },
-              { n: '03', title: 'Assign the day', desc: 'Drag workers onto assignments each morning. They see it instantly.' },
-              { n: '04', title: 'Watch it run', desc: 'Live map, live sessions, full visibility without lifting the phone.' },
+              { n: '01', title: t('landing.step01Title'), desc: t('landing.step01Desc') },
+              { n: '02', title: t('landing.step02Title'), desc: t('landing.step02Desc') },
+              { n: '03', title: t('landing.step03Title'), desc: t('landing.step03Desc') },
+              { n: '04', title: t('landing.step04Title'), desc: t('landing.step04Desc') },
             ].map((step, i) => (
               <HoverCard key={i} style={[styles.stepCard, lg && { flex: 1 }]}>
                 <Text style={styles.stepNum} fontType="bold">{step.n}</Text>
@@ -335,13 +352,13 @@ export default function LandingPage() {
         <View style={[styles.ctaSection, { paddingHorizontal: pad }]}>
           <HoverCard style={[styles.ctaBox, { padding: lg ? theme.spacing(8) : theme.spacing(5) }]}>
             <Text style={[styles.ctaTitle, { fontSize: lg ? 40 : 26 }]} fontType="bold">
-              Ready to get your crew organised?
+              {t('landing.ctaTitle')}
             </Text>
             <Text style={styles.ctaSub} fontType="regular">
-              Join construction companies using Koordinate to run cleaner, faster field operations.
+              {t('landing.ctaSub')}
             </Text>
             <TouchableOpacity style={styles.ctaBtn} onPress={() => router.push('/auth/signup')}>
-              <Text style={styles.ctaBtnLabel} fontType="medium">Create Your Account</Text>
+              <Text style={styles.ctaBtnLabel} fontType="medium">{t('landing.ctaButton')}</Text>
               <Ionicons name="arrow-forward" size={16} color={theme.colors.primary} />
             </TouchableOpacity>
           </HoverCard>

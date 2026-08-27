@@ -186,8 +186,8 @@ export default function PrivacyPolicy() {
             </TouchableOpacity>
           </Link>
         </View>
+        <GuestFooter />
       </ScrollView>
-      <GuestFooter />
     </View>
   );
 }

@@ -20,14 +20,18 @@ import AssignmentSelectionModal from '../../components/AssignmentSelectionModal'
 import BreakDurationModal from '../../components/BreakDurationModal';
 import { View, Text } from '../../components/Themed';
 import { Logo } from '~/components/Logo';
-
 import { CircularTimer } from '~/components/CircularTimer';
 import { GeofenceAssignment } from 'background-location';
 import { fetchAssignmentsForWorkers } from '~/services/workerAssignments';
+import { useTranslation } from 'react-i18next';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+const BATTERY_OPT_SHOWN_KEY = 'battery_opt_shown';
 
 export default function Home() {
   const { user, userCompanyId, isCompanyIdLoading, deviceToken, deviceSecret, userCompanyName, refreshUser } = useSession();
   const { loadInitialProjects, isLoading: projectsLoading } = useProjects();
+  const { t } = useTranslation();
   const [currentDate, setCurrentDate] = useState(moment().format('YYYY-MM-DD'));
   const [locationPermission, setLocationPermission] = useState<Location.PermissionStatus | null>(null);
   const [workerMapLocation, setWorkerMapLocation] = useState<{ latitude: number; longitude: number } | null>(null);
@@ -110,19 +114,25 @@ export default function Home() {
       if (foregroundStatus === 'granted') {
         const { status: backgroundStatus } = await Location.requestBackgroundPermissionsAsync();
         if (backgroundStatus !== 'granted') {
-          Alert.alert("Background Location Required", "This app requires background location access to track work hours accurately.", [{ text: "Open Settings", onPress: () => Linking.openSettings() }]);
+          Alert.alert(t('worker.home.backgroundLocationRequired'), t('worker.home.backgroundLocationMsg'), [{ text: t('worker.batteryOptimization.openSettings'), onPress: () => Linking.openSettings() }]);
         }
         await Notifications.requestPermissionsAsync();
-        // Prompt Android users to disable battery optimization for reliable background tracking
+        // Show battery optimization prompt once on Android
         if (Platform.OS === 'android') {
-          Alert.alert(
-            "Disable Battery Optimization",
-            "For accurate work hour tracking, please disable battery optimization for this app. Tap 'Open Settings', find this app, and select 'Unrestricted' or 'Don't optimize'.",
-            [
-              { text: "Open Settings", onPress: () => Linking.openSettings() },
-              { text: "Later", style: "cancel" },
-            ]
-          );
+          try {
+            const alreadyShown = await AsyncStorage.getItem(BATTERY_OPT_SHOWN_KEY);
+            if (!alreadyShown) {
+              await AsyncStorage.setItem(BATTERY_OPT_SHOWN_KEY, 'true');
+              Alert.alert(
+                t('worker.batteryOptimization.title'),
+                t('worker.batteryOptimization.message'),
+                [
+                  { text: t('worker.batteryOptimization.openSettings'), onPress: () => Linking.openSettings() },
+                  { text: t('worker.batteryOptimization.later'), style: 'cancel' },
+                ]
+              );
+            }
+          } catch (_) {}
         }
       }
     })();
@@ -300,26 +310,25 @@ export default function Home() {
 
   const statusBadgeInfo = useMemo(() => {
     if (stableCheckedIn) {
-      if (isNearby) return { label: "WORKING", type: 'active' };
-      return { label: "OFF-SITE", type: 'warning' };
+      if (isNearby) return { label: t('worker.home.statusWorking'), type: 'active' };
+      return { label: t('worker.home.statusOffSite'), type: 'warning' };
     }
     if (relevantAssignment) {
-      if (isNearby) return { label: "READY", type: 'success' };
-      return { label: "AWAY", type: 'warning' };
+      if (isNearby) return { label: t('worker.home.statusReady'), type: 'success' };
+      return { label: t('worker.home.statusAway'), type: 'warning' };
     }
     return null;
-  }, [stableCheckedIn, isNearby, relevantAssignment]);
+  }, [stableCheckedIn, isNearby, relevantAssignment, t]);
 
   const locationStatusText = useMemo(() => {
-    if (!relevantAssignment) return "No scheduled assignments today.";
-    if (!locationReady) return "Locating you...";
-    if (!targetProjectLocation) return "No location coordinates for this site.";
-    if (isNearby) return `At ${projectLocationName}`;
-    
+    if (!relevantAssignment) return t('worker.home.noAssignmentsToday');
+    if (!locationReady) return t('worker.home.locating');
+    if (!targetProjectLocation) return t('worker.home.noLocationCoords');
+    if (isNearby) return t('worker.home.atSite', { name: projectLocationName });
     const displayDistance = distance ?? 0;
     const formattedDistance = displayDistance > 1000 ? `${(displayDistance / 1000).toFixed(1)}km` : `${Math.round(displayDistance)}m`;
-    return `${formattedDistance} from ${projectLocationName}`;
-  }, [relevantAssignment, locationReady, targetProjectLocation, isNearby, distance, projectLocationName]);
+    return t('worker.home.distanceFrom', { distance: formattedDistance, name: projectLocationName });
+  }, [relevantAssignment, locationReady, targetProjectLocation, isNearby, distance, projectLocationName, t]);
 
   useEffect(() => { fetchHomeData(); }, [fetchHomeData]);
 
@@ -419,24 +428,21 @@ export default function Home() {
       const today = moment().format('YYYY-MM-DD');
       if (currentDate !== today) {
         if (isOffline) {
-          Alert.alert("Connect to Refresh", "Today's assignments have not been loaded yet. Go online to refresh your schedule before checking in.");
+          Alert.alert(t('worker.home.connectToRefresh'), t('worker.home.connectToRefreshMsg'));
           return;
         }
-
         setCurrentDate(today);
         await fetchHomeData(true, today);
-        Alert.alert("Schedule Refreshed", "Today's assignments were refreshed. Review your schedule and tap check in again.");
+        Alert.alert(t('worker.home.scheduleRefreshed'), t('worker.home.scheduleRefreshedMsg'));
         return;
       }
 
       if (isOffline && currentWorkersAssignments.length === 0) {
-        Alert.alert("Connect to Refresh", "No assignments are loaded for today. Go online to pull today's schedule before checking in.");
+        Alert.alert(t('worker.home.connectToRefresh'), t('worker.home.connectToRefreshMsg'));
         return;
       }
 
       if (!isOffline && user?.id && userCompanyId) {
-        // 9-C: Wrap the live-assignment fetch in try-catch so a network failure doesn't
-        // silently abort check-in with no feedback to the user.
         let liveAssignments;
         try {
           liveAssignments = await fetchAssignmentsForWorkers(userCompanyId, today, [user.id]);
@@ -448,20 +454,19 @@ export default function Home() {
         if (liveAssignments !== null) {
           if (liveAssignments.length === 0) {
             await fetchHomeData(true, today);
-            Alert.alert("No Assignments Today", "You do not have any assignments scheduled for today.");
+            Alert.alert(t('worker.home.noAssignmentsOnline'), t('worker.home.noAssignmentsOnlineMsg'));
             return;
           }
-
           if (!liveAssignments.some((assignment) => assignment.id === relevantAssignment.id)) {
             await fetchHomeData(true, today);
-            Alert.alert("Schedule Updated", "Your assignments changed. Review today's schedule and try checking in again.");
+            Alert.alert(t('worker.home.scheduleUpdated'), t('worker.home.scheduleUpdatedMsg'));
             return;
           }
         }
       }
 
       const { status: bgStatus } = await Location.getBackgroundPermissionsAsync();
-      if (bgStatus !== 'granted') { Alert.alert("Background Location Required", "Please allow location access 'All the time'."); return; }
+      if (bgStatus !== 'granted') { Alert.alert(t('worker.home.backgroundLocationRequired'), t('worker.home.backgroundLocationMsg')); return; }
 
       let currentLocation;
       try {
@@ -470,15 +475,13 @@ export default function Home() {
       } catch (err) { return; }
 
       const d = getDistance(currentLocation, { latitude: targetProjectLocation.lat, longitude: targetProjectLocation.lon });
-      if (d > ACCEPTABLE_DISTANCE) { Alert.alert("Too far", `You must be at ${projectLocationName} to check in.`); return; }
+      if (d > ACCEPTABLE_DISTANCE) { Alert.alert(t('worker.home.tooFar'), t('worker.home.tooFarMsg', { name: projectLocationName })); return; }
 
       await startWorkSession(relevantAssignment.id, currentLocation);
-      // BackgroundLocation.start is handled by the useEffect that watches activeWorkSession —
-      // no need to call it here, which avoids the double-registration race.
-      Toast.show({ type: 'success', text1: 'Checked In', text2: `Working on ${projectLocationName}` });
+      Toast.show({ type: 'success', text1: t('worker.home.checkedInToast'), text2: t('worker.home.checkedInToastSub', { name: projectLocationName }) });
       setSelectedNextAssignmentId(null);
     } catch (err: any) {
-      Alert.alert("Check-in Failed", err.message);
+      Alert.alert(t('worker.home.checkInFailed'), err.message);
     } finally {
       setIsProcessingCheckInOut(false);
       setPendingAction(null);
@@ -511,11 +514,11 @@ export default function Home() {
       await endWorkSession(activeWorkSession.id, currentLocation, breakMinutes);
       await BackgroundLocation.stop();
       startedSessionIdRef.current = null;
-      Toast.show({ type: 'info', text1: 'Checked Out', text2: `Success from ${projectLocationName}` });
+      Toast.show({ type: 'info', text1: t('worker.home.checkedOutToast'), text2: t('worker.home.checkedOutToastSub', { name: projectLocationName }) });
       setElapsedTime(0);
       setSelectedNextAssignmentId(null);
     } catch (err: any) {
-      Alert.alert("Check-out Failed", err.message);
+      Alert.alert(t('worker.home.checkOutFailed'), err.message);
     } finally {
       setIsProcessingCheckInOut(false);
       setPendingAction(null);
@@ -542,7 +545,6 @@ export default function Home() {
 
   const isActuallyProcessing = isProcessingCheckInOut || pendingAction !== null;
   const buttonDisabled = isDataLoading || (stableCheckedIn ? false : (!isNearby || !relevantAssignment || !targetProjectLocation));
-  const buttonTitle = stableCheckedIn ? "Check Out" : (relevantAssignment ? "Check In" : "No Next Assignment");
 
   useEffect(() => {
     if (workerMapLocation && targetProjectLocation) {
@@ -564,21 +566,14 @@ export default function Home() {
   const handleSelectAssignment = (assignmentId: string) => {
     setSelectedNextAssignmentId(assignmentId);
     setIsAssignmentSelectionModalVisible(false);
-    // Immediately animate the map to fit the new assignment + user location.
-    // We can't use mapRegion state here because it updates asynchronously —
-    // instead compute the region directly and call animateToRegion on the ref.
     const assignment = currentWorkersAssignments.find(a => a.id === assignmentId) as any;
     if (!assignment) return;
     const lat = assignment.type === 'project' ? assignment.project?.location?.latitude : assignment.location?.latitude;
     const lon = assignment.type === 'project' ? assignment.project?.location?.longitude : assignment.location?.longitude;
     if (lat == null || lon == null) return;
     if (mapRef.current) {
-      const latDelta = workerMapLocation
-        ? Math.max(Math.abs(workerMapLocation.latitude - lat) * 1.5, 0.005)
-        : 0.005;
-      const lonDelta = workerMapLocation
-        ? Math.max(Math.abs(workerMapLocation.longitude - lon) * 1.5, 0.005)
-        : 0.005;
+      const latDelta = workerMapLocation ? Math.max(Math.abs(workerMapLocation.latitude - lat) * 1.5, 0.005) : 0.005;
+      const lonDelta = workerMapLocation ? Math.max(Math.abs(workerMapLocation.longitude - lon) * 1.5, 0.005) : 0.005;
       mapRef.current.animateToRegion({
         latitude: workerMapLocation ? (workerMapLocation.latitude + lat) / 2 : lat,
         longitude: workerMapLocation ? (workerMapLocation.longitude + lon) / 2 : lon,
@@ -592,7 +587,7 @@ export default function Home() {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color={theme.colors.primary} />
-        <Text style={styles.loadingText}>Checking permissions...</Text>
+        <Text style={styles.loadingText}>{t('worker.home.checkingPermissions')}</Text>
       </View>
     );
   }
@@ -601,16 +596,16 @@ export default function Home() {
     return (
       <View style={styles.centered}>
         <Ionicons name="location-outline" size={64} color={theme.colors.primary} />
-        <Text style={styles.pageTitle} fontType="bold">Location Access Required</Text>
-        <Text style={styles.pageSubtitle}>This app needs your location to track work hours.</Text>
-        <Button title="Grant Permission" onPress={requestPermissionAgain} style={{ marginTop: 20 }} />
+        <Text style={styles.pageTitle} fontType="bold">{t('worker.home.locationRequired')}</Text>
+        <Text style={styles.pageSubtitle}>{t('worker.home.locationRequiredSub')}</Text>
+        <Button title={t('worker.home.grantPermission')} onPress={requestPermissionAgain} style={{ marginTop: 20 }} />
       </View>
     );
   }
 
   return (
     <AnimatedScreen>
-      <ScrollView 
+      <ScrollView
         contentContainerStyle={styles.scrollContent}
         refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} colors={[theme.colors.primary]} />}
       >
@@ -621,7 +616,7 @@ export default function Home() {
             {isSyncingToCloud && (
               <View style={styles.syncPill}>
                 <ActivityIndicator size="small" color={theme.colors.bodyText} style={{ transform: [{ scale: 0.6 }] }} />
-                <Text style={styles.syncText} fontType="medium">Syncing</Text>
+                <Text style={styles.syncText} fontType="medium">{t('worker.home.syncing')}</Text>
               </View>
             )}
             <Text style={styles.dateText}>{moment().format('ddd, MMM D')}</Text>
@@ -633,7 +628,7 @@ export default function Home() {
           <View style={styles.offlineBanner}>
             <Ionicons name="cloud-offline-outline" size={14} color="#92400E" />
             <Text style={styles.offlineBannerText} fontType="medium">
-              {stableCheckedIn ? " You're offline — check out is still available" : " You're offline"}
+              {stableCheckedIn ? t('worker.home.offlineBannerCheckedIn') : t('worker.home.offlineBanner')}
             </Text>
           </View>
         )}
@@ -644,7 +639,7 @@ export default function Home() {
             <View style={styles.mainCardTop}>
               <View style={styles.mainCardLeft}>
                 <Text style={styles.mainCardLabel} fontType="medium">
-                  {stableCheckedIn ? 'Currently working at' : 'Next assignment'}
+                  {stableCheckedIn ? t('worker.home.currentlyWorkingAt') : t('worker.home.nextAssignment')}
                 </Text>
                 {isDataLoading ? (
                   <ActivityIndicator color={theme.colors.primary} style={{ marginTop: 8 }} />
@@ -666,8 +661,8 @@ export default function Home() {
                   <View style={styles.emptyAssignment}>
                     <Ionicons name="calendar-outline" size={28} color={theme.colors.disabledText} />
                     <View style={styles.emptyAssignmentText}>
-                      <Text style={styles.emptyAssignmentTitle} fontType="bold">No assignments today</Text>
-                      <Text style={styles.emptyAssignmentSub}>Your manager hasn't scheduled anything yet.</Text>
+                      <Text style={styles.emptyAssignmentTitle} fontType="bold">{t('worker.home.noAssignmentsToday')}</Text>
+                      <Text style={styles.emptyAssignmentSub}>{t('worker.home.noAssignmentsSub')}</Text>
                     </View>
                   </View>
                 )}
@@ -702,7 +697,7 @@ export default function Home() {
                   <View style={styles.sessionRow}>
                     <Ionicons name="time-outline" size={14} color={theme.colors.bodyText} />
                     <Text style={styles.sessionText}>
-                      {` Started ${moment(sessionStartTime).format('h:mm A')} · ${Math.floor(elapsedTime / 3600)}h ${Math.floor((elapsedTime % 3600) / 60)}m`}
+                      {` ${t('worker.home.sessionStarted', { time: moment(sessionStartTime).format('h:mm A') })} · ${Math.floor(elapsedTime / 3600)}h ${Math.floor((elapsedTime % 3600) / 60)}m`}
                     </Text>
                   </View>
                 ) : (
@@ -714,7 +709,7 @@ export default function Home() {
                 {!stableCheckedIn && targetProjectLocation && (
                   <TouchableOpacity onPress={handleNavigate} style={styles.navButton}>
                     <Ionicons name="navigate-outline" size={14} color={theme.colors.primary} />
-                    <Text style={styles.navButtonText} fontType="bold"> Navigate</Text>
+                    <Text style={styles.navButtonText} fontType="bold"> {t('worker.home.navigate')}</Text>
                   </TouchableOpacity>
                 )}
               </View>
@@ -772,7 +767,7 @@ export default function Home() {
           onPress={stableCheckedIn ? handleCheckOut : handleCheckIn}
           style={[styles.actionButton, stableCheckedIn ? styles.checkOutBtn : styles.checkInBtn]}
           disabled={buttonDisabled || isActuallyProcessing}
-          title={stableCheckedIn ? "Check Out" : (relevantAssignment ? "Check In" : "No Assignments")}
+          title={stableCheckedIn ? t('worker.home.checkOut') : (relevantAssignment ? t('worker.home.checkIn') : t('worker.home.noAssignments'))}
           textStyle={styles.buttonText}
           loading={isActuallyProcessing}
         />

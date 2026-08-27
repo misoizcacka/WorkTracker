@@ -4,31 +4,35 @@ import { Link } from 'expo-router';
 import { Text } from './Themed';
 import { Logo } from './Logo';
 import { theme } from '../theme';
+import { LanguagePicker } from './LanguagePicker';
+import { useTranslation } from 'react-i18next';
 
 const MAX_W = 1160;
 
-const FOOTER_LINKS = [
-  { label: 'Pricing', href: '/(guest)/pricing' },
-  { label: 'Terms', href: '/(guest)/terms' },
-  { label: 'Privacy', href: '/(guest)/privacy' },
-  { label: 'DPA', href: '/(guest)/dpa' },
-  { label: 'Legal Notice', href: '/(guest)/legal-notice' },
-] as const;
-
 export function GuestFooter() {
+  const { t } = useTranslation();
+
+  const FOOTER_LINKS = [
+    { labelKey: 'common.pricing', href: '/(guest)/pricing' },
+    { labelKey: 'guestFooter.terms', href: '/(guest)/terms' },
+    { labelKey: 'guestFooter.privacy', href: '/(guest)/privacy' },
+    { labelKey: 'guestFooter.dpa', href: '/(guest)/dpa' },
+    { labelKey: 'guestFooter.legalNotice', href: '/(guest)/legal-notice' },
+  ] as const;
+
   return (
     <View style={styles.wrapper}>
       <View style={styles.inner}>
         <View style={styles.top}>
           <View style={styles.brand}>
             <Logo size="medium" />
-            <Text style={styles.tagline} fontType="regular">Workforce management for field teams.</Text>
+            <Text style={styles.tagline} fontType="regular">{t('guestFooter.tagline')}</Text>
           </View>
           <View style={styles.links}>
             {FOOTER_LINKS.map(item => (
-              <Link key={item.label} href={item.href as any} asChild>
+              <Link key={item.labelKey} href={item.href as any} asChild>
                 <TouchableOpacity>
-                  <Text style={styles.link} fontType="regular">{item.label}</Text>
+                  <Text style={styles.link} fontType="regular">{t(item.labelKey)}</Text>
                 </TouchableOpacity>
               </Link>
             ))}
@@ -36,8 +40,9 @@ export function GuestFooter() {
         </View>
         <View style={styles.bottom}>
           <Text style={styles.copy} fontType="regular">
-            © {new Date().getFullYear()} Koordinate. All rights reserved.
+            © {new Date().getFullYear()} Koordinate. {t('common.allRightsReserved')}
           </Text>
+          <LanguagePicker />
         </View>
       </View>
     </View>
@@ -84,6 +89,9 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: theme.colors.borderColor,
     paddingTop: theme.spacing(3),
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
   copy: {
     fontSize: 12,

@@ -252,8 +252,8 @@ export default function DataProcessingAgreement() {
             </TouchableOpacity>
           </Link>
         </View>
+        <GuestFooter />
       </ScrollView>
-      <GuestFooter />
     </View>
   );
 }
