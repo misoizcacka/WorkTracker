@@ -333,6 +333,8 @@
       "later": "Senare"
     }
   },
+  "subscriptionSetup": {
+    "title": "Bekräfta din plan",
     "description": "Granska dina prenumerationsuppgifter innan du fortsätter till betalning.",
     "proceedToPayment": "Fortsätt till betalning"
   },

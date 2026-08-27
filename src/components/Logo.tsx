@@ -26,8 +26,8 @@ export const Logo: React.FC<LogoProps> = ({
   let height: DimensionValue = theme.branding.logoHeight;
 
   if (variant === 'icon') {
-    width = 24;
-    height = 36;
+    width = 16;
+    height = 24;
   } else {
     switch (size) {
       case 'small':

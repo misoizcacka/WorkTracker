@@ -333,6 +333,8 @@
       "later": "Later"
     }
   },
+  "subscriptionSetup": {
+    "title": "Uw abonnement bevestigen",
     "description": "Controleer uw abonnementsgegevens voordat u doorgaat naar de betaling.",
     "proceedToPayment": "Doorgaan naar betaling"
   },

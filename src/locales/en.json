@@ -333,6 +333,7 @@
       "later": "Later"
     }
   },
+  "subscriptionSetup": {
     "title": "Confirm Your Plan",
     "description": "Review your subscription details before proceeding to payment.",
     "proceedToPayment": "Proceed to Payment"

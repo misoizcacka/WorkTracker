@@ -333,6 +333,8 @@
       "later": "Más tarde"
     }
   },
+  "subscriptionSetup": {
+    "title": "Confirmar su plan",
     "description": "Revise los detalles de su suscripción antes de proceder al pago.",
     "proceedToPayment": "Proceder al pago"
   },

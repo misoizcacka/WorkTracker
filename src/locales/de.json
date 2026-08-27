@@ -333,6 +333,8 @@
       "later": "Später"
     }
   },
+  "subscriptionSetup": {
+    "title": "Tarif bestätigen",
     "description": "Überprüfen Sie Ihre Abonnementdetails, bevor Sie mit der Zahlung fortfahren.",
     "proceedToPayment": "Zur Zahlung"
   },

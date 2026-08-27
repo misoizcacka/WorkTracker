@@ -1,5 +1,5 @@
 import React, { useState, useContext, useEffect } from 'react';
-import { View, TextInput, StyleSheet, ActivityIndicator, ScrollView, Platform, Image, Dimensions } from 'react-native';
+import { View, TextInput, StyleSheet, ActivityIndicator, ScrollView, Platform, Dimensions } from 'react-native';
 import { useRouter } from 'expo-router';
 import Toast from 'react-native-toast-message';
 import { Button } from '../../components/Button';
@@ -11,7 +11,7 @@ import { supabase } from '../../utils/supabase';
 import { Dropdown } from 'react-native-element-dropdown';
 import { countries } from '../../utils/countries';
 import { Text } from '../../components/Themed';
-import Logo from '../../../assets/koordlogoblack1.svg';
+import { useTranslation } from 'react-i18next';
 
 const { width } = Dimensions.get('window');
 const isLargeScreen = width > 900;
@@ -138,11 +138,6 @@ export default function CompanySetup() {
   return (
     <AnimatedScreen>
       <View style={styles.container}>
-        {/* Header with Logo in top left */}
-        <View style={styles.header}>
-          <Image source={Logo} style={styles.logo} resizeMode="contain" />
-        </View>
-
         <ScrollView contentContainerStyle={styles.scrollContent}>
           <View style={styles.mainContent}>
             <Card style={styles.setupCard}>
@@ -223,22 +218,10 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: theme.colors.pageBackground,
   },
-  header: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    padding: theme.spacing(4),
-    zIndex: 10,
-  },
-  logo: {
-    width: 120,
-    height: 36,
-  },
   scrollContent: {
     flexGrow: 1,
     justifyContent: 'center',
     padding: theme.spacing(3),
-    paddingTop: theme.spacing(12),
     paddingBottom: theme.spacing(8),
   },
   mainContent: {

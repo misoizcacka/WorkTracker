@@ -356,6 +356,8 @@
       "later": "Później"
     }
   },
+  "subscriptionSetup": {
+    "title": "Potwierdź swój plan",
     "description": "Przejrzyj szczegóły subskrypcji przed przejściem do płatności.",
     "proceedToPayment": "Przejdź do płatności"
   },

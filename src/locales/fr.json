@@ -333,6 +333,8 @@
       "later": "Plus tard"
     }
   },
+  "subscriptionSetup": {
+    "title": "Confirmer votre formule",
     "description": "Vérifiez les détails de votre abonnement avant de procéder au paiement.",
     "proceedToPayment": "Procéder au paiement"
   },
