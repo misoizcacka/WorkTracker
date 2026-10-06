@@ -51,17 +51,22 @@ interface DiagRow {
 }
 
 function buildRows(d: LocationDiagnostics, now: number): DiagRow[] {
-  return [
+  const isIOS = typeof d.monitoredRegionCount === 'number';
+  const rows: DiagRow[] = [
     {
-      label: 'Foreground Service',
+      label: isIOS ? 'Location Manager' : 'Foreground Service',
       value: d.serviceRunning ? 'Running ✓' : 'NOT running ✗',
       status: d.serviceRunning ? 'ok' : 'error',
-      hint: d.serviceRunning ? undefined : 'Service was killed by OS. WorkManager will restart it within 15 min.',
+      hint: d.serviceRunning
+        ? undefined
+        : isIOS
+          ? 'Location manager inactive. Check Always Allow permission.'
+          : 'Service was killed by OS. WorkManager will restart it within 15 min.',
     },
     {
-      label: 'WorkManager',
+      label: isIOS ? 'BGTask Scheduler' : 'WorkManager',
       value: d.workManagerState,
-      status: ['RUNNING', 'ENQUEUED', 'SUCCEEDED'].includes(d.workManagerState) ? 'ok'
+      status: ['RUNNING', 'ENQUEUED', 'SUCCEEDED', 'SCHEDULED'].includes(d.workManagerState) ? 'ok'
         : d.workManagerState === 'NOT_SCHEDULED' ? 'warn'
         : 'error',
       hint: d.workManagerState === 'NOT_SCHEDULED'
@@ -132,6 +137,44 @@ function buildRows(d: LocationDiagnostics, now: number): DiagRow[] {
         : undefined,
     },
   ];
+
+  // iOS-specific rows
+  if (isIOS) {
+    rows.push({
+      label: 'Monitored Regions',
+      value: String(d.monitoredRegionCount),
+      status: (d.monitoredRegionCount ?? 0) > 0 ? 'ok' : d.hasActiveSession ? 'warn' : 'neutral',
+      hint: (d.monitoredRegionCount ?? 0) === 0 && d.hasActiveSession
+        ? 'No CLRegions monitored — geofencing may not be active.'
+        : undefined,
+    });
+    rows.push({
+      label: 'Location Permission',
+      value: d.authorizationStatus ?? 'unknown',
+      status: d.authorizationStatus === 'authorized_always' ? 'ok'
+        : d.authorizationStatus === 'authorized_when_in_use' ? 'warn'
+        : 'error',
+      hint: d.authorizationStatus !== 'authorized_always'
+        ? 'Must be "Always Allow" for background tracking to work.'
+        : undefined,
+    });
+    const gapSec = d.trackingGapSeconds ?? -1;
+    rows.push({
+      label: 'Tracking Gap',
+      value: gapSec < 0 ? 'No gap' : gapSec < 60 ? `${gapSec}s` : `${Math.round(gapSec / 60)}m`,
+      status: gapSec < 0 ? 'neutral'
+        : gapSec < 120 ? 'ok'
+        : gapSec < 600 ? 'warn'
+        : 'error',
+      hint: gapSec >= 600
+        ? 'Process was likely force-swiped. Geofencing resumes via OS relaunch or significant location change.'
+        : gapSec >= 120
+        ? 'Small gap detected — may have been temporarily paused by OS.'
+        : undefined,
+    });
+  }
+
+  return rows;
 }
 
 export default function DiagnosticScreen() {
@@ -223,7 +266,7 @@ export default function DiagnosticScreen() {
             <Ionicons name="warning-outline" size={24} color={theme.colors.danger} />
             <Text style={styles.errorText}>{error}</Text>
             <Text style={styles.errorHint}>
-              This screen requires a real Android device with the native module installed.
+              This screen requires a real device (iOS or Android) with the native module installed.
             </Text>
           </Card>
         ) : (

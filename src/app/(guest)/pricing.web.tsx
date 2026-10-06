@@ -1,35 +1,47 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, ScrollView, Platform, Dimensions, Image, TextInput, TouchableOpacity } from 'react-native';
+import { View, StyleSheet, ScrollView, Platform, useWindowDimensions, TextInput, TouchableOpacity } from 'react-native';
 import { Text } from '../../components/Themed';
-import { useRouter, Link } from 'expo-router';
+import { useRouter } from 'expo-router';
 import { Button } from '../../components/Button';
 import { Card } from '../../components/Card';
 import { theme } from '../../theme';
 import { useTranslation } from 'react-i18next';
 import AnimatedScreen from '../../components/AnimatedScreen';
-import { Logo } from '~/components/Logo';
 import { GuestHeader } from '~/components/GuestHeader';
 import { GuestFooter } from '~/components/GuestFooter';
 import { Ionicons } from '@expo/vector-icons';
 
-const { width } = Dimensions.get('window');
-const isLargeScreen = width > 900;
+const BASE_MONTHLY_FEE = 20;
+const PRICE_PER_WORKER = 7;
 
-const BASE_MONTHLY_FEE = 10;
-const PRICE_PER_WORKER = 6;
+const FAQItem: React.FC<{ question: string; answer: string }> = ({ question, answer }) => {
+  const [isExpanded, setIsExpanded] = useState(false);
+  return (
+    <Card style={styles.faqItem}>
+      <TouchableOpacity onPress={() => setIsExpanded(!isExpanded)} style={styles.faqQuestionButton} activeOpacity={0.7}>
+        <Text style={styles.faqQuestionText} fontType="medium">{question}</Text>
+        <Ionicons name={isExpanded ? 'chevron-up' : 'chevron-down'} size={20} color={theme.colors.primary} />
+      </TouchableOpacity>
+      {isExpanded && (
+        <View style={styles.faqAnswerContainer}>
+          <Text style={styles.faqAnswerText} fontType="regular">{answer}</Text>
+        </View>
+      )}
+    </Card>
+  );
+};
 
 export default function PricingPage() {
   const { t } = useTranslation();
   const router = useRouter();
   const [numWorkers, setNumWorkers] = useState('1');
+  const { width } = useWindowDimensions();
+  const isLargeScreen = width > 900;
 
   const estimatedCost = BASE_MONTHLY_FEE + (parseInt(numWorkers || '0') * PRICE_PER_WORKER);
 
   const handleDecrementWorkers = () => {
-    setNumWorkers(prev => {
-      const current = parseInt(prev || '0');
-      return Math.max(1, current - 1).toString();
-    });
+    setNumWorkers(prev => Math.max(1, parseInt(prev || '1') - 1).toString());
   };
 
   const handleIncrementWorkers = () => {
@@ -43,29 +55,31 @@ export default function PricingPage() {
 
         <ScrollView contentContainerStyle={styles.scrollContent}>
           <View style={styles.pricingSection}>
-            <Text style={styles.title} fontType="bold">{t('pricing.simpleTransparentPricingTitle')}</Text>
+            <Text style={[styles.title, { fontSize: isLargeScreen ? 48 : 32 }]} fontType="bold">
+              {t('pricing.simpleTransparentPricingTitle')}
+            </Text>
             <Text style={styles.description} fontType="regular">
               {t('pricing.simpleTransparentPricingDescription')}
             </Text>
 
             <Card style={styles.pricingCard}>
               <Text style={styles.pricingCardTitle} fontType="bold">{t('pricing.singlePlanTitle')}</Text>
-              
+
               <View style={styles.feeContainer}>
                 <Text style={styles.pricingCardBaseFee} fontType="bold">{BASE_MONTHLY_FEE} {t('common.currency')}</Text>
                 <Text style={styles.perMonth} fontType="regular">/ {t('common.month')}</Text>
               </View>
-              
+
               <Text style={styles.pricingCardPerWorker} fontType="regular">
                 + {PRICE_PER_WORKER} {t('common.currency')} / {t('pricing.workerPerMonth')}
               </Text>
-              
+
               <View style={styles.divider} />
 
               <Text style={styles.calculatorLabel} fontType="medium">{t('pricing.howManyWorkers')}</Text>
               <View style={styles.workerInputGroup}>
                 <TouchableOpacity onPress={handleDecrementWorkers} style={styles.workerButton}>
-                  <Text style={styles.workerButtonText} fontType="bold">−</Text>
+                  <Text style={styles.workerButtonText} fontType="bold">-</Text>
                 </TouchableOpacity>
                 <TextInput
                   style={styles.calculatorInput}
@@ -86,14 +100,16 @@ export default function PricingPage() {
               </View>
 
               <Button
-                title={t('pricing.getStarted')}
+                title={t('pricing.getStarted') as string}
                 onPress={() => router.push('/auth/signup')}
                 style={styles.ctaButton}
               />
             </Card>
-            
+
             <View style={styles.faqSection}>
-              <Text style={styles.faqHeading} fontType="bold">{t('pricing.faqHeading')}</Text>
+              <Text style={[styles.faqHeading, { fontSize: isLargeScreen ? 32 : 24 }]} fontType="bold">
+                {t('pricing.faqHeading')}
+              </Text>
               <View style={styles.faqGrid}>
                 {[
                   { q: 'pricing.faq1Q', a: 'pricing.faq1A', params: { baseFee: BASE_MONTHLY_FEE, perWorkerFee: PRICE_PER_WORKER } },
@@ -101,12 +117,12 @@ export default function PricingPage() {
                   { q: 'pricing.faq3Q', a: 'pricing.faq3A' },
                   { q: 'pricing.faq4Q', a: 'pricing.faq4A' },
                   { q: 'pricing.faq5Q', a: 'pricing.faq5A' },
-                  { q: 'pricing.faq6Q', a: 'pricing.faq6A' }
+                  { q: 'pricing.faq6Q', a: 'pricing.faq6A' },
                 ].map((item, index) => (
                   <FAQItem
                     key={index}
-                    question={t(item.q)}
-                    answer={t(item.a, item.params)}
+                    question={String(t(item.q))}
+                    answer={String(t(item.a, (item as any).params))}
                   />
                 ))}
               </View>
@@ -119,24 +135,6 @@ export default function PricingPage() {
   );
 }
 
-const FAQItem: React.FC<{ question: string; answer: string }> = ({ question, answer }) => {
-  const [isExpanded, setIsExpanded] = useState(false);
-
-  return (
-    <Card style={styles.faqItem}>
-      <TouchableOpacity onPress={() => setIsExpanded(!isExpanded)} style={styles.faqQuestionButton} activeOpacity={0.7}>
-        <Text style={styles.faqQuestionText} fontType="medium">{question}</Text>
-        <Ionicons name={isExpanded ? "chevron-up" : "chevron-down"} size={20} color={theme.colors.primary} />
-      </TouchableOpacity>
-      {isExpanded && (
-        <View style={styles.faqAnswerContainer}>
-          <Text style={styles.faqAnswerText} fontType="regular">{answer}</Text>
-        </View>
-      )}
-    </Card>
-  );
-};
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -147,28 +145,29 @@ const styles = StyleSheet.create({
     paddingBottom: theme.spacing(10),
   },
   pricingSection: {
-    padding: theme.spacing(8),
+    padding: theme.spacing(4),
     alignItems: 'center',
     ...Platform.select({
       web: {
         width: '100%',
-        maxWidth: 1400,
+        maxWidth: 1160,
         alignSelf: 'center',
+        paddingHorizontal: theme.spacing(5),
+        paddingVertical: theme.spacing(8),
       },
     }),
   },
   title: {
-    fontSize: isLargeScreen ? 48 : 32,
     color: theme.colors.headingText,
     textAlign: 'center',
     marginBottom: theme.spacing(2),
   },
   description: {
-    fontSize: 18,
+    fontSize: 17,
     color: theme.colors.bodyText,
     textAlign: 'center',
     marginBottom: theme.spacing(8),
-    maxWidth: 600,
+    maxWidth: 560,
     lineHeight: 28,
   },
   pricingCard: {
@@ -183,22 +182,17 @@ const styles = StyleSheet.create({
     marginBottom: theme.spacing(10),
     ...Platform.select({
       web: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 10 },
-        shadowOpacity: 0.1,
-        shadowRadius: 20,
-      },
-      native: {
-        elevation: 10,
-      },
+        boxShadow: '0px 8px 24px rgba(0,0,0,0.08)',
+      } as any,
+      native: { elevation: 8 },
     }),
   },
   pricingCardTitle: {
-    fontSize: 20,
+    fontSize: 14,
     color: theme.colors.primary,
     marginBottom: theme.spacing(3),
     textTransform: 'uppercase',
-    letterSpacing: 1,
+    letterSpacing: 1.5,
   },
   feeContainer: {
     flexDirection: 'row',
@@ -206,7 +200,7 @@ const styles = StyleSheet.create({
     marginBottom: theme.spacing(0.5),
   },
   pricingCardBaseFee: {
-    fontSize: 48,
+    fontSize: 52,
     color: theme.colors.headingText,
   },
   perMonth: {
@@ -215,7 +209,7 @@ const styles = StyleSheet.create({
     marginLeft: 4,
   },
   pricingCardPerWorker: {
-    fontSize: 16,
+    fontSize: 15,
     color: theme.colors.bodyText,
     marginBottom: theme.spacing(4),
   },
@@ -292,11 +286,10 @@ const styles = StyleSheet.create({
   },
   faqSection: {
     width: '100%',
-    maxWidth: 900,
+    maxWidth: 860,
     alignItems: 'center',
   },
   faqHeading: {
-    fontSize: 32,
     color: theme.colors.headingText,
     textAlign: 'center',
     marginBottom: theme.spacing(6),
@@ -309,7 +302,9 @@ const styles = StyleSheet.create({
     width: '100%',
     padding: 0,
     overflow: 'hidden',
-    borderRadius: theme.radius.lg,
+    borderRadius: theme.radius.xl,
+    borderWidth: 1,
+    borderColor: theme.colors.borderColor,
   },
   faqQuestionButton: {
     flexDirection: 'row',
@@ -318,9 +313,10 @@ const styles = StyleSheet.create({
     padding: theme.spacing(3),
   },
   faqQuestionText: {
-    fontSize: 17,
+    fontSize: 16,
     color: theme.colors.headingText,
-    flexShrink: 1,
+    flex: 1,
+    paddingRight: theme.spacing(2),
   },
   faqAnswerContainer: {
     paddingHorizontal: theme.spacing(3),
@@ -330,7 +326,7 @@ const styles = StyleSheet.create({
     borderTopColor: theme.colors.borderColor,
   },
   faqAnswerText: {
-    fontSize: 15,
+    fontSize: 14,
     color: theme.colors.bodyText,
     lineHeight: 24,
   },

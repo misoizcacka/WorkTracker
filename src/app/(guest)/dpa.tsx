@@ -46,6 +46,7 @@ export default function DataProcessingAgreement() {
       <GuestHeader variant="content" />
 
       <ScrollView contentContainerStyle={styles.content}>
+        <View style={styles.inner}>
         <Text style={styles.pageTitle} fontType="bold">Data Processing Agreement</Text>
         <Text style={styles.subtitle} fontType="regular">
           Pursuant to Art. 28 GDPR — between Koordinate (Processor) and the Customer (Controller)
@@ -252,6 +253,7 @@ export default function DataProcessingAgreement() {
             </TouchableOpacity>
           </Link>
         </View>
+        </View>
         <GuestFooter />
       </ScrollView>
     </View>
@@ -264,6 +266,9 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.pageBackground,
   },
   content: {
+    width: '100%',
+  },
+  inner: {
     maxWidth: 760,
     width: '100%',
     alignSelf: 'center',

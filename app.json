@@ -22,9 +22,13 @@
         "NSLocationAlwaysAndWhenInUseUsageDescription": "This app uses your location in the background to track your work hours and send periodic updates even when the app is closed.",
         "NSLocationAlwaysUsageDescription": "This app uses your location in the background to track your work hours and send periodic updates.",
         "UIBackgroundModes": [
-          "location"
+          "location",
+          "fetch"
         ],
-        "ITSAppUsesNonExemptEncryption": false
+        "ITSAppUsesNonExemptEncryption": false,
+        "BGTaskSchedulerPermittedIdentifiers": [
+          "app.koord.location.refresh"
+        ]
       },
       "bundleIdentifier": "app.koord"
     },

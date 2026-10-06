@@ -21,7 +21,7 @@
   },
   "pricing": {
     "simpleTransparentPricingTitle": "Eenvoudige en transparante prijzen",
-    "simpleTransparentPricingDescription": "Koordinate is ontworpen om mee te groeien met uw bedrijf. Onze flexibele abonnementen zorgen ervoor dat u alleen betaalt voor wat u nodig heeft, met heldere en voorspelbare kosten.",
+    "simpleTransparentPricingDescription": "Één plan, geen verrassingen. U betaalt een vaste basisprijs plus een klein bedrag per actieve medewerker — verder niets.",
     "singlePlanTitle": "Enkel abonnement",
     "workerPerMonth": "medewerker/maand",
     "howManyWorkers": "Hoeveel medewerkers?",
@@ -29,17 +29,17 @@
     "getStarted": "Aan de slag",
     "faqHeading": "Veelgestelde vragen",
     "faq1Q": "Hoe worden de maandelijkse kosten berekend?",
-    "faq1A": "Onze prijzen bestaan uit een basisbedrag van {{baseFee}}€ per maand, plus {{perWorkerFee}}€ extra per actieve medewerker.",
+    "faq1A": "U betaalt een vaste basisprijs van {{baseFee}}€/maand plus {{perWorkerFee}}€ per actieve medewerker. Bijvoorbeeld: 10 medewerkers kost {{baseFee}}€ + (10 × {{perWorkerFee}}€) = 90€/maand.",
     "faq2Q": "Zijn er verborgen kosten?",
-    "faq2A": "Nee, onze prijzen zijn volledig transparant. De maandelijkse basiskosten en de kosten per medewerker zijn de enige tarieven.",
+    "faq2A": "Nee. De basisprijs en het tarief per medewerker zijn de enige kosten. Geen installatiekosten, geen onboardingkosten, geen kosten per project.",
     "faq3Q": "Kan ik op elk moment medewerkers toevoegen of verwijderen?",
-    "faq3A": "Ja, u kunt het aantal medewerkers naar behoefte aanpassen. De facturering wordt naar rato berekend.",
-    "faq4Q": "Is er een contract of een minimale looptijd?",
-    "faq4A": "Nee, er zijn geen langetermijncontracten. U kunt uw abonnement op elk moment opzeggen.",
-    "faq5Q": "Wat gebeurt er als ik meer medewerkers toevoeg?",
-    "faq5A": "Extra plaatsen worden naar rato berekend. U betaalt alleen voor de resterende dagen van de factuurperiode.",
-    "faq6Q": "Hebben medewerkers accounts nodig?",
-    "faq6A": "Ja, elke medewerker heeft een account nodig om opdrachten in te zien en uren bij te houden."
+    "faq3A": "Ja. Medewerkers toevoegen heeft direct effect en wordt naar rato berekend voor de rest van de factuurperiode. Medewerkers verwijderen gaat in aan het begin van de volgende factuurperiode.",
+    "faq4Q": "Zijn er verborgen kosten of langetermijncontracten?",
+    "faq4A": "Geen verborgen kosten en geen contracten. U betaalt maandelijks en kunt altijd opzeggen via uw accountinstellingen. Uw toegang blijft actief tot het einde van de betaalde periode.",
+    "faq5Q": "Wat hebben medewerkers nodig om de app te gebruiken?",
+    "faq5A": "Medewerkers installeren de gratis Koordinate-app op hun Android- of iOS-telefoon. U nodigt ze uit met een code — geen e-mailadres vereist. Ze zien nooit facturatiegegevens.",
+    "faq6Q": "Hoe werkt locatietracking voor medewerkers?",
+    "faq6A": "Wanneer een medewerker incheckt bij een opdracht, volgt de app de GPS-locatie op de achtergrond en stuurt periodieke updates. Tracking stopt automatisch bij het uitchecken. Medewerkers worden in de app geïnformeerd over de tracking."
   },
   "login": {
     "loginHeading": "Welkom terug!",
@@ -145,13 +145,13 @@
       "heroTitleLine1": "Uw team.",
       "heroTitleLine2": "Uw locaties.",
       "heroTitleAccent": "Onder controle.",
-      "heroSub": "Koordinate biedt buitendienstmanagers een live overzicht van elke medewerker en elke locatie — met automatische tijdregistratie, slimme planning en salarisverwerking in één klik.",
+      "heroSub": "Live kaart van uw team, automatische tijdregistratie en salarisverwerking in een klik.",
       "heroCTA": "Aan de slag",
       "heroSeePricing": "Bekijk prijzen",
       "heroNote": "Instellen in minder dan 5 minuten",
       "featuresEyebrow": "FUNCTIES",
       "featuresTitle": "Alles wat een buitendienstmanager nodig heeft.",
-      "featuresSub": "Geen integraties. Geen vier aparte apps. Planning, registratie en salarisadministratie — van begin tot eind.",
+      "featuresSub": "Geen integraties. Geen vier aparte apps. Planning, registratie en salarisadministratie van begin tot eind.",
       "cardSchedulingTitle": "Dagelijkse planning",
       "cardSchedulingDesc": "Sleep medewerkers elke ochtend naar projectlocaties. Ze zien de opdracht meteen in hun app — geen WhatsApp-groepen, geen verwarring.",
       "cardScheduleBadgeOnSite": "Op locatie",
@@ -181,7 +181,7 @@
       "step04Desc": "Live kaart, actieve sessies, volledig overzicht zonder de telefoon op te pakken.",
       "ctaTitle": "Klaar om uw team onder controle te krijgen?",
       "ctaSub": "Sluit u aan bij bouwbedrijven die Koordinate gebruiken voor efficiëntere en snellere buitendienstoperaties.",
-      "ctaButton": "Uw account aanmaken"
+      "ctaButton": "Gratis starten"
     },
     "pricing": {
       "pageTitle": "Prijzen — Koordinate"
@@ -249,6 +249,7 @@
       "syncing": "Synchroniseren",
       "offlineBanner": "U bent offline",
       "offlineBannerCheckedIn": "U bent offline — uitchecken is nog mogelijk",
+      "trackingPausedBanner": "Locatietracking was ~{{minutes}} min. gepauzeerd (app gesloten). Uw uren worden nog steeds bijgehouden.",
       "checkedInToast": "Ingecheckt",
       "checkedInToastSub": "Werkzaam bij {{name}}",
       "checkedOutToast": "Uitgecheckt",
@@ -342,13 +343,13 @@
     "heroPill": "Voor bouw- en buitendienstteams",
     "heroTitle": "Uw team.\nUw locaties.\nOnder controle.",
     "heroTitleAccent": "Onder controle.",
-    "heroSub": "Koordinate biedt buitendienstmanagers een live overzicht van elke medewerker en elke locatie — met automatische tijdregistratie, slimme planning en salarisverwerking in één klik.",
+    "heroSub": "Live kaart van uw team, automatische tijdregistratie en salarisverwerking in een klik.",
     "heroCTA": "Aan de slag",
     "heroSeePricing": "Bekijk prijzen",
     "heroNote": "Instellen in minder dan 5 minuten",
     "featuresEyebrow": "FUNCTIES",
     "featuresTitle": "Alles wat een buitendienstmanager nodig heeft.",
-    "featuresSub": "Geen integraties. Geen vier aparte apps. Planning, registratie en salarisadministratie — van begin tot eind.",
+    "featuresSub": "Geen integraties. Geen vier aparte apps. Planning, registratie en salarisadministratie van begin tot eind.",
     "cardSchedulingTitle": "Dagelijkse planning",
     "cardSchedulingDesc": "Sleep medewerkers elke ochtend naar projectlocaties. Ze zien de opdracht meteen in hun app — geen WhatsApp-groepen, geen verwarring.",
     "cardScheduleBadgeOnSite": "Op locatie",
@@ -377,6 +378,6 @@
     "step04Desc": "Live kaart, actieve sessies, volledig overzicht zonder de telefoon op te pakken.",
     "ctaTitle": "Klaar om uw team onder controle te krijgen?",
     "ctaSub": "Sluit u aan bij bouwbedrijven die Koordinate gebruiken voor efficiëntere en snellere buitendienstoperaties.",
-    "ctaButton": "Uw account aanmaken"
+    "ctaButton": "Gratis starten"
   }
 }

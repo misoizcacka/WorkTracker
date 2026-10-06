@@ -9,7 +9,43 @@ final class LocationDbHelper {
   private let tableName = "local_location_events"
   private let transitionEventTypes = Set(["enter_geofence", "exit_geofence"])
 
+  // ─── App Group identifier ──────────────────────────────────────────────────
+  // Matches TrackingStateStore — must be added in Xcode → Signing & Capabilities.
+  private static let appGroupSuite = "group.app.koord.tracking"
+
   private init() {}
+
+  // ─── Database path ────────────────────────────────────────────────────────
+  // Android stores the DB in the application's databases directory, which maps
+  // to the App Group container on iOS.  Using the App Group path ensures:
+  //   1. The native background process (after a process kill) can still open the DB.
+  //   2. expo-sqlite (JS side) will open the same file when you pass the absolute
+  //      path — both sides stay in sync.
+  //
+  // Fallback: If the App Group container isn't available (unsigned build / simulator
+  // without entitlements) we fall back to the Documents/SQLite/ directory that the
+  // old implementation used, so existing installs keep working.
+  private func databaseURL() -> URL {
+    let fileManager = FileManager.default
+
+    // Primary: App Group shared container
+    if let containerURL = fileManager.containerURL(forSecurityApplicationGroupIdentifier: LocationDbHelper.appGroupSuite) {
+      let sqliteDir = containerURL.appendingPathComponent("SQLite", isDirectory: true)
+      try? fileManager.createDirectory(at: sqliteDir, withIntermediateDirectories: true, attributes: nil)
+      return sqliteDir.appendingPathComponent("workhourstracker.db")
+    }
+
+    // Fallback: Documents/SQLite (legacy path, kept for simulator / dev builds)
+    NSLog("LocationDbHelper: App Group not available — using Documents/SQLite fallback path.")
+    guard let documentsDirectory = fileManager.urls(for: .documentDirectory, in: .userDomainMask).first else {
+      fatalError("LocationDbHelper: Cannot determine Documents directory")
+    }
+    let sqliteDir = documentsDirectory.appendingPathComponent("SQLite", isDirectory: true)
+    try? fileManager.createDirectory(at: sqliteDir, withIntermediateDirectories: true, attributes: nil)
+    return sqliteDir.appendingPathComponent("workhourstracker.db")
+  }
+
+  // ─── Public API ────────────────────────────────────────────────────────────
 
   @discardableResult
   func insertLocationEvent(_ event: LocationEventRecord) -> Bool {
@@ -113,40 +149,37 @@ final class LocationDbHelper {
     return events
   }
 
-  private func openDatabase() -> OpaquePointer? {
-    let fileManager = FileManager.default
-    guard let documentsDirectory = fileManager.urls(for: .documentDirectory, in: .userDomainMask).first else {
-      return nil
-    }
-    let sqliteDirectory = documentsDirectory.appendingPathComponent("SQLite", isDirectory: true)
-    try? fileManager.createDirectory(at: sqliteDirectory, withIntermediateDirectories: true, attributes: nil)
-    let dbURL = sqliteDirectory.appendingPathComponent("workhourstracker.db")
+  /// Returns the total count of unsynced events — used by getDiagnostics().
+  func unsyncedEventCount() -> Int {
+    guard let db = openDatabase() else { return 0 }
+    defer { sqlite3_close(db) }
+    guard prepareDatabase(db) else { return 0 }
 
+    let sql = "SELECT COUNT(*) FROM \(tableName) WHERE synced = 0;"
+    var statement: OpaquePointer?
+    guard sqlite3_prepare_v2(db, sql, -1, &statement, nil) == SQLITE_OK else { return 0 }
+    defer { sqlite3_finalize(statement) }
+    guard sqlite3_step(statement) == SQLITE_ROW else { return 0 }
+    return Int(sqlite3_column_int(statement, 0))
+  }
+
+  // ─── Private helpers ───────────────────────────────────────────────────────
+
+  private func openDatabase() -> OpaquePointer? {
+    let dbURL = databaseURL()
     var db: OpaquePointer?
     guard sqlite3_open(dbURL.path, &db) == SQLITE_OK else {
-      if db != nil {
-        sqlite3_close(db)
-      }
+      if db != nil { sqlite3_close(db) }
+      NSLog("LocationDbHelper: failed to open database at \(dbURL.path)")
       return nil
     }
+    // WAL mode keeps the native write-ahead log in sync with the expo-sqlite JS connection.
+    sqlite3_exec(db, "PRAGMA journal_mode=WAL;", nil, nil, nil)
     return db
   }
 
   private func prepareDatabase(_ db: OpaquePointer?) -> Bool {
-    let createSQL = """
-      CREATE TABLE IF NOT EXISTS \(tableName) (
-        id TEXT PRIMARY KEY NOT NULL,
-        timestamp TEXT NOT NULL,
-        company_id TEXT NOT NULL,
-        type TEXT NOT NULL,
-        assignment_id TEXT NOT NULL,
-        worker_id TEXT NOT NULL,
-        latitude REAL NOT NULL,
-        longitude REAL NOT NULL,
-        notes TEXT,
-        synced INTEGER DEFAULT 0 NOT NULL
-      );
-    """
+    let createSQL = createTableSQL()
     guard sqlite3_exec(db, createSQL, nil, nil, nil) == SQLITE_OK else { return false }
     return ensureCompanyIdIsRequired(db)
   }

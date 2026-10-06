@@ -753,17 +753,10 @@ export function AssignmentsProvider({ children }: { children: React.ReactNode })
           // Enrich with worker_assignments data from the local assignments state
           // so the SQLite mirror has the full shape needed when going offline.
           const matchingAssignment = assignments.find(a => a.id === assignmentId);
-          const enrichedSession = {
+          const enrichedSession: WorkSession = {
             ...remoteSession,
             synced: true,
-            worker_assignments: matchingAssignment
-              ? {
-                  assigned_date: matchingAssignment.assigned_date,
-                  sort_key: matchingAssignment.sort_key,
-                  ref_id: matchingAssignment.ref_id,
-                  ref_type: matchingAssignment.ref_type,
-                }
-              : undefined,
+            worker_assignments: matchingAssignment ?? undefined,
           };
           setActiveWorkSession(enrichedSession);
           setLoadedWorkSessions(prev => [...prev, enrichedSession]);

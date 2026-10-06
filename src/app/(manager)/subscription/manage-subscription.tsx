@@ -13,8 +13,8 @@ import { supabase } from '../../../utils/supabase';
 import moment from 'moment';
 import Toast from 'react-native-toast-message';
 
-const BASE_MONTHLY_FEE = 10;
-const PRICE_PER_WORKER = 6;
+const BASE_MONTHLY_FEE = 20;
+const PRICE_PER_WORKER = 7;
 
 export default function ManageSubscriptionScreen() {
   const router = useRouter();

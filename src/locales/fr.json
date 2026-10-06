@@ -21,7 +21,7 @@
   },
   "pricing": {
     "simpleTransparentPricingTitle": "Tarification simple et transparente",
-    "simpleTransparentPricingDescription": "Koordinate est conçu pour évoluer avec votre entreprise. Nos formules flexibles vous permettent de ne payer que ce dont vous avez besoin, avec des coûts clairs et prévisibles.",
+    "simpleTransparentPricingDescription": "Un seul plan, sans surprise. Vous payez un forfait de base fixe plus un petit montant par travailleur actif — rien de plus.",
     "singlePlanTitle": "Formule unique",
     "workerPerMonth": "travailleur/mois",
     "howManyWorkers": "Combien de travailleurs ?",
@@ -29,17 +29,17 @@
     "getStarted": "Commencer",
     "faqHeading": "Foire aux questions",
     "faq1Q": "Comment le coût mensuel est-il calculé ?",
-    "faq1A": "Notre tarification comprend un abonnement de base de {{baseFee}}€ par mois, plus {{perWorkerFee}}€ supplémentaires par travailleur actif.",
+    "faq1A": "Vous payez un forfait de base fixe de {{baseFee}}€/mois, plus {{perWorkerFee}}€ par travailleur actif. Par exemple, 10 travailleurs coûtent {{baseFee}}€ + (10 × {{perWorkerFee}}€) = 90€/mois.",
     "faq2Q": "Y a-t-il des frais cachés ?",
-    "faq2A": "Non, notre tarification est entièrement transparente. L'abonnement de base mensuel et le coût par travailleur sont les seuls frais appliqués.",
+    "faq2A": "Non. Le forfait de base et le tarif par travailleur sont les seuls frais. Aucun frais d'installation, d'intégration ou par projet.",
     "faq3Q": "Puis-je ajouter ou supprimer des travailleurs à tout moment ?",
-    "faq3A": "Oui, vous pouvez ajuster votre nombre de travailleurs selon vos besoins. Votre facturation sera calculée au prorata.",
-    "faq4Q": "Y a-t-il un contrat ou une période d'engagement minimum ?",
-    "faq4A": "Non, il n'y a aucun contrat à long terme. Vous pouvez résilier votre abonnement à tout moment.",
-    "faq5Q": "Que se passe-t-il si j'ajoute davantage de travailleurs ?",
-    "faq5A": "Les postes supplémentaires sont facturés au prorata. Vous ne payez que pour les jours restants du cycle de facturation.",
-    "faq6Q": "Les travailleurs ont-ils besoin de comptes ?",
-    "faq6A": "Oui, chaque travailleur doit disposer d'un compte pour accéder aux missions et enregistrer ses heures."
+    "faq3A": "Oui. L'ajout de travailleurs prend effet immédiatement et est calculé au prorata pour le reste du cycle de facturation. La suppression prend effet au début de la prochaine période de facturation.",
+    "faq4Q": "Y a-t-il des frais cachés ou des engagements ?",
+    "faq4A": "Aucun frais caché, aucun contrat. Vous payez mois par mois et pouvez résilier à tout moment depuis vos paramètres de compte. Votre accès reste actif jusqu'à la fin de la période payée.",
+    "faq5Q": "De quoi les travailleurs ont-ils besoin pour utiliser l'application ?",
+    "faq5A": "Les travailleurs installent l'application gratuite Koordinate sur leur téléphone Android ou iOS. Vous les invitez avec un code — aucune adresse e-mail requise. Ils ne voient jamais les informations de facturation.",
+    "faq6Q": "Comment fonctionne le suivi de localisation pour les travailleurs ?",
+    "faq6A": "Lorsqu'un travailleur pointe sur une mission, l'application suit sa position GPS en arrière-plan et envoie des mises à jour périodiques. Le suivi s'arrête automatiquement lors du pointage de sortie. Les travailleurs sont informés du suivi dans l'application."
   },
   "login": {
     "loginHeading": "Bon retour !",
@@ -145,13 +145,13 @@
       "heroTitleLine1": "Vos équipes.",
       "heroTitleLine2": "Vos chantiers.",
       "heroTitleAccent": "Sous contrôle.",
-      "heroSub": "Koordinate offre aux responsables terrain une vue en direct de chaque travailleur et de chaque chantier — avec suivi automatique du temps, planification intelligente et paie en un clic.",
+      "heroSub": "Carte live de vos équipes, suivi automatique du temps et gestion de paie en un clic.",
       "heroCTA": "Commencer",
       "heroSeePricing": "Voir les tarifs",
       "heroNote": "Configuration en moins de 5 minutes",
       "featuresEyebrow": "FONCTIONNALITÉS",
       "featuresTitle": "Tout ce dont un responsable terrain a besoin.",
-      "featuresSub": "Pas d'intégrations. Pas de combinaison de quatre applications. Planification, suivi et paie — de bout en bout.",
+      "featuresSub": "Pas d'intégrations. Pas de combinaison de quatre applications. Planification, suivi et paie de bout en bout.",
       "cardSchedulingTitle": "Planification quotidienne",
       "cardSchedulingDesc": "Affectez les travailleurs sur les chantiers chaque matin par glisser-déposer. Ils voient immédiatement leur mission dans l'application — sans groupes WhatsApp, sans confusion.",
       "cardScheduleBadgeOnSite": "Sur site",
@@ -181,7 +181,7 @@
       "step04Desc": "Carte en direct, sessions actives, visibilité totale sans décrocher le téléphone.",
       "ctaTitle": "Prêt à maîtriser vos équipes terrain ?",
       "ctaSub": "Rejoignez les entreprises du bâtiment qui utilisent Koordinate pour des opérations terrain plus fluides et plus rapides.",
-      "ctaButton": "Créer votre compte"
+      "ctaButton": "Commencer gratuitement"
     },
     "pricing": {
       "pageTitle": "Tarifs — Koordinate"
@@ -249,6 +249,7 @@
       "syncing": "Synchronisation",
       "offlineBanner": "Vous êtes hors ligne",
       "offlineBannerCheckedIn": "Vous êtes hors ligne — le pointage de départ reste disponible",
+      "trackingPausedBanner": "Le suivi de localisation a été interrompu ~{{minutes}} min (application fermée). Vos heures sont toujours enregistrées.",
       "checkedInToast": "Arrivée pointée",
       "checkedInToastSub": "En cours sur {{name}}",
       "checkedOutToast": "Départ pointé",
@@ -342,13 +343,13 @@
     "heroPill": "Pour les équipes terrain et le bâtiment",
     "heroTitle": "Vos équipes.\nVos chantiers.\nSous contrôle.",
     "heroTitleAccent": "Sous contrôle.",
-    "heroSub": "Koordinate offre aux responsables terrain une vue en direct de chaque travailleur et de chaque chantier — avec suivi automatique du temps, planification intelligente et paie en un clic.",
+    "heroSub": "Carte live de vos équipes, suivi automatique du temps et gestion de paie en un clic.",
     "heroCTA": "Commencer",
     "heroSeePricing": "Voir les tarifs",
     "heroNote": "Configuration en moins de 5 minutes",
     "featuresEyebrow": "FONCTIONNALITÉS",
     "featuresTitle": "Tout ce dont un responsable terrain a besoin.",
-    "featuresSub": "Pas d'intégrations. Pas de combinaison de quatre applications. Planification, suivi et paie — de bout en bout.",
+    "featuresSub": "Pas d'intégrations. Pas de combinaison de quatre applications. Planification, suivi et paie de bout en bout.",
     "cardSchedulingTitle": "Planification quotidienne",
     "cardSchedulingDesc": "Affectez les travailleurs sur les chantiers chaque matin par glisser-déposer. Ils voient immédiatement leur mission dans l'application — sans groupes WhatsApp, sans confusion.",
     "cardScheduleBadgeOnSite": "Sur site",
@@ -377,6 +378,6 @@
     "step04Desc": "Carte en direct, sessions actives, visibilité totale sans décrocher le téléphone.",
     "ctaTitle": "Prêt à maîtriser vos équipes terrain ?",
     "ctaSub": "Rejoignez les entreprises du bâtiment qui utilisent Koordinate pour des opérations terrain plus fluides et plus rapides.",
-    "ctaButton": "Créer votre compte"
+    "ctaButton": "Commencer gratuitement"
   }
 }

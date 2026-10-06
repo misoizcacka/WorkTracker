@@ -37,6 +37,7 @@ export default function TermsOfService() {
       <GuestHeader variant="content" />
 
       <ScrollView contentContainerStyle={styles.content}>
+        <View style={styles.inner}>
         <Text style={styles.pageTitle} fontType="bold">Terms of Service</Text>
         <Text style={styles.lastUpdated} fontType="regular">Last updated: {LAST_UPDATED}</Text>
 
@@ -158,6 +159,7 @@ export default function TermsOfService() {
             </TouchableOpacity>
           </Link>
         </View>
+        </View>
         <GuestFooter />
       </ScrollView>
     </View>
@@ -170,6 +172,9 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.pageBackground,
   },
   content: {
+    width: '100%',
+  },
+  inner: {
     maxWidth: 760,
     width: '100%',
     alignSelf: 'center',

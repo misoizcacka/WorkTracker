@@ -21,17 +21,21 @@ interface BackgroundLocationModule {
 
 export interface LocationDiagnostics {
   serviceRunning: boolean;
-  workManagerState: string;         // RUNNING | ENQUEUED | SUCCEEDED | NOT_SCHEDULED | etc.
-  trackingMode: string;             // ACTIVE | PASSIVE
+  workManagerState: string;           // Android: RUNNING|ENQUEUED|SUCCEEDED|NOT_SCHEDULED  iOS: SCHEDULED|NOT_SCHEDULED
+  trackingMode: string;               // ACTIVE | PASSIVE
   geofenceCount: number;
   lastLatitude: number;
   lastLongitude: number;
-  lastLocationAgeSeconds: number;   // -1 if never
-  lastLocationAccuracyMeters: number; // -1 if unknown
+  lastLocationAgeSeconds: number;     // -1 if never
+  lastLocationAccuracyMeters: number; // -1 if unknown (always -1 on iOS)
   hasActiveSession: boolean;
   workerId: string;
   assignmentId: string;
   unsyncedNativeEventCount: number;
+  // iOS-only (present on iOS, absent on Android — treat as optional)
+  monitoredRegionCount?: number;      // Number of CLRegions currently monitored
+  authorizationStatus?: string;       // CLAuthorizationStatus as string
+  trackingGapSeconds?: number;        // Seconds since last live location tick; > 600 = gap detected
 }
 
 let BackgroundLocationModule: BackgroundLocationModule;
@@ -82,6 +86,8 @@ try {
         workerId: '',
         assignmentId: '',
         unsyncedNativeEventCount: 0,
+        monitoredRegionCount: 0,
+        authorizationStatus: 'unknown',
       };
     },
   };

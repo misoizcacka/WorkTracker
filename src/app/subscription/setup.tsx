@@ -17,8 +17,8 @@ const { width } = Dimensions.get('window');
 const isLargeScreen = width > 900;
 
 // Define pricing constants from pricing page
-const BASE_MONTHLY_FEE = 10; // EUR
-const PRICE_PER_WORKER = 6; // EUR
+const BASE_MONTHLY_FEE = 20; // EUR
+const PRICE_PER_WORKER = 7; // EUR
 
 export default function SubscriptionSetupPage() {
   const { t } = useTranslation();

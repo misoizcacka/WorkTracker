@@ -184,7 +184,10 @@ export default function Login() {
                 onChangeText={setEmail}
                 keyboardType="email-address"
                 autoCapitalize="none"
+                autoComplete="email"
+                spellCheck={false}
                 placeholderTextColor={theme.colors.disabledText}
+                accessibilityLabel="Email address"
               />
               {errors.email && <Text style={styles.fieldError} fontType="regular">{errors.email}</Text>}
             </View>
@@ -198,7 +201,9 @@ export default function Login() {
                   value={password}
                   onChangeText={setPassword}
                   secureTextEntry={!passwordVisible}
+                  autoComplete="current-password"
                   placeholderTextColor={theme.colors.disabledText}
+                  accessibilityLabel="Password"
                 />
                 <Pressable onPress={() => setPasswordVisible(!passwordVisible)} style={styles.passwordToggle}>
                   <Feather
@@ -310,6 +315,12 @@ const styles = StyleSheet.create({
     color: theme.colors.bodyText,
     textAlign: 'center',
     marginBottom: theme.spacing(4),
+  },
+  header: {
+    alignItems: 'center',
+    paddingTop: theme.spacing(4),
+    paddingBottom: theme.spacing(2),
+    paddingHorizontal: theme.spacing(3),
   },
   mobileIconShell: {
     width: 52,

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, TextInput, StyleSheet, ActivityIndicator, Alert, ScrollView, Platform, Dimensions, Image, Pressable, TouchableOpacity } from 'react-native';
+import { View, TextInput, StyleSheet, ActivityIndicator, Alert, ScrollView, Platform, Dimensions, Image, Pressable, TouchableOpacity, useWindowDimensions } from 'react-native';
 import { Feather, Ionicons } from '@expo/vector-icons';
 import { useRouter, Link } from 'expo-router';
 import { useSession } from '../../context/AuthContext';
@@ -13,13 +13,14 @@ import { GuestHeader } from '~/components/GuestHeader';
 import { supabase } from '../../utils/supabase';
 import { useTranslation } from 'react-i18next';
 
-const { width } = Dimensions.get('window');
-const isLargeScreen = width > 900;
+const BREAKPOINT = 900;
 
 export default function Signup() {
   const router = useRouter();
   const { refreshUser, user, userRole } = useSession();
   const { t } = useTranslation();
+  const { width } = useWindowDimensions();
+  const isLargeScreen = width > BREAKPOINT;
 
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
@@ -152,7 +153,9 @@ export default function Signup() {
                     value={fullName}
                     onChangeText={setFullName}
                     autoCapitalize="words"
+                    autoComplete="name"
                     placeholderTextColor={theme.colors.disabledText}
+                    accessibilityLabel="Full name"
                   />
                   {errors.fullName && <Text style={styles.fieldError} fontType="regular">{errors.fullName}</Text>}
                 </View>
@@ -166,7 +169,10 @@ export default function Signup() {
                     onChangeText={setEmail}
                     keyboardType="email-address"
                     autoCapitalize="none"
+                    autoComplete="email"
+                    spellCheck={false}
                     placeholderTextColor={theme.colors.disabledText}
+                    accessibilityLabel="Email address"
                   />
                   {errors.email && <Text style={styles.fieldError} fontType="regular">{errors.email}</Text>}
                 </View>
@@ -180,7 +186,9 @@ export default function Signup() {
                       value={password}
                       onChangeText={setPassword}
                       secureTextEntry={!passwordVisible}
+                      autoComplete="new-password"
                       placeholderTextColor={theme.colors.disabledText}
+                      accessibilityLabel="Password"
                     />
                     <Pressable onPress={() => setPasswordVisible(!passwordVisible)} style={styles.passwordToggle}>
                       <Feather
@@ -250,6 +258,7 @@ const styles = StyleSheet.create({
   },
   mainLayout: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     alignItems: 'center',
     justifyContent: 'center',
     width: '100%',

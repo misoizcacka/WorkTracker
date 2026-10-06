@@ -12,6 +12,7 @@ export default function Impressum() {
       <GuestHeader variant="content" />
 
       <ScrollView contentContainerStyle={styles.content}>
+        <View style={styles.inner}>
         <Text style={styles.pageTitle} fontType="bold">Legal Notice</Text>
         <Text style={styles.subtitle} fontType="regular">Impressum – Information pursuant to §5 TMG (Telemedia Act) and §55 RStV</Text>
 
@@ -78,6 +79,7 @@ export default function Impressum() {
             </TouchableOpacity>
           </Link>
         </View>
+        </View>
         <GuestFooter />
       </ScrollView>
     </View>
@@ -90,6 +92,9 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.pageBackground,
   },
   content: {
+    width: '100%',
+  },
+  inner: {
     maxWidth: 640,
     width: '100%',
     alignSelf: 'center',

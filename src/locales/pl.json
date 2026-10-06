@@ -21,7 +21,7 @@
   },
   "pricing": {
     "simpleTransparentPricingTitle": "Prosty i przejrzysty cennik",
-    "simpleTransparentPricingDescription": "Koordinate jest zaprojektowany, aby rozwijać się wraz z Państwa firmą. Nasze elastyczne plany gwarantują, że płacą Państwo tylko za to, czego potrzebujecie, z jasnymi i przewidywalnymi kosztami.",
+    "simpleTransparentPricingDescription": "Jeden plan, bez niespodzianek. Płacisz stałą opłatę podstawową plus niewielką kwotę za każdego aktywnego pracownika — nic więcej.",
     "singlePlanTitle": "Jeden plan",
     "workerPerMonth": "pracownik/miesiąc",
     "howManyWorkers": "Ilu pracowników?",
@@ -29,17 +29,17 @@
     "getStarted": "Rozpocznij",
     "faqHeading": "Często zadawane pytania",
     "faq1Q": "Jak obliczany jest koszt miesięczny?",
-    "faq1A": "Nasz cennik składa się z opłaty podstawowej w wysokości {{baseFee}}€ miesięcznie oraz {{perWorkerFee}}€ za każdego aktywnego pracownika.",
-    "faq2Q": "Czy istnieją ukryte opłaty?",
-    "faq2A": "Nie, nasz cennik jest całkowicie przejrzysty. Miesięczna opłata podstawowa i koszt za pracownika to jedyne naliczane opłaty.",
+    "faq1A": "Płacisz stałą opłatę podstawową w wysokości {{baseFee}}€/miesiąc plus {{perWorkerFee}}€ za każdego aktywnego pracownika. Na przykład 10 pracowników kosztuje {{baseFee}}€ + (10 × {{perWorkerFee}}€) = 90€/miesiąc.",
+    "faq2Q": "Czy są ukryte opłaty?",
+    "faq2A": "Nie. Opłata podstawowa i stawka za pracownika to jedyne koszty. Żadnych opłat konfiguracyjnych, onboardingowych ani projektowych.",
     "faq3Q": "Czy można dodawać lub usuwać pracowników w dowolnym momencie?",
-    "faq3A": "Tak, można dostosować liczbę pracowników według potrzeb. Rozliczenie zostanie proporcjonalnie przeliczone.",
-    "faq4Q": "Czy obowiązuje umowa lub minimalny okres zobowiązania?",
-    "faq4A": "Nie, nie ma umów długoterminowych. Subskrypcję można anulować w dowolnym momencie.",
-    "faq5Q": "Co się dzieje, gdy dodam więcej pracowników?",
-    "faq5A": "Dodatkowe miejsca są naliczane proporcjonalnie. Płacą Państwo tylko za pozostałe dni okresu rozliczeniowego.",
-    "faq6Q": "Czy pracownicy potrzebują kont?",
-    "faq6A": "Tak, każdy pracownik potrzebuje konta, aby uzyskać dostęp do przydziałów i rejestrować godziny pracy."
+    "faq3A": "Tak. Dodanie pracowników działa natychmiast i jest rozliczane proporcjonalnie do pozostałych dni okresu rozliczeniowego. Usunięcie pracowników następuje z początkiem kolejnego okresu rozliczeniowego.",
+    "faq4Q": "Czy są ukryte opłaty lub długoterminowe umowy?",
+    "faq4A": "Żadnych ukrytych opłat i żadnych umów. Płacisz miesięcznie i możesz anulować w dowolnym momencie z poziomu ustawień konta. Dostęp pozostaje aktywny do końca opłaconego okresu.",
+    "faq5Q": "Co pracownicy muszą mieć, żeby korzystać z aplikacji?",
+    "faq5A": "Pracownicy instalują bezpłatną aplikację Koordinate na telefonie z Androidem lub iOS. Zapraszasz ich kodem — adres e-mail nie jest wymagany. Pracownicy nigdy nie widzą informacji rozliczeniowych.",
+    "faq6Q": "Jak działa śledzenie lokalizacji pracowników?",
+    "faq6A": "Kiedy pracownik zamelduje się przy zadaniu, aplikacja śledzi jego lokalizację GPS w tle i wysyła okresowe aktualizacje. Śledzenie zatrzymuje się automatycznie przy wymeldowaniu. Pracownicy są informowani o śledzeniu w aplikacji."
   },
   "login": {
     "loginHeading": "Witamy ponownie!",
@@ -145,13 +145,13 @@
       "heroTitleLine1": "Twój zespół.",
       "heroTitleLine2": "Twoje budowy.",
       "heroTitleAccent": "Pod kontrolą.",
-      "heroSub": "Koordinate daje kierownikom terenowym podgląd na żywo każdego pracownika i każdej budowy — z automatyczną rejestracją czasu pracy, inteligentnym planowaniem i obsługą płac jednym kliknięciem.",
+      "heroSub": "Mapa na żywo zespołu, automatyczna rejestracja czasu i obsługa płac jednym kliknięciem.",
       "heroCTA": "Rozpocznij",
       "heroSeePricing": "Zobacz cennik",
       "heroNote": "Konfiguracja w mniej niż 5 minut",
       "featuresEyebrow": "FUNKCJE",
       "featuresTitle": "Wszystko, czego potrzebuje kierownik terenowy.",
-      "featuresSub": "Bez integracji. Bez łączenia czterech aplikacji. Planowanie, rejestracja i płace — od początku do końca.",
+      "featuresSub": "Bez integracji. Bez łączenia czterech aplikacji. Planowanie, rejestracja i płace od początku do końca.",
       "cardSchedulingTitle": "Codzienna organizacja pracy",
       "cardSchedulingDesc": "Przeciągaj pracowników na budowy każdego ranka. Widzą przydzieloną pracę natychmiast w aplikacji — bez grup WhatsApp, bez zamieszania.",
       "cardScheduleBadgeOnSite": "Na budowie",
@@ -181,7 +181,7 @@
       "step04Desc": "Mapa na żywo, aktywne sesje, pełna widoczność bez konieczności sięgania po telefon.",
       "ctaTitle": "Gotowy, aby mieć swój zespół pod kontrolą?",
       "ctaSub": "Dołącz do firm budowlanych korzystających z Koordinate, aby prowadzić sprawniejsze i szybsze operacje terenowe.",
-      "ctaButton": "Utwórz swoje konto"
+      "ctaButton": "Zacznij bezpłatnie"
     },
     "pricing": {
       "pageTitle": "Cennik — Koordinate"
@@ -272,6 +272,7 @@
       "syncing": "Synchronizacja",
       "offlineBanner": "Jesteś offline",
       "offlineBannerCheckedIn": "Jesteś offline — wymeldowanie jest nadal dostępne",
+      "trackingPausedBanner": "Śledzenie lokalizacji było wstrzymane przez ~{{minutes}} min (aplikacja była zamknięta). Twoje godziny są nadal rejestrowane.",
       "checkedInToast": "Zameldowano",
       "checkedInToastSub": "Praca w {{name}}",
       "checkedOutToast": "Wymeldowano",
@@ -365,13 +366,13 @@
     "heroPill": "Dla zespołów budowlanych i terenowych",
     "heroTitle": "Twój zespół.\nTwoje budowy.\nPod kontrolą.",
     "heroTitleAccent": "Pod kontrolą.",
-    "heroSub": "Koordinate daje kierownikom terenowym podgląd na żywo każdego pracownika i każdej budowy — z automatyczną rejestracją czasu pracy, inteligentnym planowaniem i obsługą płac jednym kliknięciem.",
+    "heroSub": "Mapa na żywo zespołu, automatyczna rejestracja czasu i obsługa płac jednym kliknięciem.",
     "heroCTA": "Rozpocznij",
     "heroSeePricing": "Zobacz cennik",
     "heroNote": "Konfiguracja w mniej niż 5 minut",
     "featuresEyebrow": "FUNKCJE",
     "featuresTitle": "Wszystko, czego potrzebuje kierownik terenowy.",
-    "featuresSub": "Bez integracji. Bez łączenia czterech aplikacji. Planowanie, rejestracja i płace — od początku do końca.",
+    "featuresSub": "Bez integracji. Bez łączenia czterech aplikacji. Planowanie, rejestracja i płace od początku do końca.",
     "cardSchedulingTitle": "Codzienna organizacja pracy",
     "cardSchedulingDesc": "Przeciągaj pracowników na budowy każdego ranka. Widzą przydzieloną pracę natychmiast w aplikacji — bez grup WhatsApp, bez zamieszania.",
     "cardScheduleBadgeOnSite": "Na budowie",
@@ -400,6 +401,6 @@
     "step04Desc": "Mapa na żywo, aktywne sesje, pełna widoczność bez konieczności sięgania po telefon.",
     "ctaTitle": "Gotowy, aby mieć swój zespół pod kontrolą?",
     "ctaSub": "Dołącz do firm budowlanych korzystających z Koordinate, aby prowadzić sprawniejsze i szybsze operacje terenowe.",
-    "ctaButton": "Utwórz swoje konto"
+    "ctaButton": "Zacznij bezpłatnie"
   }
 }

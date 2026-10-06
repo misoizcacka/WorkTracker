@@ -59,7 +59,7 @@ export default function ReportsHub() {
             {reports.map((report) => (
                 <View key={report.title} style={[styles.cardContainer, isLargeScreen ? styles.cardContainerLarge : styles.cardContainerSmall]}>
                 <TouchableOpacity onPress={() => !report.comingSoon && handlePress(report.path)} disabled={report.comingSoon} activeOpacity={report.comingSoon ? 1 : 0.7}>
-                    <Card style={[styles.reportCard, report.comingSoon && styles.reportCardDisabled]}>
+                    <Card style={[styles.reportCard, report.comingSoon ? styles.reportCardDisabled : undefined] as any}>
                     {report.comingSoon && (
                       <View style={styles.comingSoonBadge}>
                         <Text style={styles.comingSoonText} fontType="bold">Coming Soon</Text>

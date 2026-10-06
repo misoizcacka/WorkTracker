@@ -21,7 +21,7 @@
   },
   "pricing": {
     "simpleTransparentPricingTitle": "Einfache & transparente Preise",
-    "simpleTransparentPricingDescription": "Koordinate ist darauf ausgelegt, mit Ihrem Unternehmen zu wachsen. Unsere flexiblen Tarife stellen sicher, dass Sie nur für das zahlen, was Sie benötigen – mit klaren, planbaren Kosten.",
+    "simpleTransparentPricingDescription": "Ein Plan, keine Überraschungen. Sie zahlen eine feste Grundgebühr plus einen kleinen Betrag pro aktivem Mitarbeiter – sonst nichts.",
     "singlePlanTitle": "Einheitstarif",
     "workerPerMonth": "Mitarbeiter/Monat",
     "howManyWorkers": "Wie viele Mitarbeiter?",
@@ -29,17 +29,17 @@
     "getStarted": "Jetzt starten",
     "faqHeading": "Häufig gestellte Fragen",
     "faq1Q": "Wie werden die monatlichen Kosten berechnet?",
-    "faq1A": "Unsere Preisgestaltung besteht aus einer Grundgebühr von {{baseFee}}€ pro Monat zuzüglich {{perWorkerFee}}€ für jeden aktiven Mitarbeiter.",
+    "faq1A": "Sie zahlen eine feste Grundgebühr von {{baseFee}}€/Monat plus {{perWorkerFee}}€ pro aktivem Mitarbeiter. Beispiel: 10 Mitarbeiter kosten {{baseFee}}€ + (10 × {{perWorkerFee}}€) = 90€/Monat.",
     "faq2Q": "Gibt es versteckte Kosten?",
-    "faq2A": "Nein, unsere Preise sind vollständig transparent. Die monatliche Grundgebühr und die Kosten pro Mitarbeiter sind die einzigen Gebühren.",
+    "faq2A": "Nein. Die Grundgebühr und der Preis pro Mitarbeiter sind die einzigen Kosten. Keine Einrichtungsgebühr, keine Onboarding-Gebühr, keine projektbezogenen Kosten.",
     "faq3Q": "Kann ich Mitarbeiter jederzeit hinzufügen oder entfernen?",
-    "faq3A": "Ja, Sie können die Anzahl Ihrer Mitarbeiter jederzeit anpassen. Die Abrechnung wird entsprechend anteilig berechnet.",
-    "faq4Q": "Gibt es einen Vertrag oder eine Mindestlaufzeit?",
-    "faq4A": "Nein, es gibt keine langfristigen Verträge. Sie können Ihr Abonnement jederzeit kündigen.",
-    "faq5Q": "Was passiert, wenn ich weitere Mitarbeiter hinzufüge?",
-    "faq5A": "Zusätzliche Plätze werden anteilig berechnet. Sie zahlen nur für die verbleibenden Tage des Abrechnungszeitraums.",
-    "faq6Q": "Benötigen Mitarbeiter eigene Konten?",
-    "faq6A": "Ja, jeder Mitarbeiter benötigt ein Konto, um Aufgaben einzusehen und Stunden zu erfassen."
+    "faq3A": "Ja. Das Hinzufügen von Mitarbeitern ist sofort wirksam und wird für den Rest des Abrechnungszeitraums anteilig berechnet. Das Entfernen von Mitarbeitern tritt zu Beginn des nächsten Abrechnungszeitraums in Kraft.",
+    "faq4Q": "Gibt es versteckte Kosten oder langfristige Verträge?",
+    "faq4A": "Keine versteckten Kosten und keine Verträge. Sie zahlen monatlich und können jederzeit in den Kontoeinstellungen kündigen. Ihr Zugang gilt bis zum Ende des bezahlten Zeitraums.",
+    "faq5Q": "Was benötigen Mitarbeiter zur Nutzung der App?",
+    "faq5A": "Mitarbeiter installieren die kostenlose Koordinate-App auf ihrem Android- oder iOS-Smartphone. Sie laden sie per Code ein – keine E-Mail-Adresse erforderlich. Mitarbeiter sehen keinerlei Abrechnungsinformationen.",
+    "faq6Q": "Wie funktioniert die Standortverfolgung für Mitarbeiter?",
+    "faq6A": "Wenn sich ein Mitarbeiter bei einem Auftrag eincheckt, verfolgt die App seinen GPS-Standort im Hintergrund und sendet regelmäßige Updates. Die Verfolgung stoppt automatisch beim Auschecken. Mitarbeiter werden in der App über die Verfolgung informiert."
   },
   "login": {
     "loginHeading": "Willkommen zurück!",
@@ -145,13 +145,13 @@
       "heroTitleLine1": "Ihr Team.",
       "heroTitleLine2": "Ihre Baustellen.",
       "heroTitleAccent": "Unter Kontrolle.",
-      "heroSub": "Koordinate gibt Bauleitern eine Live-Ansicht jedes Mitarbeiters und jeder Baustelle – mit automatischer Zeiterfassung, intelligenter Planung und Lohnabrechnung auf Knopfdruck.",
+      "heroSub": "Live-Karte aller Mitarbeiter, automatische Zeiterfassung und Lohnabrechnung auf Knopfdruck.",
       "heroCTA": "Jetzt starten",
       "heroSeePricing": "Preise ansehen",
       "heroNote": "In weniger als 5 Minuten eingerichtet",
       "featuresEyebrow": "FUNKTIONEN",
       "featuresTitle": "Alles, was ein Bauleiter braucht.",
-      "featuresSub": "Keine Integrationen. Kein Zusammenstückeln von vier Apps. Planung, Erfassung und Lohnabrechnung – aus einer Hand.",
+      "featuresSub": "Keine Integrationen. Kein Zusammenstückeln von vier Apps. Planung, Erfassung und Lohnabrechnung aus einer Hand.",
       "cardSchedulingTitle": "Tagesplanung",
       "cardSchedulingDesc": "Weisen Sie Mitarbeiter morgens per Drag-and-Drop Baustellen zu. Sie sehen den Auftrag sofort in ihrer App – keine WhatsApp-Gruppen, keine Verwirrung.",
       "cardScheduleBadgeOnSite": "Vor Ort",
@@ -181,7 +181,7 @@
       "step04Desc": "Live-Karte, Live-Sitzungen, volle Transparenz – ohne das Telefon in die Hand nehmen zu müssen.",
       "ctaTitle": "Bereit, Ihr Team zu organisieren?",
       "ctaSub": "Schließen Sie sich Bauunternehmen an, die Koordinate für einen reibungsloseren und schnelleren Außendienst nutzen.",
-      "ctaButton": "Konto erstellen"
+      "ctaButton": "Kostenlos starten"
     },
     "pricing": {
       "pageTitle": "Preise — Koordinate"
@@ -249,6 +249,7 @@
       "syncing": "Synchronisierung",
       "offlineBanner": "Sie sind offline",
       "offlineBannerCheckedIn": "Sie sind offline – Auschecken ist weiterhin möglich",
+      "trackingPausedBanner": "Standortverfolgung war ~{{minutes}} Min. pausiert (App wurde geschlossen). Ihre Arbeitszeit wird weiterhin erfasst.",
       "checkedInToast": "Eingecheckt",
       "checkedInToastSub": "Arbeitet bei {{name}}",
       "checkedOutToast": "Ausgecheckt",
@@ -342,13 +343,13 @@
     "heroPill": "Für Bau- und Außendienstteams",
     "heroTitle": "Ihr Team.\nIhre Baustellen.\nUnter Kontrolle.",
     "heroTitleAccent": "Unter Kontrolle.",
-    "heroSub": "Koordinate gibt Bauleitern eine Live-Ansicht jedes Mitarbeiters und jeder Baustelle — mit automatischer Zeiterfassung, intelligenter Planung und Lohnabrechnung auf Knopfdruck.",
+    "heroSub": "Live-Karte aller Mitarbeiter, automatische Zeiterfassung und Lohnabrechnung auf Knopfdruck.",
     "heroCTA": "Jetzt starten",
     "heroSeePricing": "Preise ansehen",
     "heroNote": "In weniger als 5 Minuten eingerichtet",
     "featuresEyebrow": "FUNKTIONEN",
     "featuresTitle": "Alles, was ein Bauleiter braucht.",
-    "featuresSub": "Keine Integrationen. Kein Zusammenstückeln von vier Apps. Planung, Erfassung und Lohnabrechnung — aus einer Hand.",
+    "featuresSub": "Keine Integrationen. Kein Zusammenstückeln von vier Apps. Planung, Erfassung und Lohnabrechnung aus einer Hand.",
     "cardSchedulingTitle": "Tagesplanung",
     "cardSchedulingDesc": "Weisen Sie Mitarbeiter morgens per Drag-and-Drop Baustellen zu. Sie sehen den Auftrag sofort in ihrer App — keine WhatsApp-Gruppen, keine Verwirrung.",
     "cardScheduleBadgeOnSite": "Vor Ort",
@@ -377,6 +378,6 @@
     "step04Desc": "Live-Karte, Live-Sitzungen, volle Transparenz — ohne das Telefon in die Hand nehmen zu müssen.",
     "ctaTitle": "Bereit, Ihr Team zu organisieren?",
     "ctaSub": "Schließen Sie sich Bauunternehmen an, die Koordinate für einen reibungsloseren und schnelleren Außendienst nutzen.",
-    "ctaButton": "Konto erstellen"
+    "ctaButton": "Kostenlos starten"
   }
 }

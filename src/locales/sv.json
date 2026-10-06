@@ -21,7 +21,7 @@
   },
   "pricing": {
     "simpleTransparentPricingTitle": "Enkel och transparent prissättning",
-    "simpleTransparentPricingDescription": "Koordinate är utformat för att växa med ditt företag. Våra flexibla planer säkerställer att du bara betalar för det du behöver, med tydliga och förutsägbara kostnader.",
+    "simpleTransparentPricingDescription": "En plan, inga överraskningar. Du betalar en fast grundavgift plus ett litet belopp per aktiv medarbetare — inget mer.",
     "singlePlanTitle": "Enstaka plan",
     "workerPerMonth": "medarbetare/månad",
     "howManyWorkers": "Hur många medarbetare?",
@@ -29,17 +29,17 @@
     "getStarted": "Kom igång",
     "faqHeading": "Vanliga frågor",
     "faq1Q": "Hur beräknas månadskostnaden?",
-    "faq1A": "Vår prissättning består av en grundavgift på {{baseFee}}€ per månad plus {{perWorkerFee}}€ för varje aktiv medarbetare.",
-    "faq2Q": "Finns det några dolda avgifter?",
-    "faq2A": "Nej, vår prissättning är helt transparent. Den månatliga grundavgiften och kostnaden per medarbetare är de enda avgifterna.",
+    "faq1A": "Du betalar en fast grundavgift på {{baseFee}}€/månad plus {{perWorkerFee}}€ per aktiv medarbetare. Till exempel kostar 10 medarbetare {{baseFee}}€ + (10 × {{perWorkerFee}}€) = 90€/månad.",
+    "faq2Q": "Finns det dolda avgifter?",
+    "faq2A": "Nej. Grundavgiften och priset per medarbetare är de enda kostnaderna. Inga installationsavgifter, inga introduktionsavgifter, inga projektkostnader.",
     "faq3Q": "Kan jag lägga till eller ta bort medarbetare när som helst?",
-    "faq3A": "Ja, du kan justera antalet medarbetare efter behov. Din fakturering beräknas proportionellt.",
-    "faq4Q": "Finns det ett avtal eller en minsta bindningstid?",
-    "faq4A": "Nej, det finns inga långsiktiga avtal. Du kan avsluta din prenumeration när som helst.",
-    "faq5Q": "Vad händer om jag lägger till fler medarbetare?",
-    "faq5A": "Extra platser beräknas proportionellt. Du betalar bara för de återstående dagarna i faktureringscykeln.",
-    "faq6Q": "Behöver medarbetare konton?",
-    "faq6A": "Ja, varje medarbetare behöver ett konto för att komma åt uppdrag och registrera timmar."
+    "faq3A": "Ja. Att lägga till medarbetare börjar gälla omedelbart och beräknas proportionellt för resten av faktureringsperioden. Att ta bort medarbetare börjar gälla i början av nästa faktureringsperiod.",
+    "faq4Q": "Finns det dolda avgifter eller långsiktiga avtal?",
+    "faq4A": "Inga dolda avgifter och inga avtal. Du betalar månadsvis och kan avsluta när som helst via dina kontoinställningar. Din åtkomst fortsätter till slutet av den betalda perioden.",
+    "faq5Q": "Vad behöver medarbetare för att använda appen?",
+    "faq5A": "Medarbetare installerar den kostnadsfria Koordinate-appen på sin Android- eller iOS-telefon. Du bjuder in dem med en kod — ingen e-postadress krävs. De ser aldrig någon faktureringsinformation.",
+    "faq6Q": "Hur fungerar platsspårning för medarbetare?",
+    "faq6A": "När en medarbetare checkar in på ett uppdrag spårar appen deras GPS-position i bakgrunden och skickar regelbundna uppdateringar. Spårningen stoppas automatiskt vid utcheckning. Medarbetare informeras om spårningen i appen."
   },
   "login": {
     "loginHeading": "Välkommen tillbaka!",
@@ -204,7 +204,7 @@
       "step04Desc": "Livekarta, aktiva sessioner, full överblick utan att lyfta telefonen.",
       "ctaTitle": "Redo att få ordning på ditt team?",
       "ctaSub": "Gå med byggföretag som använder Koordinate för smidigare och snabbare fältoperationer.",
-      "ctaButton": "Skapa ditt konto"
+      "ctaButton": "Kom igång gratis"
     },
     "pricing": {
       "pageTitle": "Priser — Koordinate"
@@ -249,6 +249,7 @@
       "syncing": "Synkroniserar",
       "offlineBanner": "Du är offline",
       "offlineBannerCheckedIn": "Du är offline — utcheckning är fortfarande möjlig",
+      "trackingPausedBanner": "Platsspårning pausades i ~{{minutes}} min (appen stängdes). Dina timmar registreras fortfarande.",
       "checkedInToast": "Incheckad",
       "checkedInToastSub": "Arbetar på {{name}}",
       "checkedOutToast": "Utcheckad",
@@ -377,6 +378,6 @@
     "step04Desc": "Livekarta, aktiva sessioner, full överblick utan att lyfta telefonen.",
     "ctaTitle": "Redo att få ordning på ditt team?",
     "ctaSub": "Gå med byggföretag som använder Koordinate för smidigare och snabbare fältoperationer.",
-    "ctaButton": "Skapa ditt konto"
+    "ctaButton": "Kom igång gratis"
   }
 }

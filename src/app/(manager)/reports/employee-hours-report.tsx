@@ -347,26 +347,6 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         borderColor: theme.colors.borderColor,
     },
-    dateErrorBanner: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        backgroundColor: '#FEE2E2',
-        borderRadius: theme.radius.sm,
-        padding: theme.spacing(1),
-        marginBottom: theme.spacing(1),
-    },
-    dateErrorText: {
-        fontSize: theme.fontSizes.xs,
-        color: theme.colors.danger,
-    },
-    dateLabel: {
-        fontSize: theme.fontSizes.xs,
-        color: theme.colors.bodyText,
-        textTransform: 'uppercase',
-        letterSpacing: 0.5,
-        marginBottom: theme.spacing(0.5),
-        marginTop: theme.spacing(1),
-    },
     dateSeparator: {
         alignItems: 'center',
         marginVertical: theme.spacing(0.5),

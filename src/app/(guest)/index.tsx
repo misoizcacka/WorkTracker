@@ -229,6 +229,9 @@ export default function LandingPage() {
                   0%, 100% { transform: translate(0px, 0px) scale(1); }
                   50% { transform: translate(20px, 40px) scale(1.1); }
                 }
+                @media (prefers-reduced-motion: reduce) {
+                  .orb { animation: none !important; }
+                }
               `}</style>
               {/* Dot grid */}
               <div style={{
@@ -238,24 +241,24 @@ export default function LandingPage() {
                 maskImage: 'radial-gradient(ellipse 80% 80% at 50% 0%, black 30%, transparent 100%)',
                 WebkitMaskImage: 'radial-gradient(ellipse 80% 80% at 50% 0%, black 30%, transparent 100%)',
               }} />
-              {/* Orb 1 — top left */}
-              <div style={{
+              {/* Orb 1 */}
+              <div className="orb" style={{
                 position: 'absolute', top: '-80px', left: '5%',
                 width: 420, height: 420, borderRadius: '50%',
                 background: `radial-gradient(circle, ${theme.colors.primary}28 0%, transparent 70%)`,
                 filter: 'blur(40px)',
                 animation: 'orb1 12s ease-in-out infinite',
               }} />
-              {/* Orb 2 — top right */}
-              <div style={{
+              {/* Orb 2 */}
+              <div className="orb" style={{
                 position: 'absolute', top: '-60px', right: '10%',
                 width: 360, height: 360, borderRadius: '50%',
                 background: `radial-gradient(circle, ${theme.colors.primary}1A 0%, transparent 70%)`,
                 filter: 'blur(50px)',
                 animation: 'orb2 15s ease-in-out infinite',
               }} />
-              {/* Orb 3 — center */}
-              <div style={{
+              {/* Orb 3 */}
+              <div className="orb" style={{
                 position: 'absolute', top: '10%', left: '35%',
                 width: 500, height: 300, borderRadius: '50%',
                 background: `radial-gradient(circle, ${theme.colors.primary}12 0%, transparent 70%)`,
@@ -290,7 +293,6 @@ export default function LandingPage() {
               </TouchableOpacity>
             </Link>
           </View>
-          <Text style={styles.heroNote} fontType="regular">{t('landing.heroNote')}</Text>
           </View>{/* end inner content View */}
         </View>
 
@@ -327,7 +329,6 @@ export default function LandingPage() {
         {/* HOW IT WORKS */}
         <View style={[styles.section, { paddingHorizontal: pad }]}>
           <View style={styles.sectionHead}>
-            <Text style={styles.eyebrow} fontType="bold">{t('landing.howItWorksEyebrow')}</Text>
             <Text style={[styles.sectionTitle, { fontSize: lg ? 40 : 28 }]} fontType="bold">{t('landing.howItWorksTitle')}</Text>
           </View>
           <View style={[styles.stepsRow, { flexDirection: lg ? 'row' : 'column' }]}>
@@ -337,7 +338,7 @@ export default function LandingPage() {
               { n: '03', title: t('landing.step03Title'), desc: t('landing.step03Desc') },
               { n: '04', title: t('landing.step04Title'), desc: t('landing.step04Desc') },
             ].map((step, i) => (
-              <HoverCard key={i} style={[styles.stepCard, lg && { flex: 1 }]}>
+              <HoverCard key={i} style={[styles.stepCard, lg ? { flex: 1 } : undefined]}>
                 <Text style={styles.stepNum} fontType="bold">{step.n}</Text>
                 <Text style={styles.stepTitle} fontType="bold">{step.title}</Text>
                 <Text style={styles.stepDesc} fontType="regular">{step.desc}</Text>
@@ -383,8 +384,8 @@ const styles = StyleSheet.create({
 
   // HERO
   hero: {
-    paddingTop: theme.spacing(16),
-    paddingBottom: theme.spacing(16),
+    paddingTop: theme.spacing(10),
+    paddingBottom: theme.spacing(10),
     width: '100%',
     alignItems: 'center',
     gap: theme.spacing(3),

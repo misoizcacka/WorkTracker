@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from "react";
-import { StyleSheet, Alert, ScrollView, ActivityIndicator, Linking, TouchableOpacity, RefreshControl, Platform, Image } from "react-native";
+import { StyleSheet, Alert, ScrollView, ActivityIndicator, Linking, TouchableOpacity, RefreshControl, Platform, Image, AppState } from "react-native";
 import { Ionicons } from '@expo/vector-icons';
 import * as Location from "expo-location";
 import * as Notifications from "expo-notifications";
@@ -55,6 +55,8 @@ export default function Home() {
   const [isBreakModalVisible, setIsBreakModalVisible] = useState(false);
   // Stores the GPS location captured when user taps "Check Out", used after break modal confirms
   const pendingCheckoutLocationRef = React.useRef<{ latitude: number; longitude: number } | null>(null);
+  // iOS only: seconds since last native location tick — >600 means process was force-swiped
+  const [trackingGapSeconds, setTrackingGapSeconds] = useState<number | null>(null);
 
   const { processedAssignments, loadAssignmentsForDate, loadWorkSessionsForDate, isLoading: assignmentsLoading, activeWorkSession, loadedWorkSessions, startWorkSession, endWorkSession, lastCheckoutAssignmentId, isOffline, isSyncingToCloud } = useAssignments();
 
@@ -336,6 +338,32 @@ export default function Home() {
   useEffect(() => {
     if (!isOffline) refreshUser();
   }, [isOffline]);
+
+  // iOS only: detect tracking gaps caused by force-swipe.
+  // When the app comes to the foreground and a work session is active, ask the
+  // native module how long ago it last received a live location update.
+  // A gap > 10 minutes means the process was killed (force-swipe or OS kill) and
+  // geofencing was paused until iOS relaunched us. Show a warning so the worker knows.
+  useEffect(() => {
+    if (Platform.OS !== 'ios') return;
+
+    const checkGap = async () => {
+      if (!checkedIn) { setTrackingGapSeconds(null); return; }
+      try {
+        const diag = await BackgroundLocation.getDiagnostics();
+        const gap = (diag as any).trackingGapSeconds as number | undefined;
+        setTrackingGapSeconds(typeof gap === 'number' ? gap : null);
+      } catch {
+        setTrackingGapSeconds(null);
+      }
+    };
+
+    checkGap();
+    const sub = AppState.addEventListener('change', (state) => {
+      if (state === 'active') checkGap();
+    });
+    return () => sub.remove();
+  }, [checkedIn]);
 
   useEffect(() => {
     let timer: any;
@@ -633,6 +661,19 @@ export default function Home() {
           </View>
         )}
 
+        {/* iOS tracking-gap banner — shown when process was force-swiped during a session */}
+        {Platform.OS === 'ios' && stableCheckedIn && trackingGapSeconds !== null && trackingGapSeconds > 600 && (
+          <View style={styles.trackingGapBanner}>
+            <Ionicons name="warning-outline" size={14} color="#92400E" />
+            <Text style={styles.trackingGapBannerText} fontType="medium">
+              {t('worker.home.trackingPausedBanner', {
+                minutes: Math.round(trackingGapSeconds / 60),
+                defaultValue: `Location tracking was paused for ~${Math.round(trackingGapSeconds / 60)} min (app was closed). Your hours are still recorded.`,
+              })}
+            </Text>
+          </View>
+        )}
+
         <View style={styles.homeContent}>
           {/* Status + Assignment card */}
           <View style={styles.mainCard}>
@@ -839,6 +880,24 @@ const styles = StyleSheet.create({
   offlineBannerText: {
     fontSize: theme.fontSizes.sm,
     color: '#92400E',
+    marginLeft: 6,
+    flex: 1,
+  },
+  trackingGapBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFF7ED',
+    borderTopWidth: 1,
+    borderBottomWidth: 1,
+    borderColor: '#FED7AA',
+    paddingHorizontal: theme.spacing(3),
+    paddingVertical: 8,
+    gap: 6,
+  },
+  trackingGapBannerText: {
+    fontSize: theme.fontSizes.sm,
+    color: '#92400E',
+    flex: 1,
   },
   dateText: {
     fontSize: theme.fontSizes.sm,
