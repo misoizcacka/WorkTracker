@@ -22,7 +22,11 @@ const FLAGS: Record<LanguageCode, string> = {
   sv: '🇸🇪',
 };
 
-export function LanguagePicker() {
+interface LanguagePickerProps {
+  variant?: 'default' | 'row';
+}
+
+export function LanguagePicker({ variant = 'default' }: LanguagePickerProps) {
   const { i18n } = useTranslation();
   const [open, setOpen] = useState(false);
 
@@ -40,13 +44,22 @@ export function LanguagePicker() {
   return (
     <View>
       <TouchableOpacity
-        style={styles.trigger}
+        style={variant === 'row' ? styles.triggerRow : styles.trigger}
         onPress={() => setOpen(true)}
         activeOpacity={0.7}
       >
         <Text style={styles.flag}>{FLAGS[currentCode]}</Text>
-        <Text style={styles.triggerLabel} fontType="regular">{current.label}</Text>
-        <Ionicons name="chevron-down" size={12} color={theme.colors.disabledText} />
+        <Text
+          style={variant === 'row' ? styles.triggerRowLabel : styles.triggerLabel}
+          fontType="regular"
+        >
+          {current.label}
+        </Text>
+        <Ionicons
+          name="chevron-down"
+          size={variant === 'row' ? 14 : 12}
+          color={theme.colors.disabledText}
+        />
       </TouchableOpacity>
 
       <Modal
@@ -102,6 +115,16 @@ const styles = StyleSheet.create({
     borderRadius: theme.radius.md,
     borderWidth: 1,
     borderColor: theme.colors.borderColor,
+  },
+  triggerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingVertical: theme.spacing(0.5),
+  },
+  triggerRowLabel: {
+    fontSize: 15,
+    color: theme.colors.headingText,
   },
   flag: {
     fontSize: 14,

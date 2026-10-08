@@ -18,7 +18,14 @@
       }
     },
     "production": {
-      "autoIncrement": true
+      "autoIncrement": true,
+      "env": {
+        "EXPO_PUBLIC_SUPABASE_URL": "https://mjbldhhcogspurzjucfc.supabase.co",
+        "EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY": "sb_publishable_HJmicFu3JWyNhPS8KCFwJg_tk84Y-0p",
+        "EXPO_PUBLIC_APP_DOMAIN": "koordinate.app",
+        "EXPO_PUBLIC_PLAY_STORE_URL": "https://play.google.com/store/apps/details?id=app.koord",
+        "EXPO_PUBLIC_APP_STORE_URL": "https://apps.apple.com/app/id0000000000"
+      }
     }
   },
   "submit": {

@@ -1,4 +1,4 @@
-const DEFAULT_APP_URL = 'https://work-tracker-sandy-iota.vercel.app';
+const DEFAULT_APP_URL = 'https://koordinate.app';
 const INTERNAL_EMAIL_DOMAIN = '@koord.local';
 export const INVITE_CODE_ALPHABET = 'ABCDEFGHJKLMNPQRTUVWXYZ2346789';
 

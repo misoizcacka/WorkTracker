@@ -111,6 +111,6 @@ const styles = StyleSheet.create({
   },
   text: {
     // fontWeight removed, fontType handled by Themed.Text
-    fontSize: 18,
+    fontSize: 15,
   },
 });

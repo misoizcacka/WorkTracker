@@ -151,7 +151,7 @@ export default function SubscriptionSetupPage() {
   return (
     <AnimatedScreen>
       <View style={styles.container}>
-        <GuestHeader variant="content" />
+        <GuestHeader variant="content" noMenu />
 
         <ScrollView contentContainerStyle={styles.scrollContent}>
           <View style={styles.mainContent}>
@@ -376,7 +376,7 @@ const styles = StyleSheet.create({
   },
   ctaButtonText: {
     color: 'white',
-    fontSize: 16,
+    fontSize: 15,
   },
   cancelButton: {
     marginTop: theme.spacing(2.5),

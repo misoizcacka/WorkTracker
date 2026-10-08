@@ -250,7 +250,7 @@ export default function ManagerEmployees() {
           {isPendingInvite ? (
             <>
               <TouchableOpacity onPress={() => handleSharePendingInvite(item)} style={styles.actionButton}>
-                <Ionicons name="link-outline" size={24} color={theme.colors.primary} />
+                <Ionicons name="link-outline" size={20} color={theme.colors.iconColor} />
               </TouchableOpacity>
               <TouchableOpacity
                 onPress={() => handleCancelPending(item)}
@@ -260,30 +260,35 @@ export default function ManagerEmployees() {
                 {isCancellingInvite === item.id ? (
                   <ActivityIndicator size="small" color={theme.colors.danger} />
                 ) : (
-                  <Ionicons name="close-circle-outline" size={24} color={theme.colors.danger} />
+                  <Ionicons name="close-circle-outline" size={20} color={theme.colors.danger} />
                 )}
               </TouchableOpacity>
             </>
           ) : (
             <>
-              {!isCurrentUser ? (
-                <TouchableOpacity onPress={() => handleGenerateAccessLink(item as Employee)} style={styles.actionButton} disabled={loading}>
-                  <Ionicons name="link-outline" size={24} color={theme.colors.secondary} />
-                </TouchableOpacity>
-              ) : null}
-              {isOwner && (item as Employee).role === 'worker' ? (
-                <TouchableOpacity
-                  onPress={() => { setSelectedRateEmployee(item as Employee); setHourlyRateModalVisible(true); }}
-                  style={styles.actionButton}
-                >
-                  <Ionicons name="cash-outline" size={24} color={theme.colors.success} />
-                </TouchableOpacity>
-              ) : null}
-              <TouchableOpacity onPress={() => handleEdit(item as Employee)} style={styles.actionButton}>
-                <Ionicons name="pencil-outline" size={24} color={theme.colors.primary} />
+              {/* Access link — grayed out for current user (can't generate for yourself) */}
+              <TouchableOpacity
+                onPress={() => !isCurrentUser && handleGenerateAccessLink(item as Employee)}
+                style={[styles.actionButton, isCurrentUser && { opacity: 0.35 }]}
+                disabled={isCurrentUser || loading}
+              >
+                <Ionicons name="link-outline" size={16} color={theme.colors.iconColor} />
               </TouchableOpacity>
-              <TouchableOpacity onPress={() => handleDelete(item as Employee)} style={styles.actionButton}>
-                <Ionicons name="trash-outline" size={24} color={theme.colors.danger} />
+              {/* Hourly rate — grayed out for managers and non-workers */}
+              <TouchableOpacity
+                onPress={() => { setSelectedRateEmployee(item as Employee); setHourlyRateModalVisible(true); }}
+                style={[styles.actionButton, (!isOwner || (item as Employee).role !== 'worker') && { opacity: 0.35 }]}
+                disabled={!isOwner || (item as Employee).role !== 'worker'}
+              >
+                <Ionicons name="cash-outline" size={16} color={theme.colors.iconColor} />
+              </TouchableOpacity>
+              {/* Edit */}
+              <TouchableOpacity onPress={() => handleEdit(item as Employee)} style={styles.actionButton}>
+                <Ionicons name="pencil-outline" size={16} color={theme.colors.iconColor} />
+              </TouchableOpacity>
+              {/* Delete — danger color signals destructive action */}
+              <TouchableOpacity onPress={() => handleDelete(item as Employee)} style={[styles.actionButton, styles.actionButtonDanger]}>
+                <Ionicons name="trash-outline" size={16} color={theme.colors.danger} />
               </TouchableOpacity>
             </>
           )}
@@ -598,7 +603,20 @@ const styles = StyleSheet.create({
     fontSize: theme.fontSizes.xs,
     textTransform: 'capitalize',
   },
-  actionButton: { padding: theme.spacing(0.5) },
+  actionButton: {
+    width: 30,
+    height: 30,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: theme.colors.borderColor,
+    backgroundColor: theme.colors.cardBackground,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  actionButtonDanger: {
+    borderColor: theme.colors.danger + '40',
+    backgroundColor: theme.colors.errorBackground,
+  },
   actionButtonText: {
     fontSize: theme.fontSizes.xs,
     color: theme.colors.bodyText,

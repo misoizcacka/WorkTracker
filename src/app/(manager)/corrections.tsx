@@ -398,7 +398,7 @@ const styles = StyleSheet.create({
         borderRadius: theme.radius.lg,
         borderWidth: 1,
         borderColor: theme.colors.borderColor,
-        padding: theme.spacing(2),
+        overflow: 'hidden',
         marginHorizontal: theme.spacing(2),
         marginBottom: theme.spacing(2),
         ...Platform.select({

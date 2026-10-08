@@ -80,7 +80,7 @@ export default function Login() {
       router.push('/auth/signup');
     } else {
       // On mobile, redirect to browser signup page
-      Linking.openURL('https://work-tracker-sandy-iota.vercel.app/auth/signup');
+      Linking.openURL('https://koordinate.app/auth/signup');
     }
   };
 

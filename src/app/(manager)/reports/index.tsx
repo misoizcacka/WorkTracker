@@ -6,42 +6,44 @@ import { Ionicons } from '@expo/vector-icons';
 import AnimatedScreen from '../../../components/AnimatedScreen';
 import { Card } from '../../../components/Card';
 import { theme } from '../../../theme';
-
-const reports = [
-  {
-    title: 'Employee Hours',
-    description: 'Drill down into daily breakdowns of employee work hours.',
-    icon: 'time-outline',
-    path: 'employee-hours-report',
-    comingSoon: false,
-  },
-  {
-    title: 'Payroll Summary',
-    description: 'View and export payable hours for each employee for the month.',
-    icon: 'cash-outline',
-    path: 'payroll-report',
-    comingSoon: false,
-  },
-  {
-    title: 'Project Labor Report',
-    description: 'Analyze labor costs and hours for each project.',
-    icon: 'briefcase-outline',
-    path: 'project-labor-report',
-    comingSoon: true,
-  },
-  {
-    title: 'Daily Detailed Report',
-    description: "Get a detailed, chronological breakdown of each worker's day.",
-    icon: 'analytics-outline',
-    path: 'daily-detailed-report',
-    comingSoon: false,
-  },
-];
+import { useTranslation } from 'react-i18next';
 
 export default function ReportsHub() {
   const router = useRouter();
   const { width } = useWindowDimensions();
   const isLargeScreen = width >= 768;
+  const { t } = useTranslation();
+
+  const reports = [
+    {
+      title: t('manager.reports.employeeHours'),
+      description: t('manager.reports.employeeHoursDesc'),
+      icon: 'time-outline',
+      path: 'employee-hours-report',
+      comingSoon: false,
+    },
+    {
+      title: t('manager.reports.payrollSummary'),
+      description: t('manager.reports.payrollSummaryDesc'),
+      icon: 'cash-outline',
+      path: 'payroll-report',
+      comingSoon: false,
+    },
+    {
+      title: t('manager.reports.projectLabor'),
+      description: t('manager.reports.projectLaborDesc'),
+      icon: 'briefcase-outline',
+      path: 'project-labor-report',
+      comingSoon: true,
+    },
+    {
+      title: t('manager.reports.dailyDetailed'),
+      description: t('manager.reports.dailyDetailedDesc'),
+      icon: 'analytics-outline',
+      path: 'daily-detailed-report',
+      comingSoon: false,
+    },
+  ];
 
   const handlePress = (path: string) => {
     router.push(`/reports/${path}`);
@@ -50,8 +52,8 @@ export default function ReportsHub() {
   return (
     <AnimatedScreen>
       <View style={styles.pageHeader}>
-        <Text style={styles.pageTitle} fontType="bold">Reports Hub</Text>
-        <Text style={styles.pageSubtitle}>View and export summaries of company data.</Text>
+        <Text style={styles.pageTitle} fontType="bold">{t('manager.reports.title')}</Text>
+        <Text style={styles.pageSubtitle}>{t('manager.reports.subtitle')}</Text>
       </View>
       <View style={styles.mainContentCard}>
         <ScrollView showsVerticalScrollIndicator={false}>
@@ -62,7 +64,7 @@ export default function ReportsHub() {
                     <Card style={[styles.reportCard, report.comingSoon ? styles.reportCardDisabled : undefined] as any}>
                     {report.comingSoon && (
                       <View style={styles.comingSoonBadge}>
-                        <Text style={styles.comingSoonText} fontType="bold">Coming Soon</Text>
+                        <Text style={styles.comingSoonText} fontType="bold">{t('manager.reports.comingSoon')}</Text>
                       </View>
                     )}
                     <Ionicons name={report.icon as any} size={32} color={report.comingSoon ? theme.colors.disabledText : theme.colors.primary} style={styles.icon} />

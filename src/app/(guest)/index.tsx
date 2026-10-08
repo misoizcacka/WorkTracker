@@ -32,7 +32,7 @@ const HoverCard: React.FC<{ style?: any; children: React.ReactNode }> = ({ style
 const CardScheduling = () => {
   const { t } = useTranslation();
   return (
-    <HoverCard style={{ flex: 2, minWidth: 280 }}>
+    <HoverCard style={{ flex: 2, flexBasis: 280, flexShrink: 1 }}>
       <View style={styles.cardIconRow}>
         <View style={styles.cardIconWrap}>
           <Ionicons name="calendar-outline" size={20} color={theme.colors.primary} />
@@ -65,7 +65,7 @@ const CardScheduling = () => {
 const CardLiveMap = () => {
   const { t } = useTranslation();
   return (
-    <HoverCard style={{ flex: 1, minWidth: 220 }}>
+    <HoverCard style={{ flex: 1, flexBasis: 220, flexShrink: 1 }}>
       <View style={styles.cardIconRow}>
         <View style={styles.cardIconWrap}>
           <Ionicons name="location-outline" size={20} color={theme.colors.primary} />
@@ -97,7 +97,7 @@ const CardLiveMap = () => {
 const CardTimeTracking = () => {
   const { t } = useTranslation();
   return (
-    <HoverCard style={{ flex: 1, minWidth: 220 }}>
+    <HoverCard style={{ flex: 1, flexBasis: 220, flexShrink: 1 }}>
       <View style={styles.cardIconRow}>
         <View style={styles.cardIconWrap}>
           <Ionicons name="time-outline" size={20} color={theme.colors.primary} />
@@ -126,7 +126,7 @@ const CardTimeTracking = () => {
 const CardPayroll = () => {
   const { t } = useTranslation();
   return (
-    <HoverCard style={{ flex: 1, minWidth: 220 }}>
+    <HoverCard style={{ flex: 1, flexBasis: 220, flexShrink: 1 }}>
       <View style={styles.cardIconRow}>
         <View style={styles.cardIconWrap}>
           <Ionicons name="cash-outline" size={20} color={theme.colors.primary} />
@@ -157,7 +157,7 @@ const CardPayroll = () => {
 const CardReplay = () => {
   const { t } = useTranslation();
   return (
-    <HoverCard style={{ flex: 2, minWidth: 280 }}>
+    <HoverCard style={{ flex: 2, flexBasis: 280, flexShrink: 1 }}>
       <View style={styles.cardIconRow}>
         <View style={styles.cardIconWrap}>
           <Ionicons name="play-outline" size={20} color={theme.colors.primary} />
@@ -311,13 +311,13 @@ export default function LandingPage() {
           </View>
 
           {/* Row 1 */}
-          <View style={[styles.bentoRow, { flexDirection: lg ? 'row' : 'column' }]}>
+          <View style={styles.bentoRow}>
             <CardScheduling />
             <CardLiveMap />
           </View>
 
           {/* Row 2 */}
-          <View style={[styles.bentoRow, { flexDirection: lg ? 'row' : 'column' }]}>
+          <View style={styles.bentoRow}>
             <CardTimeTracking />
             <CardPayroll />
             <CardReplay />
@@ -420,7 +420,7 @@ const styles = StyleSheet.create({
   sectionSub: { fontSize: 16, lineHeight: 26, color: theme.colors.bodyText, textAlign: 'center', maxWidth: 560 },
 
   // BENTO
-  bentoRow: { gap: theme.spacing(2), marginBottom: theme.spacing(2) },
+  bentoRow: { flexDirection: 'row', flexWrap: 'wrap', gap: theme.spacing(2), marginBottom: theme.spacing(2) },
   hoverCard: {
     backgroundColor: theme.colors.cardBackground,
     borderRadius: theme.radius.xl,

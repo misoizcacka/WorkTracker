@@ -130,7 +130,7 @@ export default function PaymentSuccess() {
   return (
     <AnimatedScreen>
       <View style={styles.container}>
-        <GuestHeader variant="content" />
+        <GuestHeader variant="content" noMenu />
 
         <ScrollView contentContainerStyle={styles.scrollContent}>
           <View style={styles.mainContent}>

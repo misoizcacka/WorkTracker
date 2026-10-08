@@ -4,6 +4,7 @@ import { Text } from "../../components/Themed";
 import * as ImagePicker from 'expo-image-picker';
 import Toast from 'react-native-toast-message';
 import moment from 'moment';
+import { useTranslation } from 'react-i18next';
 
 import { Card } from "../../components/Card";
 import { Button } from "../../components/Button";
@@ -21,6 +22,7 @@ import { LanguagePicker } from "../../components/LanguagePicker";
 export default function ManagerAccount() {
   const { width } = useWindowDimensions();
   const isLargeScreen = width >= 900;
+  const { t } = useTranslation();
   const {
     signOut,
     user,
@@ -224,7 +226,7 @@ export default function ManagerAccount() {
       <AnimatedScreen>
         <View style={styles.centered}>
           <ActivityIndicator size="large" color={theme.colors.primary} />
-          <Text style={styles.loadingText} fontType="regular">Loading profile...</Text>
+          <Text style={styles.loadingText} fontType="regular">{t('manager.account.loading')}</Text>
         </View>
       </AnimatedScreen>
     );
@@ -239,9 +241,9 @@ export default function ManagerAccount() {
     <AnimatedScreen>
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.pageHeader}>
-          <Text style={styles.pageTitle} fontType="bold">My Account</Text>
+          <Text style={styles.pageTitle} fontType="bold">{t('manager.account.title')}</Text>
           <Text style={styles.pageSubtitle}>
-            {isOwner ? 'Manage your personal profile and company settings.' : 'Manage your personal profile and security.'}
+            {isOwner ? t('manager.account.subtitleOwner') : t('manager.account.subtitleManager')}
           </Text>
         </View>
 
@@ -250,7 +252,7 @@ export default function ManagerAccount() {
             {/* 1. Profile Section */}
             <Card style={styles.sectionCard}>
               <View style={styles.cardHeaderRow}>
-                <Text style={styles.sectionTitle} fontType="bold">Profile Details</Text>
+                <Text style={styles.sectionTitle} fontType="bold">{t('manager.account.profileDetails')}</Text>
                 <View style={styles.roleBadge}>
                   <Text style={styles.roleBadgeText} fontType="bold">{roleLabel}</Text>
                 </View>
@@ -285,41 +287,41 @@ export default function ManagerAccount() {
 
               <View style={styles.form}>
                 <View style={styles.inputGroup}>
-                  <Text style={styles.label} fontType="bold">Full Name</Text>
+                  <Text style={styles.label} fontType="bold">{t('manager.account.fullName')}</Text>
                   <TextInput 
                     style={styles.input} 
                     value={name} 
                     onChangeText={setName} 
-                    placeholder="Enter your full name"
+                    placeholder={t('manager.account.fullNamePlaceholder') as string}
                     placeholderTextColor={theme.colors.disabledText}
                   />
                 </View>
                 <View style={styles.inputGroup}>
-                  <Text style={styles.label} fontType="bold">Phone Number</Text>
+                  <Text style={styles.label} fontType="bold">{t('manager.account.phoneNumber')}</Text>
                   <TextInput 
                     style={styles.input} 
                     value={phone} 
                     onChangeText={setPhone} 
                     keyboardType="phone-pad" 
-                    placeholder="Enter your phone number"
+                    placeholder={t('manager.account.phoneNumberPlaceholder') as string}
                     placeholderTextColor={theme.colors.disabledText}
                   />
                 </View>
                 <View style={styles.inputGroup}>
-                  <Text style={styles.label} fontType="bold">Email Address</Text>
+                  <Text style={styles.label} fontType="bold">{t('manager.account.emailAddress')}</Text>
                   <TextInput 
                     style={styles.input}
                     value={email}
                     onChangeText={setEmail}
                     keyboardType="email-address"
                     autoCapitalize="none"
-                    placeholder="Enter your email address"
+                    placeholder={t('manager.account.emailPlaceholder') as string}
                     placeholderTextColor={theme.colors.disabledText}
                   />
                 </View>
                 
                 <Button 
-                  title="Save Changes" 
+                  title={t('manager.account.saveChanges') as string}
                   onPress={handleSaveProfileChanges} 
                   disabled={isSavingProfile || isProfileLoading || isUploadingAvatar} 
                   style={styles.primaryButton}
@@ -328,54 +330,55 @@ export default function ManagerAccount() {
               </View>
             </Card>
 
-            {isOwner ? (
+            <View style={{ opacity: isOwner ? 1 : 0.55 }}>
               <Card style={styles.sectionCard}>
-                <Text style={styles.sectionTitle} fontType="bold">Company Profile</Text>
+                <Text style={styles.sectionTitle} fontType="bold">{t('manager.account.companyProfile')}</Text>
                 <View style={styles.form}>
                   <View style={styles.inputGroup}>
-                    <Text style={styles.label} fontType="bold">Company Name</Text>
+                    <Text style={styles.label} fontType="bold">{t('manager.account.companyName')}</Text>
                     <TextInput
-                      style={styles.input}
+                      style={[styles.input, !isOwner && styles.disabledInput]}
                       value={companyName}
                       onChangeText={setCompanyName}
-                      placeholder="Enter company name"
+                      editable={isOwner}
+                      placeholder={t('manager.account.companyNamePlaceholder') as string}
                       placeholderTextColor={theme.colors.disabledText}
                     />
                   </View>
                   <Button
-                    title="Update"
+                    title={t('manager.account.update') as string}
                     onPress={handleSaveCompanyChanges}
-                    disabled={isSavingCompany || companyName === userCompanyName}
+                    disabled={!isOwner || isSavingCompany || companyName === userCompanyName}
                     style={styles.primaryButton}
                     loading={isSavingCompany}
                   />
                 </View>
               </Card>
-            ) : null}
+            </View>
           </View>
 
           <View style={styles.column}>
-            {isOwner ? (
+            <View style={{ opacity: isOwner ? 1 : 0.6 }}>
               <Card style={styles.sectionCard}>
                 <View style={styles.cardHeaderRow}>
-                  <Text style={styles.sectionTitle} fontType="bold">Subscription & Billing</Text>
+                  <Text style={styles.sectionTitle} fontType="bold">{t('manager.account.subscriptionBilling')}</Text>
                   <Ionicons name="card-outline" size={20} color={theme.colors.primary} />
                 </View>
 
                 <View style={styles.subscriptionStats}>
                   <View style={styles.subStatBox}>
                     <Text style={styles.subStatValue} fontType="bold">{seatsUsed}</Text>
-                    <Text style={styles.subStatLabel}>Active Workers</Text>
+                    <Text style={styles.subStatLabel}>{t('manager.account.activeWorkers')}</Text>
                   </View>
                   <View style={[styles.subStatBox, styles.subStatDivider]}>
                     <Text style={styles.subStatValue} fontType="bold">{seatLimit}</Text>
-                    <Text style={styles.subStatLabel}>Worker Seats</Text>
+                    <Text style={styles.subStatLabel}>{t('manager.account.workerSeats')}</Text>
                   </View>
                 </View>
 
                 <View style={styles.usageContainer}>
                   <View style={styles.usageHeader}>
-                    <Text style={styles.usageLabel}>Seat Utilization</Text>
+                    <Text style={styles.usageLabel}>{t('manager.account.seatUtilization')}</Text>
                     <Text style={styles.usageValue}>{Math.round((seatsUsed / (seatLimit || 1)) * 100)}%</Text>
                   </View>
                   <View style={styles.progressBarBg}>
@@ -392,7 +395,7 @@ export default function ManagerAccount() {
                   <View style={styles.periodContainer}>
                     <Ionicons name="time-outline" size={16} color={theme.colors.bodyText} />
                     <Text style={styles.periodEndText}>
-                      Next renewal: <Text fontType="bold" style={{ color: theme.colors.headingText }}>{moment(userSubscriptionPeriodEnd).format('MMMM D, YYYY')}</Text>
+                      {t('manager.account.nextRenewal')}: <Text fontType="bold" style={{ color: theme.colors.headingText }}>{moment(userSubscriptionPeriodEnd).format('MMMM D, YYYY')}</Text>
                     </Text>
                   </View>
                 )}
@@ -401,59 +404,65 @@ export default function ManagerAccount() {
                   <View style={styles.periodContainer}>
                     <Ionicons name="arrow-down-circle-outline" size={16} color={theme.colors.primary} />
                     <Text style={styles.periodEndText}>
-                      Scheduled seats next cycle: <Text fontType="bold" style={{ color: theme.colors.headingText }}>{userScheduledWorkerSeats}</Text>
+                      {t('manager.account.scheduledSeats')}: <Text fontType="bold" style={{ color: theme.colors.headingText }}>{userScheduledWorkerSeats}</Text>
                       {userScheduledChangeEffectiveAt ? ` on ${moment(userScheduledChangeEffectiveAt).format('MMMM D, YYYY')}` : ''}
                     </Text>
                   </View>
                 )}
 
                 <Button
-                  title="Manage Subscription"
+                  title={t('manager.account.manageSubscription') as string}
                   onPress={() => router.push('/(manager)/subscription/manage-subscription')}
+                  disabled={!isOwner}
                   style={styles.manageSubButton}
                 />
+                {!isOwner && (
+                  <Text style={{ fontSize: 12, color: theme.colors.disabledText, marginTop: theme.spacing(1), textAlign: 'center' }}>
+                    Only the account owner can manage billing.
+                  </Text>
+                )}
               </Card>
-            ) : null}
+            </View>
 
             {/* 4. Security */}
             <Card style={styles.sectionCard}>
-              <Text style={styles.sectionTitle} fontType="bold">Security</Text>
+              <Text style={styles.sectionTitle} fontType="bold">{t('manager.account.security')}</Text>
               <View style={styles.securityItem}>
                 <View style={styles.securityInfo}>
                   <View style={styles.securityIcon}>
                     <Ionicons name="lock-closed-outline" size={20} color={theme.colors.primary} />
                   </View>
                   <View>
-                    <Text style={styles.securityTitle} fontType="medium">Password</Text>
-                    <Text style={styles.securitySubtitle}>Choose a new password for this account</Text>
+                    <Text style={styles.securityTitle} fontType="medium">{t('manager.account.passwordLabel')}</Text>
+                    <Text style={styles.securitySubtitle}>{t('manager.account.passwordSubtitle')}</Text>
                   </View>
                 </View>
               </View>
               <View style={styles.form}>
                 <View style={styles.inputGroup}>
-                  <Text style={styles.label} fontType="bold">New Password</Text>
+                  <Text style={styles.label} fontType="bold">{t('manager.account.newPassword')}</Text>
                   <TextInput
                     style={styles.input}
                     value={newPassword}
                     onChangeText={setNewPassword}
                     secureTextEntry
-                    placeholder="Enter new password"
+                    placeholder={t('manager.account.newPasswordPlaceholder') as string}
                     placeholderTextColor={theme.colors.disabledText}
                   />
                 </View>
                 <View style={styles.inputGroup}>
-                  <Text style={styles.label} fontType="bold">Confirm Password</Text>
+                  <Text style={styles.label} fontType="bold">{t('manager.account.confirmPassword')}</Text>
                   <TextInput
                     style={styles.input}
                     value={confirmPassword}
                     onChangeText={setConfirmPassword}
                     secureTextEntry
-                    placeholder="Re-enter new password"
+                    placeholder={t('manager.account.confirmPasswordPlaceholder') as string}
                     placeholderTextColor={theme.colors.disabledText}
                   />
                 </View>
                 <Button
-                  title="Update Password"
+                  title={t('manager.account.updatePassword') as string}
                   onPress={handleUpdatePassword}
                   disabled={isSavingPassword}
                   style={styles.primaryButton}
@@ -464,22 +473,22 @@ export default function ManagerAccount() {
 
             {/* 5. Preferences */}
             <Card style={styles.sectionCard}>
-              <Text style={styles.sectionTitle} fontType="bold">Preferences</Text>
+              <Text style={styles.sectionTitle} fontType="bold">{t('manager.account.preferences')}</Text>
               <View style={styles.preferenceRow}>
                 <View style={styles.preferenceInfo}>
                   <Ionicons name="globe-outline" size={20} color={theme.colors.primary} />
                   <View>
-                    <Text style={styles.preferenceLabel} fontType="medium">Language</Text>
-                    <Text style={styles.preferenceSubtitle}>Choose your display language</Text>
+                    <Text style={styles.preferenceLabel} fontType="medium">{t('manager.account.language')}</Text>
+                    <Text style={styles.preferenceSubtitle}>{t('manager.account.languageDesc')}</Text>
                   </View>
                 </View>
-                <LanguagePicker />
+                <LanguagePicker variant="row" />
               </View>
             </Card>
 
             {/* 6. Logout */}
             <Button 
-              title="Sign Out" 
+              title={t('manager.account.signOut') as string}
               onPress={() => signOut()} 
               style={styles.logoutButton}
             />

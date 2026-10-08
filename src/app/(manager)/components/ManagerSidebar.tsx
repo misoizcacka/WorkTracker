@@ -6,6 +6,7 @@ import { theme } from '../../../theme';
 import { useSession } from '../../../context/AuthContext';
 import { Text } from '../../../components/Themed';
 import { Logo } from '~/components/Logo';
+import { useTranslation } from 'react-i18next';
 
 const SIDEBAR_COLLAPSED_WIDTH = 64;
 const SIDEBAR_EXPANDED_WIDTH = 240;
@@ -64,6 +65,7 @@ export const ManagerSidebar = () => {
   const fullOpacity = useRef(new Animated.Value(0)).current;
   const pathname = usePathname();
   const { signOut } = useSession();
+  const { t } = useTranslation();
 
   const toggleSidebar = (expand: boolean) => {
     setIsExpanded(expand);
@@ -99,11 +101,11 @@ export const ManagerSidebar = () => {
   };
 
   const navItems = [
-    { icon: 'home-outline', label: 'Home', href: '/(manager)/dashboard' },
-    { icon: 'people-outline', label: 'Team', href: '/(manager)/employees' },
-    { icon: 'map-outline', label: 'Locations', href: '/(manager)/projects' },
-    { icon: 'document-text-outline', label: 'Reports', href: '/(manager)/reports' },
-    { icon: 'person-circle-outline', label: 'Account', href: '/(manager)/account' },
+    { icon: 'home-outline', label: t('manager.sidebar.home'), href: '/(manager)/dashboard' },
+    { icon: 'people-outline', label: t('manager.sidebar.team'), href: '/(manager)/employees' },
+    { icon: 'map-outline', label: t('manager.sidebar.locations'), href: '/(manager)/projects' },
+    { icon: 'document-text-outline', label: t('manager.sidebar.reports'), href: '/(manager)/reports' },
+    { icon: 'person-circle-outline', label: t('manager.sidebar.account'), href: '/(manager)/account' },
   ];
 
   const handleMouseEnter = () => {
@@ -188,7 +190,7 @@ export const ManagerSidebar = () => {
                   isSignOutHovered && styles.hoveredLabel
                 ])}
               >
-                Sign Out
+                {t('manager.sidebar.signOut')}
               </Text>
             )}
           </Pressable>

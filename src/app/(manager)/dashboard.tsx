@@ -11,6 +11,7 @@ import { Text } from '../../components/Themed';
 import { Button } from '../../components/Button';
 import { EmployeesContext } from '../../context/EmployeesContext';
 import moment from 'moment';
+import { useTranslation } from 'react-i18next';
 
 function getCurrencySymbol(country: string | null): string {
   if (!country) return '€';
@@ -58,6 +59,7 @@ export default function NewManagerDashboard() {
   const router = useRouter();
   const { user, userCompanyId, userCompanyName, userCompanyCountry, userRole, isLoading: isAuthLoading } = useSession();
   const employeesContext = useContext(EmployeesContext);
+  const { t } = useTranslation();
 
   const [stats, setStats] = useState<DashboardStats>({
     totalWorkers: 0,
@@ -354,7 +356,7 @@ export default function NewManagerDashboard() {
       <AnimatedScreen>
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={theme.colors.primary} />
-          <Text style={styles.loadingText}>Loading dashboard...</Text>
+          <Text style={styles.loadingText}>{t('manager.dashboard.loading')}</Text>
         </View>
       </AnimatedScreen>
     );
@@ -364,7 +366,7 @@ export default function NewManagerDashboard() {
     <AnimatedScreen>
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.pageHeader}>
-          <Text style={styles.pageTitle} fontType="bold">Dashboard</Text>
+          <Text style={styles.pageTitle} fontType="bold">{t('manager.dashboard.title')}</Text>
           <Text style={styles.pageSubtitle}>{userCompanyName}</Text>
         </View>
 
@@ -372,40 +374,40 @@ export default function NewManagerDashboard() {
           <View style={styles.column}>
             {/* 1. Overview Cards */}
             <Card style={styles.sectionCard}>
-              <Text style={styles.sectionTitle} fontType="bold">Overview</Text>
+              <Text style={styles.sectionTitle} fontType="bold">{t('manager.dashboard.overview')}</Text>
               <View style={styles.summaryCardsContainer}>
                 <Card style={styles.summaryCard}>
                   <Text style={styles.summaryValue} fontType="bold">{totalWorkersCount}</Text>
-                  <Text style={styles.summaryLabel}>Total Workers</Text>
+                  <Text style={styles.summaryLabel}>{t('manager.dashboard.totalWorkers')}</Text>
                 </Card>
                 <Card style={styles.summaryCard}>
                   <Text style={styles.summaryValue} fontType="bold">{stats.workersOnline}</Text>
-                  <Text style={styles.summaryLabel}>Workers Online</Text>
+                  <Text style={styles.summaryLabel}>{t('manager.dashboard.workersOnline')}</Text>
                 </Card>
                 <Card style={styles.summaryCard}>
                   <Text style={styles.summaryValue} fontType="bold">{stats.totalHoursToday}h</Text>
-                  <Text style={styles.summaryLabel}>Hours Today</Text>
+                  <Text style={styles.summaryLabel}>{t('manager.dashboard.hoursToday')}</Text>
                 </Card>
               </View>
             </Card>
 
             {/* 2. Today's Project Schedule */}
             <Card style={styles.sectionCard}>
-              <Text style={styles.sectionTitle} fontType="bold">Today's Project Schedule</Text>
+              <Text style={styles.sectionTitle} fontType="bold">{t('manager.dashboard.todaySchedule')}</Text>
               <View style={styles.statsGrid}>
                 <View style={styles.statBox}>
                   <Text style={styles.statValue} fontType="bold">{stats.plannedProjectsCount} / {stats.totalProjectsCount}</Text>
-                  <Text style={styles.statLabel}>Projects Planned</Text>
+                  <Text style={styles.statLabel}>{t('manager.dashboard.projectsPlanned')}</Text>
                 </View>
                 <View style={styles.statBox}>
                   <Text style={styles.statValue} fontType="bold">{stats.unassignedCount}</Text>
-                  <Text style={styles.statLabel}>Unassigned Workers</Text>
+                  <Text style={styles.statLabel}>{t('manager.dashboard.unassignedWorkers')}</Text>
                 </View>
               </View>
 
               {stats.plannedProjects.length > 0 && (
                 <View style={styles.projectListContainer}>
-                  <Text style={styles.projectListTitle} fontType="bold">Scheduled Projects</Text>
+                  <Text style={styles.projectListTitle} fontType="bold">{t('manager.dashboard.scheduledProjects')}</Text>
                   {stats.plannedProjects.map(project => (
                     <TouchableOpacity 
                       key={project.id} 
@@ -428,7 +430,7 @@ export default function NewManagerDashboard() {
               )}
 
               <Button
-                title="Manage Assignments"
+                title={t('manager.dashboard.manageAssignments')}
                 onPress={() => router.push('/(manager)/worker-assignments')}
                 style={styles.outlineButton}
                 textStyle={styles.outlineButtonText}
@@ -438,11 +440,11 @@ export default function NewManagerDashboard() {
             {/* 3. Active Workers List */}
             <Card style={styles.sectionCard}>
               <View style={styles.cardHeaderRow}>
-                <Text style={styles.sectionTitle} fontType="bold">Workers Currently Online</Text>
+                <Text style={styles.sectionTitle} fontType="bold">{t('manager.dashboard.workersCurrentlyOnline')}</Text>
                 <Ionicons name="radio-button-on" size={16} color={theme.colors.success} />
               </View>
               {stats.activeSessions.length === 0 ? (
-                <Text style={styles.emptyText}>No workers are currently clocked in.</Text>
+                <Text style={styles.emptyText}>{t('manager.dashboard.noWorkersOnline')}</Text>
               ) : (
                 stats.activeSessions.map(session => (
                   <View key={session.id} style={styles.workerItem}>
@@ -477,28 +479,28 @@ export default function NewManagerDashboard() {
 
             {/* 4. Financial Snapshot */}
             <Card style={styles.sectionCard}>
-              <Text style={styles.sectionTitle} fontType="bold">Financial Quick View (MTD)</Text>
+              <Text style={styles.sectionTitle} fontType="bold">{t('manager.dashboard.financialTitle')}</Text>
               <View style={styles.financialRow}>
                 <View>
-                  <Text style={styles.financialLabel}>Total Payable Hours</Text>
+                  <Text style={styles.financialLabel}>{t('manager.dashboard.totalPayableHours')}</Text>
                   <Text style={styles.financialValue} fontType="bold">{stats.monthToDateHours}h</Text>
                 </View>
                 <View style={{ alignItems: 'flex-end' }}>
-                  <Text style={styles.financialLabel}>Est. Payroll</Text>
+                  <Text style={styles.financialLabel}>{t('manager.dashboard.estPayroll')}</Text>
                   {stats.monthToDatePay !== null ? (
                     <Text style={[styles.financialValue, { color: theme.colors.success }]} fontType="bold">
                       {currency}{stats.monthToDatePay.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </Text>
                   ) : (
                     <Text style={[styles.financialValue, { color: theme.colors.disabledText, fontSize: theme.fontSizes.md }]} fontType="regular">
-                      Set hourly rates to see payroll
+                      {t('manager.dashboard.setRatesHint')}
                     </Text>
                   )}
                 </View>
               </View>
               {stats.monthToDatePay === null && (
                 <Text style={styles.financialNote}>
-                  Go to Team → worker → 💰 to set hourly rates.
+                  {t('manager.dashboard.setRatesNote')}
                 </Text>
               )}
             </Card>
@@ -508,16 +510,16 @@ export default function NewManagerDashboard() {
             {/* 5. Workers Not Yet Clocked In */}
             <Card style={styles.sectionCard}>
               <View style={styles.cardHeaderRow}>
-                <Text style={styles.sectionTitle} fontType="bold">Not Yet Clocked In</Text>
+                <Text style={styles.sectionTitle} fontType="bold">{t('manager.dashboard.notYetClockedIn')}</Text>
                 <TouchableOpacity onPress={() => router.push('/(manager)/worker-assignments')}>
-                  <Text style={{ fontSize: theme.fontSizes.sm, color: theme.colors.primary }}>View Schedule</Text>
+                  <Text style={{ fontSize: theme.fontSizes.sm, color: theme.colors.primary }}>{t('manager.dashboard.viewSchedule')}</Text>
                 </TouchableOpacity>
               </View>
               {(() => {
                 const onlineIds = new Set(stats.activeSessions.map((s: any) => s.worker_id));
                 const notClockedIn = workers.filter(w => !onlineIds.has(w.id));
                 if (notClockedIn.length === 0) {
-                  return <Text style={styles.emptyText}>All workers are clocked in 🎉</Text>;
+                  return <Text style={styles.emptyText}>{t('manager.dashboard.allClockedIn')}</Text>;
                 }
                 return (
                   <View>
@@ -542,13 +544,13 @@ export default function NewManagerDashboard() {
             {/* 6. Real-time Activity Feed */}
             <Card style={styles.sectionCard}>
               <View style={styles.cardHeaderRow}>
-                <Text style={styles.sectionTitle} fontType="bold">Live Activity Feed</Text>
+                <Text style={styles.sectionTitle} fontType="bold">{t('manager.dashboard.liveActivityFeed')}</Text>
                 <View style={styles.todayBadge}>
-                  <Text style={styles.todayBadgeText}>Today</Text>
+                  <Text style={styles.todayBadgeText}>{t('manager.dashboard.today')}</Text>
                 </View>
               </View>
               {activities.length === 0 ? (
-                <Text style={styles.emptyText}>No activity today.</Text>
+                <Text style={styles.emptyText}>{t('manager.dashboard.noActivityToday')}</Text>
               ) : (
                 activities.map(activity => (
                   <View key={activity.id} style={styles.activityItem}>
@@ -571,11 +573,11 @@ export default function NewManagerDashboard() {
             {/* 7. Worker Utilization - Monthly */}
             <Card style={styles.sectionCard}>
               <View style={styles.cardHeaderRow}>
-                <Text style={styles.sectionTitle} fontType="bold">Top Workers ({stats.currentMonthYear})</Text>
+                <Text style={styles.sectionTitle} fontType="bold">{t('manager.dashboard.topWorkers')} ({stats.currentMonthYear})</Text>
                 <Ionicons name="trophy-outline" size={18} color={theme.colors.secondary} />
               </View>
               {stats.topWorkers.length === 0 ? (
-                <Text style={styles.emptyText}>No hours logged this month.</Text>
+                <Text style={styles.emptyText}>{t('manager.dashboard.noHoursThisMonth')}</Text>
               ) : (
                 stats.topWorkers.map((worker, index) => (
                   <View key={index} style={styles.utilizationRow}>
@@ -593,24 +595,24 @@ export default function NewManagerDashboard() {
 
             {/* 8. Quick Actions */}
             <Card style={styles.sectionCard}>
-              <Text style={styles.sectionTitle} fontType="bold">Quick Actions</Text>
+              <Text style={styles.sectionTitle} fontType="bold">{t('manager.dashboard.quickActions')}</Text>
               <View style={styles.quickActionsGrid}>
                 <TouchableOpacity style={styles.quickActionButton} onPress={() => router.push('/(manager)/employees')}>
                   <Ionicons name="person-add-outline" size={24} color={theme.colors.primary} />
-                  <Text style={styles.quickActionLabel}>Add Worker</Text>
+                  <Text style={styles.quickActionLabel}>{t('manager.dashboard.addWorker')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.quickActionButton} onPress={() => router.push('/(manager)/reports')}>
                   <Ionicons name="document-text-outline" size={24} color={theme.colors.primary} />
-                  <Text style={styles.quickActionLabel}>Reports</Text>
+                  <Text style={styles.quickActionLabel}>{t('manager.sidebar.reports')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.quickActionButton} onPress={() => router.push('/(manager)/projects')}>
                   <Ionicons name="folder-outline" size={24} color={theme.colors.primary} />
-                  <Text style={styles.quickActionLabel}>Projects</Text>
+                  <Text style={styles.quickActionLabel}>{t('manager.dashboard.projects')}</Text>
                 </TouchableOpacity>
                 {userRole === 'owner' ? (
                   <TouchableOpacity style={styles.quickActionButton} onPress={() => router.push('/(manager)/subscription')}>
                     <Ionicons name="card-outline" size={24} color={theme.colors.primary} />
-                    <Text style={styles.quickActionLabel}>Billing</Text>
+                    <Text style={styles.quickActionLabel}>{t('manager.dashboard.billing')}</Text>
                   </TouchableOpacity>
                 ) : null}
               </View>
