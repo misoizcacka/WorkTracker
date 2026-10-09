@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, StyleSheet, Image, Platform, Pressable, ScrollView } from 'react-native';
+import { View, StyleSheet, Image, Platform, Pressable, ScrollView, useWindowDimensions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { StoreButtons } from '../components/StoreButtons';
@@ -12,6 +12,8 @@ import Logo from '../../assets/koordinatelogo.svg';
 export default function MobileOnlyScreen() {
   const router = useRouter();
   const { userRole, user, signOut } = useSession();
+  const { width } = useWindowDimensions();
+  const isMobile = width < 640;
   const isManager = userRole === 'manager' || userRole === 'owner';
   const isSignedInWorkerOnWeb = Platform.OS === 'web' && !!user && userRole === 'worker';
 
@@ -47,7 +49,7 @@ export default function MobileOnlyScreen() {
           <Image source={Logo} style={styles.logo} resizeMode="contain" />
         </Pressable>
 
-        <Card style={styles.card}>
+        <Card style={isMobile ? [styles.card, styles.mobileCard] : styles.card}>
           <View style={styles.iconContainer}>
             <Ionicons
               name={isManager ? 'desktop-outline' : 'phone-portrait-outline'}
@@ -97,6 +99,10 @@ export default function MobileOnlyScreen() {
               <Text style={styles.helperText} fontType="regular">
                 Zoom back out or click the Koordinate logo to return to the default page.
               </Text>
+
+              <Pressable onPress={handleSignOut} style={({ pressed }) => [styles.signOutButton, pressed ? styles.signOutButtonPressed : null]}>
+                <Text style={styles.signOutButtonText} fontType="medium">Sign out</Text>
+              </Pressable>
             </View>
           )}
         </Card>
@@ -146,6 +152,17 @@ const styles = StyleSheet.create({
         elevation: 8,
       },
     }),
+  },
+  // No card chrome on narrow viewports
+  mobileCard: {
+    borderWidth: 0,
+    borderRadius: 0,
+    shadowColor: 'transparent',
+    shadowOpacity: 0,
+    elevation: 0,
+    backgroundColor: theme.colors.background,
+    maxWidth: '100%',
+    padding: theme.spacing(3),
   },
   iconContainer: {
     width: 96,

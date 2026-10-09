@@ -12,6 +12,7 @@ import { EmployeesContext, EmployeesContextType } from '../../../context/Employe
 import { supabase } from '../../../utils/supabase';
 import moment from 'moment';
 import Toast from 'react-native-toast-message';
+import { useTranslation } from 'react-i18next';
 
 const BASE_MONTHLY_FEE = 20;
 const PRICE_PER_WORKER = 7;
@@ -20,6 +21,7 @@ export default function ManageSubscriptionScreen() {
   const router = useRouter();
   const { userCompanyId, userCompanyName, userSubscriptionPeriodEnd, userRole, refreshUser } = useSession();
   const employeesContext = useContext(EmployeesContext) as EmployeesContextType;
+  const { t } = useTranslation();
 
   const currentSeats = employeesContext?.seatLimit || 0;
   const activeWorkers = employeesContext?.seatsUsed || 0;
@@ -118,10 +120,10 @@ export default function ManageSubscriptionScreen() {
   const currentMonthly = BASE_MONTHLY_FEE + (currentSeats * PRICE_PER_WORKER);
   const newMonthly = BASE_MONTHLY_FEE + (newSlotCount * PRICE_PER_WORKER);
   const pricingTitle = isCancellation
-    ? 'New Monthly Total'
+    ? t('manager.subscription.pricingTitle')
     : (newSlotCount < currentSeats || hasScheduledDowngrade)
-      ? 'Next Renewal Total'
-      : 'New Monthly Total';
+      ? t('manager.subscription.nextRenewalTitle')
+      : t('manager.subscription.pricingTitle');
 
   return (
     <AnimatedScreen>
@@ -131,7 +133,7 @@ export default function ManageSubscriptionScreen() {
             <Ionicons name="arrow-back" size={24} color={theme.colors.headingText} />
           </TouchableOpacity>
           <View>
-            <Text style={styles.pageTitle} fontType="bold">Manage Subscription</Text>
+            <Text style={styles.pageTitle} fontType="bold">{t('manager.subscription.title')}</Text>
             <Text style={styles.pageSubtitle}>{userCompanyName}</Text>
           </View>
         </View>
@@ -139,15 +141,15 @@ export default function ManageSubscriptionScreen() {
         <View style={styles.content}>
           {/* 1. Status Overview */}
           <Card style={styles.sectionCard}>
-            <Text style={styles.sectionTitle} fontType="bold">Plan Overview</Text>
+            <Text style={styles.sectionTitle} fontType="bold">{t('manager.subscription.planOverview')}</Text>
             <View style={styles.statsRow}>
               <View style={styles.statBox}>
                 <Text style={styles.statValue} fontType="bold">{activeWorkers}</Text>
-                <Text style={styles.statLabel}>Active Workers</Text>
+                <Text style={styles.statLabel}>{t('manager.subscription.activeWorkers')}</Text>
               </View>
               <View style={[styles.statBox, styles.statDivider]}>
                 <Text style={styles.statValue} fontType="bold">{currentSeats}</Text>
-                <Text style={styles.statLabel}>Current Seats</Text>
+                <Text style={styles.statLabel}>{t('manager.subscription.currentSeats')}</Text>
               </View>
             </View>
             {userSubscriptionPeriodEnd && (
@@ -159,9 +161,9 @@ export default function ManageSubscriptionScreen() {
 
           {/* 2. Seat Adjuster */}
           <Card style={styles.sectionCard}>
-            <Text style={styles.sectionTitle} fontType="bold">Adjust Capacity</Text>
+            <Text style={styles.sectionTitle} fontType="bold">{t('manager.subscription.adjustCapacity')}</Text>
             <Text style={styles.adjusterDescription}>
-              Add seats immediately with prorated billing. Downgrades are scheduled for the next billing cycle, so you keep your current paid seats until renewal.
+              {t('manager.subscription.adjustDesc')}
             </Text>
             
             <View style={styles.stepperContainer}>
@@ -175,7 +177,7 @@ export default function ManageSubscriptionScreen() {
               
               <View style={styles.stepperValueContainer}>
                 <Text style={styles.stepperValue} fontType="bold">{newSlotCount}</Text>
-                <Text style={styles.stepperLabel}>SEATS</Text>
+                <Text style={styles.stepperLabel}>{t('manager.subscription.seats')}</Text>
               </View>
 
               <TouchableOpacity style={styles.stepperButton} onPress={handleIncrement}>
@@ -186,9 +188,9 @@ export default function ManageSubscriptionScreen() {
 
           {hasScheduledDowngrade && (
             <Card style={styles.sectionCard}>
-              <Text style={styles.sectionTitle} fontType="bold">Scheduled Downgrade</Text>
+              <Text style={styles.sectionTitle} fontType="bold">{t('manager.subscription.scheduledDowngrade')}</Text>
               <Text style={styles.adjusterDescription}>
-                Your plan currently includes {currentSeats} live seats. It is scheduled to move to {scheduledSeats} seats on {nextCycleDate || 'the next renewal'}.
+                {t('manager.subscription.scheduledDowngradeDesc', { currentSeats, scheduledSeats, date: nextCycleDate || t('manager.subscription.nextRenewalTitle') })}
               </Text>
             </Card>
           )}
@@ -197,11 +199,11 @@ export default function ManageSubscriptionScreen() {
           <Card style={styles.sectionCard}>
             <Text style={styles.sectionTitle} fontType="bold">{pricingTitle}</Text>
             <View style={styles.pricingRow}>
-              <Text style={styles.pricingLabel}>Base Platform Fee</Text>
+              <Text style={styles.pricingLabel}>{t('manager.subscription.baseFee')}</Text>
               <Text style={styles.pricingValue}>€{BASE_MONTHLY_FEE.toFixed(2)}</Text>
             </View>
             <View style={styles.pricingRow}>
-              <Text style={styles.pricingLabel}>Worker Seats ({newSlotCount} × €{PRICE_PER_WORKER})</Text>
+              <Text style={styles.pricingLabel}>{t('manager.subscription.workerSeats', { count: newSlotCount, price: PRICE_PER_WORKER })}</Text>
               <Text style={styles.pricingValue}>€{(newSlotCount * PRICE_PER_WORKER).toFixed(2)}</Text>
             </View>
             <View style={styles.divider} />
@@ -212,7 +214,7 @@ export default function ManageSubscriptionScreen() {
             
             {hasChanges && (
               <View style={styles.diffContainer}>
-                <Text style={styles.diffLabel}>Difference:</Text>
+                <Text style={styles.diffLabel}>{t('manager.subscription.difference')}</Text>
                 <Text style={[styles.diffValue, { color: isIncrease ? theme.colors.success : theme.colors.primary }]} fontType="bold">
                   {isIncrease ? '+' : '-'}€{Math.abs(newMonthly - currentMonthly).toFixed(2)} / month
                 </Text>
@@ -221,7 +223,7 @@ export default function ManageSubscriptionScreen() {
           </Card>
 
           <Button 
-            title={isCancellation ? "Cancel Scheduled Downgrade" : "Confirm Changes"}
+            title={isCancellation ? t('manager.subscription.cancelScheduled') : t('manager.subscription.confirmChanges')}
             onPress={handleSaveChanges}
             disabled={!hasChanges || isSaving}
             loading={isSaving}
@@ -229,7 +231,7 @@ export default function ManageSubscriptionScreen() {
           />
           
           <Text style={styles.footerNote}>
-            All prices include VAT where applicable. Stripe prorates upgrades immediately, while downgrades apply on the next renewal.
+            {t('manager.subscription.footerNote')}
           </Text>
         </View>
       </ScrollView>

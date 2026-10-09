@@ -5,6 +5,7 @@ import moment from 'moment';
 import { DragDropContext, DropResult, Droppable } from '@hello-pangea/dnd';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import SubNavBar from '~/components/SubNavBar';
+import { useTranslation } from 'react-i18next';
 
 // NEW: Use new types for AssignmentsContext
 import { Employee, Project, CommonLocation, AssignmentRecord, ProcessedAssignmentStep } from '~/types';
@@ -38,6 +39,7 @@ export default function ProjectAssignmentScreen() {
   const { employees } = useContext(EmployeesContext)!;
   const { projects, isLoading: projectsLoading } = useProjects()!;
   const { user } = useSession()!; // NEW: From useSession
+  const { t } = useTranslation();
 
   // NEW: Use AssignmentsContext for data management
   const {
@@ -325,8 +327,8 @@ export default function ProjectAssignmentScreen() {
             { label: 'Corrections', href: '/(manager)/corrections' },
           ]} />
           <View style={styles.pageHeader}>
-            <Text style={styles.pageTitle} fontType="bold">Assignments</Text>
-            <Text style={styles.pageSubtitle}>Assign projects and locations to your workers.</Text>
+            <Text style={styles.pageTitle} fontType="bold">{t('manager.assignments.title')}</Text>
+            <Text style={styles.pageSubtitle}>{t('manager.assignments.subtitle')}</Text>
           </View>
           <View style={styles.container}>
           <View style={styles.topControls}>
@@ -346,10 +348,10 @@ export default function ProjectAssignmentScreen() {
           <View style={styles.mainLayout}>
             {/* Left Panel: Worker List */}
             <View style={styles.leftPanel}>
-              <Text style={styles.panelTitle} fontType="medium">Workers</Text>
+              <Text style={styles.panelTitle} fontType="medium">{t('manager.assignments.workers')}</Text>
               <TextInput
                 style={styles.searchInput}
-                placeholder="Search workers..."
+                placeholder={t('manager.assignments.searchWorkers')}
                 value={searchTerm}
                 onChangeText={setSearchTerm}
               />
@@ -365,7 +367,7 @@ export default function ProjectAssignmentScreen() {
             <View style={styles.centerPanel}>
               {selectedWorkers.length === 0 ? (
                 <View style={styles.noWorkerSelectedContainer}>
-                  <Text style={styles.noWorkerSelectedText} fontType="regular">Please select a worker to view their schedule.</Text>
+                  <Text style={styles.noWorkerSelectedText} fontType="regular">{t('manager.assignments.selectWorker')}</Text>
                 </View>
               ) : (
                 <ScheduleGrid
@@ -401,7 +403,7 @@ export default function ProjectAssignmentScreen() {
                     <View style={styles.tabContent}>
                         <TextInput
                             style={styles.searchInput}
-                            placeholder="Search projects..."
+                            placeholder={t('manager.assignments.searchProjects')}
                             value={searchTermProject}
                             onChangeText={setSearchTermProject}
                         />
@@ -433,7 +435,7 @@ export default function ProjectAssignmentScreen() {
                     <View style={styles.tabContent}>
                         <TextInput
                             style={styles.searchInput}
-                            placeholder="Search locations..."
+                            placeholder={t('manager.assignments.searchLocations')}
                             value={searchTermLocation}
                             onChangeText={setSearchTermLocation}
                         />

@@ -21,6 +21,7 @@ export default function Signup() {
   const { t } = useTranslation();
   const { width } = useWindowDimensions();
   const isLargeScreen = width > BREAKPOINT;
+  const isMobile = width < 640;
 
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
@@ -103,7 +104,7 @@ export default function Signup() {
       <View style={styles.container}>
         <GuestHeader variant="auth" authAction="signin" />
 
-        <ScrollView contentContainerStyle={styles.scrollContent}>
+        <ScrollView contentContainerStyle={[styles.scrollContent, isMobile && styles.scrollContentMobile]}>
           <View style={styles.mainLayout}>
             {/* Left Column: Reassurance (Desktop Only) */}
             {isLargeScreen && (
@@ -135,7 +136,7 @@ export default function Signup() {
 
             {/* Right Column: Sign Up Form */}
             <View style={styles.formColumn}>
-              <Card style={styles.signupCard}>
+              <Card style={isMobile ? [styles.signupCard, styles.mobileCard] : styles.signupCard}>
                 <Text style={styles.title} fontType="bold">{t('signup.createYourAccount')}</Text>
                 <Text style={styles.description} fontType="regular">{t('signup.registerManagerAccount')}</Text>
 
@@ -324,6 +325,20 @@ const styles = StyleSheet.create({
         elevation: 10,
       }
     }),
+  },
+  // On narrow screens: no card chrome — form sits directly on the page background
+  mobileCard: {
+    borderWidth: 0,
+    borderRadius: 0,
+    shadowColor: 'transparent',
+    shadowOpacity: 0,
+    elevation: 0,
+    backgroundColor: theme.colors.pageBackground,
+    padding: theme.spacing(3),
+  },
+  scrollContentMobile: {
+    padding: 0,
+    paddingTop: theme.spacing(1),
   },
   title: {
     fontSize: 28,

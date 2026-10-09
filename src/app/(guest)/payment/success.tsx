@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, ActivityIndicator, ScrollView, Platform, Dimensions } from 'react-native';
+import { View, StyleSheet, ActivityIndicator, ScrollView, Platform, Dimensions, useWindowDimensions } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { supabase } from '../../../utils/supabase';
 import { Button } from '../../../components/Button';
@@ -19,6 +19,8 @@ export default function PaymentSuccess() {
   const router = useRouter();
   const { refreshUser } = useSession();
   const { t } = useTranslation();
+  const { width } = useWindowDimensions();
+  const isMobile = width < 640;
 
   const [status, setStatus] = useState('verifying');
   const [isUpdate, setIsUpdate] = useState(false);
@@ -134,7 +136,7 @@ export default function PaymentSuccess() {
 
         <ScrollView contentContainerStyle={styles.scrollContent}>
           <View style={styles.mainContent}>
-            <Card style={styles.statusCard}>
+            <Card style={isMobile ? [styles.statusCard, styles.mobileCard] : styles.statusCard}>
                 {renderContent()}
             </Card>
           </View>
@@ -181,6 +183,16 @@ const styles = StyleSheet.create({
             elevation: 10,
         },
     }),
+  },
+  mobileCard: {
+    borderWidth: 0,
+    borderRadius: 0,
+    shadowColor: 'transparent',
+    shadowOpacity: 0,
+    elevation: 0,
+    backgroundColor: theme.colors.pageBackground,
+    maxWidth: '100%',
+    padding: theme.spacing(3),
   },
   iconCircle: {
     width: 80,

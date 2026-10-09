@@ -16,28 +16,28 @@ export default function ReportsHub() {
 
   const reports = [
     {
-      title: t('manager.reports.employeeHours'),
+      title: t('manager.reports.employeeHoursTitle'),
       description: t('manager.reports.employeeHoursDesc'),
       icon: 'time-outline',
       path: 'employee-hours-report',
       comingSoon: false,
     },
     {
-      title: t('manager.reports.payrollSummary'),
+      title: t('manager.reports.payrollSummaryTitle'),
       description: t('manager.reports.payrollSummaryDesc'),
       icon: 'cash-outline',
       path: 'payroll-report',
       comingSoon: false,
     },
     {
-      title: t('manager.reports.projectLabor'),
+      title: t('manager.reports.projectLaborTitle'),
       description: t('manager.reports.projectLaborDesc'),
       icon: 'briefcase-outline',
       path: 'project-labor-report',
       comingSoon: true,
     },
     {
-      title: t('manager.reports.dailyDetailed'),
+      title: t('manager.reports.dailyDetailedTitle'),
       description: t('manager.reports.dailyDetailedDesc'),
       icon: 'analytics-outline',
       path: 'daily-detailed-report',

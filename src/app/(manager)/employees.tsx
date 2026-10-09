@@ -19,6 +19,7 @@ import { Dropdown } from "react-native-element-dropdown";
 import UserAvatar from "../../components/UserAvatar";
 import { useSession } from "../../context/AuthContext";
 import HourlyRateModal from "../../components/HourlyRateModal";
+import { useTranslation } from 'react-i18next';
 
 
 
@@ -43,6 +44,7 @@ export default function ManagerEmployees() {
   const employeesContext = useContext(EmployeesContext);
   const invitesContext = useContext(InvitesContext);
   const { user, userRole } = useSession();
+  const { t } = useTranslation();
   
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('All');
@@ -183,10 +185,10 @@ export default function ManagerEmployees() {
 
   const getStatusStyle = (status: Employee['status']) => { // Changed type to Employee['status']
     switch (status) {
-      case "active": return { color: theme.colors.success, text: "Active", };
-      case "pending": return { color: theme.colors.warning, text: "Pending" };
-      case "disabled": return { color: theme.colors.danger, text: "Disabled" };
-      default: return { color: theme.colors.iconColor, text: "Unknown" };
+      case "active": return { color: theme.colors.success, text: t('manager.employees.statusActive') };
+      case "pending": return { color: theme.colors.warning, text: t('manager.employees.statusPending') };
+      case "disabled": return { color: theme.colors.danger, text: t('manager.employees.statusDisabled') };
+      default: return { color: theme.colors.iconColor, text: t('manager.employees.statusUnknown') };
     }
   };
 
@@ -217,10 +219,10 @@ export default function ManagerEmployees() {
   });
 
   const statusOptions = [
-    { label: 'All', value: 'All' },
-    { label: 'Active', value: 'Active' },
-    { label: 'Pending', value: 'Pending' },
-    { label: 'Disabled', value: 'Disabled' },
+    { label: t('manager.employees.filterAll'), value: 'All' },
+    { label: t('manager.employees.filterActive'), value: 'Active' },
+    { label: t('manager.employees.filterPending'), value: 'Pending' },
+    { label: t('manager.employees.filterDisabled'), value: 'Disabled' },
   ];
 
   const renderEmployeeRow = (item: CombinedEmployeeType & { token?: string }) => {
@@ -300,12 +302,12 @@ export default function ManagerEmployees() {
   const TableHeader = () => (
     <View style={styles.tableHeaderRow}>
       <View style={[styles.tableHeaderSpacer, { width: fixedColumnWidths.avatar }]} />
-      <Text style={[styles.tableHeaderCell, { flex: 1, minWidth: flexibleColumnMinLengths.name }]} fontType="bold">Name</Text>
-      <Text style={[styles.tableHeaderCell, { width: fixedColumnWidths.phone }]} fontType="bold">Phone</Text>
-      <Text style={[styles.tableHeaderCell, { width: fixedColumnWidths.status }]} fontType="bold">Status</Text>
-      <Text style={[styles.tableHeaderCell, { width: fixedColumnWidths.role }]} fontType="bold">Role</Text>
-      <Text style={[styles.tableHeaderCell, { width: fixedColumnWidths.joined }]} fontType="bold">Joined</Text>
-      <Text style={[styles.tableHeaderCell, { flex: 1, minWidth: flexibleColumnMinLengths.reportingTo }]} fontType="bold">Reporting To</Text>
+      <Text style={[styles.tableHeaderCell, { flex: 1, minWidth: flexibleColumnMinLengths.name }]} fontType="bold">{t('manager.employees.colName')}</Text>
+      <Text style={[styles.tableHeaderCell, { width: fixedColumnWidths.phone }]} fontType="bold">{t('manager.employees.colPhone')}</Text>
+      <Text style={[styles.tableHeaderCell, { width: fixedColumnWidths.status }]} fontType="bold">{t('manager.employees.colStatus')}</Text>
+      <Text style={[styles.tableHeaderCell, { width: fixedColumnWidths.role }]} fontType="bold">{t('manager.employees.colRole')}</Text>
+      <Text style={[styles.tableHeaderCell, { width: fixedColumnWidths.joined }]} fontType="bold">{t('manager.employees.colJoined')}</Text>
+      <Text style={[styles.tableHeaderCell, { flex: 1, minWidth: flexibleColumnMinLengths.reportingTo }]} fontType="bold">{t('manager.employees.colReportingTo')}</Text>
       <View style={[styles.tableHeaderSpacer, { width: fixedColumnWidths.actions }]} />
     </View>
   );
@@ -319,15 +321,15 @@ export default function ManagerEmployees() {
       ]} />
       <AnimatedScreen>
       <View style={styles.pageHeader}>
-        <Text style={styles.pageTitle} fontType="bold">Team</Text>
-        <Text style={styles.pageSubtitle}>Manage your workers and their roles.</Text>
+        <Text style={styles.pageTitle} fontType="bold">{t('manager.employees.title')}</Text>
+        <Text style={styles.pageSubtitle}>{t('manager.employees.subtitle')}</Text>
       </View>
       <View style={styles.mainContentCard}>
         <View style={styles.headerControls}>
           <View style={styles.searchAndFilter}>
             <TextInput
               style={styles.searchInput}
-              placeholder="Search employees..."
+              placeholder={t('manager.employees.searchPlaceholder')}
               value={searchTerm}
               onChangeText={setSearchTerm}
               placeholderTextColor={theme.colors.bodyText}
@@ -348,21 +350,21 @@ export default function ManagerEmployees() {
             {isOwner ? (
               <View style={styles.statItem}>
                 <Text style={styles.statValue} fontType="bold">{seatsUsed}/{seatLimit}</Text>
-                <Text style={styles.statLabel} fontType="regular">Seats Used</Text>
+                <Text style={styles.statLabel} fontType="regular">{t('manager.employees.seatsUsed')}</Text>
               </View>
             ) : (
               <View style={styles.statItem}>
                 <Text style={styles.statValue} fontType="bold">{visibleWorkerCount}</Text>
-                <Text style={styles.statLabel} fontType="regular">Workers</Text>
+                <Text style={styles.statLabel} fontType="regular">{t('manager.employees.workers')}</Text>
               </View>
             )}
             {isOwner ? (
               <View style={styles.statItem}>
                 <Text style={styles.statValue} fontType="bold">{managerCount}</Text>
-                <Text style={styles.statLabel} fontType="regular">Managers</Text>
+                <Text style={styles.statLabel} fontType="regular">{t('manager.employees.managers')}</Text>
               </View>
             ) : null}
-            <Button title="Invite" onPress={handleInvite} style={styles.createButton} textStyle={styles.createButtonText} />
+            <Button title={t('manager.employees.invite')} onPress={handleInvite} style={styles.createButton} textStyle={styles.createButtonText} />
           </View>
         </View>
 

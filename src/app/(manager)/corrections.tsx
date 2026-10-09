@@ -15,10 +15,12 @@ import { Ionicons } from '@expo/vector-icons';
 import { Button } from '~/components/Button';
 import UserAvatar from '~/components/UserAvatar';
 import CrossPlatformDatePicker from '../../components/CrossPlatformDatePicker';
+import { useTranslation } from 'react-i18next';
 
 
 const CorrectionsPage = () => {
     const { employees } = useContext(EmployeesContext)!;
+    const { t } = useTranslation();
 
     const [selectedWorker, setSelectedWorker] = useState<Employee | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
@@ -190,17 +192,17 @@ const CorrectionsPage = () => {
           ]} />
           <AnimatedScreen>
           <View style={styles.pageHeader}>
-            <Text style={styles.pageTitle} fontType="bold">Corrections</Text>
-            <Text style={styles.pageSubtitle}>Adjust recorded work sessions for your team.</Text>
+            <Text style={styles.pageTitle} fontType="bold">{t('manager.corrections.title')}</Text>
+            <Text style={styles.pageSubtitle}>{t('manager.corrections.subtitle')}</Text>
           </View>
             <View style={styles.mainContentCard}>
                 
                 <View style={styles.mainLayout}>
                     <View style={styles.leftPanel}>
-                        <Text style={styles.panelTitle} fontType="medium">Workers</Text>
+                        <Text style={styles.panelTitle} fontType="medium">{t('manager.corrections.workers')}</Text>
                         <TextInput
                             style={styles.searchInput}
-                            placeholder="Search workers..."
+                            placeholder={t('manager.corrections.searchWorkers')}
                             value={searchTerm}
                             onChangeText={setSearchTerm}
                             placeholderTextColor="#999"
@@ -231,13 +233,13 @@ const CorrectionsPage = () => {
                         <Card style={styles.tableWrapperCard}>
                             {selectedWorker === null ? (
                                 <View style={styles.noSessionsContainer}>
-                                    <Text style={styles.noSessionsText} fontType="regular">Please select a worker to view sessions.</Text>
+                                    <Text style={styles.noSessionsText} fontType="regular">{t('manager.corrections.selectWorker')}</Text>
                                 </View>
                             ) : loading ? (
                                 <ActivityIndicator size="large" color={theme.colors.primary} style={{ marginTop: 50 }}/>
                             ) : sessions.length === 0 ? (
                                 <View style={styles.noSessionsContainer}>
-                                    <Text style={styles.noSessionsText} fontType="regular">No sessions found for this month.</Text>
+                                    <Text style={styles.noSessionsText} fontType="regular">{t('manager.corrections.noSessions')}</Text>
                                 </View>
                             ) : (
                                 <>
@@ -379,7 +381,7 @@ const CorrectionsPage = () => {
                                     style={styles.saveButton}
                                     disabled={isSaving}
                                     loading={isSaving}
-                                    title="Save Adjustments"
+                                    title={t('manager.corrections.saveAdjustments')}
                                 />
                             </View>
                         </Card>

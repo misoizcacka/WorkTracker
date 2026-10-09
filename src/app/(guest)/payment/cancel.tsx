@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, StyleSheet, ScrollView, Platform } from 'react-native';
+import { View, StyleSheet, ScrollView, Platform, useWindowDimensions } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Button } from '../../../components/Button';
 import { Card } from '../../../components/Card';
@@ -13,6 +13,8 @@ import { Ionicons } from '@expo/vector-icons';
 export default function PaymentCancel() {
   const router = useRouter();
   const { t } = useTranslation();
+  const { width } = useWindowDimensions();
+  const isMobile = width < 640;
 
   return (
     <AnimatedScreen>
@@ -21,7 +23,7 @@ export default function PaymentCancel() {
 
         <ScrollView contentContainerStyle={styles.scrollContent}>
           <View style={styles.mainContent}>
-            <Card style={styles.statusCard}>
+            <Card style={isMobile ? [styles.statusCard, styles.mobileCard] : styles.statusCard}>
                 <View style={[styles.iconCircle, { backgroundColor: '#FEF3C7' }]}>
                     <Ionicons name="warning-outline" size={40} color="#D97706" />
                 </View>
@@ -79,6 +81,16 @@ const styles = StyleSheet.create({
             elevation: 10,
         },
     }),
+  },
+  mobileCard: {
+    borderWidth: 0,
+    borderRadius: 0,
+    shadowColor: 'transparent',
+    shadowOpacity: 0,
+    elevation: 0,
+    backgroundColor: theme.colors.pageBackground,
+    maxWidth: '100%',
+    padding: theme.spacing(3),
   },
   iconCircle: {
     width: 80,

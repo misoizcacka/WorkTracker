@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useContext } from 'react';
-import { View, TextInput, StyleSheet, ActivityIndicator, ScrollView, Platform, Dimensions, Image, Pressable, TouchableOpacity, Linking } from 'react-native';
+import { View, TextInput, StyleSheet, ActivityIndicator, ScrollView, Platform, Dimensions, Image, Pressable, TouchableOpacity, Linking, useWindowDimensions } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useRouter, Link } from 'expo-router';
 import { Button } from '../../components/Button';
@@ -22,6 +22,8 @@ export default function Login() {
   const router = useRouter();
   const { t } = useTranslation();
   const invitesContext = useContext(InvitesContext);
+  const { width } = useWindowDimensions();
+  const isMobile = width < 640;
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -118,7 +120,7 @@ export default function Login() {
           </View>
 
           <ScrollView contentContainerStyle={styles.scrollContent}>
-            <Card style={styles.loginCard}>
+            <Card style={[styles.loginCard, styles.mobileCard]}>
               <View style={styles.mobileIconShell}>
                 <Feather name="key" size={26} color={theme.colors.primary} />
               </View>
@@ -164,8 +166,8 @@ export default function Login() {
       <View style={styles.container}>
         <GuestHeader variant="auth" authAction="signup" />
 
-        <ScrollView contentContainerStyle={styles.scrollContent}>
-          <Card style={styles.loginCard}>
+        <ScrollView contentContainerStyle={[styles.scrollContent, isMobile && styles.scrollContentMobile]}>
+          <Card style={isMobile ? [styles.loginCard, styles.mobileCard] : styles.loginCard}>
             <Text style={styles.title} fontType="bold">{t('login.loginHeading')}</Text>
             <Text style={styles.description} fontType="regular">{t('login.loginDescription')}</Text>
 
@@ -303,6 +305,21 @@ const styles = StyleSheet.create({
         shadowRadius: 20,
       }
     }),
+  },
+  // On narrow screens (mobile / small browser): no card chrome — just the form on the background
+  mobileCard: {
+    borderWidth: 0,
+    borderRadius: 0,
+    shadowColor: 'transparent',
+    shadowOpacity: 0,
+    elevation: 0,
+    backgroundColor: theme.colors.pageBackground,
+    maxWidth: '100%',
+    padding: theme.spacing(3),
+  },
+  scrollContentMobile: {
+    padding: 0,
+    paddingTop: theme.spacing(2),
   },
   title: {
     fontSize: Platform.OS === 'web' ? 28 : 24,

@@ -71,13 +71,13 @@ export default function ManagerAccount() {
 
   const handleImagePickAndUpload = async () => {
     if (!user?.id) {
-        Alert.alert("Error", "User not logged in.");
+        Alert.alert(t('manager.account.errUserNotLoggedIn'));
         return;
     }
 
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
-      Alert.alert('Permission Denied', 'Sorry, we need camera roll permissions to make this work!');
+      Alert.alert(t('manager.account.errPermissionDenied'), t('manager.account.errCameraRollPermission'));
       return;
     }
 
@@ -95,10 +95,10 @@ export default function ManagerAccount() {
         const storagePath = await uploadAvatar(user.id, localUri);
         await updateEmployeeProfile(user.id, { avatar_url: storagePath });
         await refetchProfile();
-        Toast.show({ type: 'success', text1: 'Avatar Updated' });
+        Toast.show({ type: 'success', text1: t('manager.account.avatarUpdated') });
       } catch (error: any) {
         console.error("Error uploading avatar:", error);
-        Alert.alert("Upload Failed", error.message || "Failed to upload avatar.");
+        Alert.alert(t('manager.account.errUploadFailed'), error.message || t('manager.account.errFailedToUploadAvatar'));
       } finally {
         setIsUploadingAvatar(false);
       }
@@ -107,7 +107,7 @@ export default function ManagerAccount() {
 
   const handleSaveProfileChanges = async () => {
     if (!user?.id || !profile) {
-        Alert.alert("Error", "User not logged in or profile not loaded.");
+        Alert.alert(t('manager.account.errProfileNotLoaded'));
         return;
     }
     const trimmedName = name.trim();
@@ -117,12 +117,12 @@ export default function ManagerAccount() {
     const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
     if (trimmedName.length < 2) {
-        Alert.alert("Invalid Name", "Please enter a valid full name.");
+        Alert.alert(t('manager.account.errInvalidName'), t('manager.account.errEnterValidName'));
         return;
     }
 
     if (!emailPattern.test(trimmedEmail)) {
-        Alert.alert("Invalid Email", "Please enter a valid email address.");
+        Alert.alert(t('manager.account.errInvalidEmail'), t('manager.account.errEnterValidEmail'));
         return;
     }
 
@@ -131,7 +131,7 @@ export default function ManagerAccount() {
       trimmedPhone === (profile.phone_number || '').trim() &&
       trimmedEmail === normalizedCurrentEmail
     ) {
-        Toast.show({ type: 'info', text1: 'No Changes', text2: 'No profile changes to save.' });
+        Toast.show({ type: 'info', text1: t('manager.account.noChanges'), text2: t('manager.account.noProfileChanges') });
         return;
     }
 
@@ -149,10 +149,10 @@ export default function ManagerAccount() {
         }
         await refreshUser();
         await refetchProfile();
-        Toast.show({ type: 'success', text1: 'Profile Saved', text2: 'Your profile details have been updated.' });
+        Toast.show({ type: 'success', text1: t('manager.account.profileSaved'), text2: t('manager.account.profileSavedDesc') });
     } catch (error: any) {
         console.error("Error saving profile changes:", error);
-        Alert.alert("Save Failed", error.message || "Failed to save profile changes.");
+        Alert.alert(t('manager.account.errSaveFailed'), error.message || t('manager.account.errFailedToSaveProfile'));
     } finally {
         setIsSavingProfile(false);
     }
@@ -160,17 +160,17 @@ export default function ManagerAccount() {
 
   const handleUpdatePassword = async () => {
     if (!newPassword) {
-      Alert.alert("Password Required", "Please enter a new password.");
+      Alert.alert(t('manager.account.errPasswordRequired'), t('manager.account.errEnterNewPassword'));
       return;
     }
 
     if (newPassword.length < 6) {
-      Alert.alert("Password Too Short", "Password must be at least 6 characters long.");
+      Alert.alert(t('manager.account.errPasswordTooShort'), t('manager.account.errPasswordLength'));
       return;
     }
 
     if (newPassword !== confirmPassword) {
-      Alert.alert("Passwords Do Not Match", "Please make sure both password fields match.");
+      Alert.alert(t('manager.account.errPasswordsDoNotMatch'), t('manager.account.errPasswordMatchMsg'));
       return;
     }
 
@@ -182,10 +182,10 @@ export default function ManagerAccount() {
 
       setNewPassword('');
       setConfirmPassword('');
-      Toast.show({ type: 'success', text1: 'Password Updated', text2: 'Your password has been changed.' });
+      Toast.show({ type: 'success', text1: t('manager.account.passwordUpdated'), text2: t('manager.account.passwordUpdatedDesc') });
     } catch (error: any) {
       console.error("Error updating password:", error);
-      Alert.alert("Update Failed", error.message || "Failed to update password.");
+      Alert.alert(t('manager.account.errUpdateFailed'), error.message || t('manager.account.errFailedToUpdatePassword'));
     } finally {
       setIsSavingPassword(false);
     }
@@ -193,12 +193,12 @@ export default function ManagerAccount() {
 
   const handleSaveCompanyChanges = async () => {
     if (userRole !== 'owner') {
-      Alert.alert("Not Allowed", "Only owners can update company settings.");
+      Alert.alert(t('manager.account.errNotAllowed'), t('manager.account.errOnlyOwnerCanUpdate'));
       return;
     }
     if (!userCompanyId) return;
     if (companyName === userCompanyName) {
-        Toast.show({ type: 'info', text1: 'No Changes', text2: 'Company name is the same.' });
+        Toast.show({ type: 'info', text1: t('manager.account.noChanges'), text2: t('manager.account.noCompanyChanges') });
         return;
     }
 
@@ -212,10 +212,10 @@ export default function ManagerAccount() {
         if (error) throw error;
         
         await refreshUser();
-        Toast.show({ type: 'success', text1: 'Company Updated', text2: 'Your company name has been updated.' });
+        Toast.show({ type: 'success', text1: t('manager.account.companyUpdated'), text2: t('manager.account.companyUpdatedDesc') });
     } catch (error: any) {
         console.error("Error saving company changes:", error);
-        Alert.alert("Save Failed", error.message || "Failed to update company name.");
+        Alert.alert(t('manager.account.errSaveFailed'), error.message || t('manager.account.errFailedToUpdateCompany'));
     } finally {
         setIsSavingCompany(false);
     }
@@ -405,7 +405,7 @@ export default function ManagerAccount() {
                     <Ionicons name="arrow-down-circle-outline" size={16} color={theme.colors.primary} />
                     <Text style={styles.periodEndText}>
                       {t('manager.account.scheduledSeats')}: <Text fontType="bold" style={{ color: theme.colors.headingText }}>{userScheduledWorkerSeats}</Text>
-                      {userScheduledChangeEffectiveAt ? ` on ${moment(userScheduledChangeEffectiveAt).format('MMMM D, YYYY')}` : ''}
+                      {userScheduledChangeEffectiveAt ? ` ${t('manager.account.scheduledOn', { date: moment(userScheduledChangeEffectiveAt).format('MMMM D, YYYY') })}` : ''}
                     </Text>
                   </View>
                 )}
@@ -418,7 +418,7 @@ export default function ManagerAccount() {
                 />
                 {!isOwner && (
                   <Text style={{ fontSize: 12, color: theme.colors.disabledText, marginTop: theme.spacing(1), textAlign: 'center' }}>
-                    Only the account owner can manage billing.
+                    {t('manager.account.ownerOnlyBilling')}
                   </Text>
                 )}
               </Card>

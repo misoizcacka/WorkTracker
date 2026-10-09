@@ -11,6 +11,7 @@ import AnimatedScreen from '../../components/AnimatedScreen'; // Corrected impor
 import { Ionicons } from '@expo/vector-icons'; 
 import UserAvatar from '../../components/UserAvatar';
 import { Card } from '../../components/Card';
+import { useTranslation } from 'react-i18next';
 
 import { Employee } from '../../types';
 import { fetchLatestLocationForWorkers, LatestLocation } from '~/services/locationEvents';
@@ -31,6 +32,7 @@ export default function MapOverviewScreen() {
   const { user } = useSession();
   const { employees } = useContext(EmployeesContext) as EmployeesContextType;
   const { projects } = useContext(ProjectsContext) as ProjectsContextType;
+  const { t } = useTranslation();
 
   const [selectedWorkers, setSelectedWorkers] = useState<Employee[]>([]);
   const [selectedProjects, setSelectedProjects] = useState<Project[]>([]);
@@ -250,16 +252,16 @@ export default function MapOverviewScreen() {
       ]} />
       <AnimatedScreen>
       <View style={styles.pageHeader}>
-        <Text style={styles.pageTitle} fontType="bold">Map Overview</Text>
-        <Text style={styles.pageSubtitle}>Visualize worker and project locations.</Text>
+        <Text style={styles.pageTitle} fontType="bold">{t('manager.mapOverview.title')}</Text>
+        <Text style={styles.pageSubtitle}>{t('manager.mapOverview.subtitle')}</Text>
       </View>
       <View style={styles.mainContentCard}>
         <View style={styles.mainLayout}>
           <View style={styles.leftPanel}>
-            <Text style={styles.panelTitle} fontType="medium">Workers</Text>
+            <Text style={styles.panelTitle} fontType="medium">{t('manager.mapOverview.workers')}</Text>
             <TextInput
               style={styles.searchInput}
-              placeholder="Search workers..."
+              placeholder={t('manager.mapOverview.searchWorkers')}
               value={searchTerm}
               onChangeText={setSearchTerm}
               placeholderTextColor="#999"
@@ -276,7 +278,7 @@ export default function MapOverviewScreen() {
             {selectedWorkers.length === 0 ? (
               <Card style={styles.emptyMapCard}>
                 <Text style={styles.emptyMapText} fontType="regular">
-                  Select one or more workers to view their locations on the map.
+                  {t('manager.mapOverview.selectWorkerHint')}
                 </Text>
               </Card>
             ) : (
@@ -290,10 +292,10 @@ export default function MapOverviewScreen() {
           </View>
 
           <View style={styles.rightPanel}>
-            <Text style={styles.panelTitle} fontType="medium">Projects</Text>
+            <Text style={styles.panelTitle} fontType="medium">{t('manager.mapOverview.projects')}</Text>
             <TextInput
               style={styles.searchInput}
-              placeholder="Search projects..."
+              placeholder={t('manager.mapOverview.searchProjects')}
               value={searchTermProject}
               onChangeText={setSearchTermProject}
               placeholderTextColor="#999"
