@@ -12,6 +12,7 @@ module.exports = () => {
     ...config,
     android: {
       ...config.android,
+      newArchEnabled: false,
       intentFilters: [
         {
           action: 'VIEW',
