@@ -1,36 +1,48 @@
 /**
- * Config plugin that patches android/settings.gradle to delete the
- * Windows-generated autolinking cache before Gradle runs.
+ * Config plugin that forces AGP to 8.10.1 via pluginManagement resolutionStrategy.
  *
- * Root cause: when you run expo prebuild on Windows, it generates
- * android/build/generated/autolinking/autolinking.json with Windows
- * absolute paths. EAS Build (Linux) restores this file from its own
- * build cache, causing all native module subprojects to produce zero
- * variants ("No variants exist").
+ * React Native 0.81.5 ships AGP 8.11.0 which introduced AgpVersionAttr —
+ * a new variant attribute that community packages (react-native-maps,
+ * react-native-reanimated, react-native-worklets, etc.) don't declare,
+ * causing "No variants exist" errors on all of them.
  *
- * Fix confirmed by Expo Support: https://github.com/expo/expo/issues/42370
+ * AGP 8.10.1 does not enforce this attribute and is compatible with
+ * current community RN packages.
  */
 const { withSettingsGradle } = require('@expo/config-plugins');
 
-const AUTOLINKING_FIX = `
-// Fix: delete Windows-generated autolinking cache so it always regenerates
-// with correct Linux paths on the EAS build machine.
-// See: https://github.com/expo/expo/issues/42370
-def autolinkingCacheDir = new File(rootDir, "build/generated/autolinking")
-if (!System.getProperty("os.name").toLowerCase().contains("windows")) {
-    autolinkingCacheDir.deleteDir()
-}
-`;
+const RESOLUTION_STRATEGY = [
+  '',
+  '  // Force AGP to 8.10.1 — AGP 8.11.0 (RN 0.81.5) introduced AgpVersionAttr',
+  '  // which breaks community packages that do not declare it.',
+  '  resolutionStrategy {',
+  '    eachPlugin {',
+  '      if (requested.id.id == "com.android.application" ||',
+  '          requested.id.id == "com.android.library") {',
+  '        useVersion("8.10.1")',
+  '      }',
+  '    }',
+  '  }',
+].join('\n');
 
-const withFixAutolinkingCache = (config) => {
-    return withSettingsGradle(config, (config) => {
-        // Only inject if not already present
-        if (!config.modResults.contents.includes('autolinkingCacheDir')) {
-            // Prepend before everything else in settings.gradle
-            config.modResults.contents = AUTOLINKING_FIX + config.modResults.contents;
-        }
-        return config;
-    });
+const withDowngradeAgp = (config) => {
+  return withSettingsGradle(config, (config) => {
+    const contents = config.modResults.contents;
+
+    // Only inject once
+    if (contents.includes('Force AGP to 8.10.1')) {
+      return config;
+    }
+
+    // Inject resolutionStrategy inside the pluginManagement { } block,
+    // right before its closing brace
+    config.modResults.contents = contents.replace(
+      /(pluginManagement\s*\{)([\s\S]*?)(\n\})/,
+      (match, open, body, close) => open + body + RESOLUTION_STRATEGY + close
+    );
+
+    return config;
+  });
 };
 
-module.exports = withFixAutolinkingCache;
+module.exports = withDowngradeAgp;
