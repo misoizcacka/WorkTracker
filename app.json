@@ -63,7 +63,8 @@
       "expo-audio",
       "expo-font",
       "expo-asset",
-      "./plugins/with-background-location.js"
+      "./plugins/with-background-location.js",
+      "./plugins/with-fix-autolinking-cache.js"
     ],
     "extra": {
       "router": {},
