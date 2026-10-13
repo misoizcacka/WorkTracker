@@ -667,6 +667,7 @@ export default function Home() {
 
   const circleButtonActive = stableCheckedIn || isNearby;
 
+
   return (
     <AnimatedScreen>
       <ScrollView
@@ -674,7 +675,6 @@ export default function Home() {
         refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} colors={[theme.colors.primary]} />}
         showsVerticalScrollIndicator={false}
       >
-        {/* HEADER */}
         <View style={styles.pageHeader}>
           <Logo />
           <View style={styles.headerRight}>
@@ -688,7 +688,6 @@ export default function Home() {
           </View>
         </View>
 
-        {/* Offline banner */}
         {isOffline && (
           <View style={styles.offlineBanner}>
             <Ionicons name="cloud-offline-outline" size={14} color="#92400E" />
@@ -698,7 +697,6 @@ export default function Home() {
           </View>
         )}
 
-        {/* iOS tracking-gap banner */}
         {Platform.OS === 'ios' && stableCheckedIn && trackingGapSeconds !== null && trackingGapSeconds > 600 && (
           <View style={styles.trackingGapBanner}>
             <Ionicons name="warning-outline" size={14} color="#92400E" />
@@ -711,10 +709,8 @@ export default function Home() {
           </View>
         )}
 
-        {/* MAIN CONTENT */}
         <View style={styles.homeContent}>
 
-          {/* Project info card */}
           {!isDataLoading && relevantAssignment ? (
             <View style={styles.projectCard}>
               <Text style={styles.projectCardLabel} fontType="medium">
@@ -754,19 +750,12 @@ export default function Home() {
             </View>
           ) : null}
 
-          {/* Circle check-in button */}
           <View style={styles.circleSection}>
-            <View style={[
-              styles.circleOuter,
-              stableCheckedIn ? styles.circleOuterCheckedIn : circleButtonActive ? styles.circleOuterReady : styles.circleOuterFar,
-            ]}>
+            <View style={[styles.circleOuter, stableCheckedIn ? styles.circleOuterCheckedIn : circleButtonActive ? styles.circleOuterReady : styles.circleOuterFar]}>
               <TouchableOpacity
                 onPress={stableCheckedIn ? handleCheckOut : handleCheckIn}
                 disabled={(!isNearby && !stableCheckedIn) || buttonDisabled || isActuallyProcessing}
-                style={[
-                  styles.circleButton,
-                  stableCheckedIn ? styles.circleButtonCheckedIn : circleButtonActive ? styles.circleButtonReady : styles.circleButtonFar,
-                ]}
+                style={[styles.circleButton, stableCheckedIn ? styles.circleButtonCheckedIn : circleButtonActive ? styles.circleButtonReady : styles.circleButtonFar]}
                 activeOpacity={0.85}
               >
                 {isActuallyProcessing ? (
@@ -785,8 +774,6 @@ export default function Home() {
                 )}
               </TouchableOpacity>
             </View>
-
-            {/* Check out button */}
             {stableCheckedIn && (
               <TouchableOpacity
                 onPress={handleCheckOut}
@@ -799,7 +786,6 @@ export default function Home() {
             )}
           </View>
 
-          {/* Proximity indicator */}
           {!stableCheckedIn && relevantAssignment && targetProjectLocation && (
             <View style={styles.proximityCard}>
               <View style={styles.proximityTopRow}>
@@ -819,10 +805,7 @@ export default function Home() {
                 ) : null}
               </View>
               <View style={styles.proximityBarTrack}>
-                <View style={[styles.proximityBarFill, {
-                  width: `${Math.round(proximityRatio * 100)}%` as any,
-                  backgroundColor: proximityColor,
-                }]} />
+                <View style={[styles.proximityBarFill, { width: `${Math.round(proximityRatio * 100)}%` as any, backgroundColor: proximityColor }]} />
               </View>
               {!isNearby && locationReady && (
                 <Text style={styles.proximityHint}>
@@ -832,8 +815,7 @@ export default function Home() {
             </View>
           )}
 
-        </View>{/* proximityCard */}
-          </View>{/* homeContent */}
+        </View>
       </ScrollView>
 
       <AssignmentSelectionModal
@@ -845,10 +827,7 @@ export default function Home() {
       />
       <BreakDurationModal
         visible={isBreakModalVisible}
-        workedMinutes={activeWorkSession
-          ? Math.floor((Date.now() - new Date(activeWorkSession.start_time).getTime()) / 60000)
-          : 0
-        }
+        workedMinutes={activeWorkSession ? Math.floor((Date.now() - new Date(activeWorkSession.start_time).getTime()) / 60000) : 0}
         onConfirm={handleBreakConfirm}
         onCancel={handleBreakCancel}
         isLoading={isProcessingCheckInOut}
@@ -861,132 +840,33 @@ const CIRCLE_SIZE = 200;
 
 const styles = StyleSheet.create({
   scrollContent: { paddingBottom: theme.spacing(5), flexGrow: 1 },
-  pageHeader: {
-    paddingTop: theme.spacing(4),
-    paddingBottom: theme.spacing(2),
-    paddingHorizontal: theme.spacing(3),
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
+  pageHeader: { paddingTop: theme.spacing(4), paddingBottom: theme.spacing(2), paddingHorizontal: theme.spacing(3), flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   headerRight: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  syncPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: theme.colors.primaryMuted,
-    borderRadius: theme.radius.pill,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    gap: 2,
-  },
+  syncPill: { flexDirection: 'row', alignItems: 'center', backgroundColor: theme.colors.primaryMuted, borderRadius: theme.radius.pill, paddingHorizontal: 8, paddingVertical: 3, gap: 2 },
   syncText: { fontSize: 11, color: theme.colors.bodyText },
   dateText: { fontSize: theme.fontSizes.sm, color: theme.colors.bodyText },
-  offlineBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FFF7ED',
-    borderTopWidth: 1,
-    borderBottomWidth: 1,
-    borderColor: '#FED7AA',
-    paddingHorizontal: theme.spacing(3),
-    paddingVertical: 8,
-    gap: 6,
-  },
+  offlineBanner: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFF7ED', borderTopWidth: 1, borderBottomWidth: 1, borderColor: '#FED7AA', paddingHorizontal: theme.spacing(3), paddingVertical: 8, gap: 6 },
   offlineBannerText: { fontSize: theme.fontSizes.sm, color: '#92400E', flex: 1 },
-  trackingGapBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FFF7ED',
-    borderTopWidth: 1,
-    borderBottomWidth: 1,
-    borderColor: '#FED7AA',
-    paddingHorizontal: theme.spacing(3),
-    paddingVertical: 8,
-    gap: 6,
-  },
+  trackingGapBanner: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFF7ED', borderTopWidth: 1, borderBottomWidth: 1, borderColor: '#FED7AA', paddingHorizontal: theme.spacing(3), paddingVertical: 8, gap: 6 },
   trackingGapBannerText: { fontSize: theme.fontSizes.sm, color: '#92400E', flex: 1 },
-  homeContent: {
-    paddingHorizontal: theme.spacing(3),
-    gap: theme.spacing(2.5),
-    paddingTop: theme.spacing(1),
-  },
-
-  // Project card
-  projectCard: {
-    backgroundColor: theme.colors.cardBackground,
-    borderRadius: theme.radius.lg,
-    borderWidth: 1,
-    borderColor: theme.colors.borderColor,
-    padding: theme.spacing(2.5),
-  },
-  projectCardLabel: {
-    fontSize: theme.fontSizes.xs,
-    color: theme.colors.disabledText,
-    textTransform: 'uppercase',
-    letterSpacing: 0.8,
-    marginBottom: 4,
-  },
+  homeContent: { paddingHorizontal: theme.spacing(3), gap: theme.spacing(2.5), paddingTop: theme.spacing(1) },
+  projectCard: { backgroundColor: theme.colors.cardBackground, borderRadius: theme.radius.lg, borderWidth: 1, borderColor: theme.colors.borderColor, padding: theme.spacing(2.5) },
+  projectCardLabel: { fontSize: theme.fontSizes.xs, color: theme.colors.disabledText, textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 4 },
   projectNameRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   projectName: { fontSize: 18, color: theme.colors.headingText, flexShrink: 1 },
-  projectCardBottom: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginTop: 6,
-  },
+  projectCardBottom: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 6 },
   projectAddress: { fontSize: theme.fontSizes.sm, color: theme.colors.bodyText, flex: 1 },
-  navigateBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    backgroundColor: theme.colors.primaryMuted,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: theme.radius.pill,
-    marginLeft: 8,
-  },
+  navigateBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: theme.colors.primaryMuted, paddingHorizontal: 10, paddingVertical: 5, borderRadius: theme.radius.pill, marginLeft: 8 },
   navigateBtnText: { fontSize: theme.fontSizes.sm, color: theme.colors.primary },
   sessionStartText: { fontSize: theme.fontSizes.sm, color: theme.colors.disabledText, marginTop: 4 },
-  emptyProjectCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: theme.spacing(1),
-    backgroundColor: theme.colors.cardBackground,
-    borderRadius: theme.radius.lg,
-    borderWidth: 1,
-    borderColor: theme.colors.borderColor,
-    padding: theme.spacing(2),
-  },
+  emptyProjectCard: { flexDirection: 'row', alignItems: 'center', gap: theme.spacing(1), backgroundColor: theme.colors.cardBackground, borderRadius: theme.radius.lg, borderWidth: 1, borderColor: theme.colors.borderColor, padding: theme.spacing(2) },
   emptyProjectText: { fontSize: theme.fontSizes.md, color: theme.colors.disabledText },
-
-  // Circle section
   circleSection: { alignItems: 'center', paddingVertical: theme.spacing(2), gap: theme.spacing(2) },
-  circleOuter: {
-    width: CIRCLE_SIZE + 24,
-    height: CIRCLE_SIZE + 24,
-    borderRadius: (CIRCLE_SIZE + 24) / 2,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 2,
-  },
+  circleOuter: { width: CIRCLE_SIZE + 24, height: CIRCLE_SIZE + 24, borderRadius: (CIRCLE_SIZE + 24) / 2, alignItems: 'center', justifyContent: 'center', borderWidth: 2 },
   circleOuterReady: { borderColor: 'rgba(0,0,0,0.15)', backgroundColor: 'rgba(0,0,0,0.04)' },
   circleOuterCheckedIn: { borderColor: 'rgba(0,0,0,0.1)', backgroundColor: 'rgba(0,0,0,0.04)' },
   circleOuterFar: { borderColor: theme.colors.borderColor, backgroundColor: 'transparent' },
-  circleButton: {
-    width: CIRCLE_SIZE,
-    height: CIRCLE_SIZE,
-    borderRadius: CIRCLE_SIZE / 2,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    borderWidth: 6,
-    borderColor: 'rgba(0,0,0,0.08)',
-    shadowColor: '#000',
-    shadowOpacity: 0.25,
-    shadowRadius: 16,
-    shadowOffset: { width: 0, height: 8 },
-    elevation: 12,
-  },
+  circleButton: { width: CIRCLE_SIZE, height: CIRCLE_SIZE, borderRadius: CIRCLE_SIZE / 2, alignItems: 'center', justifyContent: 'center', gap: 6, borderWidth: 6, borderColor: 'rgba(0,0,0,0.08)', shadowColor: '#000', shadowOpacity: 0.25, shadowRadius: 16, shadowOffset: { width: 0, height: 8 }, elevation: 12 },
   circleButtonReady: { backgroundColor: theme.colors.primary, borderColor: 'rgba(255,255,255,0.15)' },
   circleButtonCheckedIn: { backgroundColor: '#1a1a1a', borderColor: 'rgba(255,255,255,0.1)' },
   circleButtonFar: { backgroundColor: '#e8e8e8', borderColor: theme.colors.borderColor, shadowOpacity: 0.08, elevation: 4 },
@@ -994,34 +874,15 @@ const styles = StyleSheet.create({
   circleSubLabel: { fontSize: theme.fontSizes.xs, color: 'rgba(255,255,255,0.6)', textTransform: 'uppercase', letterSpacing: 1, textAlign: 'center' },
   circleLabel: { fontSize: theme.fontSizes.lg, color: '#fff', textTransform: 'uppercase', letterSpacing: 1.5, textAlign: 'center', paddingHorizontal: theme.spacing(1) },
   circleLabelDisabled: { color: theme.colors.disabledText },
-  checkOutButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    backgroundColor: theme.colors.danger,
-    paddingHorizontal: theme.spacing(3),
-    paddingVertical: theme.spacing(1.5),
-    borderRadius: theme.radius.pill,
-  },
+  checkOutButton: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: theme.colors.danger, paddingHorizontal: theme.spacing(3), paddingVertical: theme.spacing(1.5), borderRadius: theme.radius.pill },
   checkOutButtonText: { fontSize: theme.fontSizes.md, color: '#fff' },
-
-  // Proximity card
-  proximityCard: {
-    backgroundColor: theme.colors.cardBackground,
-    borderRadius: theme.radius.lg,
-    borderWidth: 1,
-    borderColor: theme.colors.borderColor,
-    padding: theme.spacing(2),
-    gap: theme.spacing(1.5),
-  },
+  proximityCard: { backgroundColor: theme.colors.cardBackground, borderRadius: theme.radius.lg, borderWidth: 1, borderColor: theme.colors.borderColor, padding: theme.spacing(2), gap: theme.spacing(1.5) },
   proximityTopRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   proximityStatusText: { fontSize: theme.fontSizes.md, flex: 1 },
   proximityDistance: { fontSize: 22, letterSpacing: -0.5 },
   proximityBarTrack: { width: '100%', height: 6, backgroundColor: theme.colors.borderColor, borderRadius: theme.radius.pill, overflow: 'hidden' },
   proximityBarFill: { height: 6, borderRadius: theme.radius.pill, minWidth: 6 },
   proximityHint: { fontSize: theme.fontSizes.xs, color: theme.colors.disabledText },
-
-  // Permission screens
   loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   loadingText: { marginTop: 10, color: theme.colors.bodyText },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 },
