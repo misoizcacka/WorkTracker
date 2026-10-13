@@ -789,7 +789,7 @@ export default function Home() {
               {locationReady && workerMapLocation ? (
                 <MapView
                   ref={mapRef}
-                  style={StyleSheet.absoluteFillObject}
+                  style={{ width: '100%', height: 220, borderRadius: theme.radius.lg }}
                   scrollEnabled={false}
                   zoomEnabled={false}
                   showsUserLocation={true}
@@ -1033,7 +1033,6 @@ const styles = StyleSheet.create({
   mapCard: {
     height: 220,
     borderRadius: theme.radius.lg,
-    overflow: 'hidden',
     borderWidth: 1,
     borderColor: theme.colors.borderColor,
   },
