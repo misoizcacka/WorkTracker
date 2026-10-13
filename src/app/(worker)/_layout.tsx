@@ -95,6 +95,10 @@ function ProtectedWorkerLayout() {
           ),
         }}
       />
+      <Tabs.Screen
+        name="diagnostics"
+        options={{ href: null }}
+      />
     </Tabs>
   );
 }
