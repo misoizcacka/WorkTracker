@@ -414,14 +414,14 @@ const styles = StyleSheet.create({
   },
   mapContainer: {
     borderRadius: theme.radius.lg,
-    overflow: 'hidden',
     borderWidth: 1,
     borderColor: theme.colors.borderColor,
     height: 200,
+    overflow: 'hidden',
   },
   map: {
-    ...StyleSheet.absoluteFillObject,
-    borderRadius: theme.radius.lg,
+    width: '100%',
+    height: 200,
   },
   mapOverlay: {
     position: 'absolute',

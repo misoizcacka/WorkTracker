@@ -26,7 +26,7 @@ export const MapPreview: React.FC<MapPreviewProps> = ({
   return (
     <View style={[styles.container, { height }]}>
       <MapView
-        style={[StyleSheet.absoluteFillObject, { borderRadius: theme.radius.md }]}
+        style={{ width: '100%', height }}
         initialRegion={{
           latitude,
           longitude,
