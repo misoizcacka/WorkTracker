@@ -9,16 +9,23 @@
       "distribution": "internal",
       "ios": {
         "simulator": true
+      },
+      "android": {
+        "image": "ubuntu-24.04-jdk-17-ndk-r27b"
       }
     },
     "preview": {
       "distribution": "internal",
       "android": {
-        "buildType": "apk"
+        "buildType": "apk",
+        "image": "ubuntu-24.04-jdk-17-ndk-r27b"
       }
     },
     "production": {
       "autoIncrement": true,
+      "android": {
+        "image": "ubuntu-24.04-jdk-17-ndk-r27b"
+      },
       "env": {
         "EXPO_PUBLIC_SUPABASE_URL": "https://mjbldhhcogspurzjucfc.supabase.co",
         "EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY": "sb_publishable_HJmicFu3JWyNhPS8KCFwJg_tk84Y-0p",
