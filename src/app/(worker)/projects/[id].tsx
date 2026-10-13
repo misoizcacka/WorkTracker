@@ -421,6 +421,7 @@ const styles = StyleSheet.create({
   },
   map: {
     ...StyleSheet.absoluteFillObject,
+    borderRadius: theme.radius.lg,
   },
   mapOverlay: {
     position: 'absolute',

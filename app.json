@@ -70,6 +70,12 @@
       "expo-splash-screen",
       "expo-sqlite",
       "expo-status-bar",
+      [
+        "react-native-maps",
+        {
+          "androidGoogleMapsApiKey": "AIzaSyDE81zzchDXalQuGapH-E8tBBjnN9fT304"
+        }
+      ],
       "./plugins/with-background-location.js"
     ],
     "extra": {
