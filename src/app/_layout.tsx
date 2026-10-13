@@ -19,6 +19,8 @@ import Toast, { BaseToast, ErrorToast, ToastConfig } from 'react-native-toast-me
 
 import { useFonts } from 'expo-font';
 import * as SplashScreen from 'expo-splash-screen';
+import { Asset } from 'expo-asset';
+import { Ionicons } from '@expo/vector-icons';
 
 // Import specific font weights from @expo-google-fonts/work-sans
 import {
@@ -136,6 +138,8 @@ export default function RootLayout() {
     // Add other fonts if necessary
   });
 
+  const [assetsLoaded, setAssetsLoaded] = useState(false);
+
   // Re-render the entire tree when language changes so hardcoded strings update
   const [langKey, setLangKey] = useState(i18n.language);
   useEffect(() => {
@@ -144,12 +148,33 @@ export default function RootLayout() {
     return () => { i18n.off('languageChanged', handler); };
   }, []);
 
+  // Preload images and icon fonts before showing the app
   useEffect(() => {
-    if (fontsLoaded) {
+    async function preload() {
+      try {
+        await Promise.all([
+          Asset.loadAsync([
+            require('../../assets/koordinatelogo.png'),
+            require('../../assets/koordinateappicon.png'),
+            require('../../assets/koordsplashscreen.png'),
+          ]),
+          Ionicons.loadFont(),
+        ]);
+      } catch (e) {
+        console.warn('Asset preload error:', e);
+      } finally {
+        setAssetsLoaded(true);
+      }
+    }
+    preload();
+  }, []);
+
+  useEffect(() => {
+    if (fontsLoaded && assetsLoaded) {
       loadPersistedLanguage();
       SplashScreen.hideAsync();
     }
-  }, [fontsLoaded]);
+  }, [fontsLoaded, assetsLoaded]);
 
   useEffect(() => {
     if (fontError) {
