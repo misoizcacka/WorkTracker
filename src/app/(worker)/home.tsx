@@ -781,22 +781,15 @@ export default function Home() {
                 <ActivityIndicator size="large" color="#fff" />
               ) : stableCheckedIn && sessionStartTime ? (
                 <>
-                  <Text style={styles.circleTimer} fontType="bold">
+                  <Text style={styles.circleTimer} fontType="medium">
                     {`${Math.floor(elapsedTime / 3600).toString().padStart(2, '0')}:${Math.floor((elapsedTime % 3600) / 60).toString().padStart(2, '0')}:${(elapsedTime % 60).toString().padStart(2, '0')}`}
                   </Text>
                   <Text style={styles.circleSubLabel}>{t('worker.home.timeElapsed') || 'time elapsed'}</Text>
                 </>
               ) : (
-                <>
-                  <Ionicons
-                    name="checkmark-circle-outline"
-                    size={36}
-                    color={circleButtonActive ? '#fff' : theme.colors.disabledText}
-                  />
-                  <Text style={[styles.circleLabel, !circleButtonActive && styles.circleLabelDisabled]} fontType="bold">
-                    {isDataLoading ? '...' : !relevantAssignment ? t('worker.home.noAssignments') : t('worker.home.checkIn')}
-                  </Text>
-                </>
+                <Text style={[styles.circleLabel, !circleButtonActive && styles.circleLabelDisabled]} fontType="medium">
+                  {isDataLoading ? '...' : !relevantAssignment ? t('worker.home.noAssignments') : t('worker.home.checkIn')}
+                </Text>
               )}
             </TouchableOpacity>
             </View>
@@ -817,31 +810,42 @@ export default function Home() {
           {/* ── PROXIMITY INDICATOR ── (only when has assignment and not checked in) */}
           {!stableCheckedIn && relevantAssignment && targetProjectLocation && (
             <View style={styles.proximityCard}>
-              {/* Bar */}
-              <View style={styles.proximityBarRow}>
-                <View style={styles.proximityBarTrack}>
-                  <View style={[styles.proximityBarFill, {
-                    width: `${Math.round(proximityRatio * 100)}%` as any,
-                    backgroundColor: proximityColor,
-                  }]} />
+              <View style={styles.proximityTopRow}>
+                {/* Left: status */}
+                <View style={styles.proximityStatusBlock}>
+                  <View style={[styles.proximityDot, { backgroundColor: proximityColor }]} />
+                  <Text style={[styles.proximityStatusText, { color: proximityColor }]} fontType="medium">
+                    {isNearby
+                      ? (t('worker.home.statusReady') || 'Ready to check in')
+                      : !locationReady
+                        ? (t('worker.home.locating') || 'Getting location...')
+                        : (t('worker.home.statusAway') || 'Not on site')}
+                  </Text>
                 </View>
-              </View>
-              {/* Label */}
-              <View style={styles.proximityLabelRow}>
-                <View style={[styles.proximityDot, { backgroundColor: proximityColor }]} />
-                <Text style={[styles.proximityText, { color: proximityColor }]} fontType="medium">
-                  {isNearby
-                    ? t('worker.home.statusReady')
-                    : !locationReady
-                      ? t('worker.home.locating')
-                      : locationStatusText}
-                </Text>
+                {/* Right: distance number */}
                 {!isNearby && locationReady && distance !== null && (
-                  <Text style={styles.proximityRadius}>
-                    {`/ ${relevantRadius}m zone`}
+                  <Text style={styles.proximityDistance} fontType="bold">
+                    {distance > 1000
+                      ? `${(distance / 1000).toFixed(1)}km`
+                      : `${Math.round(distance)}m`}
                   </Text>
                 )}
+                {isNearby && (
+                  <Ionicons name="checkmark-circle" size={20} color={theme.colors.success} />
+                )}
               </View>
+              {/* Progress bar */}
+              <View style={styles.proximityBarTrack}>
+                <View style={[styles.proximityBarFill, {
+                  width: `${Math.round(proximityRatio * 100)}%` as any,
+                  backgroundColor: proximityColor,
+                }]} />
+              </View>
+              {!isNearby && locationReady && (
+                <Text style={styles.proximityHint}>
+                  {`${t('worker.home.checkInRadius') || 'Check-in zone'}: ${relevantRadius}m`}
+                </Text>
+              )}
             </View>
           )}
 
@@ -1028,27 +1032,6 @@ const styles = StyleSheet.create({
     borderColor: theme.colors.borderColor,
     backgroundColor: 'transparent',
   },
-  // Outer decorative ring — gives bezel/depth effect
-  circleOuter: {
-    width: CIRCLE_SIZE + 20,
-    height: CIRCLE_SIZE + 20,
-    borderRadius: (CIRCLE_SIZE + 20) / 2,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 2,
-  },
-  circleOuterReady: {
-    borderColor: 'rgba(0,0,0,0.12)',
-    backgroundColor: 'rgba(0,0,0,0.04)',
-  },
-  circleOuterCheckedIn: {
-    borderColor: 'rgba(0,0,0,0.1)',
-    backgroundColor: 'rgba(0,0,0,0.04)',
-  },
-  circleOuterFar: {
-    borderColor: theme.colors.borderColor,
-    backgroundColor: 'transparent',
-  },
   circleButton: {
     width: CIRCLE_SIZE,
     height: CIRCLE_SIZE,
@@ -1085,17 +1068,23 @@ const styles = StyleSheet.create({
     fontSize: 28,
     color: '#fff',
     letterSpacing: 1,
+    textAlign: 'center',
   },
   circleSubLabel: {
     fontSize: theme.fontSizes.xs,
     color: 'rgba(255,255,255,0.6)',
     textTransform: 'uppercase',
     letterSpacing: 1,
+    textAlign: 'center',
   },
   circleLabel: {
     fontSize: theme.fontSizes.lg,
     color: '#fff',
     textTransform: 'uppercase',
+    letterSpacing: 1.5,
+    textAlign: 'center',
+    paddingHorizontal: theme.spacing(1),
+  },
     letterSpacing: 1.5,
   },
   circleLabelDisabled: {
@@ -1122,38 +1111,47 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: theme.colors.borderColor,
     padding: theme.spacing(2),
-    gap: theme.spacing(1),
+    gap: theme.spacing(1.5),
   },
-  proximityBarRow: {
-    width: '100%',
+  proximityTopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
-  proximityBarTrack: {
-    width: '100%',
-    height: 8,
-    backgroundColor: theme.colors.borderColor,
-    borderRadius: theme.radius.pill,
-    overflow: 'hidden',
-  },
-  proximityBarFill: {
-    height: 8,
-    borderRadius: theme.radius.pill,
-    minWidth: 8,
-  },
-  proximityLabelRow: {
+  proximityStatusBlock: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
+    flex: 1,
   },
   proximityDot: {
     width: 8,
     height: 8,
     borderRadius: 4,
+    flexShrink: 0,
   },
-  proximityText: {
+  proximityStatusText: {
     fontSize: theme.fontSizes.sm,
     flex: 1,
   },
-  proximityRadius: {
+  proximityDistance: {
+    fontSize: 22,
+    color: theme.colors.headingText,
+    letterSpacing: -0.5,
+  },
+  proximityBarTrack: {
+    width: '100%',
+    height: 6,
+    backgroundColor: theme.colors.borderColor,
+    borderRadius: theme.radius.pill,
+    overflow: 'hidden',
+  },
+  proximityBarFill: {
+    height: 6,
+    borderRadius: theme.radius.pill,
+    minWidth: 6,
+  },
+  proximityHint: {
     fontSize: theme.fontSizes.xs,
     color: theme.colors.disabledText,
   },
