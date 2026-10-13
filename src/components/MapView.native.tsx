@@ -1,6 +1,6 @@
 import React, { useMemo, useState, useRef, useEffect } from 'react';
-import RNMapView, { Marker, Callout, Circle, Polyline, MapViewProps as RNMapViewProps, LatLng, FitToOptions, Region, PROVIDER_GOOGLE } from 'react-native-maps';
-import { View, Image, Text, StyleSheet, Dimensions } from 'react-native';
+import RNMapView, { Marker, Callout, Circle, Polyline, MapViewProps as RNMapViewProps, LatLng, FitToOptions, Region, PROVIDER_GOOGLE, PROVIDER_DEFAULT } from 'react-native-maps';
+import { View, Image, Text, StyleSheet, Dimensions, Platform } from 'react-native';
 import { theme } from '../theme';
 import Supercluster from 'supercluster';
 import { FontAwesome5, Ionicons } from '@expo/vector-icons';
@@ -108,7 +108,7 @@ export const MapView = React.forwardRef<MapViewHandle, NativeMapViewProps>(
 
   return (
     <RNMapView
-      provider={PROVIDER_GOOGLE}
+      provider={Platform.OS === 'android' ? PROVIDER_GOOGLE : PROVIDER_DEFAULT}
       {...restProps}
       ref={mapViewRef}
       onMapReady={() => { isMounted.current = true; }}
