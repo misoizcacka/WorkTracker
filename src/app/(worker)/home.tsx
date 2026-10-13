@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo, useCallback } from "react";
+﻿import React, { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { StyleSheet, Alert, ScrollView, ActivityIndicator, Linking, TouchableOpacity, RefreshControl, Platform, Image, AppState } from "react-native";
 import { Ionicons } from '@expo/vector-icons';
 import * as Location from "expo-location";
@@ -55,13 +55,13 @@ export default function Home() {
   const [isBreakModalVisible, setIsBreakModalVisible] = useState(false);
   // Stores the GPS location captured when user taps "Check Out", used after break modal confirms
   const pendingCheckoutLocationRef = React.useRef<{ latitude: number; longitude: number } | null>(null);
-  // iOS only: seconds since last native location tick — >600 means process was force-swiped
+  // iOS only: seconds since last native location tick â€” >600 means process was force-swiped
   const [trackingGapSeconds, setTrackingGapSeconds] = useState<number | null>(null);
 
   const { processedAssignments, loadAssignmentsForDate, loadWorkSessionsForDate, isLoading: assignmentsLoading, activeWorkSession, loadedWorkSessions, startWorkSession, endWorkSession, lastCheckoutAssignmentId, isOffline, isSyncingToCloud } = useAssignments();
 
   const isDataLoading = assignmentsLoading || projectsLoading;
-  const DEFAULT_RADIUS = 150; // meters — fallback when no per-project radius is set
+  const DEFAULT_RADIUS = 150; // meters â€” fallback when no per-project radius is set
 
   const checkedIn = !!activeWorkSession;
   const sessionStartTime = activeWorkSession ? new Date(activeWorkSession.start_time).getTime() : null;
@@ -241,7 +241,7 @@ export default function Home() {
       };
     }
 
-    // Manual selection always wins — don't let location polling override it
+    // Manual selection always wins â€” don't let location polling override it
     if (selectedNextAssignmentId) {
       const manuallySelected = currentWorkersAssignments.find(a => a.id === selectedNextAssignmentId) || null;
       return { relevantAssignment: manuallySelected, isSelectionLocked: false };
@@ -354,7 +354,7 @@ export default function Home() {
 
   useEffect(() => { fetchHomeData(); }, [fetchHomeData]);
 
-  // Ensure the session token is always fresh when the screen loads — skip when offline
+  // Ensure the session token is always fresh when the screen loads â€” skip when offline
   useEffect(() => {
     if (!isOffline) refreshUser();
   }, [isOffline]);
@@ -433,7 +433,7 @@ export default function Home() {
   useEffect(() => {
     const sessionId = activeWorkSession?.id ?? null;
 
-    // Only start once per unique session — prevents re-firing when other deps change
+    // Only start once per unique session â€” prevents re-firing when other deps change
     if (!sessionId || sessionId === startedSessionIdRef.current) {
       return;
     }
@@ -538,7 +538,7 @@ export default function Home() {
 
   const handleCheckOut = async () => {
     if (!activeWorkSession) return;
-    // Grab GPS first — before showing the modal so there's no delay after confirm
+    // Grab GPS first â€” before showing the modal so there's no delay after confirm
     let currentLocation;
     try {
       const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
@@ -681,7 +681,7 @@ export default function Home() {
           </View>
         )}
 
-        {/* iOS tracking-gap banner — shown when process was force-swiped during a session */}
+        {/* iOS tracking-gap banner */}
         {Platform.OS === 'ios' && stableCheckedIn && trackingGapSeconds !== null && trackingGapSeconds > 600 && (
           <View style={styles.trackingGapBanner}>
             <Ionicons name="warning-outline" size={14} color="#92400E" />
@@ -695,96 +695,102 @@ export default function Home() {
         )}
 
         <View style={styles.homeContent}>
-          {/* Status + Assignment card */}
-          <View style={styles.mainCard}>
-            <View style={styles.mainCardTop}>
-              <View style={styles.mainCardLeft}>
-                <Text style={styles.mainCardLabel} fontType="medium">
-                  {stableCheckedIn ? t('worker.home.currentlyWorkingAt') : t('worker.home.nextAssignment')}
+
+          {/* â”€â”€ STATUS HERO CARD â”€â”€ */}
+          <View style={[
+            styles.statusHeroCard,
+            stableCheckedIn
+              ? styles.statusHeroCheckedIn
+              : relevantAssignment
+                ? styles.statusHeroReady
+                : styles.statusHeroIdle,
+          ]}>
+            {/* Big status label */}
+            <View style={styles.statusHeroTop}>
+              <View style={styles.statusHeroLeft}>
+                <Text style={styles.statusHeroLabel} fontType="bold">
+                  {stableCheckedIn
+                    ? t('worker.home.currentlyWorkingAt')
+                    : relevantAssignment
+                      ? t('worker.home.nextAssignment')
+                      : t('worker.home.noAssignmentsToday')}
                 </Text>
+
                 {isDataLoading ? (
-                  <ActivityIndicator color={theme.colors.primary} style={{ marginTop: 8 }} />
+                  <ActivityIndicator color="#fff" style={{ marginTop: 8, alignSelf: 'flex-start' }} />
                 ) : relevantAssignment ? (
-                  <>
-                    <TouchableOpacity
-                      onPress={() => !isSelectionLocked && setIsAssignmentSelectionModalVisible(true)}
-                      disabled={isSelectionLocked}
-                      style={styles.siteNameRow}
-                    >
-                      <Text style={styles.siteName} fontType="bold" numberOfLines={1}>{projectLocationName}</Text>
-                      {!isSelectionLocked && <Ionicons name="chevron-down" size={16} color={theme.colors.bodyText} />}
-                    </TouchableOpacity>
-                    <Text style={styles.siteAddress} numberOfLines={1}>
-                      {(relevantAssignment as any).project?.address || (relevantAssignment as any).location?.name || ''}
-                    </Text>
-                  </>
+                  <TouchableOpacity
+                    onPress={() => !isSelectionLocked && setIsAssignmentSelectionModalVisible(true)}
+                    disabled={isSelectionLocked}
+                    style={styles.siteNameRow}
+                  >
+                    <Text style={styles.statusHeroSiteName} fontType="bold" numberOfLines={1}>{projectLocationName}</Text>
+                    {!isSelectionLocked && <Ionicons name="chevron-down" size={18} color="rgba(255,255,255,0.8)" />}
+                  </TouchableOpacity>
                 ) : (
-                  <View style={styles.emptyAssignment}>
-                    <Ionicons name="calendar-outline" size={28} color={theme.colors.disabledText} />
-                    <View style={styles.emptyAssignmentText}>
-                      <Text style={styles.emptyAssignmentTitle} fontType="bold">{t('worker.home.noAssignmentsToday')}</Text>
-                      <Text style={styles.emptyAssignmentSub}>{t('worker.home.noAssignmentsSub')}</Text>
-                    </View>
-                  </View>
+                  <Text style={styles.statusHeroEmptySub}>
+                    {t('worker.home.noAssignmentsSub')}
+                  </Text>
+                )}
+
+                {relevantAssignment && (
+                  <Text style={styles.statusHeroAddress} numberOfLines={1}>
+                    {(relevantAssignment as any).project?.address || (relevantAssignment as any).location?.name || ''}
+                  </Text>
                 )}
               </View>
 
-              {statusBadgeInfo && (
-                <View style={[styles.statusPill, {
-                  backgroundColor: statusBadgeInfo.type === 'active' ? theme.colors.primary :
-                                   statusBadgeInfo.type === 'success' ? theme.statusColors.successBackground :
-                                   theme.statusColors.warningBackground
-                }]}>
-                  <View style={[styles.statusDot, {
-                    backgroundColor: statusBadgeInfo.type === 'active' ? '#fff' :
-                                     statusBadgeInfo.type === 'success' ? theme.statusColors.successText :
-                                     theme.statusColors.warningText
-                  }]} />
-                  <Text style={[styles.statusPillText, {
-                    color: statusBadgeInfo.type === 'active' ? '#fff' :
-                           statusBadgeInfo.type === 'success' ? theme.statusColors.successText :
-                           theme.statusColors.warningText
-                  }]} fontType="bold">
-                    {statusBadgeInfo.label}
-                  </Text>
-                </View>
-              )}
+              {/* Status icon */}
+              <View style={styles.statusHeroIcon}>
+                <Ionicons
+                  name={stableCheckedIn ? 'checkmark-circle' : relevantAssignment ? 'location' : 'calendar-outline'}
+                  size={32}
+                  color="rgba(255,255,255,0.9)"
+                />
+              </View>
             </View>
 
-            {/* Location / timer row */}
+            {/* Bottom row â€” time elapsed OR distance */}
             {relevantAssignment && (
-              <View style={styles.mainCardBottom}>
+              <View style={styles.statusHeroBottom}>
                 {stableCheckedIn && sessionStartTime ? (
-                  <View style={styles.sessionRow}>
-                    <Ionicons name="time-outline" size={14} color={theme.colors.bodyText} />
-                    <Text style={styles.sessionText}>
-                      {` ${t('worker.home.sessionStarted', { time: moment(sessionStartTime).format('h:mm A') })} · ${Math.floor(elapsedTime / 3600)}h ${Math.floor((elapsedTime % 3600) / 60)}m`}
+                  <View style={styles.statusHeroTimeRow}>
+                    <Ionicons name="time-outline" size={14} color="rgba(255,255,255,0.75)" />
+                    <Text style={styles.statusHeroTimeText}>
+                      {` ${t('worker.home.sessionStarted', { time: moment(sessionStartTime).format('h:mm A') })}`}
                     </Text>
+                    <View style={styles.statusHeroElapsed}>
+                      <Text style={styles.statusHeroElapsedText} fontType="bold">
+                        {`${Math.floor(elapsedTime / 3600)}h ${Math.floor((elapsedTime % 3600) / 60)}m`}
+                      </Text>
+                    </View>
                   </View>
                 ) : (
-                  <View style={styles.sessionRow}>
-                    <Ionicons name="location-outline" size={14} color={theme.colors.bodyText} />
-                    <Text style={styles.sessionText}>{` ${locationStatusText}`}</Text>
+                  <View style={styles.statusHeroTimeRow}>
+                    <Ionicons name="location-outline" size={14} color="rgba(255,255,255,0.75)" />
+                    <Text style={styles.statusHeroTimeText}>{` ${locationStatusText}`}</Text>
+                    {targetProjectLocation && (
+                      <TouchableOpacity onPress={handleNavigate} style={styles.statusHeroNavBtn}>
+                        <Ionicons name="navigate-outline" size={13} color="rgba(255,255,255,0.9)" />
+                        <Text style={styles.statusHeroNavText} fontType="bold"> {t('worker.home.navigate')}</Text>
+                      </TouchableOpacity>
+                    )}
                   </View>
-                )}
-                {!stableCheckedIn && targetProjectLocation && (
-                  <TouchableOpacity onPress={handleNavigate} style={styles.navButton}>
-                    <Ionicons name="navigate-outline" size={14} color={theme.colors.primary} />
-                    <Text style={styles.navButtonText} fontType="bold"> {t('worker.home.navigate')}</Text>
-                  </TouchableOpacity>
                 )}
               </View>
             )}
           </View>
 
-          {/* Timer when checked in, map when not */}
+          {/* â”€â”€ TIMER (checked in) OR MAP (not checked in) â”€â”€ */}
           {stableCheckedIn && sessionStartTime ? (
             <View style={styles.timerCard}>
-              <CircularTimer elapsedTime={elapsedTime} size={200} strokeWidth={6} />
+              <Text style={styles.timerLabel} fontType="bold">
+                {`${Math.floor(elapsedTime / 3600).toString().padStart(2, '0')}:${Math.floor((elapsedTime % 3600) / 60).toString().padStart(2, '0')}:${(elapsedTime % 60).toString().padStart(2, '0')}`}
+              </Text>
+              <Text style={styles.timerSubLabel}>{t('worker.home.timeElapsed') || 'Time elapsed'}</Text>
+              <CircularTimer elapsedTime={elapsedTime} size={160} strokeWidth={5} />
             </View>
           ) : (
-            // Keep MapView always mounted so isMounted stays true and animateToRegion works.
-            // Just hide the card when there's nothing to show.
             <View style={[styles.mapCard, (!relevantAssignment || !targetProjectLocation) && { display: 'none' }]}>
               {locationReady && workerMapLocation ? (
                 <MapView
@@ -822,7 +828,7 @@ export default function Home() {
         </View>
       </ScrollView>
 
-      {/* Check in/out button */}
+      {/* â”€â”€ CHECK IN / OUT BUTTON â”€â”€ */}
       <View style={styles.footer}>
         <Button
           onPress={stableCheckedIn ? handleCheckOut : handleCheckIn}
@@ -857,7 +863,7 @@ export default function Home() {
 
 const styles = StyleSheet.create({
   scrollContent: {
-    paddingBottom: 100,
+    paddingBottom: 110,
   },
   pageHeader: {
     paddingTop: theme.spacing(4),
@@ -890,12 +896,13 @@ const styles = StyleSheet.create({
   offlineBanner: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFBEB',
+    backgroundColor: '#FFF7ED',
     borderTopWidth: 1,
     borderBottomWidth: 1,
-    borderColor: '#FDE68A',
+    borderColor: '#FED7AA',
     paddingHorizontal: theme.spacing(3),
     paddingVertical: 8,
+    gap: 6,
   },
   offlineBannerText: {
     fontSize: theme.fontSizes.sm,
@@ -927,116 +934,122 @@ const styles = StyleSheet.create({
     paddingHorizontal: theme.spacing(3),
     gap: theme.spacing(2),
   },
-  // Main assignment card
-  mainCard: {
-    backgroundColor: theme.colors.cardBackground,
+
+  // â”€â”€ STATUS HERO CARD â”€â”€
+  statusHeroCard: {
     borderRadius: theme.radius.lg,
-    borderWidth: 1,
-    borderColor: theme.colors.borderColor,
-    overflow: 'hidden',
+    padding: theme.spacing(2.5),
+    ...theme.shadow.soft,
   },
-  mainCardTop: {
+  statusHeroCheckedIn: {
+    backgroundColor: theme.colors.primary,
+  },
+  statusHeroReady: {
+    backgroundColor: '#1A1A2E',
+  },
+  statusHeroIdle: {
+    backgroundColor: '#3A3A3C',
+  },
+  statusHeroTop: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     justifyContent: 'space-between',
-    padding: theme.spacing(2.5),
   },
-  mainCardLeft: {
+  statusHeroLeft: {
     flex: 1,
     marginRight: theme.spacing(1.5),
   },
-  mainCardLabel: {
+  statusHeroLabel: {
     fontSize: theme.fontSizes.xs,
-    color: theme.colors.disabledText,
+    color: 'rgba(255,255,255,0.65)',
     textTransform: 'uppercase',
-    letterSpacing: 0.8,
+    letterSpacing: 1,
     marginBottom: 6,
-  },
-  emptyAssignment: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: theme.spacing(1.5),
-    paddingVertical: theme.spacing(1),
-  },
-  emptyAssignmentText: {
-    flex: 1,
-  },
-  emptyAssignmentTitle: {
-    fontSize: theme.fontSizes.md,
-    color: theme.colors.headingText,
-  },
-  emptyAssignmentSub: {
-    fontSize: theme.fontSizes.sm,
-    color: theme.colors.disabledText,
-    marginTop: 2,
   },
   siteNameRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
   },
-  siteName: {
-    fontSize: theme.fontSizes.lg,
-    color: theme.colors.headingText,
+  statusHeroSiteName: {
+    fontSize: 22,
+    color: '#fff',
     flexShrink: 1,
+    lineHeight: 28,
   },
-  siteAddress: {
+  statusHeroAddress: {
     fontSize: theme.fontSizes.sm,
-    color: theme.colors.bodyText,
-    marginTop: 2,
+    color: 'rgba(255,255,255,0.6)',
+    marginTop: 4,
   },
-  statusPill: {
-    flexDirection: 'row',
+  statusHeroEmptySub: {
+    fontSize: theme.fontSizes.md,
+    color: 'rgba(255,255,255,0.6)',
+    marginTop: 4,
+  },
+  statusHeroIcon: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: 'rgba(255,255,255,0.15)',
     alignItems: 'center',
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: theme.radius.pill,
-    gap: 5,
-    alignSelf: 'flex-start',
+    justifyContent: 'center',
   },
-  statusDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-  },
-  statusPillText: {
-    fontSize: 11,
-  },
-  mainCardBottom: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: theme.spacing(2.5),
-    paddingVertical: theme.spacing(1.5),
+  statusHeroBottom: {
+    marginTop: theme.spacing(2),
+    paddingTop: theme.spacing(1.5),
     borderTopWidth: 1,
-    borderTopColor: theme.colors.borderColor,
+    borderTopColor: 'rgba(255,255,255,0.15)',
   },
-  sessionRow: {
+  statusHeroTimeRow: {
     flexDirection: 'row',
     alignItems: 'center',
     flex: 1,
   },
-  sessionText: {
+  statusHeroTimeText: {
     fontSize: theme.fontSizes.sm,
-    color: theme.colors.bodyText,
+    color: 'rgba(255,255,255,0.75)',
+    flex: 1,
   },
-  navButton: {
+  statusHeroElapsed: {
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    borderRadius: theme.radius.pill,
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+  },
+  statusHeroElapsedText: {
+    fontSize: theme.fontSizes.sm,
+    color: '#fff',
+  },
+  statusHeroNavBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingLeft: theme.spacing(1),
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    borderRadius: theme.radius.pill,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
   },
-  navButtonText: {
+  statusHeroNavText: {
     fontSize: theme.fontSizes.sm,
-    color: theme.colors.primary,
+    color: '#fff',
   },
-  // Map
+
+  // â”€â”€ MAP â”€â”€
   mapCard: {
     height: 220,
     borderRadius: theme.radius.lg,
     borderWidth: 1,
     borderColor: theme.colors.borderColor,
   },
-  // Timer (shown instead of map when checked in)
+  mapLoading: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: theme.colors.cardBackground,
+    borderRadius: theme.radius.lg,
+  },
+
+  // â”€â”€ TIMER (checked in) â”€â”€
   timerCard: {
     backgroundColor: theme.colors.cardBackground,
     borderRadius: theme.radius.lg,
@@ -1044,14 +1057,23 @@ const styles = StyleSheet.create({
     borderColor: theme.colors.borderColor,
     alignItems: 'center',
     justifyContent: 'center',
+    paddingVertical: theme.spacing(3),
+    gap: theme.spacing(1),
   },
-  mapLoading: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: theme.colors.cardBackground,
+  timerLabel: {
+    fontSize: 42,
+    color: theme.colors.headingText,
+    letterSpacing: 2,
   },
-  // Footer
+  timerSubLabel: {
+    fontSize: theme.fontSizes.sm,
+    color: theme.colors.disabledText,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+    marginBottom: theme.spacing(1),
+  },
+
+  // â”€â”€ FOOTER BUTTON â”€â”€
   footer: {
     position: 'absolute',
     bottom: 0,
@@ -1064,7 +1086,7 @@ const styles = StyleSheet.create({
     borderTopColor: theme.colors.borderColor,
   },
   actionButton: {
-    height: 50,
+    height: 56,
     borderRadius: theme.radius.md,
     width: '100%',
     shadowColor: 'transparent',
@@ -1081,9 +1103,10 @@ const styles = StyleSheet.create({
   },
   buttonText: {
     color: 'white',
-    fontSize: 15,
+    fontSize: 16,
   },
-  // Permission screens
+
+  // â”€â”€ PERMISSION SCREENS â”€â”€
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
