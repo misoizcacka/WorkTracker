@@ -844,13 +844,6 @@ export default function Home() {
               )}
             </View>
           )}
-              {!isNearby && locationReady && (
-                <Text style={styles.proximityHint}>
-                  {`${t('worker.home.checkInRadius') || 'Check-in zone'}: ${relevantRadius}m`}
-                </Text>
-              )}
-            </View>
-          )}
 
         </View>
       </ScrollView>
