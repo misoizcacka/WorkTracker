@@ -651,24 +651,30 @@ export default function Home() {
     );
   }
 
-
-  // Proximity: 0 = far, 1 = on site. Cap approach distance at 3x radius so the ring fills meaningfully.
+  // Proximity ratio: 0 = far, 1 = on site
   const proximityRatio = (() => {
     if (!targetProjectLocation || distance === null) return 0;
     if (isNearby) return 1;
-    const approachZone = relevantRadius * 3;
+    const approachZone = relevantRadius * 4;
     return Math.max(0, 1 - (distance - relevantRadius) / approachZone);
   })();
 
-  const proximityColor = isNearby ? theme.colors.success : proximityRatio > 0.5 ? '#F59E0B' : theme.colors.disabledText;
+  const proximityColor = isNearby
+    ? theme.colors.success
+    : proximityRatio > 0.6
+      ? '#F59E0B'
+      : theme.colors.disabledText;
+
+  const circleButtonActive = stableCheckedIn || isNearby;
 
   return (
     <AnimatedScreen>
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} colors={[theme.colors.primary]} />}
+        showsVerticalScrollIndicator={false}
       >
-        {/* Header */}
+        {/* ── HEADER ── */}
         <View style={styles.pageHeader}>
           <Logo />
           <View style={styles.headerRight}>
@@ -707,114 +713,136 @@ export default function Home() {
 
         <View style={styles.homeContent}>
 
-          {/* ── STATE: NO ASSIGNMENTS ── */}
-          {!isDataLoading && !relevantAssignment && (
-            <View style={styles.emptyState}>
-              <Ionicons name="calendar-outline" size={48} color={theme.colors.disabledText} />
-              <Text style={styles.emptyStateTitle} fontType="bold">{t('worker.home.noAssignmentsToday')}</Text>
-              <Text style={styles.emptyStateSub}>{t('worker.home.noAssignmentsSub')}</Text>
-              <Text style={styles.emptyStateDate}>{moment().format('dddd, MMMM D')}</Text>
-            </View>
-          )}
-
-          {isDataLoading && (
-            <View style={styles.emptyState}>
-              <ActivityIndicator size="large" color={theme.colors.primary} />
-            </View>
-          )}
-
-          {/* ── STATE: HAS ASSIGNMENT ── */}
-          {!isDataLoading && relevantAssignment && (
-            <>
-              {/* Project card */}
-              <View style={styles.projectCard}>
-                <Text style={styles.projectCardLabel} fontType="medium">
-                  {stableCheckedIn ? t('worker.home.currentlyWorkingAt') : t('worker.home.nextAssignment')}
-                </Text>
-                <TouchableOpacity
-                  onPress={() => !isSelectionLocked && setIsAssignmentSelectionModalVisible(true)}
-                  disabled={isSelectionLocked}
-                  style={styles.projectNameRow}
-                >
-                  <Text style={styles.projectName} fontType="bold" numberOfLines={1}>{projectLocationName}</Text>
-                  {!isSelectionLocked && <Ionicons name="chevron-down" size={16} color={theme.colors.bodyText} />}
-                </TouchableOpacity>
-                <Text style={styles.projectAddress} numberOfLines={1}>
-                  {(relevantAssignment as any).project?.address || (relevantAssignment as any).location?.name || ''}
-                </Text>
-
-                {/* Navigate button */}
-                {!stableCheckedIn && targetProjectLocation && (
-                  <TouchableOpacity onPress={handleNavigate} style={styles.navigateBtn}>
-                    <Ionicons name="navigate-outline" size={14} color={theme.colors.primary} />
-                    <Text style={styles.navigateBtnText} fontType="bold">{t('worker.home.navigate')}</Text>
-                  </TouchableOpacity>
-                )}
-              </View>
-
-              {/* ── CHECKED IN: Big timer ── */}
+          {/* ── PROJECT INFO ── */}
+          {!isDataLoading && relevantAssignment ? (
+            <View style={styles.projectCard}>
+              <Text style={styles.projectCardLabel} fontType="medium">
+                {stableCheckedIn ? t('worker.home.currentlyWorkingAt') : t('worker.home.nextAssignment')}
+              </Text>
+              <TouchableOpacity
+                onPress={() => !isSelectionLocked && setIsAssignmentSelectionModalVisible(true)}
+                disabled={isSelectionLocked}
+                style={styles.projectNameRow}
+              >
+                <Text style={styles.projectName} fontType="bold" numberOfLines={1}>{projectLocationName}</Text>
+                {!isSelectionLocked && <Ionicons name="chevron-down" size={16} color={theme.colors.bodyText} />}
+              </TouchableOpacity>
+              {!stableCheckedIn && (
+                <View style={styles.projectCardBottom}>
+                  <Text style={styles.projectAddress} numberOfLines={1}>
+                    {(relevantAssignment as any).project?.address || (relevantAssignment as any).location?.name || ''}
+                  </Text>
+                  {targetProjectLocation && (
+                    <TouchableOpacity onPress={handleNavigate} style={styles.navigateBtn}>
+                      <Ionicons name="navigate-outline" size={13} color={theme.colors.primary} />
+                      <Text style={styles.navigateBtnText} fontType="bold">{t('worker.home.navigate')}</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+              )}
               {stableCheckedIn && sessionStartTime && (
-                <View style={styles.timerCard}>
-                  <Text style={styles.timerSubLabel}>{t('worker.home.timeElapsed') || 'TIME ELAPSED'}</Text>
-                  <Text style={styles.timerLabel} fontType="bold">
+                <Text style={styles.sessionStartText}>
+                  {t('worker.home.sessionStarted', { time: moment(sessionStartTime).format('h:mm A') })}
+                </Text>
+              )}
+            </View>
+          ) : !isDataLoading ? (
+            <View style={styles.emptyProjectCard}>
+              <Ionicons name="calendar-outline" size={20} color={theme.colors.disabledText} />
+              <Text style={styles.emptyProjectText} fontType="medium">{t('worker.home.noAssignmentsToday')}</Text>
+            </View>
+          ) : null}
+
+          {/* ── BIG CIRCLE BUTTON ── */}
+          <View style={styles.circleSection}>
+            {/* Outer decorative ring */}
+            <View style={[
+              styles.circleOuter,
+              stableCheckedIn
+                ? styles.circleOuterCheckedIn
+                : circleButtonActive
+                  ? styles.circleOuterReady
+                  : styles.circleOuterFar,
+            ]}>
+              <TouchableOpacity
+              onPress={stableCheckedIn ? handleCheckOut : handleCheckIn}
+              disabled={(!isNearby && !stableCheckedIn) || buttonDisabled || isActuallyProcessing}
+              style={[
+                styles.circleButton,
+                stableCheckedIn
+                  ? styles.circleButtonCheckedIn
+                  : circleButtonActive
+                    ? styles.circleButtonReady
+                    : styles.circleButtonFar,
+              ]}
+              activeOpacity={0.85}
+            >
+              {isActuallyProcessing ? (
+                <ActivityIndicator size="large" color="#fff" />
+              ) : stableCheckedIn && sessionStartTime ? (
+                <>
+                  <Text style={styles.circleTimer} fontType="bold">
                     {`${Math.floor(elapsedTime / 3600).toString().padStart(2, '0')}:${Math.floor((elapsedTime % 3600) / 60).toString().padStart(2, '0')}:${(elapsedTime % 60).toString().padStart(2, '0')}`}
                   </Text>
-                  <Text style={styles.timerStartText}>
-                    {t('worker.home.sessionStarted', { time: moment(sessionStartTime).format('h:mm A') })}
+                  <Text style={styles.circleSubLabel}>{t('worker.home.timeElapsed') || 'time elapsed'}</Text>
+                </>
+              ) : (
+                <>
+                  <Ionicons
+                    name="checkmark-circle-outline"
+                    size={36}
+                    color={circleButtonActive ? '#fff' : theme.colors.disabledText}
+                  />
+                  <Text style={[styles.circleLabel, !circleButtonActive && styles.circleLabelDisabled]} fontType="bold">
+                    {isDataLoading ? '...' : !relevantAssignment ? t('worker.home.noAssignments') : t('worker.home.checkIn')}
                   </Text>
-                </View>
+                </>
               )}
+            </TouchableOpacity>
+            </View>
 
-              {/* ── NOT CHECKED IN: Proximity indicator ── */}
-              {!stableCheckedIn && (
-                <View style={styles.proximityCard}>
-                  {/* Status ring */}
-                  <View style={styles.proximityRingOuter}>
-                    <View style={[styles.proximityRingInner, { borderColor: proximityColor }]}>
-                      <Ionicons
-                        name={isNearby ? 'checkmark-circle' : 'location-outline'}
-                        size={36}
-                        color={proximityColor}
-                      />
-                    </View>
-                  </View>
-
-                  {/* Distance text */}
-                  <View style={styles.proximityTextBlock}>
-                    <Text style={[styles.proximityStatus, { color: proximityColor }]} fontType="bold">
-                      {isNearby
-                        ? t('worker.home.statusReady')
-                        : !locationReady
-                          ? t('worker.home.locating')
-                          : locationStatusText}
-                    </Text>
-                    {!isNearby && locationReady && distance !== null && (
-                      <Text style={styles.proximityHint}>
-                        {`${t('worker.home.checkInRadius') || 'Check-in zone'}: ${relevantRadius}m`}
-                      </Text>
-                    )}
-                  </View>
-
-                  {/* Progress bar */}
-                  <View style={styles.proximityBarTrack}>
-                    <View style={[styles.proximityBarFill, {
-                      width: `${Math.round(proximityRatio * 100)}%` as any,
-                      backgroundColor: proximityColor,
-                    }]} />
-                  </View>
-                </View>
-              )}
-
-              {/* ── CHECK IN / OUT BUTTON ── */}
-              <Button
-                onPress={stableCheckedIn ? handleCheckOut : handleCheckIn}
-                style={[styles.actionButton, stableCheckedIn ? styles.checkOutBtn : (isNearby ? styles.checkInBtn : styles.checkInBtnDisabled)]}
+            {/* Check out button — only visible when checked in */}
+            {stableCheckedIn && (
+              <TouchableOpacity
+                onPress={handleCheckOut}
                 disabled={buttonDisabled || isActuallyProcessing}
-                title={stableCheckedIn ? t('worker.home.checkOut') : t('worker.home.checkIn')}
-                textStyle={styles.buttonText}
-                loading={isActuallyProcessing}
-              />
-            </>
+                style={styles.checkOutButton}
+              >
+                <Ionicons name="stop-circle-outline" size={18} color="#fff" />
+                <Text style={styles.checkOutButtonText} fontType="bold">{t('worker.home.checkOut')}</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+
+          {/* ── PROXIMITY INDICATOR ── (only when has assignment and not checked in) */}
+          {!stableCheckedIn && relevantAssignment && targetProjectLocation && (
+            <View style={styles.proximityCard}>
+              {/* Bar */}
+              <View style={styles.proximityBarRow}>
+                <View style={styles.proximityBarTrack}>
+                  <View style={[styles.proximityBarFill, {
+                    width: `${Math.round(proximityRatio * 100)}%` as any,
+                    backgroundColor: proximityColor,
+                  }]} />
+                </View>
+              </View>
+              {/* Label */}
+              <View style={styles.proximityLabelRow}>
+                <View style={[styles.proximityDot, { backgroundColor: proximityColor }]} />
+                <Text style={[styles.proximityText, { color: proximityColor }]} fontType="medium">
+                  {isNearby
+                    ? t('worker.home.statusReady')
+                    : !locationReady
+                      ? t('worker.home.locating')
+                      : locationStatusText}
+                </Text>
+                {!isNearby && locationReady && distance !== null && (
+                  <Text style={styles.proximityRadius}>
+                    {`/ ${relevantRadius}m zone`}
+                  </Text>
+                )}
+              </View>
+            </View>
           )}
 
         </View>
@@ -841,9 +869,12 @@ export default function Home() {
   );
 }
 
+const CIRCLE_SIZE = 200;
+
 const styles = StyleSheet.create({
   scrollContent: {
-    paddingBottom: theme.spacing(4),
+    paddingBottom: theme.spacing(5),
+    flexGrow: 1,
   },
   pageHeader: {
     paddingTop: theme.spacing(4),
@@ -852,13 +883,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: theme.colors.pageBackground,
   },
   headerRight: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    flexShrink: 0,
   },
   syncPill: {
     flexDirection: 'row',
@@ -869,10 +898,9 @@ const styles = StyleSheet.create({
     paddingVertical: 3,
     gap: 2,
   },
-  syncText: {
-    fontSize: 11,
-    color: theme.colors.bodyText,
-  },
+  syncText: { fontSize: 11, color: theme.colors.bodyText },
+  dateText: { fontSize: theme.fontSizes.sm, color: theme.colors.bodyText },
+
   offlineBanner: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -884,12 +912,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     gap: 6,
   },
-  offlineBannerText: {
-    fontSize: theme.fontSizes.sm,
-    color: '#92400E',
-    marginLeft: 6,
-    flex: 1,
-  },
+  offlineBannerText: { fontSize: theme.fontSizes.sm, color: '#92400E', flex: 1 },
   trackingGapBanner: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -901,42 +924,12 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     gap: 6,
   },
-  trackingGapBannerText: {
-    fontSize: theme.fontSizes.sm,
-    color: '#92400E',
-    flex: 1,
-  },
-  dateText: {
-    fontSize: theme.fontSizes.sm,
-    color: theme.colors.bodyText,
-  },
+  trackingGapBannerText: { fontSize: theme.fontSizes.sm, color: '#92400E', flex: 1 },
+
   homeContent: {
     paddingHorizontal: theme.spacing(3),
-    gap: theme.spacing(2),
+    gap: theme.spacing(2.5),
     paddingTop: theme.spacing(1),
-  },
-
-  // ── EMPTY STATE ──
-  emptyState: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: theme.spacing(8),
-    gap: theme.spacing(1),
-  },
-  emptyStateTitle: {
-    fontSize: theme.fontSizes.lg,
-    color: theme.colors.headingText,
-    marginTop: theme.spacing(1),
-  },
-  emptyStateSub: {
-    fontSize: theme.fontSizes.sm,
-    color: theme.colors.disabledText,
-    textAlign: 'center',
-  },
-  emptyStateDate: {
-    fontSize: theme.fontSizes.sm,
-    color: theme.colors.disabledText,
-    marginTop: theme.spacing(1),
   },
 
   // ── PROJECT CARD ──
@@ -952,7 +945,7 @@ const styles = StyleSheet.create({
     color: theme.colors.disabledText,
     textTransform: 'uppercase',
     letterSpacing: 0.8,
-    marginBottom: 6,
+    marginBottom: 4,
   },
   projectNameRow: {
     flexDirection: 'row',
@@ -960,133 +953,209 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   projectName: {
-    fontSize: 20,
+    fontSize: 18,
     color: theme.colors.headingText,
     flexShrink: 1,
+  },
+  projectCardBottom: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 6,
   },
   projectAddress: {
     fontSize: theme.fontSizes.sm,
     color: theme.colors.bodyText,
-    marginTop: 4,
+    flex: 1,
   },
   navigateBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    marginTop: theme.spacing(1.5),
-    alignSelf: 'flex-start',
     backgroundColor: theme.colors.primaryMuted,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
     borderRadius: theme.radius.pill,
+    marginLeft: 8,
   },
   navigateBtnText: {
     fontSize: theme.fontSizes.sm,
     color: theme.colors.primary,
   },
-
-  // ── TIMER (checked in) ──
-  timerCard: {
-    backgroundColor: theme.colors.cardBackground,
-    borderRadius: theme.radius.lg,
-    borderWidth: 1,
-    borderColor: theme.colors.borderColor,
-    alignItems: 'center',
-    paddingVertical: theme.spacing(4),
-    gap: 4,
-  },
-  timerSubLabel: {
-    fontSize: theme.fontSizes.xs,
-    color: theme.colors.disabledText,
-    textTransform: 'uppercase',
-    letterSpacing: 1.2,
-  },
-  timerLabel: {
-    fontSize: 52,
-    color: theme.colors.headingText,
-    letterSpacing: 3,
-  },
-  timerStartText: {
+  sessionStartText: {
     fontSize: theme.fontSizes.sm,
     color: theme.colors.disabledText,
     marginTop: 4,
   },
+  emptyProjectCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing(1),
+    backgroundColor: theme.colors.cardBackground,
+    borderRadius: theme.radius.lg,
+    borderWidth: 1,
+    borderColor: theme.colors.borderColor,
+    padding: theme.spacing(2),
+  },
+  emptyProjectText: {
+    fontSize: theme.fontSizes.md,
+    color: theme.colors.disabledText,
+  },
 
-  // ── PROXIMITY CARD ──
+  // ── CIRCLE SECTION ──
+  circleSection: {
+    alignItems: 'center',
+    paddingVertical: theme.spacing(2),
+    gap: theme.spacing(2),
+  },
+  circleOuter: {
+    width: CIRCLE_SIZE + 24,
+    height: CIRCLE_SIZE + 24,
+    borderRadius: (CIRCLE_SIZE + 24) / 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+  },
+  circleOuterReady: {
+    borderColor: 'rgba(0,0,0,0.15)',
+    backgroundColor: 'rgba(0,0,0,0.04)',
+  },
+  circleOuterCheckedIn: {
+    borderColor: 'rgba(0,0,0,0.1)',
+    backgroundColor: 'rgba(0,0,0,0.04)',
+  },
+  circleOuterFar: {
+    borderColor: theme.colors.borderColor,
+    backgroundColor: 'transparent',
+  },
+  // Outer decorative ring — gives bezel/depth effect
+  circleOuter: {
+    width: CIRCLE_SIZE + 20,
+    height: CIRCLE_SIZE + 20,
+    borderRadius: (CIRCLE_SIZE + 20) / 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+  },
+  circleOuterReady: {
+    borderColor: 'rgba(0,0,0,0.12)',
+    backgroundColor: 'rgba(0,0,0,0.04)',
+  },
+  circleOuterCheckedIn: {
+    borderColor: 'rgba(0,0,0,0.1)',
+    backgroundColor: 'rgba(0,0,0,0.04)',
+  },
+  circleOuterFar: {
+    borderColor: theme.colors.borderColor,
+    backgroundColor: 'transparent',
+  },
+  circleButton: {
+    width: CIRCLE_SIZE,
+    height: CIRCLE_SIZE,
+    borderRadius: CIRCLE_SIZE / 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    // Outer bezel ring
+    borderWidth: 6,
+    borderColor: 'rgba(0,0,0,0.08)',
+    // Shadow for depth
+    shadowColor: '#000',
+    shadowOpacity: 0.25,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 12,
+  },
+  circleButtonReady: {
+    backgroundColor: theme.colors.primary,
+    borderColor: 'rgba(255,255,255,0.15)',
+  },
+  circleButtonCheckedIn: {
+    backgroundColor: '#1a1a1a',
+    borderColor: 'rgba(255,255,255,0.1)',
+  },
+  circleButtonFar: {
+    backgroundColor: '#e8e8e8',
+    borderColor: theme.colors.borderColor,
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  circleTimer: {
+    fontSize: 28,
+    color: '#fff',
+    letterSpacing: 1,
+  },
+  circleSubLabel: {
+    fontSize: theme.fontSizes.xs,
+    color: 'rgba(255,255,255,0.6)',
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+  },
+  circleLabel: {
+    fontSize: theme.fontSizes.lg,
+    color: '#fff',
+    textTransform: 'uppercase',
+    letterSpacing: 1.5,
+  },
+  circleLabelDisabled: {
+    color: theme.colors.disabledText,
+  },
+  checkOutButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: theme.colors.danger,
+    paddingHorizontal: theme.spacing(3),
+    paddingVertical: theme.spacing(1.5),
+    borderRadius: theme.radius.pill,
+  },
+  checkOutButtonText: {
+    fontSize: theme.fontSizes.md,
+    color: '#fff',
+  },
+
+  // ── PROXIMITY ──
   proximityCard: {
     backgroundColor: theme.colors.cardBackground,
     borderRadius: theme.radius.lg,
     borderWidth: 1,
     borderColor: theme.colors.borderColor,
-    padding: theme.spacing(3),
-    alignItems: 'center',
-    gap: theme.spacing(2),
+    padding: theme.spacing(2),
+    gap: theme.spacing(1),
   },
-  proximityRingOuter: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    backgroundColor: theme.colors.primaryMuted,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  proximityRingInner: {
-    width: 76,
-    height: 76,
-    borderRadius: 38,
-    borderWidth: 3,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: theme.colors.cardBackground,
-  },
-  proximityTextBlock: {
-    alignItems: 'center',
-    gap: 4,
-  },
-  proximityStatus: {
-    fontSize: theme.fontSizes.lg,
-    color: theme.colors.headingText,
-  },
-  proximityHint: {
-    fontSize: theme.fontSizes.sm,
-    color: theme.colors.disabledText,
+  proximityBarRow: {
+    width: '100%',
   },
   proximityBarTrack: {
     width: '100%',
-    height: 6,
+    height: 8,
     backgroundColor: theme.colors.borderColor,
     borderRadius: theme.radius.pill,
     overflow: 'hidden',
   },
   proximityBarFill: {
-    height: 6,
+    height: 8,
     borderRadius: theme.radius.pill,
-    minWidth: 6,
+    minWidth: 8,
   },
-
-  // ── CHECK IN / OUT BUTTON ──
-  actionButton: {
-    height: 60,
-    borderRadius: theme.radius.md,
-    width: '100%',
-    shadowColor: 'transparent',
-    shadowOpacity: 0,
-    shadowRadius: 0,
-    elevation: 0,
-    overflow: 'hidden',
+  proximityLabelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
   },
-  checkInBtn: {
-    backgroundColor: theme.colors.primary,
+  proximityDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
   },
-  checkInBtnDisabled: {
-    backgroundColor: '#555',
+  proximityText: {
+    fontSize: theme.fontSizes.sm,
+    flex: 1,
   },
-  checkOutBtn: {
-    backgroundColor: theme.colors.danger,
-  },
-  buttonText: {
-    color: 'white',
-    fontSize: 17,
+  proximityRadius: {
+    fontSize: theme.fontSizes.xs,
+    color: theme.colors.disabledText,
   },
 
   // ── PERMISSION SCREENS ──
@@ -1094,7 +1163,6 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: theme.colors.background,
   },
   loadingText: {
     marginTop: 10,
@@ -1109,10 +1177,13 @@ const styles = StyleSheet.create({
   pageTitle: {
     fontSize: theme.fontSizes.xl,
     color: theme.colors.headingText,
+    marginTop: theme.spacing(2),
+    textAlign: 'center',
   },
   pageSubtitle: {
-    fontSize: theme.fontSizes.lg,
+    fontSize: theme.fontSizes.md,
     color: theme.colors.bodyText,
-    marginTop: 2,
+    marginTop: 6,
+    textAlign: 'center',
   },
 });
