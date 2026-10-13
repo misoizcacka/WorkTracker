@@ -651,6 +651,17 @@ export default function Home() {
     );
   }
 
+
+  // Proximity: 0 = far, 1 = on site. Cap approach distance at 3x radius so the ring fills meaningfully.
+  const proximityRatio = (() => {
+    if (!targetProjectLocation || distance === null) return 0;
+    if (isNearby) return 1;
+    const approachZone = relevantRadius * 3;
+    return Math.max(0, 1 - (distance - relevantRadius) / approachZone);
+  })();
+
+  const proximityColor = isNearby ? theme.colors.success : proximityRatio > 0.5 ? '#F59E0B' : theme.colors.disabledText;
+
   return (
     <AnimatedScreen>
       <ScrollView
@@ -696,149 +707,118 @@ export default function Home() {
 
         <View style={styles.homeContent}>
 
-          {/* â”€â”€ STATUS HERO CARD â”€â”€ */}
-          <View style={[
-            styles.statusHeroCard,
-            stableCheckedIn
-              ? styles.statusHeroCheckedIn
-              : relevantAssignment
-                ? styles.statusHeroReady
-                : styles.statusHeroIdle,
-          ]}>
-            {/* Big status label */}
-            <View style={styles.statusHeroTop}>
-              <View style={styles.statusHeroLeft}>
-                <Text style={styles.statusHeroLabel} fontType="bold">
-                  {stableCheckedIn
-                    ? t('worker.home.currentlyWorkingAt')
-                    : relevantAssignment
-                      ? t('worker.home.nextAssignment')
-                      : t('worker.home.noAssignmentsToday')}
-                </Text>
-
-                {isDataLoading ? (
-                  <ActivityIndicator color="#fff" style={{ marginTop: 8, alignSelf: 'flex-start' }} />
-                ) : relevantAssignment ? (
-                  <TouchableOpacity
-                    onPress={() => !isSelectionLocked && setIsAssignmentSelectionModalVisible(true)}
-                    disabled={isSelectionLocked}
-                    style={styles.siteNameRow}
-                  >
-                    <Text style={styles.statusHeroSiteName} fontType="bold" numberOfLines={1}>{projectLocationName}</Text>
-                    {!isSelectionLocked && <Ionicons name="chevron-down" size={18} color="rgba(255,255,255,0.8)" />}
-                  </TouchableOpacity>
-                ) : (
-                  <Text style={styles.statusHeroEmptySub}>
-                    {t('worker.home.noAssignmentsSub')}
-                  </Text>
-                )}
-
-                {relevantAssignment && (
-                  <Text style={styles.statusHeroAddress} numberOfLines={1}>
-                    {(relevantAssignment as any).project?.address || (relevantAssignment as any).location?.name || ''}
-                  </Text>
-                )}
-              </View>
-
-              {/* Status icon */}
-              <View style={styles.statusHeroIcon}>
-                <Ionicons
-                  name={stableCheckedIn ? 'checkmark-circle' : relevantAssignment ? 'location' : 'calendar-outline'}
-                  size={32}
-                  color="rgba(255,255,255,0.9)"
-                />
-              </View>
-            </View>
-
-            {/* Bottom row â€” time elapsed OR distance */}
-            {relevantAssignment && (
-              <View style={styles.statusHeroBottom}>
-                {stableCheckedIn && sessionStartTime ? (
-                  <View style={styles.statusHeroTimeRow}>
-                    <Ionicons name="time-outline" size={14} color="rgba(255,255,255,0.75)" />
-                    <Text style={styles.statusHeroTimeText}>
-                      {` ${t('worker.home.sessionStarted', { time: moment(sessionStartTime).format('h:mm A') })}`}
-                    </Text>
-                    <View style={styles.statusHeroElapsed}>
-                      <Text style={styles.statusHeroElapsedText} fontType="bold">
-                        {`${Math.floor(elapsedTime / 3600)}h ${Math.floor((elapsedTime % 3600) / 60)}m`}
-                      </Text>
-                    </View>
-                  </View>
-                ) : (
-                  <View style={styles.statusHeroTimeRow}>
-                    <Ionicons name="location-outline" size={14} color="rgba(255,255,255,0.75)" />
-                    <Text style={styles.statusHeroTimeText}>{` ${locationStatusText}`}</Text>
-                    {targetProjectLocation && (
-                      <TouchableOpacity onPress={handleNavigate} style={styles.statusHeroNavBtn}>
-                        <Ionicons name="navigate-outline" size={13} color="rgba(255,255,255,0.9)" />
-                        <Text style={styles.statusHeroNavText} fontType="bold"> {t('worker.home.navigate')}</Text>
-                      </TouchableOpacity>
-                    )}
-                  </View>
-                )}
-              </View>
-            )}
-          </View>
-
-          {/* â”€â”€ TIMER (checked in) OR MAP (not checked in) â”€â”€ */}
-          {stableCheckedIn && sessionStartTime ? (
-            <View style={styles.timerCard}>
-              <Text style={styles.timerLabel} fontType="bold">
-                {`${Math.floor(elapsedTime / 3600).toString().padStart(2, '0')}:${Math.floor((elapsedTime % 3600) / 60).toString().padStart(2, '0')}:${(elapsedTime % 60).toString().padStart(2, '0')}`}
-              </Text>
-              <Text style={styles.timerSubLabel}>{t('worker.home.timeElapsed') || 'Time elapsed'}</Text>
-              <CircularTimer elapsedTime={elapsedTime} size={160} strokeWidth={5} />
-            </View>
-          ) : (
-            <View style={[styles.mapCard, (!relevantAssignment || !targetProjectLocation) && { display: 'none' }]}>
-              {locationReady && workerMapLocation ? (
-                <MapView
-                  ref={mapRef}
-                  style={{ width: '100%', height: 220, borderRadius: theme.radius.lg }}
-                  scrollEnabled={false}
-                  zoomEnabled={false}
-                  showsUserLocation={true}
-                  region={mapRegion}
-                >
-                  {targetProjectLocation && (
-                    <>
-                      <Marker
-                        coordinate={{ latitude: targetProjectLocation.lat, longitude: targetProjectLocation.lon }}
-                        anchor={{ x: 0.5, y: 0.5 }}
-                        pinColor={theme.colors.primary}
-                      />
-                      <Circle
-                        center={{ latitude: targetProjectLocation.lat, longitude: targetProjectLocation.lon }}
-                        radius={relevantRadius}
-                        strokeWidth={2}
-                        strokeColor={theme.colors.primary}
-                        fillColor={theme.colors.primary + '20'}
-                      />
-                    </>
-                  )}
-                </MapView>
-              ) : (
-                <View style={styles.mapLoading}>
-                  <ActivityIndicator color={theme.colors.primary} />
-                </View>
-              )}
+          {/* ── STATE: NO ASSIGNMENTS ── */}
+          {!isDataLoading && !relevantAssignment && (
+            <View style={styles.emptyState}>
+              <Ionicons name="calendar-outline" size={48} color={theme.colors.disabledText} />
+              <Text style={styles.emptyStateTitle} fontType="bold">{t('worker.home.noAssignmentsToday')}</Text>
+              <Text style={styles.emptyStateSub}>{t('worker.home.noAssignmentsSub')}</Text>
+              <Text style={styles.emptyStateDate}>{moment().format('dddd, MMMM D')}</Text>
             </View>
           )}
+
+          {isDataLoading && (
+            <View style={styles.emptyState}>
+              <ActivityIndicator size="large" color={theme.colors.primary} />
+            </View>
+          )}
+
+          {/* ── STATE: HAS ASSIGNMENT ── */}
+          {!isDataLoading && relevantAssignment && (
+            <>
+              {/* Project card */}
+              <View style={styles.projectCard}>
+                <Text style={styles.projectCardLabel} fontType="medium">
+                  {stableCheckedIn ? t('worker.home.currentlyWorkingAt') : t('worker.home.nextAssignment')}
+                </Text>
+                <TouchableOpacity
+                  onPress={() => !isSelectionLocked && setIsAssignmentSelectionModalVisible(true)}
+                  disabled={isSelectionLocked}
+                  style={styles.projectNameRow}
+                >
+                  <Text style={styles.projectName} fontType="bold" numberOfLines={1}>{projectLocationName}</Text>
+                  {!isSelectionLocked && <Ionicons name="chevron-down" size={16} color={theme.colors.bodyText} />}
+                </TouchableOpacity>
+                <Text style={styles.projectAddress} numberOfLines={1}>
+                  {(relevantAssignment as any).project?.address || (relevantAssignment as any).location?.name || ''}
+                </Text>
+
+                {/* Navigate button */}
+                {!stableCheckedIn && targetProjectLocation && (
+                  <TouchableOpacity onPress={handleNavigate} style={styles.navigateBtn}>
+                    <Ionicons name="navigate-outline" size={14} color={theme.colors.primary} />
+                    <Text style={styles.navigateBtnText} fontType="bold">{t('worker.home.navigate')}</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+
+              {/* ── CHECKED IN: Big timer ── */}
+              {stableCheckedIn && sessionStartTime && (
+                <View style={styles.timerCard}>
+                  <Text style={styles.timerSubLabel}>{t('worker.home.timeElapsed') || 'TIME ELAPSED'}</Text>
+                  <Text style={styles.timerLabel} fontType="bold">
+                    {`${Math.floor(elapsedTime / 3600).toString().padStart(2, '0')}:${Math.floor((elapsedTime % 3600) / 60).toString().padStart(2, '0')}:${(elapsedTime % 60).toString().padStart(2, '0')}`}
+                  </Text>
+                  <Text style={styles.timerStartText}>
+                    {t('worker.home.sessionStarted', { time: moment(sessionStartTime).format('h:mm A') })}
+                  </Text>
+                </View>
+              )}
+
+              {/* ── NOT CHECKED IN: Proximity indicator ── */}
+              {!stableCheckedIn && (
+                <View style={styles.proximityCard}>
+                  {/* Status ring */}
+                  <View style={styles.proximityRingOuter}>
+                    <View style={[styles.proximityRingInner, { borderColor: proximityColor }]}>
+                      <Ionicons
+                        name={isNearby ? 'checkmark-circle' : 'location-outline'}
+                        size={36}
+                        color={proximityColor}
+                      />
+                    </View>
+                  </View>
+
+                  {/* Distance text */}
+                  <View style={styles.proximityTextBlock}>
+                    <Text style={[styles.proximityStatus, { color: proximityColor }]} fontType="bold">
+                      {isNearby
+                        ? t('worker.home.statusReady')
+                        : !locationReady
+                          ? t('worker.home.locating')
+                          : locationStatusText}
+                    </Text>
+                    {!isNearby && locationReady && distance !== null && (
+                      <Text style={styles.proximityHint}>
+                        {`${t('worker.home.checkInRadius') || 'Check-in zone'}: ${relevantRadius}m`}
+                      </Text>
+                    )}
+                  </View>
+
+                  {/* Progress bar */}
+                  <View style={styles.proximityBarTrack}>
+                    <View style={[styles.proximityBarFill, {
+                      width: `${Math.round(proximityRatio * 100)}%` as any,
+                      backgroundColor: proximityColor,
+                    }]} />
+                  </View>
+                </View>
+              )}
+
+              {/* ── CHECK IN / OUT BUTTON ── */}
+              <Button
+                onPress={stableCheckedIn ? handleCheckOut : handleCheckIn}
+                style={[styles.actionButton, stableCheckedIn ? styles.checkOutBtn : (isNearby ? styles.checkInBtn : styles.checkInBtnDisabled)]}
+                disabled={buttonDisabled || isActuallyProcessing}
+                title={stableCheckedIn ? t('worker.home.checkOut') : t('worker.home.checkIn')}
+                textStyle={styles.buttonText}
+                loading={isActuallyProcessing}
+              />
+            </>
+          )}
+
         </View>
       </ScrollView>
-
-      {/* â”€â”€ CHECK IN / OUT BUTTON â”€â”€ */}
-      <View style={styles.footer}>
-        <Button
-          onPress={stableCheckedIn ? handleCheckOut : handleCheckIn}
-          style={[styles.actionButton, stableCheckedIn ? styles.checkOutBtn : styles.checkInBtn]}
-          disabled={buttonDisabled || isActuallyProcessing}
-          title={stableCheckedIn ? t('worker.home.checkOut') : (relevantAssignment ? t('worker.home.checkIn') : t('worker.home.noAssignments'))}
-          textStyle={styles.buttonText}
-          loading={isActuallyProcessing}
-        />
-      </View>
 
       <AssignmentSelectionModal
         isVisible={isAssignmentSelectionModalVisible}
@@ -863,7 +843,7 @@ export default function Home() {
 
 const styles = StyleSheet.create({
   scrollContent: {
-    paddingBottom: 110,
+    paddingBottom: theme.spacing(4),
   },
   pageHeader: {
     paddingTop: theme.spacing(4),
@@ -933,160 +913,160 @@ const styles = StyleSheet.create({
   homeContent: {
     paddingHorizontal: theme.spacing(3),
     gap: theme.spacing(2),
+    paddingTop: theme.spacing(1),
   },
 
-  // â”€â”€ STATUS HERO CARD â”€â”€
-  statusHeroCard: {
+  // ── EMPTY STATE ──
+  emptyState: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: theme.spacing(8),
+    gap: theme.spacing(1),
+  },
+  emptyStateTitle: {
+    fontSize: theme.fontSizes.lg,
+    color: theme.colors.headingText,
+    marginTop: theme.spacing(1),
+  },
+  emptyStateSub: {
+    fontSize: theme.fontSizes.sm,
+    color: theme.colors.disabledText,
+    textAlign: 'center',
+  },
+  emptyStateDate: {
+    fontSize: theme.fontSizes.sm,
+    color: theme.colors.disabledText,
+    marginTop: theme.spacing(1),
+  },
+
+  // ── PROJECT CARD ──
+  projectCard: {
+    backgroundColor: theme.colors.cardBackground,
     borderRadius: theme.radius.lg,
+    borderWidth: 1,
+    borderColor: theme.colors.borderColor,
     padding: theme.spacing(2.5),
-    ...theme.shadow.soft,
   },
-  statusHeroCheckedIn: {
-    backgroundColor: theme.colors.primary,
-  },
-  statusHeroReady: {
-    backgroundColor: '#1A1A2E',
-  },
-  statusHeroIdle: {
-    backgroundColor: '#3A3A3C',
-  },
-  statusHeroTop: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
-  },
-  statusHeroLeft: {
-    flex: 1,
-    marginRight: theme.spacing(1.5),
-  },
-  statusHeroLabel: {
+  projectCardLabel: {
     fontSize: theme.fontSizes.xs,
-    color: 'rgba(255,255,255,0.65)',
+    color: theme.colors.disabledText,
     textTransform: 'uppercase',
-    letterSpacing: 1,
+    letterSpacing: 0.8,
     marginBottom: 6,
   },
-  siteNameRow: {
+  projectNameRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
   },
-  statusHeroSiteName: {
-    fontSize: 22,
-    color: '#fff',
+  projectName: {
+    fontSize: 20,
+    color: theme.colors.headingText,
     flexShrink: 1,
-    lineHeight: 28,
   },
-  statusHeroAddress: {
+  projectAddress: {
     fontSize: theme.fontSizes.sm,
-    color: 'rgba(255,255,255,0.6)',
+    color: theme.colors.bodyText,
     marginTop: 4,
   },
-  statusHeroEmptySub: {
-    fontSize: theme.fontSizes.md,
-    color: 'rgba(255,255,255,0.6)',
-    marginTop: 4,
-  },
-  statusHeroIcon: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-    backgroundColor: 'rgba(255,255,255,0.15)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  statusHeroBottom: {
-    marginTop: theme.spacing(2),
-    paddingTop: theme.spacing(1.5),
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.15)',
-  },
-  statusHeroTimeRow: {
+  navigateBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    flex: 1,
-  },
-  statusHeroTimeText: {
-    fontSize: theme.fontSizes.sm,
-    color: 'rgba(255,255,255,0.75)',
-    flex: 1,
-  },
-  statusHeroElapsed: {
-    backgroundColor: 'rgba(255,255,255,0.2)',
+    gap: 4,
+    marginTop: theme.spacing(1.5),
+    alignSelf: 'flex-start',
+    backgroundColor: theme.colors.primaryMuted,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
     borderRadius: theme.radius.pill,
-    paddingHorizontal: 10,
-    paddingVertical: 3,
   },
-  statusHeroElapsedText: {
+  navigateBtnText: {
     fontSize: theme.fontSizes.sm,
-    color: '#fff',
-  },
-  statusHeroNavBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    borderRadius: theme.radius.pill,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-  },
-  statusHeroNavText: {
-    fontSize: theme.fontSizes.sm,
-    color: '#fff',
+    color: theme.colors.primary,
   },
 
-  // â”€â”€ MAP â”€â”€
-  mapCard: {
-    height: 220,
-    borderRadius: theme.radius.lg,
-    borderWidth: 1,
-    borderColor: theme.colors.borderColor,
-  },
-  mapLoading: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: theme.colors.cardBackground,
-    borderRadius: theme.radius.lg,
-  },
-
-  // â”€â”€ TIMER (checked in) â”€â”€
+  // ── TIMER (checked in) ──
   timerCard: {
     backgroundColor: theme.colors.cardBackground,
     borderRadius: theme.radius.lg,
     borderWidth: 1,
     borderColor: theme.colors.borderColor,
     alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: theme.spacing(3),
-    gap: theme.spacing(1),
-  },
-  timerLabel: {
-    fontSize: 42,
-    color: theme.colors.headingText,
-    letterSpacing: 2,
+    paddingVertical: theme.spacing(4),
+    gap: 4,
   },
   timerSubLabel: {
-    fontSize: theme.fontSizes.sm,
+    fontSize: theme.fontSizes.xs,
     color: theme.colors.disabledText,
     textTransform: 'uppercase',
-    letterSpacing: 1,
-    marginBottom: theme.spacing(1),
+    letterSpacing: 1.2,
+  },
+  timerLabel: {
+    fontSize: 52,
+    color: theme.colors.headingText,
+    letterSpacing: 3,
+  },
+  timerStartText: {
+    fontSize: theme.fontSizes.sm,
+    color: theme.colors.disabledText,
+    marginTop: 4,
   },
 
-  // â”€â”€ FOOTER BUTTON â”€â”€
-  footer: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    padding: theme.spacing(2.5),
-    paddingBottom: theme.spacing(3),
-    backgroundColor: theme.colors.pageBackground,
-    borderTopWidth: 1,
-    borderTopColor: theme.colors.borderColor,
+  // ── PROXIMITY CARD ──
+  proximityCard: {
+    backgroundColor: theme.colors.cardBackground,
+    borderRadius: theme.radius.lg,
+    borderWidth: 1,
+    borderColor: theme.colors.borderColor,
+    padding: theme.spacing(3),
+    alignItems: 'center',
+    gap: theme.spacing(2),
   },
+  proximityRingOuter: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: theme.colors.primaryMuted,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  proximityRingInner: {
+    width: 76,
+    height: 76,
+    borderRadius: 38,
+    borderWidth: 3,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: theme.colors.cardBackground,
+  },
+  proximityTextBlock: {
+    alignItems: 'center',
+    gap: 4,
+  },
+  proximityStatus: {
+    fontSize: theme.fontSizes.lg,
+    color: theme.colors.headingText,
+  },
+  proximityHint: {
+    fontSize: theme.fontSizes.sm,
+    color: theme.colors.disabledText,
+  },
+  proximityBarTrack: {
+    width: '100%',
+    height: 6,
+    backgroundColor: theme.colors.borderColor,
+    borderRadius: theme.radius.pill,
+    overflow: 'hidden',
+  },
+  proximityBarFill: {
+    height: 6,
+    borderRadius: theme.radius.pill,
+    minWidth: 6,
+  },
+
+  // ── CHECK IN / OUT BUTTON ──
   actionButton: {
-    height: 56,
+    height: 60,
     borderRadius: theme.radius.md,
     width: '100%',
     shadowColor: 'transparent',
@@ -1098,15 +1078,18 @@ const styles = StyleSheet.create({
   checkInBtn: {
     backgroundColor: theme.colors.primary,
   },
+  checkInBtnDisabled: {
+    backgroundColor: '#555',
+  },
   checkOutBtn: {
     backgroundColor: theme.colors.danger,
   },
   buttonText: {
     color: 'white',
-    fontSize: 16,
+    fontSize: 17,
   },
 
-  // â”€â”€ PERMISSION SCREENS â”€â”€
+  // ── PERMISSION SCREENS ──
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
