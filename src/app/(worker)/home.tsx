@@ -832,8 +832,8 @@ export default function Home() {
             </View>
           )}
 
-        </View>
-      </View>
+        </View>{/* proximityCard */}
+          </View>{/* homeContent */}
       </ScrollView>
 
       <AssignmentSelectionModal
