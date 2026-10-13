@@ -3,7 +3,7 @@ import { Image, ImageStyle, StyleProp, Platform, DimensionValue } from 'react-na
 import { theme } from '../theme';
 
 // Import assets
-const LogoPNG = require('../../assets/koordlogoblack1.png');
+const LogoPNG = require('../../assets/koordinatelogo.png');
 const LogoSVG = require('../../assets/koordinatelogo.svg');
 const KLogoSVG = require('../../assets/klogoblack1.svg');
 
