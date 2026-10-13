@@ -34,7 +34,7 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/koordappicon.png",
+        "foregroundImage": "./assets/koordinateappicon.png",
         "backgroundColor": "#000000"
       },
       "edgeToEdgeEnabled": true,
@@ -63,6 +63,13 @@
       "expo-audio",
       "expo-font",
       "expo-asset",
+      "@react-native-community/datetimepicker",
+      "expo-localization",
+      "expo-secure-store",
+      "expo-sharing",
+      "expo-splash-screen",
+      "expo-sqlite",
+      "expo-status-bar",
       "./plugins/with-background-location.js"
     ],
     "extra": {
