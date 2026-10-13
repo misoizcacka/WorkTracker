@@ -1,19 +1,14 @@
 import React, { useEffect, useState } from "react";
-import { Redirect, useRouter } from "expo-router";
+import { Redirect, Tabs, useRouter } from "expo-router";
 import { useSession } from "../../context/AuthContext";
 import { Ionicons } from "@expo/vector-icons";
 import { theme } from "../../theme";
-import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { withLayoutContext } from 'expo-router';
 import { Text } from "../../components/Themed";
 import { SubscriptionLockScreen } from "../../components/SubscriptionLockScreen";
 import { Platform } from "react-native";
 import { useTranslation } from 'react-i18next';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { WorkerPrivacyNotice, PRIVACY_NOTICE_ACCEPTED_KEY } from "../../components/WorkerPrivacyNotice";
-
-const { Navigator } = createBottomTabNavigator();
-export const BottomTabs = withLayoutContext(Navigator);
 
 function ProtectedWorkerLayout() {
   const { user, isLoading, userRole, isSubscriptionExpired } = useSession();
@@ -48,7 +43,7 @@ function ProtectedWorkerLayout() {
   }
 
   return (
-    <BottomTabs
+    <Tabs
       safeAreaInsets={{ bottom: 0 }}
       screenOptions={{
         headerShown: false,
@@ -64,7 +59,7 @@ function ProtectedWorkerLayout() {
         ),
       }}
     >
-      <BottomTabs.Screen
+      <Tabs.Screen
         name="home"
         options={{
           title: t('worker.tabs.home'),
@@ -73,7 +68,7 @@ function ProtectedWorkerLayout() {
           ),
         }}
       />
-      <BottomTabs.Screen
+      <Tabs.Screen
         name="projects"
         options={{
           title: t('worker.tabs.projects'),
@@ -82,7 +77,7 @@ function ProtectedWorkerLayout() {
           ),
         }}
       />
-      <BottomTabs.Screen
+      <Tabs.Screen
         name="dashboard"
         options={{
           title: t('worker.tabs.dashboard'),
@@ -91,7 +86,7 @@ function ProtectedWorkerLayout() {
           ),
         }}
       />
-      <BottomTabs.Screen
+      <Tabs.Screen
         name="account"
         options={{
           title: t('worker.tabs.account'),
@@ -100,7 +95,7 @@ function ProtectedWorkerLayout() {
           ),
         }}
       />
-    </BottomTabs>
+    </Tabs>
   );
 }
 

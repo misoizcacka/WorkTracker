@@ -1,5 +1,5 @@
 import React, { useState, useContext, useMemo, useEffect } from "react";
-import { View, StyleSheet, useWindowDimensions, TextInput, TouchableOpacity, Image, Platform, ActivityIndicator, Animated, ScrollView } from "react-native";
+import { View, StyleSheet, useWindowDimensions, TextInput, TouchableOpacity, Platform, ActivityIndicator, ScrollView, Image } from "react-native";
 import { Text } from "~/components/Themed";
 import { Card } from "~/components/Card";
 import AnimatedScreen from "~/components/AnimatedScreen";
@@ -12,6 +12,7 @@ import { Button } from "~/components/Button";
 import { AssignmentsContext } from "~/context/AssignmentsContext";
 import { CreateProjectModal } from "~/components/CreateProjectModal";
 import CustomDropdown from "~/components/CustomDropdown";
+import { useTranslation } from "react-i18next";
 
 interface DropdownOption {
   label: string;
@@ -29,24 +30,10 @@ const statusFilterOptions: DropdownOption[] = [
   { label: 'Closed', value: 'closed' },
 ];
 
-function hexToRgba(hex: string, alpha: number) {
-  if (!/^#([A-Fa-f0-9]{3}){1,2}$/.test(hex)) {
-    return `rgba(0,0,0,${alpha})`;
-  }
-  let c = hex.substring(1).split('');
-  if (c.length === 3) {
-    c = [c[0], c[0], c[1], c[1], c[2], c[2]];
-  }
-  const num = parseInt(c.join(''), 16);
-  const r = (num >> 16) & 255;
-  const g = (num >> 8) & 255;
-  const b = num & 255;
-  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-}
-
 export default function ManagerProjects() {
   const { width } = useWindowDimensions();
   const router = useRouter();
+  const { t } = useTranslation();
   const { projects, loadInitialProjects, isLoading: projectsLoading } = useContext(ProjectsContext) as ProjectsContextType;
   const { assignments } = useContext(AssignmentsContext)!;
   
@@ -63,24 +50,20 @@ export default function ManagerProjects() {
   }, [loadInitialProjects]);
 
   const getNumColumns = () => {
-    if (width < 640) return 1; // Mobile
-    if (width < 1024) return 2; // Tablet
-    if (width < 1440) return 3; // Small Desktop
-    return 4; // Desktop
+    if (width < 640) return 1;
+    if (width < 1024) return 2;
+    if (width < 1440) return 3;
+    return 4;
   };
 
   const numColumns = getNumColumns();
   const gridGap = theme.spacing(2);
   const itemsPerPage = useMemo(() => {
-    if (numColumns >= 4) return 12;
-    if (numColumns === 3) return 9;
-    if (numColumns === 2) return 8;
-    return 6;
+    if (numColumns >= 4) return 20;
+    if (numColumns === 3) return 15;
+    if (numColumns === 2) return 12;
+    return 10;
   }, [numColumns]);
-  const projectCardWidth = useMemo(() => {
-    if (gridWidth <= 0) return undefined;
-    return Math.max(0, (gridWidth - gridGap * (numColumns - 1)) / numColumns);
-  }, [gridWidth, gridGap, numColumns]);
 
 
   const getWorkerCountForProject = (projectId: string) => {
@@ -124,13 +107,17 @@ export default function ManagerProjects() {
     const startIndex = (currentPage - 1) * itemsPerPage;
     return sortedAndFilteredProjects.slice(startIndex, startIndex + itemsPerPage);
   }, [sortedAndFilteredProjects, currentPage, itemsPerPage]);
+  const projectCardWidth = useMemo(() => {
+    if (gridWidth <= 0) return undefined;
+    return Math.max(0, (gridWidth - theme.spacing(2) * (numColumns - 1)) / numColumns);
+  }, [gridWidth, numColumns]);
+
   const gridStyle = useMemo(() => (
     Platform.OS === 'web'
       ? {
-          display: 'grid',
+          display: 'grid' as any,
           gridTemplateColumns: `repeat(${numColumns}, minmax(0, 1fr))`,
-          columnGap: theme.spacing(2),
-          rowGap: theme.spacing(2),
+          gap: theme.spacing(2),
           alignContent: 'start',
         }
       : null
@@ -152,51 +139,86 @@ export default function ManagerProjects() {
 
   const ProjectCardItem = ({ item }: { item: Project }) => {
     const workerCount = getWorkerCountForProject(item.id as string);
-    const cardWidthStyle = Platform.OS === 'web'
-      ? ({ width: '100%' } as const)
-      : (projectCardWidth ? { width: projectCardWidth } : null);
+    const isActive = item.status !== 'closed';
+    const cardWidthStyle = Platform.OS !== 'web' && projectCardWidth
+      ? { width: projectCardWidth }
+      : { width: '100%' as const };
+
+    // Initials fallback: first letters of up to 2 words
+    const initials = item.name
+      .split(' ')
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((w: string) => w[0].toUpperCase())
+      .join('');
+
+    const hasPhoto = item.photos && item.photos.length > 0;
 
     return (
-      <View style={[styles.cardContainer, cardWidthStyle]}>
-        <TouchableOpacity 
-          onPress={() => handleProjectPress(item.id)} 
-          style={styles.projectCardWrapper}
+      <View style={[styles.cardOuter, cardWidthStyle]}>
+        <TouchableOpacity
+          onPress={() => handleProjectPress(item.id)}
+          activeOpacity={0.75}
+          style={styles.cardTouchable}
         >
-          <Animated.View style={styles.projectCard}>
-            <TouchableOpacity
-              onPress={(event) => {
-                event.stopPropagation();
-                handleEditProject(item);
-              }}
-              style={styles.editProjectButton}
-            >
-              <Ionicons name="pencil-outline" size={16} color={theme.colors.headingText} />
-            </TouchableOpacity>
-            {item.photos && item.photos.length > 0 ? (
-              <Image source={{ uri: item.photos[0] }} style={styles.projectImage} resizeMode="cover" />
+          {/* Banner: photo or coloured initials fallback */}
+          <View style={styles.cardBanner}>
+            {hasPhoto ? (
+              <Image
+                source={{ uri: item.photos[0] }}
+                style={styles.bannerImage}
+                resizeMode="cover"
+              />
             ) : (
-              <View style={[styles.projectImage, styles.imagePlaceholder]}>
-                <Ionicons name="image-outline" size={50} color={theme.colors.borderColor} />
+              <View style={[styles.bannerFallback, { backgroundColor: item.color || theme.colors.primary }]}>
+                <Text style={styles.bannerInitials} fontType="bold">{initials}</Text>
               </View>
             )}
-            <View style={[styles.cardContent, { backgroundColor: theme.colors.cardBackground }]}>
-              <View style={[styles.colorAccent, { backgroundColor: item.color || theme.colors.primary }]} />
-              <Text style={styles.projectName} numberOfLines={2} fontType="regular">{item.name}</Text>
-              <Text style={styles.projectAddress} numberOfLines={1} fontType="regular">{item.address}</Text>
-              <View style={styles.cardFooter}>
-                <View style={styles.footerStat}>
-                  <Ionicons name="people-outline" size={16} color={theme.colors.bodyText} />
-                  <Text style={styles.footerStatText} fontType="medium">{workerCount} {workerCount === 1 ? 'worker' : 'workers'}</Text>
-                </View>
-                <View style={styles.cardMeta}>
-                  <Text style={[styles.statusPill, item.status === 'closed' ? styles.statusPillClosed : styles.statusPillActive]} fontType="medium">
-                    {item.status === 'closed' ? 'Closed' : 'Active'}
-                  </Text>
-                  <Text style={styles.lastModified} fontType="medium">{new Date(item.lastModified).toLocaleDateString()}</Text>
-                </View>
-              </View>
+
+            {/* Status pill — overlaid bottom-left on the banner */}
+            <View style={[styles.statusPill, isActive ? styles.statusPillActive : styles.statusPillClosed]}>
+              <Text style={[styles.statusPillText, isActive ? styles.statusPillTextActive : styles.statusPillTextClosed]} fontType="bold">
+                {isActive ? t('manager.projects.statusActive') : t('manager.projects.statusClosed')}
+              </Text>
             </View>
-          </Animated.View>
+
+            {/* Edit button — overlaid top-right */}
+            <TouchableOpacity
+              onPress={(e) => { e.stopPropagation(); handleEditProject(item); }}
+              style={styles.editButton}
+              hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+            >
+              <Ionicons name="pencil-outline" size={14} color="white" />
+            </TouchableOpacity>
+          </View>
+
+          {/* Card body */}
+          <View style={styles.cardBody}>
+            {/* Colour dot + name row */}
+            <View style={styles.nameRow}>
+              <View style={[styles.colorDot, { backgroundColor: item.color || theme.colors.primary }]} />
+              <Text style={styles.projectName} fontType="bold" numberOfLines={1}>{item.name}</Text>
+            </View>
+
+            {item.address ? (
+              <View style={styles.metaItem}>
+                <Ionicons name="location-outline" size={13} color={theme.colors.bodyText} />
+                <Text style={styles.metaText} fontType="regular" numberOfLines={1}>{item.address}</Text>
+              </View>
+            ) : null}
+
+            <View style={styles.cardFooter}>
+              <View style={styles.metaItem}>
+                <Ionicons name="people-outline" size={13} color={theme.colors.bodyText} />
+                <Text style={styles.metaText} fontType="regular">
+                  {workerCount} {workerCount === 1 ? t('manager.projects.worker') : t('manager.projects.workers')}
+                </Text>
+              </View>
+              <Text style={styles.lastModified} fontType="regular">
+                {new Date(item.lastModified).toLocaleDateString()}
+              </Text>
+            </View>
+          </View>
         </TouchableOpacity>
       </View>
     );
@@ -212,15 +234,15 @@ export default function ManagerProjects() {
       ]} />
       <AnimatedScreen>
       <View style={styles.pageHeader}>
-        <Text style={styles.pageTitle} fontType="bold">Projects</Text>
-        <Text style={styles.pageSubtitle} fontType="regular">Manage your ongoing projects and assign workers.</Text>
+        <Text style={styles.pageTitle} fontType="bold">{t('manager.projects.title')}</Text>
+        <Text style={styles.pageSubtitle} fontType="regular">{t('manager.projects.subtitle')}</Text>
       </View>
       <View style={styles.mainContentCard}>
         <View style={styles.headerControls}>
           <View style={styles.filterSortRow}>
             <TextInput
               style={styles.searchInput}
-              placeholder="Search projects..."
+              placeholder={t('manager.projects.searchPlaceholder') as string}
               value={searchTerm}
               onChangeText={setSearchTerm}
               placeholderTextColor={theme.colors.bodyText}
@@ -240,17 +262,17 @@ export default function ManagerProjects() {
               style={styles.dropdownStatus}
             />
           </View>
-          <Button title="Create Project" onPress={handleCreateProject} style={styles.createButton} textStyle={styles.createButtonText} />
+          <Button title={t('manager.projects.createProject') as string} onPress={handleCreateProject} style={styles.createButton} textStyle={styles.createButtonText} />
         </View>
 
-        <View
-          style={styles.contentArea}
-          onLayout={(event) => setGridWidth(event.nativeEvent.layout.width)}
-        >
+        <View style={styles.contentArea} onLayout={(event) => setGridWidth(event.nativeEvent.layout.width)}>
           {projectsLoading && projects.length === 0 ? (
             <ActivityIndicator size="large" color={theme.colors.primary} style={{ marginTop: theme.spacing(4) }} />
           ) : sortedAndFilteredProjects.length === 0 ? (
-            <Text style={styles.noProjectsText} fontType="regular">No projects found matching your criteria.</Text>
+            <View style={styles.emptyState}>
+              <Ionicons name="folder-open-outline" size={48} color={theme.colors.borderColor} />
+              <Text style={styles.emptyStateText} fontType="regular">{t('manager.projects.noProjects')}</Text>
+            </View>
           ) : (
             <>
               <ScrollView style={styles.projectsScrollView} contentContainerStyle={styles.projectsScrollContent}>
@@ -264,11 +286,11 @@ export default function ManagerProjects() {
               {totalPages > 1 && (
                 <View style={styles.paginationBar}>
                   <Text style={styles.paginationText} fontType="regular">
-                    Page {currentPage} of {totalPages}
+                    {t('manager.projects.pageOf', { current: currentPage, total: totalPages })}
                   </Text>
                   <View style={styles.paginationActions}>
                     <Button
-                      title="Previous"
+                      title={t('manager.projects.previous') as string}
                       onPress={() => setCurrentPage(page => Math.max(1, page - 1))}
                       disabled={currentPage === 1}
                       type="secondary"
@@ -276,7 +298,7 @@ export default function ManagerProjects() {
                       textStyle={styles.paginationButtonText}
                     />
                     <Button
-                      title="Next"
+                      title={t('manager.projects.next') as string}
                       onPress={() => setCurrentPage(page => Math.min(totalPages, page + 1))}
                       disabled={currentPage === totalPages}
                       type="secondary"
@@ -305,7 +327,6 @@ export default function ManagerProjects() {
 }
 
 const styles = StyleSheet.create({
-  // Removed container, scrollContentContainer, title styles
   pageHeader: {
     paddingVertical: theme.spacing(4),
     paddingHorizontal: theme.spacing(2),
@@ -327,8 +348,8 @@ const styles = StyleSheet.create({
     borderRadius: theme.radius.lg,
     borderWidth: 1,
     borderColor: theme.colors.borderColor,
-    padding: theme.spacing(3), // Add padding within the card
-    marginHorizontal: theme.spacing(2), // Match dashboard's column margin
+    padding: theme.spacing(3),
+    marginHorizontal: theme.spacing(2),
     marginBottom: theme.spacing(2),
     overflow: 'visible',
     ...Platform.select({
@@ -339,75 +360,57 @@ const styles = StyleSheet.create({
         shadowRadius: 10,
         zIndex: 1,
       },
-      native: {
-
-      },
     }),
   },
   headerControls: {
-    marginBottom: theme.spacing(3), // Increased margin for better separation
+    marginBottom: theme.spacing(2),
     flexDirection: 'row',
-    justifyContent: 'space-between', // Aligned with employees.tsx
+    justifyContent: 'space-between',
     alignItems: 'center',
-    flexWrap: 'wrap', // Keep for responsiveness of controls
+    flexWrap: 'wrap',
     zIndex: 20,
     overflow: 'visible',
   },
   filterSortRow: {
     flexDirection: 'row',
-    alignItems: 'center', // Aligned with employees.tsx
-    flexWrap: 'wrap', // Keep for responsiveness of controls
+    alignItems: 'center',
+    flexWrap: 'wrap',
     zIndex: 30,
     overflow: 'visible',
-    // Removed flex: 1 and marginBottom: theme.spacing(2) as it's handled by main headerControls
+    gap: theme.spacing(1.5),
   },
   searchInput: {
-    width: 250, // Adjusted width
-    height: 40, // Adjusted height
-    backgroundColor: theme.colors.pageBackground, // Lighter background
+    width: 220,
+    height: 40,
+    backgroundColor: theme.colors.pageBackground,
     borderColor: theme.colors.borderColor,
     borderWidth: 1,
     borderRadius: theme.radius.md,
     paddingHorizontal: theme.spacing(2),
-    fontSize: theme.fontSizes.md, // Aligned with theme
-    marginRight: theme.spacing(1.5), // Adjusted margin
+    fontSize: theme.fontSizes.md,
     color: theme.colors.headingText,
-    // Removed flex: 1 and minWidth: 180
   },
   dropdownSort: {
-    width: 230,
-    height: 40, // Adjusted height
+    width: 210,
+    height: 40,
     zIndex: 40,
     paddingHorizontal: theme.spacing(1),
   },
   dropdownStatus: {
-    width: 180,
+    width: 160,
     height: 40,
     zIndex: 35,
     paddingHorizontal: theme.spacing(1),
   },
   createButton: {
-    // Removed height: 45, Button component handles its own height
     paddingVertical: 10,
     paddingHorizontal: 15,
     borderRadius: theme.radius.md,
     backgroundColor: theme.colors.primary,
-    // Removed marginBottom: theme.spacing(2) as it's handled by main headerControls
   },
   createButtonText: {
     color: 'white',
     fontSize: theme.fontSizes.md,
-  },
-  grid: {
-    width: '100%',
-    ...Platform.select({
-      native: {
-        flexDirection: 'row',
-        flexWrap: 'wrap',
-        alignContent: 'flex-start',
-        gap: theme.spacing(2),
-      },
-    }),
   },
   contentArea: {
     flex: 1,
@@ -420,124 +423,147 @@ const styles = StyleSheet.create({
   projectsScrollContent: {
     paddingBottom: theme.spacing(1),
   },
-  cardContainer: {
-    ...(Platform.OS !== 'web' ? { marginBottom: theme.spacing(2) } : null),
+  // --- Project grid card ---
+  cardOuter: {
+    ...Platform.select({ native: { marginBottom: theme.spacing(2) } }),
   },
-  projectCardWrapper: {
+  cardTouchable: {
     borderRadius: theme.radius.lg,
-    backgroundColor: theme.colors.cardBackground, // Ensure a background color for shadow
-    borderWidth: 1, // Added border
-    borderColor: theme.colors.borderColor, // Added border color
+    borderWidth: 1,
+    borderColor: theme.colors.borderColor,
+    backgroundColor: theme.colors.cardBackground,
+    overflow: 'hidden',
     ...Platform.select({
-      web: {
-        transition: 'transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out',
-        '&:hover': {
-          transform: 'translateY(-4px)',
-          boxShadow: `0px 8px 15px rgba(0,0,0,0.07)`,
-        },
-      },
+      web: { cursor: 'pointer' } as any,
+      native: { ...theme.shadow.soft },
     }),
   },
-  projectCard: {
-    borderRadius: theme.radius.lg,
-    overflow: 'hidden',
-    flexDirection: 'column',
-    minHeight: 230,
+  // Banner area — photo or coloured fallback, fixed height
+  cardBanner: {
+    width: '100%',
+    height: 130,
     position: 'relative',
   },
-  editProjectButton: {
+  bannerImage: {
+    width: '100%',
+    height: '100%',
+  },
+  bannerFallback: {
+    width: '100%',
+    height: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  bannerInitials: {
+    fontSize: 36,
+    color: 'rgba(255,255,255,0.9)',
+    letterSpacing: 2,
+  },
+  // Status pill — bottom-left over banner
+  statusPill: {
+    position: 'absolute',
+    bottom: theme.spacing(1),
+    left: theme.spacing(1),
+    paddingHorizontal: theme.spacing(1),
+    paddingVertical: 3,
+    borderRadius: theme.radius.pill,
+  },
+  statusPillText: {
+    fontSize: theme.fontSizes.xs,
+  },
+  statusPillActive: {
+    backgroundColor: 'rgba(0,0,0,0.35)',
+  },
+  statusPillTextActive: {
+    color: 'white',
+  },
+  statusPillClosed: {
+    backgroundColor: 'rgba(0,0,0,0.45)',
+  },
+  statusPillTextClosed: {
+    color: 'rgba(255,255,255,0.75)',
+  },
+  // Edit button — top-right over banner
+  editButton: {
     position: 'absolute',
     top: theme.spacing(1),
     right: theme.spacing(1),
-    zIndex: 5,
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    backgroundColor: 'rgba(255,255,255,0.92)',
-    borderWidth: 1,
-    borderColor: theme.colors.borderColor,
-    justifyContent: 'center',
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: 'rgba(0,0,0,0.3)',
     alignItems: 'center',
-  },
-  projectImage: {
-    width: '100%',
-    height: 100,
-    backgroundColor: theme.colors.pageBackground,
-  },
-  imagePlaceholder: {
     justifyContent: 'center',
+  },
+  // Card body below banner
+  cardBody: {
+    padding: theme.spacing(1.5),
+    gap: theme.spacing(0.75),
+  },
+  nameRow: {
+    flexDirection: 'row',
     alignItems: 'center',
+    gap: theme.spacing(1),
+    marginBottom: 2,
   },
-  cardContent: {
-    padding: theme.spacing(2),
-    flex: 1,
-    position: 'relative',
-    paddingLeft: theme.spacing(3), // Adjusted for symmetry with colorAccent
-  },
-  colorAccent: {
-    position: 'absolute',
-    left: 0,
-    top: 0,
-    bottom: 0,
-    width: theme.spacing(1),
+  colorDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    flexShrink: 0,
   },
   projectName: {
-    fontSize: theme.fontSizes.lg, // Adjusted
+    fontSize: theme.fontSizes.md,
     color: theme.colors.headingText,
-    marginBottom: theme.spacing(0.5),
-  },
-  projectAddress: {
-    fontSize: theme.fontSizes.sm, // Adjusted
-    color: theme.colors.bodyText,
-    marginBottom: theme.spacing(1.5),
+    flex: 1,
   },
   cardFooter: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    borderTopWidth: 1,
+    borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: theme.colors.borderColor,
-    paddingTop: theme.spacing(1.5),
-    marginTop: 'auto', // Pushes footer to the bottom
+    paddingTop: theme.spacing(0.75),
+    marginTop: theme.spacing(0.25),
   },
-  cardMeta: {
-    alignItems: 'flex-end',
-    gap: theme.spacing(0.75),
-  },
-  footerStat: {
+  metaItem: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 4,
   },
-  footerStatText: {
-    marginLeft: theme.spacing(1),
+  metaText: {
+    fontSize: theme.fontSizes.sm,
     color: theme.colors.bodyText,
-    fontSize: theme.fontSizes.sm, // Adjusted
   },
   lastModified: {
-    fontSize: theme.fontSizes.sm, // Adjusted
-    color: theme.colors.bodyText,
-  },
-  statusPill: {
     fontSize: theme.fontSizes.xs,
-    paddingHorizontal: theme.spacing(1),
-    paddingVertical: theme.spacing(0.5),
-    borderRadius: theme.radius.pill,
-    overflow: 'hidden',
+    color: theme.colors.disabledText,
   },
-  statusPillActive: {
-    backgroundColor: theme.statusColors.successBackground,
-    color: theme.statusColors.successText,
+  grid: {
+    width: '100%',
+    ...Platform.select({
+      native: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        gap: theme.spacing(2),
+        alignContent: 'flex-start',
+      },
+    }),
   },
-  statusPillClosed: {
-    backgroundColor: theme.colors.pageBackground,
+  // --- Empty state ---
+  emptyState: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: theme.spacing(6),
+    gap: theme.spacing(2),
+  },
+  emptyStateText: {
+    fontSize: theme.fontSizes.md,
     color: theme.colors.bodyText,
-  },
-  noProjectsText: {
     textAlign: 'center',
-    fontSize: theme.fontSizes.md, // Adjusted
-    color: theme.colors.bodyText,
-    marginTop: theme.spacing(4),
   },
+  // --- Pagination ---
   paginationBar: {
     marginTop: theme.spacing(2),
     paddingTop: theme.spacing(2),
@@ -546,7 +572,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    gap: theme.spacing(2),
   },
   paginationText: {
     fontSize: theme.fontSizes.sm,

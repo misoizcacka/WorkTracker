@@ -43,6 +43,7 @@ export interface Project {
   photos: string[]; // Supabase URLs
   explanation: string;
   color: string;
+  check_in_radius: number; // meters, default 150
 }
 
 export interface CommonLocation {

@@ -61,7 +61,7 @@ export default function Home() {
   const { processedAssignments, loadAssignmentsForDate, loadWorkSessionsForDate, isLoading: assignmentsLoading, activeWorkSession, loadedWorkSessions, startWorkSession, endWorkSession, lastCheckoutAssignmentId, isOffline, isSyncingToCloud } = useAssignments();
 
   const isDataLoading = assignmentsLoading || projectsLoading;
-  const ACCEPTABLE_DISTANCE = 150; // meters
+  const DEFAULT_RADIUS = 150; // meters — fallback when no per-project radius is set
 
   const checkedIn = !!activeWorkSession;
   const sessionStartTime = activeWorkSession ? new Date(activeWorkSession.start_time).getTime() : null;
@@ -155,15 +155,19 @@ export default function Home() {
   const assignmentAtCurrentLocation = useMemo(() => {
     if (!workerMapLocation || currentWorkersAssignments.length === 0) return null;
     return currentWorkersAssignments.find(assign => {
-      const loc = (assign as any).project?.location || (assign as any).location;
+      const ass = assign as any;
+      const loc = ass.project?.location || ass.location;
       if (!loc) return false;
       const d = getDistance(
         { latitude: workerMapLocation.latitude, longitude: workerMapLocation.longitude },
         { latitude: loc.latitude, longitude: loc.longitude }
       );
-      return d < ACCEPTABLE_DISTANCE;
+      const radius = ass.type === 'project'
+        ? (ass.project?.check_in_radius ?? DEFAULT_RADIUS)
+        : DEFAULT_RADIUS;
+      return d < radius;
     }) || null;
-  }, [workerMapLocation, currentWorkersAssignments]);
+  }, [workerMapLocation, currentWorkersAssignments, DEFAULT_RADIUS]);
 
   const { currentActiveAssignment, nextAssignableAssignment } = useMemo(() => {
     if (!user?.id || currentWorkersAssignments.length === 0) {
@@ -284,31 +288,47 @@ export default function Home() {
         return [];
       }
 
+      const radius = ass.type === 'project'
+        ? (ass.project?.check_in_radius ?? DEFAULT_RADIUS)
+        : DEFAULT_RADIUS;
+
       return [{
         id: assignment.id,
         latitude,
         longitude,
-        radius: ACCEPTABLE_DISTANCE,
+        radius,
         type: ass.type,
         status: assignment.id === activeWorkSession?.assignment_id ? 'active' : assignment.status,
       }];
     });
 
     if (relevantAssignment && !geofences.some((assignment) => assignment.id === relevantAssignment.id) && targetProjectLocation) {
+      const ass = relevantAssignment as any;
+      const radius = ass.type === 'project'
+        ? (ass.project?.check_in_radius ?? DEFAULT_RADIUS)
+        : DEFAULT_RADIUS;
       geofences.unshift({
         id: relevantAssignment.id,
         latitude: targetProjectLocation.lat,
         longitude: targetProjectLocation.lon,
-        radius: ACCEPTABLE_DISTANCE,
-        type: (relevantAssignment as any).type,
+        radius,
+        type: ass.type,
         status: relevantAssignment.id === activeWorkSession?.assignment_id ? 'active' : relevantAssignment.status,
       });
     }
 
     return geofences;
-  }, [ACCEPTABLE_DISTANCE, activeWorkSession?.assignment_id, currentWorkersAssignments, relevantAssignment, targetProjectLocation]);
+  }, [activeWorkSession?.assignment_id, currentWorkersAssignments, relevantAssignment, targetProjectLocation]);
 
-  const isNearby = distance !== null && distance < ACCEPTABLE_DISTANCE;
+  const relevantRadius = useMemo(() => {
+    const ass = relevantAssignment as any;
+    if (!ass) return DEFAULT_RADIUS;
+    return ass.type === 'project'
+      ? (ass.project?.check_in_radius ?? DEFAULT_RADIUS)
+      : DEFAULT_RADIUS;
+  }, [relevantAssignment, DEFAULT_RADIUS]);
+
+  const isNearby = distance !== null && distance < relevantRadius;
 
   const statusBadgeInfo = useMemo(() => {
     if (stableCheckedIn) {
@@ -503,7 +523,7 @@ export default function Home() {
       } catch (err) { return; }
 
       const d = getDistance(currentLocation, { latitude: targetProjectLocation.lat, longitude: targetProjectLocation.lon });
-      if (d > ACCEPTABLE_DISTANCE) { Alert.alert(t('worker.home.tooFar'), t('worker.home.tooFarMsg', { name: projectLocationName })); return; }
+      if (d > relevantRadius) { Alert.alert(t('worker.home.tooFar'), t('worker.home.tooFarMsg', { name: projectLocationName })); return; }
 
       await startWorkSession(relevantAssignment.id, currentLocation);
       Toast.show({ type: 'success', text1: t('worker.home.checkedInToast'), text2: t('worker.home.checkedInToastSub', { name: projectLocationName }) });
@@ -784,7 +804,7 @@ export default function Home() {
                       />
                       <Circle
                         center={{ latitude: targetProjectLocation.lat, longitude: targetProjectLocation.lon }}
-                        radius={ACCEPTABLE_DISTANCE}
+                        radius={relevantRadius}
                         strokeWidth={2}
                         strokeColor={theme.colors.primary}
                         fillColor={theme.colors.primary + '20'}

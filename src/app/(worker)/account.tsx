@@ -1,7 +1,7 @@
 import React, { useRef, useState } from "react";
 import { StyleSheet, View, ScrollView, Image, TouchableOpacity, Linking } from "react-native";
 import { Text } from "../../components/Themed";
-import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Card } from "../../components/Card";
 import { Button } from "../../components/Button";
 import { theme } from "../../theme";
@@ -14,7 +14,7 @@ import { useTranslation } from "react-i18next";
 import { LanguagePicker } from "../../components/LanguagePicker";
 
 export default function WorkerAccountScreen() {
-  const tabBarHeight = useBottomTabBarHeight();
+  const { bottom: tabBarHeight } = useSafeAreaInsets();
   const { signOut, user, userRole, userCompanyName } = useSession()!;
   const { profile } = useEmployeeProfile();
   const router = useRouter();

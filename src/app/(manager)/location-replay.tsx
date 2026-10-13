@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, Dimensions, Platform } from 'react-native';
+import { View, StyleSheet, Platform, useWindowDimensions } from 'react-native';
 import { Text } from '~/components/Themed';
 import SubNavBar from '~/components/SubNavBar';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -10,12 +10,11 @@ import LocationReplayWorkerSelector from '~/app/(manager)/components/LocationRep
 import LocationReplayMapOnlyPanel from '~/app/(manager)/components/LocationReplayMapOnlyPanel';
 import { theme } from '~/theme';
 
-const { width } = Dimensions.get('window');
-const isLargeScreen = width >= 900;
-
 const LocationReplayPage = () => {
   const router = useRouter();
-  const { worker_id, date } = useLocalSearchParams(); // Get worker_id and date from URL parameters
+  const { width } = useWindowDimensions();
+  const isLargeScreen = width >= 900;
+  const { worker_id, date } = useLocalSearchParams();
 
   const [selectedWorkerId, setSelectedWorkerId] = useState<string | undefined>(
     typeof worker_id === 'string' ? worker_id : undefined
@@ -67,16 +66,14 @@ const LocationReplayPage = () => {
         <Text style={styles.pageSubtitle}>Review historical worker locations.</Text>
       </View>
       <View style={styles.mainContentCard}>
-        <View style={styles.mainLayout}>
-          {isLargeScreen && (
-            <View style={styles.leftPanel}>
-              <LocationReplayWorkerSelector
-                onSelectionChange={handleSelectionChange}
-                initialDate={selectedDate}
-                initialWorkerId={selectedWorkerId}
-              />
-            </View>
-          )}
+        <View style={[styles.mainLayout, !isLargeScreen && styles.mainLayoutStacked]}>
+          <View style={isLargeScreen ? styles.leftPanel : styles.topPanel}>
+            <LocationReplayWorkerSelector
+              onSelectionChange={handleSelectionChange}
+              initialDate={selectedDate}
+              initialWorkerId={selectedWorkerId}
+            />
+          </View>
           <View style={styles.rightPanel}>
             <LocationReplayMapOnlyPanel workerId={selectedWorkerId} date={selectedDate} />
           </View>
@@ -111,16 +108,24 @@ const styles = StyleSheet.create({
   },
   mainLayout: {
     flex: 1,
-    flexDirection: 'row', // For side-by-side panels
+    flexDirection: 'row',
+  },
+  mainLayoutStacked: {
+    flexDirection: 'column',
   },
   leftPanel: {
-    width: 300, // Fixed width for the worker selector panel
+    width: 300,
     borderRightWidth: StyleSheet.hairlineWidth,
     borderRightColor: theme.colors.borderColor,
     paddingRight: theme.spacing(2),
   },
+  topPanel: {
+    maxHeight: 280,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: theme.colors.borderColor,
+  },
   rightPanel: {
-    flex: 1, // Take up remaining space
+    flex: 1,
   },
   pageHeader: {
     paddingVertical: theme.spacing(4),

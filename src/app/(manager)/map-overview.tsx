@@ -17,17 +17,6 @@ import { Employee } from '../../types';
 import { fetchLatestLocationForWorkers, LatestLocation } from '~/services/locationEvents';
 import { supabase } from '~/utils/supabase';
 
-function hexToRgba(hex: string, alpha: number) {
-  if (!/^#([A-Fa-f0-9]{3}){1,2}$/.test(hex)) return `rgba(0,0,0,${alpha})`;
-  let c = hex.substring(1).split('');
-  if (c.length === 3) c = [c[0], c[0], c[1], c[1], c[2], c[2]];
-  const num = parseInt(c.join(''), 16);
-  const r = (num >> 16) & 255;
-  const g = (num >> 8) & 255;
-  const b = num & 255;
-  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-}
-
 export default function MapOverviewScreen() { 
   const { user } = useSession();
   const { employees } = useContext(EmployeesContext) as EmployeesContextType;
@@ -187,13 +176,15 @@ export default function MapOverviewScreen() {
     const isSelected = selectedProjects.some(p => p.id === item.id);
     return (
       <TouchableOpacity onPress={() => handleProjectPress(item)} activeOpacity={0.7}>
-        <View style={[styles.projectItemContainer, { backgroundColor: hexToRgba(item.color || theme.colors.secondary, 0.1) }, isSelected && styles.projectItemSelected]}>
-          <View style={[styles.projectColorIndicator, { backgroundColor: item.color || theme.colors.secondary }]} />
+        <View style={[styles.projectItemContainer, isSelected && styles.projectItemSelected]}>
+          <View style={[styles.projectColorBar, { backgroundColor: item.color || theme.colors.secondary }]} />
           <View style={styles.itemInfo}>
-            <Text style={styles.itemName} fontType="medium">{item.name}</Text>
-            <Text style={styles.itemSubtitle} fontType="regular">{item.address}</Text>
+            <Text style={styles.itemName} fontType="medium" numberOfLines={1}>{item.name}</Text>
+            {item.address ? (
+              <Text style={styles.itemSubtitle} fontType="regular" numberOfLines={1}>{item.address}</Text>
+            ) : null}
           </View>
-          {isSelected && <Ionicons name="checkmark-circle" size={20} color={theme.colors.primary} />}
+          {isSelected && <Ionicons name="checkmark-circle" size={18} color={theme.colors.primary} style={{ marginRight: theme.spacing(1.5) }} />}
         </View>
       </TouchableOpacity>
     );
@@ -429,25 +420,30 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     marginRight: theme.spacing(1.5),
   },
-  projectColorIndicator: {
-    width: 30, 
-    height: 30, 
-    borderRadius: theme.radius.sm, 
-    marginRight: theme.spacing(1.5), 
+  projectColorBar: {
+    width: 4,
+    alignSelf: 'stretch',
+    borderTopLeftRadius: theme.radius.md,
+    borderBottomLeftRadius: theme.radius.md,
   },
   projectItemContainer: {
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderColor: theme.colors.borderColor,
     flexDirection: 'row',
     alignItems: 'center',
-    padding: theme.spacing(1.5),
+    backgroundColor: theme.colors.cardBackground,
     borderRadius: theme.radius.md,
+    borderWidth: 1,
+    borderColor: theme.colors.borderColor,
+    marginBottom: theme.spacing(1),
+    overflow: 'hidden',
   },
   projectItemSelected: {
+    borderColor: theme.colors.primary,
     backgroundColor: theme.colors.primaryMuted,
   },
   itemInfo: { 
-    flex: 1, 
+    flex: 1,
+    paddingVertical: theme.spacing(1.25),
+    paddingHorizontal: theme.spacing(1.5),
   },
   itemName: {
     color: theme.colors.headingText,

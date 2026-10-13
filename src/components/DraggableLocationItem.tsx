@@ -17,13 +17,19 @@ const DraggableLocationItem: React.FC<DraggableLocationItemProps> = ({
 }) => {
   const itemContent = (
     <View style={styles.container}>
-      <View style={[styles.colorIndicator, { backgroundColor: theme.colors.secondary }]} />
+      <View style={[styles.colorBar, { backgroundColor: theme.colors.secondary }]} />
       <View style={styles.itemInfo}>
-        <Text style={styles.itemName} fontType="medium">{item.name}</Text>
-        {item.address && (
-          <Text style={styles.itemSubtitle} fontType="regular">{item.address}</Text>
-        )}
+        <Text style={styles.itemName} fontType="medium" numberOfLines={1}>{item.name}</Text>
+        {item.address ? (
+          <Text style={styles.itemSubtitle} fontType="regular" numberOfLines={1}>{item.address}</Text>
+        ) : null}
       </View>
+      <Ionicons
+        name="menu-outline"
+        size={16}
+        color={theme.colors.disabledText}
+        style={styles.dragHandle}
+      />
     </View>
   );
 
@@ -45,34 +51,40 @@ const DraggableLocationItem: React.FC<DraggableLocationItemProps> = ({
 
 const styles = StyleSheet.create({
   wrapper: {
-    userSelect: 'none', // prevent text selection during drag on web
+    userSelect: 'none' as any,
   },
   container: {
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderColor: theme.colors.borderColor,
     flexDirection: 'row',
     alignItems: 'center',
-    padding: theme.spacing(1.5),
-    borderRadius: theme.radius.md,
     backgroundColor: theme.colors.cardBackground,
+    borderRadius: theme.radius.md,
+    borderWidth: 1,
+    borderColor: theme.colors.borderColor,
     marginBottom: theme.spacing(1),
+    overflow: 'hidden',
   },
-  colorIndicator: {
-    width: 30,
-    height: 30,
-    borderRadius: theme.radius.sm,
-    marginRight: theme.spacing(1.5),
+  colorBar: {
+    width: 4,
+    alignSelf: 'stretch',
+    borderTopLeftRadius: theme.radius.md,
+    borderBottomLeftRadius: theme.radius.md,
   },
   itemInfo: {
     flex: 1,
+    paddingVertical: theme.spacing(1.25),
+    paddingHorizontal: theme.spacing(1.5),
   },
   itemName: {
-    fontWeight: '500',
+    fontSize: 13,
     color: theme.colors.headingText,
   },
   itemSubtitle: {
-    fontSize: 12,
+    fontSize: 11,
     color: theme.colors.bodyText,
+    marginTop: 2,
+  },
+  dragHandle: {
+    paddingRight: theme.spacing(1.5),
   },
 });
 

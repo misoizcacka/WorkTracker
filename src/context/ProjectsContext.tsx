@@ -52,6 +52,7 @@ export interface Project {
   photos: string[]; // Supabase URLs
   explanation: string;
   color: string;
+  check_in_radius: number; // meters, default 150
 }
 
 export interface ProjectMessage {
@@ -91,6 +92,7 @@ const mapProjectRecord = (projectRecord: any): Project => ({
   photos: (projectRecord.project_photos || []).map((photo: { url: string }) => photo.url),
   lastModified: projectRecord.updated_at || projectRecord.created_at,
   location: { latitude: projectRecord.latitude, longitude: projectRecord.longitude },
+  check_in_radius: projectRecord.check_in_radius ?? 150,
 });
 
 // --------- PROVIDER COMPONENT --------- //
@@ -193,6 +195,7 @@ export function ProjectsProvider({ children }: { children: React.ReactNode }) {
         latitude_in: projectData.location.latitude,
         longitude_in: projectData.location.longitude,
         photo_urls_in: uploadedPhotoUrls,
+        check_in_radius_in: projectData.check_in_radius ?? 150,
       });
       if (rpcError) throw new Error(`Failed to create project: ${rpcError.message}`);
       // After creating, we should probably refetch to keep the list consistent
@@ -226,6 +229,7 @@ export function ProjectsProvider({ children }: { children: React.ReactNode }) {
           color: projectData.color,
           latitude: projectData.location.latitude,
           longitude: projectData.location.longitude,
+          check_in_radius: projectData.check_in_radius ?? 150,
         })
         .eq('id', projectId);
 

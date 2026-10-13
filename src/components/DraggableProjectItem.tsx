@@ -13,17 +13,6 @@ type DraggableProjectItemProps = {
   onPress: (project: Project) => void;
 };
 
-function hexToRgba(hex: string, alpha: number) {
-  if (!/^#([A-Fa-f0-9]{3}){1,2}$/.test(hex)) return `rgba(0,0,0,${alpha})`;
-  let c = hex.substring(1).split('');
-  if (c.length === 3) c = [c[0], c[0], c[1], c[1], c[2], c[2]];
-  const num = parseInt(c.join(''), 16);
-  const r = (num >> 16) & 255;
-  const g = (num >> 8) & 255;
-  const b = num & 255;
-  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-}
-
 const DraggableProjectItem: React.FC<DraggableProjectItemProps> = ({
   item,
   index,
@@ -31,13 +20,20 @@ const DraggableProjectItem: React.FC<DraggableProjectItemProps> = ({
   onPress,
 }) => {
   const itemContent = (
-    <View style={[styles.container, { backgroundColor: hexToRgba(item.color, 0.1) }, isSelected && styles.selected]}>
-      <View style={[styles.colorIndicator, { backgroundColor: item.color }]} />
+    <View style={[styles.container, isSelected && styles.selected]}>
+      <View style={[styles.colorBar, { backgroundColor: item.color || theme.colors.secondary }]} />
       <View style={styles.itemInfo}>
-        <Text style={styles.itemName} fontType="medium">{item.name}</Text>
-        <Text style={styles.itemSubtitle} fontType="regular">{item.address}</Text>
+        <Text style={styles.itemName} fontType="medium" numberOfLines={1}>{item.name}</Text>
+        {item.address ? (
+          <Text style={styles.itemSubtitle} fontType="regular" numberOfLines={1}>{item.address}</Text>
+        ) : null}
       </View>
-      {isSelected && <Ionicons name="checkmark-circle" size={20} color={theme.colors.primary} />}
+      <Ionicons
+        name="menu-outline"
+        size={16}
+        color={theme.colors.disabledText}
+        style={styles.dragHandle}
+      />
     </View>
   );
 
@@ -94,36 +90,45 @@ const DraggableProjectItem: React.FC<DraggableProjectItemProps> = ({
 
 const styles = StyleSheet.create({
   container: {
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderColor: theme.colors.borderColor,
     flexDirection: 'row',
     alignItems: 'center',
-    padding: theme.spacing(1.5),
+    backgroundColor: theme.colors.cardBackground,
     borderRadius: theme.radius.md,
+    borderWidth: 1,
+    borderColor: theme.colors.borderColor,
+    marginBottom: theme.spacing(1),
+    overflow: 'hidden',
   },
   selected: {
+    borderColor: theme.colors.primary,
     backgroundColor: theme.colors.primaryMuted,
   },
   dragging: {
-    opacity: 0.8,
+    opacity: 0.9,
     ...theme.shadow.soft,
   },
-  colorIndicator: {
-    width: 30,
-    height: 30,
-    borderRadius: theme.radius.sm,
-    marginRight: theme.spacing(1.5),
+  colorBar: {
+    width: 4,
+    alignSelf: 'stretch',
+    borderTopLeftRadius: theme.radius.md,
+    borderBottomLeftRadius: theme.radius.md,
   },
   itemInfo: {
     flex: 1,
+    paddingVertical: theme.spacing(1.25),
+    paddingHorizontal: theme.spacing(1.5),
   },
   itemName: {
-    fontWeight: '500',
+    fontSize: 13,
     color: theme.colors.headingText,
   },
   itemSubtitle: {
-    fontSize: 12,
+    fontSize: 11,
     color: theme.colors.bodyText,
+    marginTop: 2,
+  },
+  dragHandle: {
+    paddingRight: theme.spacing(1.5),
   },
 });
 
