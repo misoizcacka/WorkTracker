@@ -811,28 +811,24 @@ export default function Home() {
           {!stableCheckedIn && relevantAssignment && targetProjectLocation && (
             <View style={styles.proximityCard}>
               <View style={styles.proximityTopRow}>
-                {/* Left: status */}
-                <View style={styles.proximityStatusBlock}>
-                  <View style={[styles.proximityDot, { backgroundColor: proximityColor }]} />
-                  <Text style={[styles.proximityStatusText, { color: proximityColor }]} fontType="medium">
-                    {isNearby
-                      ? (t('worker.home.statusReady') || 'Ready to check in')
-                      : !locationReady
-                        ? (t('worker.home.locating') || 'Getting location...')
-                        : (t('worker.home.statusAway') || 'Not on site')}
-                  </Text>
-                </View>
-                {/* Right: distance number */}
-                {!isNearby && locationReady && distance !== null && (
-                  <Text style={styles.proximityDistance} fontType="bold">
+                {/* Left: status label */}
+                <Text style={[styles.proximityStatusText, { color: proximityColor }]} fontType="medium">
+                  {isNearby
+                    ? (t('worker.home.statusReady') || 'Ready to check in')
+                    : !locationReady
+                      ? (t('worker.home.locating') || 'Getting location...')
+                      : (t('worker.home.statusAway') || 'Not on site')}
+                </Text>
+                {/* Right: distance OR checkmark */}
+                {!isNearby && locationReady && distance !== null ? (
+                  <Text style={[styles.proximityDistance, { color: proximityColor }]} fontType="bold">
                     {distance > 1000
-                      ? `${(distance / 1000).toFixed(1)}km`
-                      : `${Math.round(distance)}m`}
+                      ? `${(distance / 1000).toFixed(1)} km`
+                      : `${Math.round(distance)} m`}
                   </Text>
-                )}
-                {isNearby && (
-                  <Ionicons name="checkmark-circle" size={20} color={theme.colors.success} />
-                )}
+                ) : isNearby ? (
+                  <Ionicons name="checkmark-circle" size={22} color={theme.colors.success} />
+                ) : null}
               </View>
               {/* Progress bar */}
               <View style={styles.proximityBarTrack}>
@@ -841,6 +837,13 @@ export default function Home() {
                   backgroundColor: proximityColor,
                 }]} />
               </View>
+              {!isNearby && locationReady && (
+                <Text style={styles.proximityHint}>
+                  {`${t('worker.home.checkInRadius') || 'Check-in zone'}: ${relevantRadius}m`}
+                </Text>
+              )}
+            </View>
+          )}
               {!isNearby && locationReady && (
                 <Text style={styles.proximityHint}>
                   {`${t('worker.home.checkInRadius') || 'Check-in zone'}: ${relevantRadius}m`}
@@ -1118,25 +1121,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
   },
-  proximityStatusBlock: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    flex: 1,
-  },
-  proximityDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    flexShrink: 0,
-  },
   proximityStatusText: {
-    fontSize: theme.fontSizes.sm,
+    fontSize: theme.fontSizes.md,
     flex: 1,
   },
   proximityDistance: {
     fontSize: 22,
-    color: theme.colors.headingText,
     letterSpacing: -0.5,
   },
   proximityBarTrack: {
