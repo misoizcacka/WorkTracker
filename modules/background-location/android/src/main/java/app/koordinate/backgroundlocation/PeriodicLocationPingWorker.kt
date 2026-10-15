@@ -1,4 +1,4 @@
-package app.koord.backgroundlocation
+package app.koordinate.backgroundlocation
 
 import android.Manifest
 import android.content.Context

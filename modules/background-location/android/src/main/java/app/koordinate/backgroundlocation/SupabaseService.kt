@@ -1,4 +1,4 @@
-package app.koord.backgroundlocation
+package app.koordinate.backgroundlocation
 
 import android.content.Context
 import android.net.ConnectivityManager

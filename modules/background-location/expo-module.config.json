@@ -5,6 +5,6 @@
     "appDelegateSubscribers": ["BackgroundLocationAppDelegateSubscriber"]
   },
   "android": {
-    "modules": ["app.koord.backgroundlocation.BackgroundLocationModule"]
+    "modules": ["app.koordinate.backgroundlocation.BackgroundLocationModule"]
   }
 }

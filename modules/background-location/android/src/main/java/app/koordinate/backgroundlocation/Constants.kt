@@ -1,4 +1,4 @@
-package app.koord.backgroundlocation
+package app.koordinate.backgroundlocation
 
 object Constants {
     const val ACTIVE_TRACKING_INTERVAL_MS = 2 * 60 * 1000L   // 2 min — worker outside geofence, traveling
@@ -29,6 +29,6 @@ object Constants {
     const val NOTIFICATION_CHANNEL_NAME = "WorkHours Tracker Location"
 
     // Intent Actions for Service Control
-    const val ACTION_START_ACTIVE_TRACKING = "app.koord.backgroundlocation.ACTION_START_ACTIVE_TRACKING"
-    const val ACTION_STOP_ACTIVE_TRACKING = "app.koord.backgroundlocation.ACTION_STOP_ACTIVE_TRACKING"
+    const val ACTION_START_ACTIVE_TRACKING = "app.koordinate.backgroundlocation.ACTION_START_ACTIVE_TRACKING"
+    const val ACTION_STOP_ACTIVE_TRACKING = "app.koordinate.backgroundlocation.ACTION_STOP_ACTIVE_TRACKING"
 }

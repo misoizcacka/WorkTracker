@@ -27,10 +27,10 @@
         ],
         "ITSAppUsesNonExemptEncryption": false,
         "BGTaskSchedulerPermittedIdentifiers": [
-          "app.koord.location.refresh"
+          "app.koordinate.location.refresh"
         ]
       },
-      "bundleIdentifier": "app.koord"
+      "bundleIdentifier": "app.koordinate"
     },
     "android": {
       "adaptiveIcon": {
@@ -52,7 +52,7 @@
           "serviceType": "location"
         }
       ],
-      "package": "app.koord"
+      "package": "app.koordinate"
     },
     "web": {
       "favicon": "./assets/favicon.png",
