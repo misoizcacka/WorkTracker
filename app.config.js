@@ -5,6 +5,7 @@ const googleMapsKey = process.env.EXPO_PUBLIC_GOOGLE_MAPS_KEY || '';
 
 module.exports = () => {
   return {
+    expo: {
     name: 'Koordinate',
     slug: 'Koord',
     owner: 'misoizcacka',
@@ -84,6 +85,7 @@ module.exports = () => {
       appDomain,
       appStoreUrl,
       playStoreUrl,
+    },
     },
   };
 };
