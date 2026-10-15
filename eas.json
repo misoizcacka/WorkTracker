@@ -4,34 +4,52 @@
     "appVersionSource": "remote"
   },
   "build": {
+    "base": {
+      "android": {
+        "image": "sdk-57"
+      }
+    },
     "development": {
+      "extends": "base",
       "developmentClient": true,
       "distribution": "internal",
       "ios": {
         "simulator": true
       },
-      "android": {
-        "image": "sdk-57"
+      "env": {
+        "EXPO_PUBLIC_SUPABASE_URL": "https://ofivipdtbweijzywpytd.supabase.co",
+        "EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY": "sb_publishable_aV245HX9cDMwYIMbXuvgAw_NHBGt7pA",
+        "EXPO_PUBLIC_APP_DOMAIN": "koordinate.app",
+        "EXPO_PUBLIC_PLAY_STORE_URL": "https://play.google.com/store/apps/details?id=app.koord",
+        "EXPO_PUBLIC_APP_STORE_URL": "https://apps.apple.com/app/id0000000000",
+        "EXPO_PUBLIC_APP_ENV": "development"
       }
     },
     "preview": {
+      "extends": "base",
       "distribution": "internal",
       "android": {
-        "buildType": "apk",
-        "image": "sdk-57"
+        "buildType": "apk"
+      },
+      "env": {
+        "EXPO_PUBLIC_SUPABASE_URL": "https://ofivipdtbweijzywpytd.supabase.co",
+        "EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY": "sb_publishable_aV245HX9cDMwYIMbXuvgAw_NHBGt7pA",
+        "EXPO_PUBLIC_APP_DOMAIN": "koordinate.app",
+        "EXPO_PUBLIC_PLAY_STORE_URL": "https://play.google.com/store/apps/details?id=app.koord",
+        "EXPO_PUBLIC_APP_STORE_URL": "https://apps.apple.com/app/id0000000000",
+        "EXPO_PUBLIC_APP_ENV": "preview"
       }
     },
     "production": {
+      "extends": "base",
       "autoIncrement": true,
-      "android": {
-        "image": "sdk-57"
-      },
       "env": {
         "EXPO_PUBLIC_SUPABASE_URL": "https://mjbldhhcogspurzjucfc.supabase.co",
         "EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY": "sb_publishable_HJmicFu3JWyNhPS8KCFwJg_tk84Y-0p",
         "EXPO_PUBLIC_APP_DOMAIN": "koordinate.app",
         "EXPO_PUBLIC_PLAY_STORE_URL": "https://play.google.com/store/apps/details?id=app.koord",
-        "EXPO_PUBLIC_APP_STORE_URL": "https://apps.apple.com/app/id0000000000"
+        "EXPO_PUBLIC_APP_STORE_URL": "https://apps.apple.com/app/id0000000000",
+        "EXPO_PUBLIC_APP_ENV": "production"
       }
     }
   },
