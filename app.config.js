@@ -6,7 +6,7 @@ const googleMapsKey = process.env.EXPO_PUBLIC_GOOGLE_MAPS_KEY || '';
 module.exports = () => {
   return {
     name: 'Koordinate',
-    slug: 'koordinate',
+    slug: 'Koord',
     owner: 'misoizcacka',
     scheme: 'koordinate',
     version: '1.0.0',
