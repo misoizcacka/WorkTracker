@@ -37,7 +37,6 @@
         "foregroundImage": "./assets/koordinateappicon.png",
         "backgroundColor": "#000000"
       },
-      "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
       "permissions": [
         "android.permission.RECORD_AUDIO",
@@ -45,12 +44,6 @@
         "android.permission.ACCESS_COARSE_LOCATION",
         "android.permission.ACCESS_FINE_LOCATION",
         "android.permission.ACCESS_BACKGROUND_LOCATION"
-      ],
-      "foregroundServices": [
-        {
-          "taskName": "LocationTracking",
-          "serviceType": "location"
-        }
       ],
       "package": "app.koordinate"
     },
