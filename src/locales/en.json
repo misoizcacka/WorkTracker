@@ -272,6 +272,7 @@
       "scheduleUpdated": "Schedule Updated",
       "scheduleUpdatedMsg": "Your assignments changed. Review today's schedule and try checking in again.",
       "sessionStarted": "Started {{time}}",
+      "timeElapsed": "time elapsed",
       "sessionDuration": "{{hours}}h {{minutes}}m"
     },
     "account": {
