@@ -631,16 +631,7 @@ export default function Home() {
     }
   };
 
-  if (locationPermission === null) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={theme.colors.primary} />
-        <Text style={styles.loadingText}>{t('worker.home.checkingPermissions')}</Text>
-      </View>
-    );
-  }
-
-  if (locationPermission !== 'granted') {
+  if (locationPermission !== null && locationPermission !== 'granted') {
     return (
       <View style={styles.centered}>
         <Ionicons name="location-outline" size={64} color={theme.colors.primary} />
