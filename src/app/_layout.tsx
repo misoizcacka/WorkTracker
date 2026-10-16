@@ -267,7 +267,7 @@ export default function RootLayout() {
     }, [user, segments, isLoading, isCompanyIdLoading, userRole, userCompanyId, isCompanyDetailsComplete]);
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: theme.colors.pageBackground }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: theme.colors.pageBackground }} edges={['top']}>
       <StatusBar style="dark" translucent backgroundColor="transparent" />
       <Stack screenOptions={{
         headerShown: false,

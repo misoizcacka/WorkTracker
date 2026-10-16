@@ -44,7 +44,6 @@ function ProtectedWorkerLayout() {
 
   return (
     <Tabs
-      safeAreaInsets={{ bottom: 0 }}
       screenOptions={{
         headerShown: false,
         tabBarActiveTintColor: theme.colors.primary,
