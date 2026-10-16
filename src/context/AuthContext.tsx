@@ -380,6 +380,9 @@ export function SessionProvider(props: React.PropsWithChildren<{}>) {
       setIsCompanyDetailsComplete(false);
       setUserRole(null);
       await setStorageItemAsync('biometricUser', null);
+      await SecureStore.deleteItemAsync('worker_auth_credentials');
+      await SecureStore.deleteItemAsync('device_token');
+      await SecureStore.deleteItemAsync('device_secret');
     },
     session,
     user,
