@@ -1,4 +1,4 @@
-import React, { useContext, useState } from 'react';
+import React, { useContext, useRef, useState } from 'react';
 import { ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -17,6 +17,7 @@ export default function JoinIndexScreen() {
   const [inviteCode, setInviteCode] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const scrollRef = useRef<ScrollView>(null);
 
   const handleContinueWithCode = async () => {
     const normalizedCode = normalizeInviteCode(inviteCode);
@@ -47,12 +48,14 @@ export default function JoinIndexScreen() {
     <AnimatedScreen>
       <KeyboardAvoidingView
         style={{ flex: 1 }}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        behavior="padding"
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 30}
       >
         <View style={styles.header}>
           <Logo />
         </View>
         <ScrollView
+          ref={scrollRef}
           contentContainerStyle={styles.container}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
@@ -78,6 +81,7 @@ export default function JoinIndexScreen() {
               style={styles.input}
               value={inviteCode}
               onChangeText={(value) => setInviteCode(normalizeInviteCode(value))}
+              onFocus={() => setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100)}
               placeholder="AB7K92"
               autoCapitalize="characters"
               autoCorrect={false}
