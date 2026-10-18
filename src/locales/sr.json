@@ -1,4 +1,4 @@
-﻿{
+{
   "login": {
     "appName": "WorkTracker",
     "loginHeading": "Prijava",
@@ -6,13 +6,13 @@
     "email": "Email",
     "password": "Lozinka",
     "continueButton": "Nastavi",
-    "termsText": "Klikom na nastavi slaÅ¾ete se sa naÅ¡im",
-    "termsLink": "Uslovima koriÅ¡Ä‡enja",
+    "termsText": "Klikom na nastavi slažete se sa našim",
+    "termsLink": "Uslovima korišćenja",
     "and": "i",
     "privacyLink": "Politikom privatnosti",
     "or": "ili",
-    "registerManagerButton": "Registrujte se kao menadÅ¾er",
-    "getStartedButton": "ZapoÄnite sa vaÅ¡om kompanijom"
+    "registerManagerButton": "Registrujte se kao menadžer",
+    "getStartedButton": "Započnite sa vašom kompanijom"
   },
   "signup": {
     "title": "Registracija",
@@ -23,7 +23,7 @@
     "confirmPassword": "Potvrdite lozinku",
     "signupButton": "Registrujte se",
     "loginButton": "Prijava",
-    "error": "GreÅ¡ka",
+    "error": "Greška",
     "allFieldsRequired": "Sva polja su obavezna.",
     "passwordsMismatch": "Lozinke se ne podudaraju.",
     "invalidEmail": "Molimo unesite ispravnu email adresu.",
@@ -32,22 +32,23 @@
   },
   "pricing": {
     "title": "Odaberite svoj plan",
-    "description": "Odaberite broj radnika da biste izraÄunali svoju meseÄnu pretplatu.",
-    "baseFee": "Osnovna meseÄna naknada: {fee} EUR",
+    "description": "Odaberite broj radnika da biste izračunali svoju mesečnu pretplatu.",
+    "baseFee": "Osnovna mesečna naknada: {fee} EUR",
     "perWorkerFee": "Cena po radniku: {price} EUR",
     "numberOfWorkers": "Broj radnika",
-    "totalMonthlyCost": "Ukupni meseÄni troÅ¡ak",
+    "totalMonthlyCost": "Ukupni mesečni trošak",
     "confirmButton": "Potvrdi plan",
-    "error": "GreÅ¡ka",
+    "error": "Greška",
     "invalidWorkerCount": "Molimo unesite validan broj radnika (najmanje 1)."
   },
   "payment": {
-    "title": "PlaÄ‡anje uspeÅ¡no!",
-    "description": "VaÅ¡a pretplata je uspeÅ¡no podeÅ¡ena. Sada se moÅ¾ete prijaviti u aplikaciju sa svojim novim menadÅ¾erskim nalogom.",
+    "title": "Plaćanje uspešno!",
+    "description": "Vaša pretplata je uspešno podešena. Sada se možete prijaviti u aplikaciju sa svojim novim menadžerskim nalogom.",
     "goToLoginButton": "Idi na prijavu"
   },
   "worker": {
     "home": {
       "timeElapsed": "proteklo vreme"
     }
-  },`n  "worker": { "home": { "timeElapsed": "proteklo vreme" } }`n}
+  }
+}
