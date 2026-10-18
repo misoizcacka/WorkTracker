@@ -288,7 +288,7 @@ export function InviteAcceptanceScreen({ token }: InviteAcceptanceScreenProps) {
             <View style={styles.privacyNotice}>
               <Ionicons name="location-outline" size={16} color={theme.colors.primary} style={{ marginTop: 2 }} />
               <Text style={styles.privacyNoticeText} fontType="regular">
-                Koordinate collects your GPS location in the background during active work sessions. Location data is visible to your employer and deleted after 90 days.
+                GPS location is collected in the background during active work sessions and is visible to your employer.
               </Text>
             </View>
 
@@ -328,21 +328,18 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.pageBackground,
   },
   header: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
+    paddingTop: theme.spacing(6),
+    paddingHorizontal: theme.spacing(4),
+    paddingBottom: theme.spacing(2),
     flexDirection: 'row',
     justifyContent: 'flex-start',
     alignItems: 'center',
-    paddingHorizontal: theme.spacing(4),
-    paddingVertical: theme.spacing(3),
-    zIndex: 10,
   },
   scrollContent: {
     flexGrow: 1,
     justifyContent: 'center',
     paddingHorizontal: theme.spacing(3),
-    paddingVertical: theme.spacing(4),
+    paddingBottom: theme.spacing(4),
   },
   formCard: {
     width: '100%',
@@ -350,8 +347,7 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
     padding: theme.spacing(3.5),
     borderRadius: theme.radius.xl,
-    borderWidth: 1,
-    borderColor: theme.colors.borderColor,
+    borderWidth: 0,
   },
   formIntro: {
     alignItems: 'center',
