@@ -1,5 +1,5 @@
 import React, { useContext, useState } from 'react';
-import { ActivityIndicator, StyleSheet, TextInput, View } from 'react-native';
+import { ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import AnimatedScreen from '../../components/AnimatedScreen';
@@ -45,11 +45,18 @@ export default function JoinIndexScreen() {
 
   return (
     <AnimatedScreen>
-      <View style={styles.screen}>
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      >
         <View style={styles.header}>
           <Logo />
         </View>
-        <View style={styles.container}>
+        <ScrollView
+          contentContainerStyle={styles.container}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
           <Card style={styles.card}>
             <Text style={styles.title} fontType="bold">Join Your Company</Text>
             <Text style={styles.subtitle} fontType="regular">
@@ -92,29 +99,23 @@ export default function JoinIndexScreen() {
               )}
             </Button>
           </Card>
-        </View>
-      </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </AnimatedScreen>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    backgroundColor: theme.colors.pageBackground,
-  },
   header: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
     paddingHorizontal: theme.spacing(4),
-    paddingVertical: theme.spacing(3),
-    zIndex: 10,
+    paddingTop: theme.spacing(6),
+    paddingBottom: theme.spacing(2),
   },
   container: {
-    flex: 1,
+    flexGrow: 1,
     justifyContent: 'center',
     padding: theme.spacing(3),
+    paddingBottom: theme.spacing(6),
   },
   card: {
     maxWidth: 560,
@@ -122,8 +123,7 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
     padding: theme.spacing(3.5),
     borderRadius: theme.radius.xl,
-    borderWidth: 1,
-    borderColor: theme.colors.borderColor,
+    borderWidth: 0,
   },
   title: {
     fontSize: 24,
