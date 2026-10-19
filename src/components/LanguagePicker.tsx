@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import {
   View,
   TouchableOpacity,
@@ -6,6 +6,7 @@ import {
   Modal,
   Platform,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import { Text } from './Themed';
@@ -13,13 +14,13 @@ import { theme } from '../theme';
 import { SUPPORTED_LANGUAGES, changeLanguage, type LanguageCode } from '../i18n';
 
 const FLAGS: Record<LanguageCode, string> = {
-  en: '🇬🇧',
-  de: '🇩🇪',
-  fr: '🇫🇷',
-  es: '🇪🇸',
-  nl: '🇳🇱',
-  pl: '🇵🇱',
-  sv: '🇸🇪',
+  en: 'ðŸ‡¬ðŸ‡§',
+  de: 'ðŸ‡©ðŸ‡ª',
+  fr: 'ðŸ‡«ðŸ‡·',
+  es: 'ðŸ‡ªðŸ‡¸',
+  nl: 'ðŸ‡³ðŸ‡±',
+  pl: 'ðŸ‡µðŸ‡±',
+  sv: 'ðŸ‡¸ðŸ‡ª',
 };
 
 interface LanguagePickerProps {
@@ -29,6 +30,7 @@ interface LanguagePickerProps {
 export function LanguagePicker({ variant = 'default' }: LanguagePickerProps) {
   const { i18n } = useTranslation();
   const [open, setOpen] = useState(false);
+  const insets = useSafeAreaInsets();
 
   const currentCode = (SUPPORTED_LANGUAGES.some(l => l.code === i18n.language)
     ? i18n.language
@@ -73,7 +75,7 @@ export function LanguagePicker({ variant = 'default' }: LanguagePickerProps) {
           activeOpacity={1}
           onPress={() => setOpen(false)}
         >
-          <View style={styles.dropdown}>
+          <View style={[styles.dropdown, { marginBottom: theme.spacing(2) + insets.bottom }]}>
             {SUPPORTED_LANGUAGES.map(lang => {
               const isActive = lang.code === currentCode;
               return (
@@ -152,6 +154,7 @@ const styles = StyleSheet.create({
     borderColor: theme.colors.borderColor,
     overflow: 'hidden',
     margin: theme.spacing(2),
+    
     ...Platform.select({
       web: {
         minWidth: 180,
@@ -183,3 +186,5 @@ const styles = StyleSheet.create({
     color: theme.colors.primary,
   },
 });
+
+
