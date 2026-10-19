@@ -772,7 +772,7 @@ export default function Home() {
                 style={styles.checkOutButton}
               >
                 <Ionicons name="stop-circle-outline" size={18} color="#fff" />
-                <Text style={styles.checkOutButtonText} fontType="bold">{t('worker.home.checkOut')}</Text>
+                <Text style={styles.checkOutButtonText} fontType="regular">{t('worker.home.checkOut')}</Text>
               </TouchableOpacity>
             )}
           </View>
@@ -880,5 +880,6 @@ const styles = StyleSheet.create({
   pageTitle: { fontSize: theme.fontSizes.xl, color: theme.colors.headingText, marginTop: theme.spacing(2), textAlign: 'center' },
   pageSubtitle: { fontSize: theme.fontSizes.md, color: theme.colors.bodyText, marginTop: 6, textAlign: 'center' },
 });
+
 
 
