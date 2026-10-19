@@ -39,6 +39,7 @@ module.exports = () => {
         foregroundImage: './assets/koordinateappicon.png',
         backgroundColor: '#000000',
       },
+      softwareKeyboardLayoutMode: 'pan',
       predictiveBackGestureEnabled: false,
       permissions: [
         'android.permission.RECORD_AUDIO',
@@ -89,4 +90,5 @@ module.exports = () => {
     },
   };
 };
+
 
