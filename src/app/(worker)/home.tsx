@@ -537,17 +537,7 @@ export default function Home() {
   };
 
   const handleCheckOut = async () => {
-    if (!activeWorkSession) return;
-    // Grab GPS first â€” before showing the modal so there's no delay after confirm
-    let currentLocation;
-    try {
-      const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
-      currentLocation = { latitude: loc.coords.latitude, longitude: loc.coords.longitude };
-    } catch (err) { return; }
-
-    // Store location and show break duration modal
-    pendingCheckoutLocationRef.current = currentLocation;
-    setIsBreakModalVisible(true);
+    if (!activeWorkSession) return;`n    setIsBreakModalVisible(true);`n    // Get GPS in background while user fills break duration`n    Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High })`n      .then(loc => {`n        pendingCheckoutLocationRef.current = { latitude: loc.coords.latitude, longitude: loc.coords.longitude };`n      })`n      .catch(() => pendingCheckoutLocationRef.current = null);
   };
 
   const handleBreakConfirm = async (breakMinutes: number) => {
@@ -880,6 +870,7 @@ const styles = StyleSheet.create({
   pageTitle: { fontSize: theme.fontSizes.xl, color: theme.colors.headingText, marginTop: theme.spacing(2), textAlign: 'center' },
   pageSubtitle: { fontSize: theme.fontSizes.md, color: theme.colors.bodyText, marginTop: 6, textAlign: 'center' },
 });
+
 
 
 
