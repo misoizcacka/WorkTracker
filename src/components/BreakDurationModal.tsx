@@ -6,7 +6,6 @@ import {
   TouchableOpacity,
   TextInput,
   ActivityIndicator,
-  KeyboardAvoidingView,
   Platform,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -94,10 +93,7 @@ const BreakDurationModal: React.FC<BreakDurationModalProps> = ({
       visible={visible}
       onRequestClose={onCancel}
     >
-      <KeyboardAvoidingView
-        style={styles.overlay}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      >
+      <View style={styles.overlay}>
         <View style={styles.container}>
           <Card style={styles.card}>
             {/* Header */}
@@ -206,7 +202,7 @@ const BreakDurationModal: React.FC<BreakDurationModalProps> = ({
             </View>
           </Card>
         </View>
-      </KeyboardAvoidingView>
+      </View>
     </Modal>
   );
 };
