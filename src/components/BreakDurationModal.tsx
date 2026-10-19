@@ -177,7 +177,7 @@ const BreakDurationModal: React.FC<BreakDurationModalProps> = ({
                     ]}
                     fontType="bold"
                   >
-                    {isValid && payableMinutes !== null ? formatDuration(payableMinutes) : 'â€”'}
+                    {isValid && payableMinutes !== null ? formatDuration(payableMinutes) : '0h 0m'}
                   </Text>
                 </View>
               </View>
