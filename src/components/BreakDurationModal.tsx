@@ -10,7 +10,6 @@ import {
   Platform,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Text } from './Themed';
 import { Card } from './Card';
@@ -404,5 +403,6 @@ const styles = StyleSheet.create({
 });
 
 export default BreakDurationModal;
+
 
 
