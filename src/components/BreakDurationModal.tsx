@@ -43,8 +43,7 @@ const BreakDurationModal: React.FC<BreakDurationModalProps> = ({
   isLoading = false,
 }) => {
   const [inputValue, setInputValue] = useState(String(DEFAULT_BREAK_MINUTES));
-  const insets = useSafeAreaInsets();
-  const insets = useSafeAreaInsets();
+    const insets = useSafeAreaInsets();
 
   // Reset to default each time modal opens
   useEffect(() => {
@@ -403,6 +402,7 @@ const styles = StyleSheet.create({
 });
 
 export default BreakDurationModal;
+
 
 
 
