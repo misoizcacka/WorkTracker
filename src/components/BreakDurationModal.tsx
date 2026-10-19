@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+﻿import React, { useState, useEffect, useMemo } from 'react';
 import {
   Modal,
   View,
@@ -9,6 +9,8 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Text } from './Themed';
 import { Card } from './Card';
@@ -42,6 +44,8 @@ const BreakDurationModal: React.FC<BreakDurationModalProps> = ({
   isLoading = false,
 }) => {
   const [inputValue, setInputValue] = useState(String(DEFAULT_BREAK_MINUTES));
+  const insets = useSafeAreaInsets();
+  const insets = useSafeAreaInsets();
 
   // Reset to default each time modal opens
   useEffect(() => {
@@ -71,7 +75,7 @@ const BreakDurationModal: React.FC<BreakDurationModalProps> = ({
   const isValid = validationError === null && breakMinutes !== null;
 
   const handleInputChange = (text: string) => {
-    // Strip non-numeric characters — only whole numbers allowed
+    // Strip non-numeric characters â€” only whole numbers allowed
     const cleaned = text.replace(/[^0-9]/g, '');
     setInputValue(cleaned);
   };
@@ -163,7 +167,7 @@ const BreakDurationModal: React.FC<BreakDurationModalProps> = ({
                 <View style={styles.summaryRow}>
                   <Text style={styles.summaryLabel}>Break time</Text>
                   <Text style={styles.summaryValue} fontType="medium">
-                    {breakMinutes !== null && breakMinutes >= 0 ? formatDuration(breakMinutes) : '—'}
+                    {breakMinutes !== null && breakMinutes >= 0 ? formatDuration(breakMinutes) : 'â€”'}
                   </Text>
                 </View>
                 <View style={[styles.summaryRow, styles.summaryRowPayable]}>
@@ -175,14 +179,14 @@ const BreakDurationModal: React.FC<BreakDurationModalProps> = ({
                     ]}
                     fontType="bold"
                   >
-                    {isValid && payableMinutes !== null ? formatDuration(payableMinutes) : '—'}
+                    {isValid && payableMinutes !== null ? formatDuration(payableMinutes) : 'â€”'}
                   </Text>
                 </View>
               </View>
             </View>
 
             {/* Footer */}
-            <View style={styles.footer}>
+            <View style={[styles.footer, { paddingBottom: theme.spacing(3) + insets.bottom }]}>
               <TouchableOpacity
                 style={styles.cancelButton}
                 onPress={onCancel}
@@ -400,3 +404,4 @@ const styles = StyleSheet.create({
 });
 
 export default BreakDurationModal;
+

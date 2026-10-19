@@ -800,7 +800,7 @@ export default function Home() {
               </View>
               {!isNearby && locationReady && (
                 <Text style={styles.proximityHint}>
-                  {`${t('worker.home.checkInRadius') || 'Check-in zone'}: ${relevantRadius}m`}
+                  {`${'Check-in zone'}: ${relevantRadius}m`}
                 </Text>
               )}
             </View>
@@ -880,3 +880,4 @@ const styles = StyleSheet.create({
   pageTitle: { fontSize: theme.fontSizes.xl, color: theme.colors.headingText, marginTop: theme.spacing(2), textAlign: 'center' },
   pageSubtitle: { fontSize: theme.fontSizes.md, color: theme.colors.bodyText, marginTop: 6, textAlign: 'center' },
 });
+
