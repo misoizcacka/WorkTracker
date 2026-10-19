@@ -70,12 +70,11 @@ export function LanguagePicker({ variant = 'default' }: LanguagePickerProps) {
         animationType="fade"
         onRequestClose={() => setOpen(false)}
       >
-        <TouchableOpacity
-          style={styles.backdrop}
+        <TouchableOpacity style={[styles.backdrop, { paddingBottom: insets.bottom }]}
           activeOpacity={1}
           onPress={() => setOpen(false)}
         >
-          <View style={[styles.dropdown, { marginBottom: theme.spacing(2) + insets.bottom }]}>
+          <View style={styles.dropdown}>
             {SUPPORTED_LANGUAGES.map(lang => {
               const isActive = lang.code === currentCode;
               return (
@@ -186,5 +185,6 @@ const styles = StyleSheet.create({
     color: theme.colors.primary,
   },
 });
+
 
 
