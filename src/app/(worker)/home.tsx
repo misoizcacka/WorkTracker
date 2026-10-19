@@ -537,7 +537,14 @@ export default function Home() {
   };
 
   const handleCheckOut = async () => {
-    if (!activeWorkSession) return;`n    setIsBreakModalVisible(true);`n    // Get GPS in background while user fills break duration`n    Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High })`n      .then(loc => {`n        pendingCheckoutLocationRef.current = { latitude: loc.coords.latitude, longitude: loc.coords.longitude };`n      })`n      .catch(() => pendingCheckoutLocationRef.current = null);
+    if (!activeWorkSession) return;
+    setIsBreakModalVisible(true);
+    // Get GPS in background while user fills break duration
+    Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High })
+      .then(loc => {
+        pendingCheckoutLocationRef.current = { latitude: loc.coords.latitude, longitude: loc.coords.longitude };
+      })
+      .catch(() => pendingCheckoutLocationRef.current = null);
   };
 
   const handleBreakConfirm = async (breakMinutes: number) => {
