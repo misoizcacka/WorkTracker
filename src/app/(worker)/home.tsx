@@ -30,7 +30,7 @@ const BATTERY_OPT_SHOWN_KEY = 'battery_opt_shown';
 
 export default function Home() {
   const { user, userCompanyId, isCompanyIdLoading, deviceToken, deviceSecret, userCompanyName, refreshUser } = useSession();
-  const { loadInitialProjects, isLoading: projectsLoading } = useProjects();
+  const { loadInitialProjects, isLoading: projectsLoading, projects } = useProjects();
   const { t } = useTranslation();
   const [currentDate, setCurrentDate] = useState(moment().format('YYYY-MM-DD'));
   const [locationPermission, setLocationPermission] = useState<Location.PermissionStatus | null>(null);
@@ -60,7 +60,7 @@ export default function Home() {
 
   const { processedAssignments, loadAssignmentsForDate, loadWorkSessionsForDate, isLoading: assignmentsLoading, activeWorkSession, loadedWorkSessions, startWorkSession, endWorkSession, lastCheckoutAssignmentId, isOffline, isSyncingToCloud } = useAssignments();
 
-  const isDataLoading = assignmentsLoading || projectsLoading;
+  const isDataLoading = assignmentsLoading || projectsLoading || projects.length === 0;
   const DEFAULT_RADIUS = 150; // meters â€” fallback when no per-project radius is set
 
   const checkedIn = !!activeWorkSession;
