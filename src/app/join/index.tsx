@@ -1,4 +1,4 @@
-import React, { useContext, useRef, useState } from 'react';
+﻿import React, { useContext, useRef, useState } from 'react';
 import { ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -48,8 +48,7 @@ export default function JoinIndexScreen() {
     <AnimatedScreen>
       <KeyboardAvoidingView
         style={{ flex: 1 }}
-        behavior="padding"
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 30}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
         <View style={styles.header}>
           <Logo />
@@ -187,3 +186,4 @@ const styles = StyleSheet.create({
     fontSize: 15,
   },
 });
+
