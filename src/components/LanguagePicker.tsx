@@ -1,27 +1,14 @@
 ﻿import React, { useState } from 'react';
-import {
-  View,
-  TouchableOpacity,
-  StyleSheet,
-  Modal,
-  Platform,
-} from 'react-native';
+import { View, TouchableOpacity, StyleSheet, Modal, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
+import CountryFlag from 'react-native-country-flag';
 import { Text } from './Themed';
 import { theme } from '../theme';
 import { SUPPORTED_LANGUAGES, changeLanguage, type LanguageCode } from '../i18n';
 
-const FLAGS: Record<LanguageCode, string> = {
-  en: 'ðŸ‡¬ðŸ‡§',
-  de: 'ðŸ‡©ðŸ‡ª',
-  fr: 'ðŸ‡«ðŸ‡·',
-  es: 'ðŸ‡ªðŸ‡¸',
-  nl: 'ðŸ‡³ðŸ‡±',
-  pl: 'ðŸ‡µðŸ‡±',
-  sv: 'ðŸ‡¸ðŸ‡ª',
-};
+const FLAG_CODES: Record<LanguageCode, string> = { en: 'GB', de: 'DE', fr: 'FR', es: 'ES', nl: 'NL', pl: 'PL', sv: 'SE' };
 
 interface LanguagePickerProps {
   variant?: 'default' | 'row';
@@ -50,7 +37,7 @@ export function LanguagePicker({ variant = 'default' }: LanguagePickerProps) {
         onPress={() => setOpen(true)}
         activeOpacity={0.7}
       >
-        <Text style={styles.flag}>{FLAGS[currentCode]}</Text>
+        <Text style={styles.flag}><CountryFlag isoCode={FLAG_CODES[currentCode]} size={14} /></Text>
         <Text
           style={variant === 'row' ? styles.triggerRowLabel : styles.triggerLabel}
           fontType="regular"
@@ -85,7 +72,7 @@ export function LanguagePicker({ variant = 'default' }: LanguagePickerProps) {
                   activeOpacity={0.7}
                 >
                   <View style={styles.optionLeft}>
-                    <Text style={styles.flag}>{FLAGS[lang.code as LanguageCode]}</Text>
+                    <Text style={styles.flag}><CountryFlag isoCode={FLAG_CODES[lang.code as LanguageCode]} size={14} /></Text>
                     <Text
                       style={[styles.optionLabel, isActive && styles.optionLabelActive]}
                       fontType={isActive ? 'medium' : 'regular'}
@@ -127,10 +114,7 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: theme.colors.headingText,
   },
-  flag: {
-    fontSize: 14,
-    lineHeight: 18,
-  },
+  flag: { width: 14, height: 14 },
   triggerLabel: {
     fontSize: 13,
     color: theme.colors.bodyText,
@@ -185,6 +169,7 @@ const styles = StyleSheet.create({
     color: theme.colors.primary,
   },
 });
+
 
 
 
