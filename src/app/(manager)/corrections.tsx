@@ -99,42 +99,54 @@ const CorrectionsPage = () => {
 
     const handleCheckOut = async (session: WorkSession) => {
         console.log('handleCheckOut called for session:', session.id);
-        Alert.alert(
-            "Remote Check Out",
-            "Are you sure you want to end this worker's session right now?",
-            [
-                { text: "Cancel", style: "cancel" },
-                { 
-                    text: "Check Out", 
-                    onPress: async () => {
-                        console.log('Checking out session:', session.id);
-                        setCheckOutLoading(session.id);
-                        try {
-                            const now = new Date().toISOString();
-                            console.log('Setting end_time to:', now);
-                            
-                            const { data, error } = await supabase
-                                .from('work_sessions')
-                                .update({ end_time: now })
-                                .eq('id', session.id)
-                                .select();
+        
+        const confirmed = Platform.OS === 'web' 
+            ? window.confirm("Are you sure you want to end this worker's session right now?")
+            : await new Promise<boolean>((resolve) => {
+                Alert.alert(
+                    "Remote Check Out",
+                    "Are you sure you want to end this worker's session right now?",
+                    [
+                        { text: "Cancel", style: "cancel", onPress: () => resolve(false) },
+                        { text: "Check Out", onPress: () => resolve(true) }
+                    ]
+                );
+            });
 
-                            console.log('Update result:', { data, error });
-                            
-                            if (error) throw error;
-                            
-                            Alert.alert("Success", "Worker has been checked out.");
-                            await fetchSessions();
-                        } catch (err: any) {
-                            console.error('Checkout error:', err);
-                            Alert.alert("Error", err.message || 'Failed to check out worker');
-                        } finally {
-                            setCheckOutLoading(null);
-                        }
-                    }
-                }
-            ]
-        );
+        if (!confirmed) return;
+
+        console.log('Checking out session:', session.id);
+        setCheckOutLoading(session.id);
+        try {
+            const now = new Date().toISOString();
+            console.log('Setting end_time to:', now);
+            
+            const { data, error } = await supabase
+                .from('work_sessions')
+                .update({ end_time: now })
+                .eq('id', session.id)
+                .select();
+
+            console.log('Update result:', { data, error });
+            
+            if (error) throw error;
+            
+            if (Platform.OS === 'web') {
+                alert('Worker has been checked out.');
+            } else {
+                Alert.alert("Success", "Worker has been checked out.");
+            }
+            await fetchSessions();
+        } catch (err: any) {
+            console.error('Checkout error:', err);
+            if (Platform.OS === 'web') {
+                alert(`Error: ${err.message || 'Failed to check out worker'}`);
+            } else {
+                Alert.alert("Error", err.message || 'Failed to check out worker');
+            }
+        } finally {
+            setCheckOutLoading(null);
+        }
     };
 
     const handleSaveChanges = async () => {
