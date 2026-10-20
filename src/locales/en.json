@@ -1,4 +1,4 @@
-﻿{
+{
   "common": {
     "pricing": "Pricing",
     "signIn": "Sign In",
@@ -282,7 +282,9 @@
       "access": "Access",
       "accessDescription": "Use an invite code from your manager to sign in on another device.",
       "company": "Company",
-      "logOut": "Log Out",`n      "cannotSignOut": "Cannot Sign Out",`n      "checkOutFirst": "Please check out from your current work session before signing out.",
+      "logOut": "Log Out",
+      "cannotSignOut": "Cannot Sign Out",
+      "checkOutFirst": "Please check out from your current work session before signing out.",
       "version": "v{{version}}",
       "privacyPolicy": "Privacy Policy",
       "language": "Language",
