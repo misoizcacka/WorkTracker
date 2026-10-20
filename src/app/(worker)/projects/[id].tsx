@@ -24,12 +24,15 @@ import ImageCarouselModal from '../../../components/ImageCarouselModal';
 import { useProjects, ProjectMessage } from '../../../context/ProjectsContext';
 import { compressImageAsync } from '../../../utils/imageCompression';
 import moment from 'moment';
+import { useEmployeeProfile } from '../../../hooks/useEmployeeProfile';
 
 export default function ProjectDetailsScreen() {
   const { id } = useLocalSearchParams();
   const router = useRouter();
   const { projects, isLoading, getProjectMessages, sendTextMessage, sendImageMessage } = useProjects();
+  const { profile } = useEmployeeProfile();
   const project = projects.find((p) => p.id === id as string);
+  const isDisabled = profile?.status === 'disabled';
 
   const MESSAGES_PER_PAGE = 20;
 
@@ -216,6 +219,14 @@ export default function ProjectDetailsScreen() {
   return (
     <AnimatedScreen>
       <PageHeader />
+      {isDisabled && (
+        <View style={styles.disabledBanner}>
+          <Ionicons name="lock-closed-outline" size={14} color="#92400E" />
+          <Text style={styles.disabledBannerText} fontType="medium">
+            Read-only mode - Your account has been disabled
+          </Text>
+        </View>
+      )}
       <KeyboardAvoidingView
         style={styles.container}
         behavior="padding"
@@ -308,18 +319,19 @@ export default function ProjectDetailsScreen() {
             />
           )}
           <View style={styles.textInputRow}>
-            <TouchableOpacity onPress={handlePickImage} style={styles.iconButton}>
-              <Ionicons name="add-circle-outline" size={30} color={theme.colors.primary} />
+            <TouchableOpacity onPress={handlePickImage} style={styles.iconButton} disabled={isDisabled}>
+              <Ionicons name="add-circle-outline" size={30} color={isDisabled ? theme.colors.disabledText : theme.colors.primary} />
             </TouchableOpacity>
             <TextInput
-              style={[styles.input, { fontSize: theme.fontSizes.md, fontFamily: theme.font.regular }]}
+              style={[styles.input, { fontSize: theme.fontSizes.md, fontFamily: theme.font.regular }, isDisabled && styles.inputDisabled]}
               value={newMessage}
               onChangeText={setNewMessage}
-              placeholder="Type a message..."
+              placeholder={isDisabled ? "Account disabled - read only" : "Type a message..."}
               placeholderTextColor={theme.colors.disabledText}
               multiline
+              editable={!isDisabled}
             />
-            <TouchableOpacity onPress={handleSendMessage} style={styles.sendButton}>
+            <TouchableOpacity onPress={handleSendMessage} style={[styles.sendButton, isDisabled && styles.sendButtonDisabled]} disabled={isDisabled}>
               <Ionicons name="send" size={20} color="white" />
             </TouchableOpacity>
           </View>
@@ -507,6 +519,29 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 0,
+  },
+  sendButtonDisabled: {
+    backgroundColor: theme.colors.disabledText,
+    opacity: 0.5,
+  },
+  inputDisabled: {
+    backgroundColor: theme.colors.pageBackground,
+    opacity: 0.6,
+  },
+  disabledBanner: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    backgroundColor: '#FFF7ED', 
+    borderBottomWidth: 1, 
+    borderColor: '#FED7AA', 
+    paddingHorizontal: theme.spacing(3), 
+    paddingVertical: 8, 
+    gap: 6 
+  },
+  disabledBannerText: { 
+    fontSize: theme.fontSizes.sm, 
+    color: '#92400E', 
+    flex: 1 
   },
   previewList: {
     marginBottom: theme.spacing(1),

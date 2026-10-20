@@ -25,13 +25,17 @@ import { GeofenceAssignment } from 'background-location';
 import { fetchAssignmentsForWorkers } from '~/services/workerAssignments';
 import { useTranslation } from 'react-i18next';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useEmployeeProfile } from '~/hooks/useEmployeeProfile';
 
 const BATTERY_OPT_SHOWN_KEY = 'battery_opt_shown';
 
 export default function Home() {
   const { user, userCompanyId, isCompanyIdLoading, deviceToken, deviceSecret, userCompanyName, refreshUser } = useSession();
+  const { profile } = useEmployeeProfile();
   const { loadInitialProjects, isLoading: projectsLoading, projects } = useProjects();
   const { t } = useTranslation();
+  
+  const isDisabled = profile?.status === 'disabled';
   const [currentDate, setCurrentDate] = useState(moment().format('YYYY-MM-DD'));
   const [locationPermission, setLocationPermission] = useState<Location.PermissionStatus | null>(null);
   const [workerMapLocation, setWorkerMapLocation] = useState<{ latitude: number; longitude: number } | null>(null);
@@ -685,6 +689,15 @@ export default function Home() {
           </View>
         )}
 
+        {isDisabled && (
+          <View style={styles.disabledBanner}>
+            <Ionicons name="ban-outline" size={16} color="#991B1B" />
+            <Text style={styles.disabledBannerText} fontType="medium">
+              {t('worker.home.accountDisabled', { defaultValue: 'Your account has been disabled. Contact your manager for assistance.' })}
+            </Text>
+          </View>
+        )}
+
         {Platform.OS === 'ios' && stableCheckedIn && trackingGapSeconds !== null && trackingGapSeconds > 600 && (
           <View style={styles.trackingGapBanner}>
             <Ionicons name="warning-outline" size={14} color="#92400E" />
@@ -742,7 +755,7 @@ export default function Home() {
             <View style={[styles.circleOuter, stableCheckedIn ? styles.circleOuterCheckedIn : circleButtonActive ? styles.circleOuterReady : styles.circleOuterFar]}>
               <TouchableOpacity
                 onPress={stableCheckedIn ? handleCheckOut : handleCheckIn}
-                disabled={(!isNearby && !stableCheckedIn) || buttonDisabled || isActuallyProcessing}
+                disabled={isDisabled || (!isNearby && !stableCheckedIn) || buttonDisabled || isActuallyProcessing}
                 style={[styles.circleButton, stableCheckedIn ? styles.circleButtonCheckedIn : circleButtonActive ? styles.circleButtonReady : styles.circleButtonFar]}
                 activeOpacity={0.85}
               >
@@ -756,8 +769,8 @@ export default function Home() {
                     <Text style={styles.circleSubLabel}>{t('worker.home.timeElapsed') || 'time elapsed'}</Text>
                   </>
                 ) : (
-                  <Text style={[styles.circleLabel, !circleButtonActive && styles.circleLabelDisabled]} fontType="medium">
-                    {isDataLoading ? '...' : !relevantAssignment ? t('worker.home.noAssignments') : t('worker.home.checkIn')}
+                  <Text style={[styles.circleLabel, (!circleButtonActive || isDisabled) && styles.circleLabelDisabled]} fontType="medium">
+                    {isDisabled ? t('worker.home.disabled', { defaultValue: 'Disabled' }) : isDataLoading ? '...' : !relevantAssignment ? t('worker.home.noAssignments') : t('worker.home.checkIn')}
                   </Text>
                 )}
               </TouchableOpacity>
@@ -835,6 +848,8 @@ const styles = StyleSheet.create({
   dateText: { fontSize: theme.fontSizes.sm, color: theme.colors.bodyText },
   offlineBanner: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFF7ED', borderTopWidth: 1, borderBottomWidth: 1, borderColor: '#FED7AA', paddingHorizontal: theme.spacing(3), paddingVertical: 8, gap: 6 },
   offlineBannerText: { fontSize: theme.fontSizes.sm, color: '#92400E', flex: 1 },
+  disabledBanner: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FEE2E2', borderTopWidth: 1, borderBottomWidth: 1, borderColor: '#FCA5A5', paddingHorizontal: theme.spacing(3), paddingVertical: 10, gap: 8 },
+  disabledBannerText: { fontSize: 14, color: '#991B1B', flex: 1, fontWeight: '500' },
   trackingGapBanner: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFF7ED', borderTopWidth: 1, borderBottomWidth: 1, borderColor: '#FED7AA', paddingHorizontal: theme.spacing(3), paddingVertical: 8, gap: 6 },
   trackingGapBannerText: { fontSize: theme.fontSizes.sm, color: '#92400E', flex: 1 },
   homeContent: { paddingHorizontal: theme.spacing(3), gap: theme.spacing(2.5), paddingTop: theme.spacing(1) },
