@@ -1,17 +1,20 @@
 import { createClient } from '@supabase/supabase-js';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Platform } from 'react-native';
 
-// Supabase project URL and Publishable Key
-// In a production environment, these should be loaded from environment variables
-// e.g., process.env.EXPO_PUBLIC_SUPABASE_URL, process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY
-const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL!; // Using '!' to assert non-null as per Expo's env loading
-export const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY!; // Using '!' to assert non-null as per Expo's env loading
+const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL!;
+export const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY!;
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
     persistSession: true,
     storage: AsyncStorage,
     autoRefreshToken: true,
+    // On web, Supabase's navigator.locks causes a console error when the lock
+    // can't be acquired immediately on init. Known bug: github.com/supabase/supabase-js/issues/1517
+    // Workaround: bypass the LockManager on web with a simple pass-through function.
+    ...(Platform.OS === 'web' && {
+      lock: async (_name: string, _acquireTimeout: number, fn: () => Promise<unknown>) => fn(),
+    }),
   },
 });
-
