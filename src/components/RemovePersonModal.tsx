@@ -33,10 +33,10 @@ const RemovePersonModal: React.FC<RemovePersonModalProps> = ({ visible, onClose,
           <TouchableOpacity style={styles.closeButton} onPress={onClose}>
             <Ionicons name="close-circle-outline" size={24} color={theme.colors.bodyText} />
           </TouchableOpacity>
-          <Text style={styles.modalText} fontType="bold">Remove Employee</Text>
+          <Text style={styles.modalText} fontType="bold">Disable Employee</Text>
 
           <Text style={styles.confirmationText} fontType="regular">
-            Are you sure you want to remove {employee?.full_name}? This action cannot be undone.
+            Are you sure you want to disable {employee?.full_name}? They won't be able to sign in, but their data will be preserved. You can re-enable them later.
           </Text>
           
           <View style={styles.buttonContainer}>
@@ -44,7 +44,7 @@ const RemovePersonModal: React.FC<RemovePersonModalProps> = ({ visible, onClose,
               onPress={handleConfirm}
               disabled={loading}
               loading={loading}
-              title="Remove Employee"
+              title="Disable Employee"
               type="danger"
               style={styles.dangerButton}
               textStyle={styles.dangerButtonText}

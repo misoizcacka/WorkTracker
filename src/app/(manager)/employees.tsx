@@ -84,7 +84,7 @@ export default function ManagerEmployees() {
     return <Text>Loading...</Text>; // Consider a proper loading component
   }
 
-  const { employees, seatsUsed, seatLimit, updateEmployee, deleteEmployee, getEmployeeById } = employeesContext;
+  const { employees, seatsUsed, seatLimit, updateEmployee, deleteEmployee, enableEmployee, getEmployeeById } = employeesContext;
   const { invites, deleteInvite, createInvite, getInviteLink } = invitesContext;
   const isOwner = userRole === 'owner';
 
@@ -276,16 +276,39 @@ export default function ManagerEmployees() {
             <Ionicons name="pencil-outline" size={16} color={theme.colors.iconColor} />
           </TouchableOpacity>
           
-          {/* Delete/Cancel - pending invites show cancel with loading, active show delete */}
+          {/* Delete/Cancel/Enable - pending invites show cancel with loading, disabled employees show enable, active show delete */}
           <TouchableOpacity 
-            onPress={() => isPendingInvite ? handleCancelPending(item) : handleDelete(item as Employee)} 
-            style={[styles.actionButton, styles.actionButtonDanger]}
-            disabled={isPendingInvite && isCancellingInvite === item.id}
+            onPress={() => {
+              if (isPendingInvite) {
+                handleCancelPending(item);
+              } else if ((item as Employee).status === 'disabled') {
+                // Enable disabled employee (check seats first)
+                if ((item as Employee).role === 'worker' && seatsUsed >= seatLimit) {
+                  Toast.show({ type: 'error', text1: 'Seat Limit Reached', text2: 'Cannot enable worker: all seats are in use.' });
+                  return;
+                }
+                enableEmployee((item as Employee).id).catch(err => {
+                  Toast.show({ type: 'error', text1: 'Error', text2: err.message || 'Failed to enable employee.' });
+                });
+              } else {
+                handleDelete(item as Employee);
+              }
+            }}
+            style={[
+              styles.actionButton, 
+              (item as Employee).status === 'disabled' ? styles.actionButtonSuccess : styles.actionButtonDanger,
+              (item as Employee).status === 'disabled' && (item as Employee).role === 'worker' && seatsUsed >= seatLimit && { opacity: 0.35 }
+            ]}
+            disabled={(isPendingInvite && isCancellingInvite === item.id) || ((item as Employee).status === 'disabled' && (item as Employee).role === 'worker' && seatsUsed >= seatLimit)}
           >
             {isPendingInvite && isCancellingInvite === item.id ? (
               <ActivityIndicator size="small" color={theme.colors.danger} />
             ) : (
-              <Ionicons name={isPendingInvite ? "close-circle-outline" : "trash-outline"} size={16} color={theme.colors.danger} />
+              <Ionicons 
+                name={isPendingInvite ? "close-circle-outline" : (item as Employee).status === 'disabled' ? "checkmark-circle-outline" : "trash-outline"} 
+                size={16} 
+                color={(item as Employee).status === 'disabled' ? theme.colors.success : theme.colors.danger} 
+              />
             )}
           </TouchableOpacity>
         </View>
@@ -622,6 +645,10 @@ const styles = StyleSheet.create({
   actionButtonDanger: {
     borderColor: theme.colors.danger + '40',
     backgroundColor: theme.colors.errorBackground,
+  },
+  actionButtonSuccess: {
+    borderColor: theme.colors.success + '40',
+    backgroundColor: theme.colors.success + '10',
   },
   actionButtonText: {
     fontSize: theme.fontSizes.xs,

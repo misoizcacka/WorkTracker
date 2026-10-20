@@ -12,6 +12,7 @@ export interface EmployeesContextType {
   scheduledSeatEffectiveAt: string | null;
   updateEmployee: (employee: Employee) => Promise<void>;
   deleteEmployee: (employeeId: string) => Promise<void>;
+  enableEmployee: (employeeId: string) => Promise<void>;
   getEmployeeById: (employeeId: string) => Employee | undefined;
   loading: boolean;
   userCompanyId: string | null;
@@ -169,7 +170,7 @@ export function EmployeesProvider({ children }: { children: React.ReactNode }) {
     };
   }, [user?.id, userCompanyId, isCompanyIdLoading, userRole]); // Re-run effect when company ID, loading state, role, or user changes
 
-  const seatsUsed = useMemo(() => employees.filter(e => e.role === 'worker').length, [employees]);
+  const seatsUsed = useMemo(() => employees.filter(e => e.role === 'worker' && e.status === 'active').length, [employees]);
 
   const getEmployeeById = useCallback((employeeId: string) => {
     // Ensure that the employee belongs to the current company
@@ -241,21 +242,62 @@ export function EmployeesProvider({ children }: { children: React.ReactNode }) {
     if (userRole === 'manager' && (!existingEmployee || existingEmployee.reporting_to !== user?.id || existingEmployee.role !== 'worker')) {
       throw new Error("You do not have permission to remove this employee.");
     }
+    
+    // Soft delete: set status to 'disabled' instead of hard deleting
     const { error } = await supabase
       .from('employees')
-      .delete()
+      .update({ status: 'disabled' })
       .eq('id', employeeId)
-      .eq('company_id', userCompanyId); // Ensure delete is scoped to company
+      .eq('company_id', userCompanyId);
 
     if (error) {
-      console.error('Error deleting employee:', error);
+      console.error('Error disabling employee:', error);
       throw error;
     }
 
+    // Update local state
     setEmployees(prevEmployees =>
-      prevEmployees.filter(employee => employee.id !== employeeId)
+      prevEmployees.map(employee =>
+        employee.id === employeeId ? { ...employee, status: 'disabled' as const } : employee
+      )
     );
   }, [user?.id, userCompanyId, userRole, employees]);
+
+  const enableEmployee = useCallback(async (employeeId: string) => {
+    if (!userCompanyId) throw new Error("Company ID not available.");
+    const existingEmployee = employees.find((employee) => employee.id === employeeId);
+    
+    if (userRole === 'manager' && (!existingEmployee || existingEmployee.reporting_to !== user?.id || existingEmployee.role !== 'worker')) {
+      throw new Error("You do not have permission to enable this employee.");
+    }
+    
+    // Check seat limit for workers
+    if (existingEmployee?.role === 'worker') {
+      const activeWorkers = employees.filter(e => e.role === 'worker' && e.status === 'active').length;
+      if (activeWorkers >= seatLimit) {
+        throw new Error("Cannot enable worker: seat limit reached.");
+      }
+    }
+    
+    // Re-enable: set status to 'active'
+    const { error } = await supabase
+      .from('employees')
+      .update({ status: 'active' })
+      .eq('id', employeeId)
+      .eq('company_id', userCompanyId);
+
+    if (error) {
+      console.error('Error enabling employee:', error);
+      throw error;
+    }
+
+    // Update local state
+    setEmployees(prevEmployees =>
+      prevEmployees.map(employee =>
+        employee.id === employeeId ? { ...employee, status: 'active' as const } : employee
+      )
+    );
+  }, [user?.id, userCompanyId, userRole, employees, seatLimit]);
 
   const value = useMemo(() => ({
     employees,
@@ -265,10 +307,11 @@ export function EmployeesProvider({ children }: { children: React.ReactNode }) {
     scheduledSeatEffectiveAt,
     updateEmployee,
     deleteEmployee,
+    enableEmployee,
     getEmployeeById,
     loading,
     userCompanyId, // New: Add userCompanyId to the context value
-  }), [employees, seatLimit, seatsUsed, scheduledSeatLimit, scheduledSeatEffectiveAt, updateEmployee, deleteEmployee, getEmployeeById, loading, userCompanyId]); // Add userCompanyId to dependencies
+  }), [employees, seatLimit, seatsUsed, scheduledSeatLimit, scheduledSeatEffectiveAt, updateEmployee, deleteEmployee, enableEmployee, getEmployeeById, loading, userCompanyId]); // Add userCompanyId to dependencies
 
   return (
     <EmployeesContext.Provider value={value}>
