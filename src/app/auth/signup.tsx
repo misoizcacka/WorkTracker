@@ -12,6 +12,7 @@ import { Logo } from '~/components/Logo';
 import { GuestHeader } from '~/components/GuestHeader';
 import { supabase } from '../../utils/supabase';
 import { useTranslation } from 'react-i18next';
+import { logConsent } from '../../services/consent';
 
 const BREAKPOINT = 900;
 
@@ -70,6 +71,13 @@ export default function Signup() {
       }
 
       if (data.user) {
+        // Log GDPR consent
+        await Promise.all([
+          logConsent({ userId: data.user.id, consentType: 'terms' }),
+          logConsent({ userId: data.user.id, consentType: 'privacy' }),
+          logConsent({ userId: data.user.id, consentType: 'dpa' }),
+        ]);
+
         const { data: edgeFunctionData, error: edgeFunctionError } = await supabase.functions.invoke('create-owner-and-company', {
           body: {
             userId: data.user.id,

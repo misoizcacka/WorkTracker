@@ -5,6 +5,8 @@ import { theme } from '../theme';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useSession } from '../context/AuthContext';
+import { logConsent } from '../services/consent';
 
 export const PRIVACY_NOTICE_ACCEPTED_KEY = 'privacy_notice_accepted';
 
@@ -14,9 +16,19 @@ interface Props {
 
 export function WorkerPrivacyNotice({ onAccept }: Props) {
   const { t } = useTranslation();
+  const { user } = useSession();
 
   const handleAccept = async () => {
     await AsyncStorage.setItem(PRIVACY_NOTICE_ACCEPTED_KEY, 'true');
+    
+    // Log location tracking consent
+    if (user?.id) {
+      await logConsent({ 
+        userId: user.id, 
+        consentType: 'location_tracking' 
+      });
+    }
+    
     onAccept();
   };
 
