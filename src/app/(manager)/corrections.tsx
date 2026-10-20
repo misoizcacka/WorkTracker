@@ -98,6 +98,7 @@ const CorrectionsPage = () => {
     };
 
     const handleCheckOut = async (session: WorkSession) => {
+        console.log('handleCheckOut called for session:', session.id);
         Alert.alert(
             "Remote Check Out",
             "Are you sure you want to end this worker's session right now?",
@@ -106,18 +107,27 @@ const CorrectionsPage = () => {
                 { 
                     text: "Check Out", 
                     onPress: async () => {
+                        console.log('Checking out session:', session.id);
                         setCheckOutLoading(session.id);
                         try {
-                            const { error } = await supabase
+                            const now = new Date().toISOString();
+                            console.log('Setting end_time to:', now);
+                            
+                            const { data, error } = await supabase
                                 .from('work_sessions')
-                                .update({ end_time: new Date().toISOString() })
-                                .eq('id', session.id);
+                                .update({ end_time: now })
+                                .eq('id', session.id)
+                                .select();
 
+                            console.log('Update result:', { data, error });
+                            
                             if (error) throw error;
+                            
                             Alert.alert("Success", "Worker has been checked out.");
-                            fetchSessions();
+                            await fetchSessions();
                         } catch (err: any) {
-                            Alert.alert("Error", err.message);
+                            console.error('Checkout error:', err);
+                            Alert.alert("Error", err.message || 'Failed to check out worker');
                         } finally {
                             setCheckOutLoading(null);
                         }
