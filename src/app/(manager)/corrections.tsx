@@ -37,6 +37,9 @@ const CorrectionsPage = () => {
     const [editEndTime, setEditEndTime] = useState<Date | null>(null);
     const [isSaving, setIsSaving] = useState(false);
     const [checkOutLoading, setCheckOutLoading] = useState<string | null>(null);
+    
+    const [isCheckOutModalVisible, setCheckOutModalVisible] = useState(false);
+    const [sessionToCheckOut, setSessionToCheckOut] = useState<WorkSession | null>(null);
 
     const handlePrevMonth = () => {
         const newDate = moment({ year: selectedYear, month: selectedMonth - 1 }).subtract(1, 'month');
@@ -97,26 +100,18 @@ const CorrectionsPage = () => {
         setModalVisible(true);
     };
 
-    const handleCheckOut = async (session: WorkSession) => {
-        console.log('handleCheckOut called for session:', session.id);
+    const handleCheckOut = (session: WorkSession) => {
+        setSessionToCheckOut(session);
+        setCheckOutModalVisible(true);
+    };
+
+    const confirmCheckOut = async () => {
+        if (!sessionToCheckOut) return;
         
-        const confirmed = Platform.OS === 'web' 
-            ? window.confirm("Are you sure you want to end this worker's session right now?")
-            : await new Promise<boolean>((resolve) => {
-                Alert.alert(
-                    "Remote Check Out",
-                    "Are you sure you want to end this worker's session right now?",
-                    [
-                        { text: "Cancel", style: "cancel", onPress: () => resolve(false) },
-                        { text: "Check Out", onPress: () => resolve(true) }
-                    ]
-                );
-            });
-
-        if (!confirmed) return;
-
-        console.log('Checking out session:', session.id);
-        setCheckOutLoading(session.id);
+        console.log('Checking out session:', sessionToCheckOut.id);
+        setCheckOutLoading(sessionToCheckOut.id);
+        setCheckOutModalVisible(false);
+        
         try {
             const now = new Date().toISOString();
             console.log('Setting end_time to:', now);
@@ -124,28 +119,20 @@ const CorrectionsPage = () => {
             const { data, error } = await supabase
                 .from('work_sessions')
                 .update({ end_time: now })
-                .eq('id', session.id)
+                .eq('id', sessionToCheckOut.id)
                 .select();
 
             console.log('Update result:', { data, error });
             
             if (error) throw error;
             
-            if (Platform.OS === 'web') {
-                alert('Worker has been checked out.');
-            } else {
-                Alert.alert("Success", "Worker has been checked out.");
-            }
             await fetchSessions();
         } catch (err: any) {
             console.error('Checkout error:', err);
-            if (Platform.OS === 'web') {
-                alert(`Error: ${err.message || 'Failed to check out worker'}`);
-            } else {
-                Alert.alert("Error", err.message || 'Failed to check out worker');
-            }
+            Alert.alert("Error", err.message || 'Failed to check out worker');
         } finally {
             setCheckOutLoading(null);
+            setSessionToCheckOut(null);
         }
     };
 
@@ -409,6 +396,52 @@ const CorrectionsPage = () => {
                         </Card>
                     </View>
                 </Modal>
+
+                {/* Checkout Confirmation Modal */}
+                <Modal
+                    animationType="fade"
+                    transparent={true}
+                    visible={isCheckOutModalVisible}
+                    onRequestClose={() => setCheckOutModalVisible(false)}
+                >
+                    <View style={styles.centeredView}>
+                        <Card style={styles.checkoutModalCard}>
+                            <View style={styles.modalHeader}>
+                                <Text style={styles.modalTitle} fontType="bold">Remote Check Out</Text>
+                                <TouchableOpacity onPress={() => setCheckOutModalVisible(false)}>
+                                    <Ionicons name="close" size={24} color={theme.colors.bodyText} />
+                                </TouchableOpacity>
+                            </View>
+
+                            <View style={styles.checkoutModalContent}>
+                                <View style={styles.warningIconContainer}>
+                                    <Ionicons name="warning-outline" size={48} color={theme.colors.warning} />
+                                </View>
+                                <Text style={styles.checkoutModalText} fontType="regular">
+                                    Are you sure you want to end this worker's session right now?
+                                </Text>
+                                <Text style={styles.checkoutModalSubtext} fontType="regular">
+                                    The session will be checked out with the current time.
+                                </Text>
+                            </View>
+
+                            <View style={styles.checkoutModalFooter}>
+                                <Button
+                                    title="Cancel"
+                                    onPress={() => setCheckOutModalVisible(false)}
+                                    style={styles.cancelButton}
+                                    textStyle={styles.cancelButtonText}
+                                />
+                                <Button
+                                    title="Check Out"
+                                    onPress={confirmCheckOut}
+                                    style={styles.confirmCheckOutButton}
+                                    textStyle={styles.confirmCheckOutButtonText}
+                                />
+                            </View>
+                        </Card>
+                    </View>
+                </Modal>
             </View>
           </AnimatedScreen>
         </View>
@@ -630,6 +663,62 @@ const styles = StyleSheet.create({
         borderTopColor: theme.colors.borderColor,
     },
     saveButton: { height: 52, backgroundColor: theme.colors.primary },
+    checkoutModalCard: {
+        width: '90%',
+        maxWidth: 400,
+        padding: 0,
+        borderRadius: theme.radius.xl,
+        overflow: 'hidden',
+    },
+    checkoutModalContent: {
+        padding: theme.spacing(4),
+        alignItems: 'center',
+    },
+    warningIconContainer: {
+        width: 80,
+        height: 80,
+        borderRadius: 40,
+        backgroundColor: theme.colors.warning + '15',
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginBottom: theme.spacing(2),
+    },
+    checkoutModalText: {
+        fontSize: 16,
+        color: theme.colors.headingText,
+        textAlign: 'center',
+        marginBottom: theme.spacing(1),
+    },
+    checkoutModalSubtext: {
+        fontSize: 14,
+        color: theme.colors.bodyText,
+        textAlign: 'center',
+    },
+    checkoutModalFooter: {
+        flexDirection: 'row',
+        padding: theme.spacing(3),
+        gap: theme.spacing(2),
+        borderTopWidth: 1,
+        borderTopColor: theme.colors.borderColor,
+    },
+    cancelButton: {
+        flex: 1,
+        height: 48,
+        backgroundColor: theme.colors.pageBackground,
+        borderWidth: 1,
+        borderColor: theme.colors.borderColor,
+    },
+    cancelButtonText: {
+        color: theme.colors.headingText,
+    },
+    confirmCheckOutButton: {
+        flex: 1,
+        height: 48,
+        backgroundColor: theme.colors.danger,
+    },
+    confirmCheckOutButtonText: {
+        color: 'white',
+    },
 });
 
 export default CorrectionsPage;
