@@ -3,7 +3,7 @@
     "ok": "OK",
     "pricing": "Prijzen",
     "signIn": "Inloggen",
-    "currency": "â‚¬",
+    "currency": "€",
     "month": "maand",
     "allRightsReserved": "Alle rechten voorbehouden.",
     "cancel": "Annuleren",
@@ -22,7 +22,7 @@
   },
   "pricing": {
     "simpleTransparentPricingTitle": "Eenvoudige en transparante prijzen",
-    "simpleTransparentPricingDescription": "Ã‰Ã©n plan, geen verrassingen. U betaalt een vaste basisprijs plus een klein bedrag per actieve medewerker â€” verder niets.",
+    "simpleTransparentPricingDescription": "Ã‰én plan, geen verrassingen. U betaalt een vaste basisprijs plus een klein bedrag per actieve medewerker — verder niets.",
     "singlePlanTitle": "Enkel abonnement",
     "workerPerMonth": "medewerker/maand",
     "howManyWorkers": "Hoeveel medewerkers?",
@@ -30,7 +30,7 @@
     "getStarted": "Aan de slag",
     "faqHeading": "Veelgestelde vragen",
     "faq1Q": "Hoe worden de maandelijkse kosten berekend?",
-    "faq1A": "U betaalt een vaste basisprijs van {{baseFee}}â‚¬/maand plus {{perWorkerFee}}â‚¬ per actieve medewerker. Bijvoorbeeld: 10 medewerkers kost {{baseFee}}â‚¬ + (10 Ã— {{perWorkerFee}}â‚¬) = 90â‚¬/maand.",
+    "faq1A": "U betaalt een vaste basisprijs van {{baseFee}}€/maand plus {{perWorkerFee}}€ per actieve medewerker. Bijvoorbeeld: 10 medewerkers kost {{baseFee}}€ + (10 Ã— {{perWorkerFee}}€) = 90€/maand.",
     "faq2Q": "Zijn er verborgen kosten?",
     "faq2A": "Nee. De basisprijs en het tarief per medewerker zijn de enige kosten. Geen installatiekosten, geen onboardingkosten, geen kosten per project.",
     "faq3Q": "Kan ik op elk moment medewerkers toevoegen of verwijderen?",
@@ -38,7 +38,7 @@
     "faq4Q": "Zijn er verborgen kosten of langetermijncontracten?",
     "faq4A": "Geen verborgen kosten en geen contracten. U betaalt maandelijks en kunt altijd opzeggen via uw accountinstellingen. Uw toegang blijft actief tot het einde van de betaalde periode.",
     "faq5Q": "Wat hebben medewerkers nodig om de app te gebruiken?",
-    "faq5A": "Medewerkers installeren de gratis Koordinate-app op hun Android- of iOS-telefoon. U nodigt ze uit met een code â€” geen e-mailadres vereist. Ze zien nooit facturatiegegevens.",
+    "faq5A": "Medewerkers installeren de gratis Koordinate-app op hun Android- of iOS-telefoon. U nodigt ze uit met een code — geen e-mailadres vereist. Ze zien nooit facturatiegegevens.",
     "faq6Q": "Hoe werkt locatietracking voor medewerkers?",
     "faq6A": "Wanneer een medewerker incheckt bij een opdracht, volgt de app de GPS-locatie op de achtergrond en stuurt periodieke updates. Tracking stopt automatisch bij het uitchecken. Medewerkers worden in de app geïnformeerd over de tracking."
   },
@@ -118,10 +118,10 @@
     "alreadyHaveAccount": "Heeft u al een account? ",
     "signInLink": "Inloggen",
     "reassuranceTitle": "U bent één stap verwijderd van een strakker beheer.",
-    "reassuranceSubtitle": "Koordinate geeft u een live overzicht van uw team, automatische tijdregistratie en salarisklare rapportages â€” zonder spreadsheets.",
+    "reassuranceSubtitle": "Koordinate geeft u een live overzicht van uw team, automatische tijdregistratie en salarisklare rapportages — zonder spreadsheets.",
     "trustSetupTime": "Stel uw bedrijf in minder dan 5 minuten in",
     "trustInviteWorkers": "Medewerkers downloaden de app en melden zich aan met een uitnodigingscode",
-    "trustGdpr": "AVG-conform â€” gegevens blijven in de EU",
+    "trustGdpr": "AVG-conform — gegevens blijven in de EU",
     "trustNoLockIn": "Zeg uw abonnement op elk moment op, zonder verplichtingen",
     "legalConsent": "Door een account aan te maken gaat u akkoord met onze",
     "legalConsentAnd": "en",
@@ -154,7 +154,7 @@
       "featuresTitle": "Alles wat een buitendienstmanager nodig heeft.",
       "featuresSub": "Geen integraties. Geen vier aparte apps. Planning, registratie en salarisadministratie van begin tot eind.",
       "cardSchedulingTitle": "Dagelijkse planning",
-      "cardSchedulingDesc": "Sleep medewerkers elke ochtend naar projectlocaties. Ze zien de opdracht meteen in hun app â€” geen WhatsApp-groepen, geen verwarring.",
+      "cardSchedulingDesc": "Sleep medewerkers elke ochtend naar projectlocaties. Ze zien de opdracht meteen in hun app — geen WhatsApp-groepen, geen verwarring.",
       "cardScheduleBadgeOnSite": "Op locatie",
       "cardScheduleBadgeScheduled": "Ingepland",
       "cardLiveMapTitle": "Live kaart",
@@ -185,7 +185,7 @@
       "ctaButton": "Gratis starten"
     },
     "pricing": {
-      "pageTitle": "Prijzen â€” Koordinate"
+      "pageTitle": "Prijzen — Koordinate"
     }
   },
   "payment": {
@@ -249,7 +249,7 @@
       "navigate": "Navigeren",
       "syncing": "Synchroniseren",
       "offlineBanner": "U bent offline",
-      "offlineBannerCheckedIn": "U bent offline â€” uitchecken is nog mogelijk",
+      "offlineBannerCheckedIn": "U bent offline — uitchecken is nog mogelijk",
       "trackingPausedBanner": "Locatietracking was ~{{minutes}} min. gepauzeerd (app gesloten). Uw uren worden nog steeds bijgehouden.",
       "checkedInToast": "Ingecheckt",
       "checkedInToastSub": "Werkzaam bij {{name}}",
@@ -356,7 +356,7 @@
     "featuresTitle": "Alles wat een buitendienstmanager nodig heeft.",
     "featuresSub": "Geen integraties. Geen vier aparte apps. Planning, registratie en salarisadministratie van begin tot eind.",
     "cardSchedulingTitle": "Dagelijkse planning",
-    "cardSchedulingDesc": "Sleep medewerkers elke ochtend naar projectlocaties. Ze zien de opdracht meteen in hun app â€” geen WhatsApp-groepen, geen verwarring.",
+    "cardSchedulingDesc": "Sleep medewerkers elke ochtend naar projectlocaties. Ze zien de opdracht meteen in hun app — geen WhatsApp-groepen, geen verwarring.",
     "cardScheduleBadgeOnSite": "Op locatie",
     "cardScheduleBadgeScheduled": "Ingepland",
     "cardLiveMapTitle": "Live kaart",
@@ -696,7 +696,7 @@
       "pricingTitle": "Nieuw maandtotaal",
       "nextRenewalTitle": "Totaal bij volgende verlenging",
       "baseFee": "Basisbedrag",
-      "workerSeats": "Medewerkerplaatsen ({{count}} Ã— â‚¬{{price}})",
+      "workerSeats": "Medewerkerplaatsen ({{count}} Ã— €{{price}})",
       "total": "Totaal",
       "difference": "Verschil:",
       "confirmChanges": "Wijzigingen bevestigen",

@@ -3,7 +3,7 @@
     "ok": "OK",
     "pricing": "Priser",
     "signIn": "Logga in",
-    "currency": "â‚¬",
+    "currency": "€",
     "month": "månad",
     "allRightsReserved": "Alla rättigheter förbehållna.",
     "cancel": "Avbryt",
@@ -22,7 +22,7 @@
   },
   "pricing": {
     "simpleTransparentPricingTitle": "Enkel och transparent prissättning",
-    "simpleTransparentPricingDescription": "En plan, inga Ã¶verraskningar. Du betalar en fast grundavgift plus ett litet belopp per aktiv medarbetare â€” inget mer.",
+    "simpleTransparentPricingDescription": "En plan, inga överraskningar. Du betalar en fast grundavgift plus ett litet belopp per aktiv medarbetare — inget mer.",
     "singlePlanTitle": "Enstaka plan",
     "workerPerMonth": "medarbetare/månad",
     "howManyWorkers": "Hur många medarbetare?",
@@ -30,7 +30,7 @@
     "getStarted": "Kom igång",
     "faqHeading": "Vanliga frågor",
     "faq1Q": "Hur beräknas månadskostnaden?",
-    "faq1A": "Du betalar en fast grundavgift pÃ¥ {{baseFee}}â‚¬/mÃ¥nad plus {{perWorkerFee}}â‚¬ per aktiv medarbetare. Till exempel kostar 10 medarbetare {{baseFee}}â‚¬ + (10 Ã— {{perWorkerFee}}â‚¬) = 90â‚¬/mÃ¥nad.",
+    "faq1A": "Du betalar en fast grundavgift på {{baseFee}}€/månad plus {{perWorkerFee}}€ per aktiv medarbetare. Till exempel kostar 10 medarbetare {{baseFee}}€ + (10 Ã— {{perWorkerFee}}€) = 90€/månad.",
     "faq2Q": "Finns det dolda avgifter?",
     "faq2A": "Nej. Grundavgiften och priset per medarbetare är de enda kostnaderna. Inga installationsavgifter, inga introduktionsavgifter, inga projektkostnader.",
     "faq3Q": "Kan jag lägga till eller ta bort medarbetare när som helst?",
@@ -38,7 +38,7 @@
     "faq4Q": "Finns det dolda avgifter eller långsiktiga avtal?",
     "faq4A": "Inga dolda avgifter och inga avtal. Du betalar månadsvis och kan avsluta när som helst via dina kontoinställningar. Din åtkomst fortsätter till slutet av den betalda perioden.",
     "faq5Q": "Vad behöver medarbetare för att använda appen?",
-    "faq5A": "Medarbetare installerar den kostnadsfria Koordinate-appen pÃ¥ sin Android- eller iOS-telefon. Du bjuder in dem med en kod â€” ingen e-postadress krÃ¤vs. De ser aldrig nÃ¥gon faktureringsinformation.",
+    "faq5A": "Medarbetare installerar den kostnadsfria Koordinate-appen på sin Android- eller iOS-telefon. Du bjuder in dem med en kod — ingen e-postadress krävs. De ser aldrig någon faktureringsinformation.",
     "faq6Q": "Hur fungerar platsspårning för medarbetare?",
     "faq6A": "När en medarbetare checkar in på ett uppdrag spårar appen deras GPS-position i bakgrunden och skickar regelbundna uppdateringar. Spårningen stoppas automatiskt vid utcheckning. Medarbetare informeras om spårningen i appen."
   },
@@ -81,7 +81,7 @@
     "smartSchedulingTitle": "Smart schemaläggning",
     "smartSchedulingDesc": "Tilldela projekt och platser med ett intuitivt dra-och-släpp-gränssnitt.",
     "realTimeOversightTitle": "Realtidsövervakning",
-    "realTimeOversightDesc": "Ã–vervaka medarbetarnas platser och aktiva sessioner live frÃ¥n din instrumentpanel.",
+    "realTimeOversightDesc": "Ã–vervaka medarbetarnas platser och aktiva sessioner live från din instrumentpanel.",
     "automatedReportingTitle": "Automatiserad rapportering",
     "automatedReportingDesc": "Generera exakta löne- och projektkostnadsrapporter på sekunder.",
     "welcomeToCompany": "Välkommen till",
@@ -208,7 +208,7 @@
       "ctaButton": "Kom igång gratis"
     },
     "pricing": {
-      "pageTitle": "Priser â€” Koordinate"
+      "pageTitle": "Priser — Koordinate"
     }
   },
   "payment": {
@@ -249,7 +249,7 @@
       "navigate": "Navigera",
       "syncing": "Synkroniserar",
       "offlineBanner": "Du är offline",
-      "offlineBannerCheckedIn": "Du Ã¤r offline â€” utcheckning Ã¤r fortfarande mÃ¶jlig",
+      "offlineBannerCheckedIn": "Du är offline — utcheckning är fortfarande möjlig",
       "trackingPausedBanner": "Platsspårning pausades i ~{{minutes}} min (appen stängdes). Dina timmar registreras fortfarande.",
       "checkedInToast": "Incheckad",
       "checkedInToastSub": "Arbetar på {{name}}",
@@ -334,8 +334,8 @@
     },
     "batteryOptimization": {
       "title": "Inaktivera batterioptimering",
-      "message": "FÃ¶r noggrann tidregistrering, inaktivera batterioptimering fÃ¶r den hÃ¤r appen. Tryck pÃ¥ 'Ã–ppna instÃ¤llningar', hitta den hÃ¤r appen och vÃ¤lj 'ObegrÃ¤nsad' eller 'Optimera inte'.",
-      "openSettings": "Ã–ppna instÃ¤llningar",
+      "message": "För noggrann tidregistrering, inaktivera batterioptimering för den här appen. Tryck på 'Ã–ppna inställningar', hitta den här appen och välj 'Obegränsad' eller 'Optimera inte'.",
+      "openSettings": "Ã–ppna inställningar",
       "later": "Senare"
     }
   },
@@ -696,7 +696,7 @@
       "pricingTitle": "Ny total per manad",
       "nextRenewalTitle": "Total vid nasta fornyelse",
       "baseFee": "Grundavgift",
-      "workerSeats": "Medarbetarplatser ({{count}} Ã— â‚¬{{price}})",
+      "workerSeats": "Medarbetarplatser ({{count}} Ã— €{{price}})",
       "total": "Totalt",
       "difference": "Skillnad:",
       "confirmChanges": "Bekrafta andringar",

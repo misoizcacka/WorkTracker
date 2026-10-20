@@ -3,7 +3,7 @@
     "ok": "OK",
     "pricing": "Precios",
     "signIn": "Iniciar sesión",
-    "currency": "â‚¬",
+    "currency": "€",
     "month": "mes",
     "allRightsReserved": "Todos los derechos reservados.",
     "cancel": "Cancelar",
@@ -22,7 +22,7 @@
   },
   "pricing": {
     "simpleTransparentPricingTitle": "Precios simples y transparentes",
-    "simpleTransparentPricingDescription": "Un plan, sin sorpresas. Paga una tarifa base fija mÃ¡s una pequeÃ±a cantidad por trabajador activo â€” nada mÃ¡s.",
+    "simpleTransparentPricingDescription": "Un plan, sin sorpresas. Paga una tarifa base fija más una pequeña cantidad por trabajador activo — nada más.",
     "singlePlanTitle": "Plan único",
     "workerPerMonth": "trabajador/mes",
     "howManyWorkers": "¿Cuántos trabajadores?",
@@ -30,7 +30,7 @@
     "getStarted": "Comenzar",
     "faqHeading": "Preguntas frecuentes",
     "faq1Q": "¿Cómo se calcula el costo mensual?",
-    "faq1A": "Paga una tarifa base fija de {{baseFee}}â‚¬/mes mÃ¡s {{perWorkerFee}}â‚¬ por cada trabajador activo. Por ejemplo, 10 trabajadores cuestan {{baseFee}}â‚¬ + (10 Ã— {{perWorkerFee}}â‚¬) = 90â‚¬/mes.",
+    "faq1A": "Paga una tarifa base fija de {{baseFee}}€/mes más {{perWorkerFee}}€ por cada trabajador activo. Por ejemplo, 10 trabajadores cuestan {{baseFee}}€ + (10 Ã— {{perWorkerFee}}€) = 90€/mes.",
     "faq2Q": "¿Hay tarifas ocultas?",
     "faq2A": "No. La tarifa base y el precio por trabajador son los únicos cargos. Sin tarifa de configuración, sin tarifa de incorporación, sin cargos por proyecto.",
     "faq3Q": "¿Puedo agregar o eliminar trabajadores en cualquier momento?",
@@ -38,7 +38,7 @@
     "faq4Q": "¿Hay tarifas ocultas o contratos a largo plazo?",
     "faq4A": "Sin tarifas ocultas y sin contratos. Paga mes a mes y puede cancelar en cualquier momento desde la configuración de su cuenta. Su acceso continúa hasta el final del período pagado.",
     "faq5Q": "¿Qué necesitan los trabajadores para usar la app?",
-    "faq5A": "Los trabajadores instalan la app gratuita Koordinate en su telÃ©fono Android o iOS. Los invita con un cÃ³digo â€” no se requiere direcciÃ³n de correo electrÃ³nico. Los trabajadores nunca ven informaciÃ³n de facturaciÃ³n.",
+    "faq5A": "Los trabajadores instalan la app gratuita Koordinate en su teléfono Android o iOS. Los invita con un código — no se requiere dirección de correo electrónico. Los trabajadores nunca ven información de facturación.",
     "faq6Q": "¿Cómo funciona el seguimiento de ubicación para los trabajadores?",
     "faq6A": "Cuando un trabajador hace check-in en una asignación, la app rastrea su ubicación GPS en segundo plano y envía actualizaciones periódicas. El seguimiento se detiene automáticamente al hacer check-out. Los trabajadores son informados del seguimiento en la app."
   },
@@ -73,7 +73,7 @@
     "marketingBullet2": "Asignación de proyectos sin fricciones",
     "marketingBullet3": "Preparación de nómina precisa",
     "marketingBullet4": "Mayor productividad y eficiencia",
-    "marketingDescription2": "Ãšnase a las empresas de todo el mundo que confÃ­an en Koordinate para obtener datos de tiempo precisos y anÃ¡lisis sÃ³lidos de su fuerza laboral. ConcÃ©ntrese en lo que mÃ¡s importa, nosotros nos encargamos del resto."
+    "marketingDescription2": "Ãšnase a las empresas de todo el mundo que confían en Koordinate para obtener datos de tiempo precisos y análisis sólidos de su fuerza laboral. Concéntrese en lo que más importa, nosotros nos encargamos del resto."
   },
   "signup": {
     "marketingTitle": "Potencie su equipo con precisión",
@@ -118,10 +118,10 @@
     "alreadyHaveAccount": "¿Ya tiene una cuenta? ",
     "signInLink": "Iniciar sesión",
     "reassuranceTitle": "Está a un paso de una gestión más eficiente.",
-    "reassuranceSubtitle": "Koordinate le ofrece una vista en tiempo real de su equipo, seguimiento automÃ¡tico del tiempo e informes listos para nÃ³mina â€” sin hojas de cÃ¡lculo.",
+    "reassuranceSubtitle": "Koordinate le ofrece una vista en tiempo real de su equipo, seguimiento automático del tiempo e informes listos para nómina — sin hojas de cálculo.",
     "trustSetupTime": "Configure su empresa en menos de 5 minutos",
     "trustInviteWorkers": "Los trabajadores descargan la aplicación y se unen con un código de invitación",
-    "trustGdpr": "Conforme al RGPD â€” los datos permanecen en la UE",
+    "trustGdpr": "Conforme al RGPD — los datos permanecen en la UE",
     "trustNoLockIn": "Cancele su suscripción en cualquier momento, sin compromisos",
     "legalConsent": "Al crear una cuenta, acepta nuestros",
     "legalConsentAnd": "y",
@@ -154,7 +154,7 @@
       "featuresTitle": "Todo lo que un responsable de campo necesita.",
       "featuresSub": "Sin integraciones. Sin combinar cuatro aplicaciones. Planificacion, seguimiento y nomina de principio a fin.",
       "cardSchedulingTitle": "Planificación diaria",
-      "cardSchedulingDesc": "Asigne trabajadores a las obras cada maÃ±ana mediante arrastrar y soltar. Ven la asignaciÃ³n al instante en su aplicaciÃ³n â€” sin grupos de WhatsApp, sin confusiÃ³n.",
+      "cardSchedulingDesc": "Asigne trabajadores a las obras cada mañana mediante arrastrar y soltar. Ven la asignación al instante en su aplicación — sin grupos de WhatsApp, sin confusión.",
       "cardScheduleBadgeOnSite": "En obra",
       "cardScheduleBadgeScheduled": "Planificado",
       "cardLiveMapTitle": "Mapa en directo",
@@ -181,11 +181,11 @@
       "step04Title": "Observe cómo funciona",
       "step04Desc": "Mapa en directo, sesiones activas, visibilidad total sin necesidad de coger el teléfono.",
       "ctaTitle": "¿Listo para tener su equipo bajo control?",
-      "ctaSub": "Ãšnase a las empresas de construcciÃ³n que utilizan Koordinate para operaciones de campo mÃ¡s Ã¡giles y eficientes.",
+      "ctaSub": "Ãšnase a las empresas de construcción que utilizan Koordinate para operaciones de campo más ágiles y eficientes.",
       "ctaButton": "Empieza gratis"
     },
     "pricing": {
-      "pageTitle": "Precios â€” Koordinate"
+      "pageTitle": "Precios — Koordinate"
     }
   },
   "payment": {
@@ -249,7 +249,7 @@
       "navigate": "Navegar",
       "syncing": "Sincronizando",
       "offlineBanner": "Sin conexión",
-      "offlineBannerCheckedIn": "Sin conexiÃ³n â€” el registro de salida sigue disponible",
+      "offlineBannerCheckedIn": "Sin conexión — el registro de salida sigue disponible",
       "trackingPausedBanner": "El seguimiento de ubicación estuvo pausado ~{{minutes}} min (se cerró la app). Sus horas siguen registradas.",
       "checkedInToast": "Entrada registrada",
       "checkedInToastSub": "Trabajando en {{name}}",
@@ -299,8 +299,8 @@
       "workHistory": "Historial de trabajo",
       "noHistory": "No hay historial para este período.",
       "filterYesterday": "Ayer",
-      "filterLast7": "Ãšltimos 7 dÃ­as",
-      "filterLast30": "Ãšltimos 30 dÃ­as",
+      "filterLast7": "Ãšltimos 7 días",
+      "filterLast30": "Ãšltimos 30 días",
       "filterThisMonth": "Este mes",
       "filterCustom": "Personalizado",
       "failedToLoad": "No se pudieron cargar las sesiones de trabajo."
@@ -356,7 +356,7 @@
     "featuresTitle": "Todo lo que un responsable de campo necesita.",
     "featuresSub": "Sin integraciones. Sin combinar cuatro aplicaciones. Planificacion, seguimiento y nomina de principio a fin.",
     "cardSchedulingTitle": "Planificación diaria",
-    "cardSchedulingDesc": "Asigne trabajadores a las obras cada maÃ±ana mediante arrastrar y soltar. Ven la asignaciÃ³n al instante en su aplicaciÃ³n â€” sin grupos de WhatsApp, sin confusiÃ³n.",
+    "cardSchedulingDesc": "Asigne trabajadores a las obras cada mañana mediante arrastrar y soltar. Ven la asignación al instante en su aplicación — sin grupos de WhatsApp, sin confusión.",
     "cardScheduleBadgeOnSite": "En obra",
     "cardScheduleBadgeScheduled": "Planificado",
     "cardLiveMapTitle": "Mapa en directo",
@@ -382,7 +382,7 @@
     "step04Title": "Observe cómo funciona",
     "step04Desc": "Mapa en directo, sesiones activas, visibilidad total sin necesidad de coger el teléfono.",
     "ctaTitle": "¿Listo para tener su equipo bajo control?",
-    "ctaSub": "Ãšnase a las empresas de construcciÃ³n que utilizan Koordinate para operaciones de campo mÃ¡s Ã¡giles y eficientes.",
+    "ctaSub": "Ãšnase a las empresas de construcción que utilizan Koordinate para operaciones de campo más ágiles y eficientes.",
     "ctaButton": "Empieza gratis"
   },
   "manager": {
@@ -719,7 +719,7 @@
       "pricingTitle": "Nuevo total mensual",
       "nextRenewalTitle": "Total en la proxima renovacion",
       "baseFee": "Tarifa base",
-      "workerSeats": "Plazas de trabajadores ({{count}} Ã— â‚¬{{price}})",
+      "workerSeats": "Plazas de trabajadores ({{count}} Ã— €{{price}})",
       "total": "Total",
       "difference": "Diferencia:",
       "confirmChanges": "Confirmar cambios",
