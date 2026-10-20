@@ -132,30 +132,16 @@ export default function WorkerAccountScreen() {
               <Ionicons name="open-outline" size={14} color={theme.colors.disabledText} />
             </TouchableOpacity>
 
-            {/* Data Rights Card */}
-            <Card style={styles.dataRightsCard}>
-              <View style={styles.dataRightsHeader}>
-                <Ionicons name="document-text-outline" size={20} color={theme.colors.primary} />
-                <Text style={styles.dataRightsTitle} fontType="bold">{t('worker.account.dataRights', { defaultValue: 'Your Data Rights' })}</Text>
-              </View>
-              <Text style={styles.dataRightsText} fontType="regular">
-                {t('worker.account.dataRightsInfo', { 
-                  defaultValue: 'To download your personal data or request account deletion, contact us at:' 
-                })}
-              </Text>
-              <TouchableOpacity 
-                onPress={() => Linking.openURL('mailto:privacy@koordinate.app?subject=Data Request')}
-                style={styles.emailButton}
-              >
-                <Ionicons name="mail-outline" size={16} color={theme.colors.primary} />
-                <Text style={styles.emailText} fontType="medium">privacy@koordinate.app</Text>
-              </TouchableOpacity>
-              <Text style={styles.dataRightsSubtext} fontType="regular">
-                {t('worker.account.dataRightsSubtext', { 
-                  defaultValue: 'We will respond within 30 days. Location data is automatically deleted after 90 days.' 
-                })}
-              </Text>
-            </Card>
+            {/* Data Rights */}
+            <TouchableOpacity
+              style={styles.privacyRow}
+              onPress={() => Linking.openURL('mailto:privacy@koordinate.app?subject=Data Request')}
+              activeOpacity={0.7}
+            >
+              <Ionicons name="document-text-outline" size={16} color={theme.colors.primary} />
+              <Text style={styles.privacyText} fontType="regular">{t('worker.account.dataRights', { defaultValue: 'Your Data Rights (privacy@koordinate.app)' })}</Text>
+              <Ionicons name="open-outline" size={14} color={theme.colors.disabledText} />
+            </TouchableOpacity>
 
             {/* Logout */}
             <View style={styles.logoutContainer}>
@@ -324,51 +310,6 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 14,
     color: theme.colors.primary,
-  },
-  dataRightsCard: {
-    borderRadius: theme.radius.lg,
-    padding: theme.spacing(2.5),
-    marginBottom: theme.spacing(2),
-    borderWidth: 1,
-    borderColor: theme.colors.borderColor,
-    backgroundColor: theme.colors.primaryMuted,
-  },
-  dataRightsHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: theme.spacing(1),
-    marginBottom: theme.spacing(1.5),
-  },
-  dataRightsTitle: {
-    fontSize: 16,
-    color: theme.colors.headingText,
-  },
-  dataRightsText: {
-    fontSize: 14,
-    color: theme.colors.bodyText,
-    marginBottom: theme.spacing(1.5),
-    lineHeight: 20,
-  },
-  emailButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: theme.spacing(1),
-    paddingVertical: theme.spacing(1.5),
-    paddingHorizontal: theme.spacing(2),
-    backgroundColor: theme.colors.cardBackground,
-    borderRadius: theme.radius.md,
-    borderWidth: 1,
-    borderColor: theme.colors.borderColor,
-    marginBottom: theme.spacing(1.5),
-  },
-  emailText: {
-    fontSize: 14,
-    color: theme.colors.primary,
-  },
-  dataRightsSubtext: {
-    fontSize: 12,
-    color: theme.colors.disabledText,
-    lineHeight: 18,
   },
   logoutContainer: {
     alignItems: 'center',

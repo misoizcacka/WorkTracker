@@ -286,6 +286,7 @@
       "logOut": "Uitloggen",
       "cannotSignOut": "Kan niet uitloggen",
       "checkOutFirst": "Sluit eerst uw huidige werksessie af voordat u uitlogt.",
+      "dataRights": "Gegevensrechten (privacy@koordinate.app)",
       "version": "v{{version}}",
       "privacyPolicy": "Privacybeleid",
       "language": "Taal",

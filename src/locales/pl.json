@@ -286,6 +286,7 @@
       "logOut": "Wyloguj się",
       "cannotSignOut": "Nie można się wylogować",
       "checkOutFirst": "Przed wylogowaniem zakończ bieżącą sesję pracy.",
+      "dataRights": "Prawa do danych (privacy@koordinate.app)",
       "version": "v{{version}}",
       "privacyPolicy": "Polityka prywatności",
       "language": "Język",

@@ -286,6 +286,7 @@
       "logOut": "Abmelden",
       "cannotSignOut": "Abmeldung nicht möglich",
       "checkOutFirst": "Bitte beenden Sie zuerst Ihre aktuelle Arbeitssitzung.",
+      "dataRights": "Datenschutzrechte (privacy@koordinate.app)",
       "version": "v{{version}}",
       "privacyPolicy": "Datenschutzrichtlinie",
       "language": "Sprache",

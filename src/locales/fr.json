@@ -286,6 +286,7 @@
       "logOut": "Se déconnecter",
       "cannotSignOut": "Déconnexion impossible",
       "checkOutFirst": "Veuillez terminer votre session de travail en cours avant de vous déconnecter.",
+      "dataRights": "Droits sur les données (privacy@koordinate.app)",
       "version": "v{{version}}",
       "privacyPolicy": "Politique de confidentialité",
       "language": "Langue",

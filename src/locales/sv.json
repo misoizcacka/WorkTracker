@@ -286,6 +286,7 @@
       "logOut": "Logga ut",
       "cannotSignOut": "Kan inte logga ut",
       "checkOutFirst": "Vänligen checka ut från din nuvarande arbetssession innan du loggar ut.",
+      "dataRights": "Datarättigheter (privacy@koordinate.app)",
       "version": "v{{version}}",
       "privacyPolicy": "Integritetspolicy",
       "language": "Språk",

@@ -286,6 +286,7 @@
       "logOut": "Cerrar sesión",
       "cannotSignOut": "No se puede cerrar sesión",
       "checkOutFirst": "Por favor, finalice su sesión de trabajo actual antes de cerrar sesión.",
+      "dataRights": "Derechos de datos (privacy@koordinate.app)",
       "version": "v{{version}}",
       "privacyPolicy": "Política de privacidad",
       "language": "Idioma",
