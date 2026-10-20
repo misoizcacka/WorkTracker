@@ -1,5 +1,5 @@
 import React, { useRef, useState } from "react";
-import { StyleSheet, View, ScrollView, Image, TouchableOpacity, Linking } from "react-native";
+import { StyleSheet, View, ScrollView, Image, TouchableOpacity, Linking, Alert } from "react-native";
 import { Text } from "../../components/Themed";
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Card } from "../../components/Card";
@@ -12,13 +12,27 @@ import { useEmployeeProfile } from "../../hooks/useEmployeeProfile";
 import { useRouter } from "expo-router";
 import { useTranslation } from "react-i18next";
 import { LanguagePicker } from "../../components/LanguagePicker";
+import { useAssignments } from "../../context/AssignmentsContext";
 
 export default function WorkerAccountScreen() {
   const { bottom: tabBarHeight } = useSafeAreaInsets();
   const { signOut, user, userRole, userCompanyName } = useSession()!;
   const { profile } = useEmployeeProfile();
+  const { activeWorkSession } = useAssignments();
   const router = useRouter();
   const { t } = useTranslation();
+
+  const handleSignOut = () => {
+    if (activeWorkSession) {
+      Alert.alert(
+        t('worker.account.cannotSignOut'),
+        t('worker.account.checkOutFirst'),
+        [{ text: t('common.ok'), style: 'cancel' }]
+      );
+      return;
+    }
+    signOut();
+  };
 
   // Hidden diagnostic entry — triple-tap the version text at the bottom
   const tapCount = useRef(0);
@@ -122,7 +136,7 @@ export default function WorkerAccountScreen() {
             <View style={styles.logoutContainer}>
               <Button
                 title={t('worker.account.logOut')}
-                onPress={() => signOut()}
+                onPress={handleSignOut}
                 style={styles.logoutButton}
                 textStyle={styles.logoutButtonText}
               />
