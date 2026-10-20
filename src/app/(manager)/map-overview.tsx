@@ -133,6 +133,7 @@ export default function MapOverviewScreen() {
   const filteredWorkers = employees.filter((employee: Employee) => // Explicitly typed
     employee.full_name.toLowerCase().includes(searchTerm.toLowerCase()) &&
     employee.role === 'worker' &&
+    employee.status === 'active' && // Only show active workers on live map
     employee.id !== user?.id
   );
 

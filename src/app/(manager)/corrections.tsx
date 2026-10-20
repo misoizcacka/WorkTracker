@@ -56,7 +56,8 @@ const CorrectionsPage = () => {
     const filteredWorkers = useMemo(() => {
         return employees.filter((employee: Employee) =>
             employee.full_name.toLowerCase().includes(searchTerm.toLowerCase()) &&
-            employee.role === 'worker' // Only show workers
+            employee.role === 'worker' && // Only show workers
+            employee.status === 'active' // Only show active workers
         );
     }, [employees, searchTerm]);
 

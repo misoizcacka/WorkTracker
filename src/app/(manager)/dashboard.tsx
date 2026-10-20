@@ -84,7 +84,7 @@ export default function NewManagerDashboard() {
   const [isLoadingStats, setIsLoadingStats] = useState(true);
 
   const employees = employeesContext?.employees || [];
-  const workers = useMemo(() => employees.filter(e => e.role === 'worker'), [employees]);
+  const workers = useMemo(() => employees.filter(e => e.role === 'worker' && e.status === 'active'), [employees]);
   const totalWorkersCount = workers.length;
 
   useEffect(() => {

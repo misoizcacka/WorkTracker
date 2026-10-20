@@ -90,6 +90,7 @@ export default function ProjectAssignmentScreen() {
   const filteredWorkers = employees.filter(employee =>
     employee.full_name.toLowerCase().includes(searchTerm.toLowerCase()) &&
     employee.role === 'worker' &&
+    employee.status === 'active' && // Only show active workers for assignments
     employee.id !== user?.id
   );
 

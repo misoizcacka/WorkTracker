@@ -45,7 +45,7 @@ const LocationReplayWorkerSelector = ({ onSelectionChange, initialWorkerId, init
             } else {
                 const allowedWorkerIds = new Set(
                     employees
-                        .filter(employee => employee.role === 'worker')
+                        .filter(employee => employee.role === 'worker' && employee.status === 'active')
                         .map(employee => employee.id)
                 );
                 setWorkers((data || []).filter((worker: Worker) => allowedWorkerIds.has(worker.worker_id)));
