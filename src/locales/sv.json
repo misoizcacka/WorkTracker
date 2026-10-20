@@ -1,5 +1,6 @@
 {
   "common": {
+    "ok": "OK",
     "pricing": "Priser",
     "signIn": "Logga in",
     "currency": "â‚¬",
@@ -283,6 +284,8 @@
       "accessDescription": "Använd en inbjudningskod från din chef för att logga in på en annan enhet.",
       "company": "Företag",
       "logOut": "Logga ut",
+      "cannotSignOut": "Kan inte logga ut",
+      "checkOutFirst": "Vänligen checka ut från din nuvarande arbetssession innan du loggar ut.",
       "version": "v{{version}}",
       "privacyPolicy": "Integritetspolicy",
       "language": "Språk",

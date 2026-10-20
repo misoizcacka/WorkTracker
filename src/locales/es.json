@@ -1,5 +1,6 @@
 {
   "common": {
+    "ok": "OK",
     "pricing": "Precios",
     "signIn": "Iniciar sesión",
     "currency": "â‚¬",
@@ -283,6 +284,8 @@
       "accessDescription": "Use un código de invitación de su responsable para iniciar sesión en otro dispositivo.",
       "company": "Empresa",
       "logOut": "Cerrar sesión",
+      "cannotSignOut": "No se puede cerrar sesión",
+      "checkOutFirst": "Por favor, finalice su sesión de trabajo actual antes de cerrar sesión.",
       "version": "v{{version}}",
       "privacyPolicy": "Política de privacidad",
       "language": "Idioma",

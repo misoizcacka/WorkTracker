@@ -1,5 +1,6 @@
 {
   "common": {
+    "ok": "OK",
     "pricing": "Prijzen",
     "signIn": "Inloggen",
     "currency": "â‚¬",
@@ -283,6 +284,8 @@
       "accessDescription": "Gebruik een uitnodigingscode van uw leidinggevende om in te loggen op een ander apparaat.",
       "company": "Bedrijf",
       "logOut": "Uitloggen",
+      "cannotSignOut": "Kan niet uitloggen",
+      "checkOutFirst": "Sluit eerst uw huidige werksessie af voordat u uitlogt.",
       "version": "v{{version}}",
       "privacyPolicy": "Privacybeleid",
       "language": "Taal",

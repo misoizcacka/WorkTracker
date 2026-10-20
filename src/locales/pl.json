@@ -1,5 +1,6 @@
 {
   "common": {
+    "ok": "OK",
     "pricing": "Cennik",
     "signIn": "Zaloguj się",
     "currency": "€",
@@ -283,6 +284,8 @@
       "accessDescription": "Użyj kodu zaproszenia od przełożonego, aby zalogować się na innym urządzeniu.",
       "company": "Firma",
       "logOut": "Wyloguj się",
+      "cannotSignOut": "Nie można się wylogować",
+      "checkOutFirst": "Przed wylogowaniem zakończ bieżącą sesję pracy.",
       "version": "v{{version}}",
       "privacyPolicy": "Polityka prywatności",
       "language": "Język",

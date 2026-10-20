@@ -1,5 +1,6 @@
 {
   "common": {
+    "ok": "OK",
     "pricing": "Preise",
     "signIn": "Anmelden",
     "currency": "â‚¬",
@@ -283,6 +284,8 @@
       "accessDescription": "Verwenden Sie einen Einladungscode Ihres Vorgesetzten, um sich auf einem anderen Gerät anzumelden.",
       "company": "Unternehmen",
       "logOut": "Abmelden",
+      "cannotSignOut": "Abmeldung nicht möglich",
+      "checkOutFirst": "Bitte beenden Sie zuerst Ihre aktuelle Arbeitssitzung.",
       "version": "v{{version}}",
       "privacyPolicy": "Datenschutzrichtlinie",
       "language": "Sprache",
