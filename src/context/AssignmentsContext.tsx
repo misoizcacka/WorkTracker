@@ -348,12 +348,51 @@ export function AssignmentsProvider({ children }: { children: React.ReactNode })
     try {
       const unsyncedEvents = await getUnsyncedLocationEvents();
       if (unsyncedEvents.length > 0) {
+        // Filter out events that happened after a session was remotely ended
+        // (we'll check this after syncing sessions)
         const eventsToSync = unsyncedEvents
           .filter(event => event.id && event.timestamp && event.company_id && event.worker_id && event.assignment_id)
           .map(({ id, timestamp, company_id, worker_id, assignment_id, type, latitude, longitude, notes }) => ({
             id, created_at: timestamp, company_id, worker_id, assignment_id, type, latitude, longitude, notes,
           }));
-        if (eventsToSync.length > 0) {
+        
+        // Check if any events belong to a session that was remotely ended
+        if (eventsToSync.length > 0 && activeWorkSession) {
+          // Fetch the current session from server to see if it was ended
+          const { data: serverSession } = await supabase
+            .from('work_sessions')
+            .select('id, end_time')
+            .eq('id', activeWorkSession.id)
+            .single();
+          
+          if (serverSession?.end_time) {
+            // Manager ended the session - filter out events after that time
+            const managerCheckoutTime = new Date(serverSession.end_time).getTime();
+            const validEvents = eventsToSync.filter(event => 
+              new Date(event.created_at).getTime() <= managerCheckoutTime
+            );
+            const droppedCount = eventsToSync.length - validEvents.length;
+            if (droppedCount > 0) {
+              console.log(`Dropped ${droppedCount} location events after remote checkout`);
+              // Mark dropped events as synced so we don't try again
+              const droppedIds = eventsToSync
+                .filter(e => new Date(e.created_at).getTime() > managerCheckoutTime)
+                .map(e => e.id);
+              await markLocationEventsAsSynced(droppedIds);
+            }
+            if (validEvents.length > 0) {
+              await upsertLocationEvents(validEvents);
+              await markLocationEventsAsSynced(validEvents.map(e => e.id));
+              console.log(`Synced ${validEvents.length} valid location events.`);
+            }
+          } else {
+            // Session not remotely ended, sync all events
+            await upsertLocationEvents(eventsToSync);
+            await markLocationEventsAsSynced(eventsToSync.map(e => e.id));
+            console.log(`Synced ${eventsToSync.length} local location events.`);
+          }
+        } else if (eventsToSync.length > 0) {
+          // No active session, just sync
           await upsertLocationEvents(eventsToSync);
           await markLocationEventsAsSynced(eventsToSync.map(e => e.id));
           console.log(`Synced ${eventsToSync.length} local location events.`);
@@ -410,6 +449,32 @@ export function AssignmentsProvider({ children }: { children: React.ReactNode })
         await upsertWorkSessions(sessionsToUpsert);
         await markWorkSessionsAsSynced(sessionsToUpsert.map(ws => ws.id));
         console.log(`Synced ${sessionsToUpsert.length} local work sessions.`);
+
+        // Check if the currently active session was remotely ended by manager
+        if (activeWorkSession) {
+          const syncedActiveSession = sessionsToUpsert.find(ws => ws.id === activeWorkSession.id);
+          if (syncedActiveSession?.end_time) {
+            console.log('Active session was remotely ended during sync. Stopping tracking.');
+            // Stop background tracking
+            try {
+              const BL = await import('background-location');
+              await BL.stop();
+            } catch (e) {
+              console.warn('Failed to stop background tracking:', e);
+            }
+            // Reload active session (will be null now)
+            await loadActiveWorkSession();
+            // Notify worker
+            try {
+              const { default: Toast } = await import('react-native-toast-message');
+              Toast.show({
+                type: 'info',
+                text1: 'Session Ended',
+                text2: 'Your manager ended your work session remotely.',
+              });
+            } catch {}
+          }
+        }
 
         // Reconcile completed sessions that were ended while offline
         const completedOfflineSessions = sessionsToUpsert.filter(ws => !!ws.end_time);
