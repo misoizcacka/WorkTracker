@@ -249,51 +249,45 @@ export default function ManagerEmployees() {
             {isPendingInvite ? 'N/A' : (item.role === 'manager' ? 'N/A' : manager?.full_name || 'N/A')}
         </Text>
         <View style={[styles.tableCellActions, { width: fixedColumnWidths.actions }]}>
-          {isPendingInvite ? (
-            <>
-              <TouchableOpacity onPress={() => handleSharePendingInvite(item)} style={styles.actionButton}>
-                <Ionicons name="link-outline" size={20} color={theme.colors.iconColor} />
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={() => handleCancelPending(item)}
-                style={[styles.actionButton, { flexDirection: 'column', alignItems: 'center' }]}
-                disabled={isCancellingInvite === item.id}
-              >
-                {isCancellingInvite === item.id ? (
-                  <ActivityIndicator size="small" color={theme.colors.danger} />
-                ) : (
-                  <Ionicons name="close-circle-outline" size={20} color={theme.colors.danger} />
-                )}
-              </TouchableOpacity>
-            </>
-          ) : (
-            <>
-              {/* Access link — grayed out for current user (can't generate for yourself) */}
-              <TouchableOpacity
-                onPress={() => !isCurrentUser && handleGenerateAccessLink(item as Employee)}
-                style={[styles.actionButton, isCurrentUser && { opacity: 0.35 }]}
-                disabled={isCurrentUser || loading}
-              >
-                <Ionicons name="link-outline" size={16} color={theme.colors.iconColor} />
-              </TouchableOpacity>
-              {/* Hourly rate — grayed out for managers and non-workers */}
-              <TouchableOpacity
-                onPress={() => { setSelectedRateEmployee(item as Employee); setHourlyRateModalVisible(true); }}
-                style={[styles.actionButton, (!isOwner || (item as Employee).role !== 'worker') && { opacity: 0.35 }]}
-                disabled={!isOwner || (item as Employee).role !== 'worker'}
-              >
-                <Ionicons name="cash-outline" size={16} color={theme.colors.iconColor} />
-              </TouchableOpacity>
-              {/* Edit */}
-              <TouchableOpacity onPress={() => handleEdit(item as Employee)} style={styles.actionButton}>
-                <Ionicons name="pencil-outline" size={16} color={theme.colors.iconColor} />
-              </TouchableOpacity>
-              {/* Delete — danger color signals destructive action */}
-              <TouchableOpacity onPress={() => handleDelete(item as Employee)} style={[styles.actionButton, styles.actionButtonDanger]}>
-                <Ionicons name="trash-outline" size={16} color={theme.colors.danger} />
-              </TouchableOpacity>
-            </>
-          )}
+          {/* Share/Access Link - enabled for pending invites OR active employees (except yourself) */}
+          <TouchableOpacity
+            onPress={() => isPendingInvite ? handleSharePendingInvite(item) : handleGenerateAccessLink(item as Employee)}
+            style={[styles.actionButton, (isPendingInvite || isCurrentUser) && !isPendingInvite && { opacity: 0.35 }]}
+            disabled={!isPendingInvite && isCurrentUser}
+          >
+            <Ionicons name="link-outline" size={16} color={theme.colors.iconColor} />
+          </TouchableOpacity>
+          
+          {/* Hourly Rate - only for workers, only by owner */}
+          <TouchableOpacity
+            onPress={() => { setSelectedRateEmployee(item as Employee); setHourlyRateModalVisible(true); }}
+            style={[styles.actionButton, (isPendingInvite || !isOwner || (item as Employee).role !== 'worker') && { opacity: 0.35 }]}
+            disabled={isPendingInvite || !isOwner || (item as Employee).role !== 'worker'}
+          >
+            <Ionicons name="cash-outline" size={16} color={theme.colors.iconColor} />
+          </TouchableOpacity>
+          
+          {/* Edit - only for active employees */}
+          <TouchableOpacity 
+            onPress={() => handleEdit(item as Employee)} 
+            style={[styles.actionButton, isPendingInvite && { opacity: 0.35 }]}
+            disabled={isPendingInvite}
+          >
+            <Ionicons name="pencil-outline" size={16} color={theme.colors.iconColor} />
+          </TouchableOpacity>
+          
+          {/* Delete/Cancel - pending invites show cancel with loading, active show delete */}
+          <TouchableOpacity 
+            onPress={() => isPendingInvite ? handleCancelPending(item) : handleDelete(item as Employee)} 
+            style={[styles.actionButton, styles.actionButtonDanger]}
+            disabled={isPendingInvite && isCancellingInvite === item.id}
+          >
+            {isPendingInvite && isCancellingInvite === item.id ? (
+              <ActivityIndicator size="small" color={theme.colors.danger} />
+            ) : (
+              <Ionicons name={isPendingInvite ? "close-circle-outline" : "trash-outline"} size={16} color={theme.colors.danger} />
+            )}
+          </TouchableOpacity>
         </View>
       </View>
     );
@@ -364,7 +358,13 @@ export default function ManagerEmployees() {
                 <Text style={styles.statLabel} fontType="regular">{t('manager.employees.managers')}</Text>
               </View>
             ) : null}
-            <Button title={t('manager.employees.invite')} onPress={handleInvite} style={styles.createButton} textStyle={styles.createButtonText} />
+            <Button 
+              title={t('manager.employees.invite')} 
+              onPress={handleInvite} 
+              style={[styles.createButton, (isOwner && seatsUsed >= seatLimit) && styles.createButtonDisabled]} 
+              textStyle={styles.createButtonText}
+              disabled={isOwner && seatsUsed >= seatLimit}
+            />
           </View>
         </View>
 
@@ -543,6 +543,10 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     paddingHorizontal: 15,
     marginLeft: theme.spacing(2),
+  },
+  createButtonDisabled: {
+    backgroundColor: theme.colors.disabledText,
+    opacity: 0.5,
   },
   createButtonText: { color: "white", fontSize: theme.fontSizes.md },
   // tableWrapperCard removed
