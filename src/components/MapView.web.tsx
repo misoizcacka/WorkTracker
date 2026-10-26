@@ -302,23 +302,30 @@ export const MapView = React.forwardRef<any, MapViewProps>(({
   ], [selectedWorkers, selectedProjects]);
 
   useEffect(() => {
+    // Only auto-fit when map first loads with markers, not on every location update
+    // This prevents the annoying zoom out/in behavior when markers move
     if (region || !isMapLoaded || !mapRef.current) return;
+    
     const map = mapRef.current;
-
     const allLocations = features.map(f => f.geometry.coordinates as [number, number]);
+    
+    // Only fit bounds if we don't have any features yet (initial load)
+    // Once markers are placed, let the user control the zoom
     if (features.length === 0) {
       if (initialRegion) {
         map.easeTo({ center: [initialRegion.longitude, initialRegion.latitude], zoom: initialRegion.zoom || 10, duration: 1000 });
       }
       return;
-    };
-
+    }
+    
+    // Only auto-fit on the very first load when features appear
+    // We detect this by checking if we previously had zero features
     const boundsToFit = new LngLatBounds();
     allLocations.forEach(loc => boundsToFit.extend(loc));
-    if(!boundsToFit.isEmpty()) {
+    if (!boundsToFit.isEmpty()) {
       map.fitBounds(boundsToFit, { padding: 100, maxZoom: 15, duration: 1000 });
     }
-  }, [features, isMapLoaded, region, initialRegion]);
+  }, [isMapLoaded, region, initialRegion]); // Removed features from dependencies to prevent refitting on location updates
 
   const supercluster = useMemo(() => {
     const sc = new Supercluster({ radius: 40, maxZoom: 16 });

@@ -57,6 +57,7 @@ export default function Home() {
   const [pendingAction, setPendingAction] = useState<'checking_in' | 'checking_out' | null>(null);
   const [lastOnSiteAssignmentId, setLastOnSiteAssignmentId] = useState<string | null>(null);
   const [isBreakModalVisible, setIsBreakModalVisible] = useState(false);
+  const [isLoadingCheckoutLocation, setIsLoadingCheckoutLocation] = useState(false);
   // Stores the GPS location captured when user taps "Check Out", used after break modal confirms
   const pendingCheckoutLocationRef = React.useRef<{ latitude: number; longitude: number } | null>(null);
   // iOS only: seconds since last native location tick â€” >600 means process was force-swiped
@@ -543,12 +544,17 @@ export default function Home() {
   const handleCheckOut = async () => {
     if (!activeWorkSession) return;
     setIsBreakModalVisible(true);
+    setIsLoadingCheckoutLocation(true);
     // Get GPS in background while user fills break duration
     Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High })
       .then(loc => {
         pendingCheckoutLocationRef.current = { latitude: loc.coords.latitude, longitude: loc.coords.longitude };
+        setIsLoadingCheckoutLocation(false);
       })
-      .catch(() => pendingCheckoutLocationRef.current = null);
+      .catch(() => {
+        pendingCheckoutLocationRef.current = null;
+        setIsLoadingCheckoutLocation(false);
+      });
   };
 
   const handleBreakConfirm = async (breakMinutes: number) => {
@@ -577,6 +583,7 @@ export default function Home() {
 
   const handleBreakCancel = () => {
     setIsBreakModalVisible(false);
+    setIsLoadingCheckoutLocation(false);
     pendingCheckoutLocationRef.current = null;
   };
 
@@ -831,7 +838,7 @@ export default function Home() {
         workedMinutes={activeWorkSession ? Math.floor((Date.now() - new Date(activeWorkSession.start_time).getTime()) / 60000) : 0}
         onConfirm={handleBreakConfirm}
         onCancel={handleBreakCancel}
-        isLoading={isProcessingCheckInOut}
+        isLoading={isProcessingCheckInOut || isLoadingCheckoutLocation}
       />
     </AnimatedScreen>
   );

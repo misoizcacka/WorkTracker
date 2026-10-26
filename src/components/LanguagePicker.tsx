@@ -97,7 +97,7 @@ const styles = StyleSheet.create({
   trigger: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 5,
+    gap: 8,
     paddingHorizontal: theme.spacing(1.5),
     paddingVertical: theme.spacing(0.75),
     borderRadius: theme.radius.md,
@@ -107,7 +107,7 @@ const styles = StyleSheet.create({
   triggerRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 8,
     paddingVertical: theme.spacing(0.5),
   },
   triggerRowLabel: {

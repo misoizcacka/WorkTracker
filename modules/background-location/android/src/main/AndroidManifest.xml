@@ -8,6 +8,11 @@
             android:name="app.koordinate.backgroundlocation.GeofenceBroadcastReceiver"
             android:enabled="true"
             android:exported="true" />
+        
+        <receiver
+            android:name="app.koordinate.backgroundlocation.LocationAlarmReceiver"
+            android:enabled="true"
+            android:exported="false" />
 
         <receiver
             android:name="app.koordinate.backgroundlocation.BootReceiver"

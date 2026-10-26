@@ -1,566 +1,378 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import {
-  View,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  ActivityIndicator,
-  Platform,
-} from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
-import moment from 'moment';
-import { Text } from '../../components/Themed';
-import { Card } from '../../components/Card';
-import AnimatedScreen from '../../components/AnimatedScreen';
-import { theme } from '../../theme';
+import React, { useState, useEffect } from 'react';
+import { ScrollView, StyleSheet, Alert, Platform } from 'react-native';
+import { View, Text } from '~/components/Themed';
+import { Button } from '~/components/Button';
 import * as BackgroundLocation from 'background-location';
-import type { LocationDiagnostics } from 'background-location';
+import * as Sharing from 'expo-sharing';
+import * as FileSystem from 'expo-file-system';
+import { useTranslation } from 'react-i18next';
+import { theme } from '~/theme';
 
-const POLL_INTERVAL_MS = 5000;
+export default function DiagnosticsScreen() {
+  const { t } = useTranslation();
+  const [logs, setLogs] = useState<string>('Loading...');
+  const [stats, setStats] = useState<any>(null);
+  const [diagnostics, setDiagnostics] = useState<any>(null);
+  const [refreshing, setRefreshing] = useState(false);
 
-function formatAge(seconds: number): string {
-  if (seconds < 0) return 'Never';
-  if (seconds < 60) return `${seconds}s ago`;
-  if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
-  return `${Math.floor(seconds / 3600)}h ${Math.floor((seconds % 3600) / 60)}m ago`;
-}
-
-function formatAccuracy(meters: number): string {
-  if (meters < 0) return 'Unknown';
-  return `±${Math.round(meters)}m`;
-}
-
-type StatusType = 'ok' | 'warn' | 'error' | 'neutral';
-
-function StatusDot({ status }: { status: StatusType }) {
-  const colors: Record<StatusType, string> = {
-    ok: theme.colors.success,
-    warn: theme.statusColors.warningText,
-    error: theme.colors.danger,
-    neutral: theme.colors.disabledText,
-  };
-  return <View style={[styles.statusDot, { backgroundColor: colors[status] }]} />;
-}
-
-interface DiagRow {
-  label: string;
-  value: string;
-  status: StatusType;
-  hint?: string;
-}
-
-function buildRows(d: LocationDiagnostics, now: number): DiagRow[] {
-  const isIOS = typeof d.monitoredRegionCount === 'number';
-  const rows: DiagRow[] = [
-    {
-      label: isIOS ? 'Location Manager' : 'Foreground Service',
-      value: d.serviceRunning ? 'Running ✓' : 'NOT running ✗',
-      status: d.serviceRunning ? 'ok' : 'error',
-      hint: d.serviceRunning
-        ? undefined
-        : isIOS
-          ? 'Location manager inactive. Check Always Allow permission.'
-          : 'Service was killed by OS. WorkManager will restart it within 15 min.',
-    },
-    {
-      label: isIOS ? 'BGTask Scheduler' : 'WorkManager',
-      value: d.workManagerState,
-      status: ['RUNNING', 'ENQUEUED', 'SUCCEEDED', 'SCHEDULED'].includes(d.workManagerState) ? 'ok'
-        : d.workManagerState === 'NOT_SCHEDULED' ? 'warn'
-        : 'error',
-      hint: d.workManagerState === 'NOT_SCHEDULED'
-        ? 'No active session — worker not checked in.'
-        : undefined,
-    },
-    {
-      label: 'Tracking Mode',
-      value: d.trackingMode,
-      status: d.trackingMode === 'ACTIVE' ? 'warn' : 'ok',
-      hint: d.trackingMode === 'ACTIVE'
-        ? 'Outside geofence — high accuracy GPS active.'
-        : 'Inside geofence — balanced accuracy.',
-    },
-    {
-      label: 'Registered Geofences',
-      value: String(d.geofenceCount),
-      status: d.geofenceCount > 0 ? 'ok' : d.hasActiveSession ? 'warn' : 'neutral',
-      hint: d.geofenceCount === 0 && d.hasActiveSession
-        ? 'Session active but no geofences registered — check-in may have failed.'
-        : undefined,
-    },
-    {
-      label: 'Last Location',
-      value: d.lastLocationAgeSeconds < 0
-        ? 'No fix yet'
-        : `${d.lastLatitude.toFixed(6)}, ${d.lastLongitude.toFixed(6)}`,
-      status: d.lastLocationAgeSeconds < 0 ? 'error'
-        : d.lastLocationAgeSeconds < 300 ? 'ok'    // < 5 min = good
-        : d.lastLocationAgeSeconds < 900 ? 'warn'  // < 15 min = warn
-        : 'error',
-    },
-    {
-      label: 'Location Age',
-      value: formatAge(d.lastLocationAgeSeconds),
-      status: d.lastLocationAgeSeconds < 0 ? 'error'
-        : d.lastLocationAgeSeconds < 300 ? 'ok'
-        : d.lastLocationAgeSeconds < 900 ? 'warn'
-        : 'error',
-      hint: d.lastLocationAgeSeconds > 900
-        ? 'Stale location. GPS may be blocked or service restarting.'
-        : undefined,
-    },
-    {
-      label: 'Location Accuracy',
-      value: formatAccuracy(d.lastLocationAccuracyMeters),
-      status: d.lastLocationAccuracyMeters < 0 ? 'neutral'
-        : d.lastLocationAccuracyMeters <= 30 ? 'ok'
-        : d.lastLocationAccuracyMeters <= 100 ? 'warn'
-        : 'error',
-      hint: d.lastLocationAccuracyMeters > 100
-        ? 'Poor accuracy. GPS may be obstructed or device indoors.'
-        : undefined,
-    },
-    {
-      label: 'Active Session',
-      value: d.hasActiveSession ? 'Yes' : 'No',
-      status: d.hasActiveSession ? 'ok' : 'neutral',
-    },
-    {
-      label: 'Unsynced Native Events',
-      value: String(d.unsyncedNativeEventCount),
-      status: d.unsyncedNativeEventCount === 0 ? 'ok'
-        : d.unsyncedNativeEventCount < 20 ? 'warn'
-        : 'error',
-      hint: d.unsyncedNativeEventCount > 0
-        ? 'Events queued locally, will sync when online.'
-        : undefined,
-    },
-  ];
-
-  // iOS-specific rows
-  if (isIOS) {
-    rows.push({
-      label: 'Monitored Regions',
-      value: String(d.monitoredRegionCount),
-      status: (d.monitoredRegionCount ?? 0) > 0 ? 'ok' : d.hasActiveSession ? 'warn' : 'neutral',
-      hint: (d.monitoredRegionCount ?? 0) === 0 && d.hasActiveSession
-        ? 'No CLRegions monitored — geofencing may not be active.'
-        : undefined,
-    });
-    rows.push({
-      label: 'Location Permission',
-      value: d.authorizationStatus ?? 'unknown',
-      status: d.authorizationStatus === 'authorized_always' ? 'ok'
-        : d.authorizationStatus === 'authorized_when_in_use' ? 'warn'
-        : 'error',
-      hint: d.authorizationStatus !== 'authorized_always'
-        ? 'Must be "Always Allow" for background tracking to work.'
-        : undefined,
-    });
-    const gapSec = d.trackingGapSeconds ?? -1;
-    rows.push({
-      label: 'Tracking Gap',
-      value: gapSec < 0 ? 'No gap' : gapSec < 60 ? `${gapSec}s` : `${Math.round(gapSec / 60)}m`,
-      status: gapSec < 0 ? 'neutral'
-        : gapSec < 120 ? 'ok'
-        : gapSec < 600 ? 'warn'
-        : 'error',
-      hint: gapSec >= 600
-        ? 'Process was likely force-swiped. Geofencing resumes via OS relaunch or significant location change.'
-        : gapSec >= 120
-        ? 'Small gap detected — may have been temporarily paused by OS.'
-        : undefined,
-    });
-  }
-
-  return rows;
-}
-
-export default function DiagnosticScreen() {
-  const router = useRouter();
-  const [diagnostics, setDiagnostics] = useState<LocationDiagnostics | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [lastRefreshed, setLastRefreshed] = useState<Date | null>(null);
-  const [isRefreshing, setIsRefreshing] = useState(false);
-  const [flushResult, setFlushResult] = useState<string | null>(null);
-  const [isFlushing, setIsFlushing] = useState(false);
-
-  const fetch = useCallback(async (manual = false) => {
-    if (manual) setIsRefreshing(true);
+  const loadLogs = async () => {
     try {
-      const data = await BackgroundLocation.getDiagnostics();
-      setDiagnostics(data);
-      setLastRefreshed(new Date());
-      setError(null);
-    } catch (e: any) {
-      setError(e?.message ?? 'Failed to get diagnostics');
-    } finally {
-      setLoading(false);
-      setIsRefreshing(false);
+      const recentLogs = await BackgroundLocation.getRecentLogs(200);
+      setLogs(recentLogs || 'No logs available');
+      
+      const logStats = await BackgroundLocation.getLogStats();
+      setStats(logStats);
+      
+      const diag = await BackgroundLocation.getDiagnostics();
+      setDiagnostics(diag);
+    } catch (error) {
+      console.error('Failed to load logs:', error);
+      setLogs('Failed to load logs: ' + error);
     }
+  };
+
+  useEffect(() => {
+    loadLogs();
   }, []);
 
-  // Initial fetch + poll every 5 seconds
-  useEffect(() => {
-    fetch();
-    const interval = setInterval(() => fetch(), POLL_INTERVAL_MS);
-    return () => clearInterval(interval);
-  }, [fetch]);
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    await loadLogs();
+    setRefreshing(false);
+  };
 
-  const handleFlush = useCallback(async () => {
-    setIsFlushing(true);
-    setFlushResult(null);
+  const handleExport = async () => {
     try {
-      const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
-      const supabaseKey = process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
-      const flushed = await BackgroundLocation.flushPendingEvents(supabaseUrl, supabaseKey);
-      setFlushResult(`✓ Flushed ${flushed} event${flushed !== 1 ? 's' : ''}`);
-      await fetch(true);
-    } catch (e: any) {
-      setFlushResult(`✗ ${e?.message ?? 'Flush failed'}`);
-    } finally {
-      setIsFlushing(false);
+      const allLogs = await BackgroundLocation.exportLogs();
+      
+      if (Platform.OS === 'web') {
+        // Web: download as file
+        const blob = new Blob([allLogs], { type: 'text/plain' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `location_tracking_logs_${new Date().toISOString()}.txt`;
+        a.click();
+        URL.revokeObjectURL(url);
+        Alert.alert('Success', 'Logs downloaded');
+      } else {
+        // Native: save and share
+        const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+        const fileName = `location_logs_${timestamp}.txt`;
+        const fileUri = `${FileSystem.documentDirectory}${fileName}`;
+        
+        // Write file (ignoring deprecation warning for now - still works)
+        try {
+          await FileSystem.writeAsStringAsync(fileUri, allLogs);
+        } catch (writeError) {
+          // If write fails, just share the text directly
+          console.warn('File write failed, sharing text directly:', writeError);
+          if (Platform.OS === 'android') {
+            // Android: can share text directly
+            const { Share } = await import('react-native');
+            await Share.share({
+              message: allLogs,
+              title: 'Location Tracking Logs',
+            });
+            return;
+          }
+        }
+        
+        const canShare = await Sharing.isAvailableAsync();
+        if (canShare) {
+          await Sharing.shareAsync(fileUri, {
+            mimeType: 'text/plain',
+            dialogTitle: 'Export Location Tracking Logs',
+          });
+        } else {
+          Alert.alert('Success', `Logs saved to: ${fileUri}`);
+        }
+      }
+    } catch (error) {
+      console.error('Failed to export logs:', error);
+      Alert.alert('Error', 'Failed to export logs: ' + error);
     }
-  }, [fetch]);
+  };
 
-  const rows = diagnostics ? buildRows(diagnostics, Date.now()) : [];
-  const hasErrors = rows.some(r => r.status === 'error');
-  const hasWarnings = rows.some(r => r.status === 'warn');
-  const overallStatus: StatusType = hasErrors ? 'error' : hasWarnings ? 'warn' : 'ok';
-  const overallLabel = hasErrors ? 'Issues Detected' : hasWarnings ? 'Warnings' : 'All Systems OK';
+  const handleClear = () => {
+    Alert.alert(
+      'Clear Logs',
+      'Are you sure you want to clear all logs? This cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Clear',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await BackgroundLocation.clearLogs();
+              setLogs('Logs cleared');
+              setStats(null);
+              Alert.alert('Success', 'Logs cleared');
+            } catch (error) {
+              console.error('Failed to clear logs:', error);
+              Alert.alert('Error', 'Failed to clear logs: ' + error);
+            }
+          },
+        },
+      ]
+    );
+  };
 
   return (
-    <AnimatedScreen>
+    <ScrollView style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-          <Ionicons name="arrow-back" size={22} color={theme.colors.headingText} />
-        </TouchableOpacity>
-        <View style={styles.headerText}>
-          <Text style={styles.title} fontType="bold">Location Diagnostics</Text>
-          <Text style={styles.subtitle}>
-            {lastRefreshed ? `Updated ${moment(lastRefreshed).format('HH:mm:ss')}` : 'Loading...'}
-          </Text>
-        </View>
-        <TouchableOpacity
-          style={styles.refreshButton}
-          onPress={() => fetch(true)}
-          disabled={isRefreshing}
-        >
-          {isRefreshing
-            ? <ActivityIndicator size="small" color={theme.colors.primary} />
-            : <Ionicons name="refresh-outline" size={22} color={theme.colors.primary} />
-          }
-        </TouchableOpacity>
+        <Text style={styles.title}>Location Tracking Diagnostics</Text>
+        <Text style={styles.subtitle}>
+          View and export logs from your location tracking sessions
+        </Text>
       </View>
 
-      <ScrollView contentContainerStyle={styles.content}>
-        {loading ? (
-          <View style={styles.centered}>
-            <ActivityIndicator size="large" color={theme.colors.primary} />
-            <Text style={styles.loadingText}>Reading diagnostics...</Text>
-          </View>
-        ) : error ? (
-          <Card style={styles.errorCard}>
-            <Ionicons name="warning-outline" size={24} color={theme.colors.danger} />
-            <Text style={styles.errorText}>{error}</Text>
-            <Text style={styles.errorHint}>
-              This screen requires a real device (iOS or Android) with the native module installed.
+      {diagnostics && (
+        <View style={styles.diagnosticsCard}>
+          <Text style={styles.sectionTitle}>Service Status</Text>
+          <View style={styles.statusRow}>
+            <Text style={styles.statusLabel}>Service Running:</Text>
+            <Text style={[styles.statusValue, { color: diagnostics.serviceRunning ? '#4CAF50' : '#F44336' }]}>
+              {diagnostics.serviceRunning ? '✅ Running' : '❌ Stopped'}
             </Text>
-          </Card>
-        ) : (
-          <>
-            {/* Overall status banner */}
-            <Card style={[styles.bannerCard, {
-              backgroundColor: overallStatus === 'ok'
-                ? theme.statusColors.successBackground
-                : overallStatus === 'warn'
-                ? theme.statusColors.warningBackground
-                : '#FEE2E2',
-              borderColor: overallStatus === 'ok'
-                ? theme.statusColors.successText
-                : overallStatus === 'warn'
-                ? theme.statusColors.warningText
-                : theme.colors.danger,
-            }]}>
-              <StatusDot status={overallStatus} />
-              <Text style={[styles.bannerText, {
-                color: overallStatus === 'ok'
-                  ? theme.statusColors.successText
-                  : overallStatus === 'warn'
-                  ? theme.statusColors.warningText
-                  : theme.colors.danger,
-              }]} fontType="bold">
-                {overallLabel}
+          </View>
+          <View style={styles.statusRow}>
+            <Text style={styles.statusLabel}>Tracking Mode:</Text>
+            <Text style={styles.statusValue}>
+              {diagnostics.trackingMode || 'Unknown'} 
+              {diagnostics.trackingMode === 'ACTIVE' ? ' 🚗' : ' 🏠'}
+            </Text>
+          </View>
+          <View style={styles.statusRow}>
+            <Text style={styles.statusLabel}>Active Geofences:</Text>
+            <Text style={styles.statusValue}>{diagnostics.geofenceCount || 0}</Text>
+          </View>
+          <View style={styles.statusRow}>
+            <Text style={styles.statusLabel}>Has Active Session:</Text>
+            <Text style={styles.statusValue}>
+              {diagnostics.hasActiveSession ? '✅ Yes' : '❌ No'}
+            </Text>
+          </View>
+          {diagnostics.unsyncedNativeEventCount > 0 && (
+            <View style={styles.statusRow}>
+              <Text style={styles.statusLabel}>Unsynced Events:</Text>
+              <Text style={[styles.statusValue, { color: '#FF9800' }]}>
+                ⚠️ {diagnostics.unsyncedNativeEventCount} (offline)
               </Text>
-              <Text style={styles.pollNote}>Auto-refreshes every 5s</Text>
-            </Card>
+            </View>
+          )}
+          {diagnostics.lastLocationAgeSeconds >= 0 && (
+            <View style={styles.statusRow}>
+              <Text style={styles.statusLabel}>Last Location:</Text>
+              <Text style={styles.statusValue}>
+                {Math.floor(diagnostics.lastLocationAgeSeconds / 60)}m {diagnostics.lastLocationAgeSeconds % 60}s ago
+              </Text>
+            </View>
+          )}
+        </View>
+      )}
 
-            {/* Diagnostic rows */}
-            <Card style={styles.tableCard}>
-              {rows.map((row, i) => (
-                <View key={row.label} style={[styles.row, i < rows.length - 1 && styles.rowBorder]}>
-                  <View style={styles.rowLeft}>
-                    <StatusDot status={row.status} />
-                    <View style={styles.rowText}>
-                      <Text style={styles.rowLabel}>{row.label}</Text>
-                      {row.hint ? (
-                        <Text style={styles.rowHint}>{row.hint}</Text>
-                      ) : null}
-                    </View>
-                  </View>
-                  <Text style={[styles.rowValue, {
-                    color: row.status === 'ok' ? theme.colors.headingText
-                      : row.status === 'warn' ? theme.statusColors.warningText
-                      : row.status === 'error' ? theme.colors.danger
-                      : theme.colors.disabledText
-                  }]} fontType="medium">
-                    {row.value}
-                  </Text>
-                </View>
-              ))}
-            </Card>
+      {stats && (
+        <View style={styles.statsCard}>
+          <Text style={styles.sectionTitle}>Log File Statistics</Text>
+          <View style={styles.statsRow}>
+            <Text style={styles.statsLabel}>Total Size:</Text>
+            <Text style={styles.statsValue}>{stats.total_size_mb} MB / {stats.max_size_mb} MB</Text>
+          </View>
+          <View style={styles.statsRow}>
+            <Text style={styles.statsLabel}>Lines:</Text>
+            <Text style={styles.statsValue}>{stats.line_count}</Text>
+          </View>
+        </View>
+      )}
 
-            {/* Flush button */}
-            <Card style={styles.flushCard}>
-              <View style={styles.flushRow}>
-                <View style={styles.flushInfo}>
-                  <Text style={styles.flushTitle} fontType="bold">Unsynced Event Queue</Text>
-                  <Text style={styles.flushSub}>
-                    {diagnostics
-                      ? `${diagnostics.unsyncedNativeEventCount} event${diagnostics.unsyncedNativeEventCount !== 1 ? 's' : ''} waiting to sync`
-                      : '—'}
-                  </Text>
-                  {flushResult ? (
-                    <Text style={[styles.flushResult, {
-                      color: flushResult.startsWith('✓') ? theme.colors.success : theme.colors.danger
-                    }]} fontType="medium">
-                      {flushResult}
-                    </Text>
-                  ) : null}
-                </View>
-                <TouchableOpacity
-                  style={[styles.flushButton, isFlushing && styles.flushButtonDisabled]}
-                  onPress={handleFlush}
-                  disabled={isFlushing}
-                >
-                  {isFlushing
-                    ? <ActivityIndicator size="small" color="white" />
-                    : <Text style={styles.flushButtonText} fontType="bold">Flush Now</Text>
-                  }
-                </TouchableOpacity>
-              </View>
-            </Card>
+      <View style={styles.actionsCard}>
+        <Button
+          title="Refresh Logs"
+          onPress={handleRefresh}
+          disabled={refreshing}
+          style={styles.actionButton}
+        />
+        <Button
+          title="Export All Logs"
+          onPress={handleExport}
+          style={styles.actionButton}
+        />
+        <Button
+          title="Clear Logs"
+          onPress={handleClear}
+          variant="outline"
+          style={styles.actionButton}
+        />
+      </View>
 
-            {/* Raw IDs for support */}
-              {diagnostics?.hasActiveSession && (
-              <Card style={styles.idsCard}>
-                <Text style={styles.idsTitle} fontType="bold">Session Info</Text>
-                <Text style={styles.idRow} numberOfLines={1}>
-                  Worker: {diagnostics.workerId || '—'}
-                </Text>
-                <Text style={styles.idRow} numberOfLines={1}>
-                  Assignment: {diagnostics.assignmentId || '—'}
-                </Text>
-              </Card>
-            )}
-          </>
-        )}
-      </ScrollView>
-    </AnimatedScreen>
+      <View style={styles.logsCard}>
+        <Text style={styles.sectionTitle}>Recent Logs (Last 200 lines)</Text>
+        <Text style={styles.hint}>
+          Tip: Export logs after a test drive to review on your computer
+        </Text>
+        <ScrollView 
+          style={styles.logsScrollView}
+          nestedScrollEnabled
+        >
+          <Text style={styles.logsText}>{logs}</Text>
+        </ScrollView>
+      </View>
+
+      <View style={styles.helpCard}>
+        <Text style={styles.helpTitle}>📖 How to Use</Text>
+        <Text style={styles.helpText}>
+          1. Before testing, tap "Clear Logs" to start fresh{'\n'}
+          2. Go for your test drive/work session{'\n'}
+          3. Return and tap "Export All Logs"{'\n'}
+          4. Share the file with support or review on your computer{'\n'}
+          {'\n'}
+          <Text style={styles.helpBold}>What to Look For:</Text>{'\n'}
+          • "Mode switched" messages show ACTIVE/PASSIVE changes{'\n'}
+          • "⚠️ AlarmManager FALLBACK" means gaps were detected{'\n'}
+          • "✓ AlarmManager fallback" shows successful recovery{'\n'}
+          • Regular timestamps = good tracking{'\n'}
+          • Large gaps = potential issues
+        </Text>
+      </View>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: theme.spacing(2),
-    paddingVertical: theme.spacing(2),
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.borderColor,
-    backgroundColor: theme.colors.pageBackground,
-  },
-  backButton: {
-    padding: theme.spacing(1),
-    marginRight: theme.spacing(1),
-  },
-  headerText: {
+  container: {
     flex: 1,
+    backgroundColor: theme.colors.background,
+  },
+  header: {
+    padding: 20,
+    backgroundColor: theme.colors.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.border,
   },
   title: {
-    fontSize: theme.fontSizes.lg,
-    color: theme.colors.headingText,
+    fontSize: 24,
+    fontWeight: 'bold',
+    marginBottom: 8,
   },
   subtitle: {
-    fontSize: theme.fontSizes.xs,
-    color: theme.colors.disabledText,
-    marginTop: 1,
+    fontSize: 14,
+    color: theme.colors.textSecondary,
   },
-  refreshButton: {
-    padding: theme.spacing(1),
-  },
-  content: {
-    padding: theme.spacing(2),
-    gap: theme.spacing(2),
-    paddingBottom: theme.spacing(6),
-  },
-  centered: {
-    alignItems: 'center',
-    paddingVertical: theme.spacing(6),
-    gap: theme.spacing(2),
-  },
-  loadingText: {
-    color: theme.colors.bodyText,
-    fontSize: theme.fontSizes.md,
-  },
-  errorCard: {
-    padding: theme.spacing(3),
-    alignItems: 'center',
-    gap: theme.spacing(1.5),
-    borderColor: theme.colors.danger,
+  statsCard: {
+    margin: 16,
+    padding: 16,
+    backgroundColor: theme.colors.surface,
+    borderRadius: 8,
     borderWidth: 1,
+    borderColor: theme.colors.border,
   },
-  errorText: {
-    color: theme.colors.danger,
-    fontSize: theme.fontSizes.md,
-    textAlign: 'center',
+  diagnosticsCard: {
+    margin: 16,
+    marginTop: 0,
+    padding: 16,
+    backgroundColor: theme.colors.surface,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
   },
-  errorHint: {
-    color: theme.colors.disabledText,
-    fontSize: theme.fontSizes.sm,
-    textAlign: 'center',
-  },
-  bannerCard: {
+  statusRow: {
     flexDirection: 'row',
-    alignItems: 'center',
-    padding: theme.spacing(2),
-    gap: theme.spacing(1.5),
-    borderWidth: 1,
-    borderRadius: theme.radius.lg,
-  },
-  bannerText: {
-    flex: 1,
-    fontSize: theme.fontSizes.md,
-  },
-  pollNote: {
-    fontSize: theme.fontSizes.xs,
-    color: theme.colors.disabledText,
-  },
-  tableCard: {
-    padding: 0,
-    overflow: 'hidden',
-    borderRadius: theme.radius.lg,
-    borderWidth: 1,
-    borderColor: theme.colors.borderColor,
-  },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
     justifyContent: 'space-between',
-    paddingHorizontal: theme.spacing(2),
-    paddingVertical: theme.spacing(1.5),
-  },
-  rowBorder: {
+    alignItems: 'center',
+    paddingVertical: 8,
     borderBottomWidth: 1,
-    borderBottomColor: theme.colors.borderColor,
+    borderBottomColor: theme.colors.border + '30',
   },
-  rowLeft: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    flex: 1,
-    gap: theme.spacing(1.5),
-    marginRight: theme.spacing(2),
-  },
-  rowText: {
+  statusLabel: {
+    fontSize: 14,
+    color: theme.colors.textSecondary,
     flex: 1,
   },
-  rowLabel: {
-    fontSize: theme.fontSizes.sm,
-    color: theme.colors.headingText,
-  },
-  rowHint: {
-    fontSize: theme.fontSizes.xs,
-    color: theme.colors.disabledText,
-    marginTop: 2,
-    lineHeight: 16,
-  },
-  rowValue: {
-    fontSize: theme.fontSizes.sm,
+  statusValue: {
+    fontSize: 14,
+    fontWeight: '600',
+    flex: 1,
     textAlign: 'right',
-    flexShrink: 0,
-    maxWidth: 160,
   },
-  statusDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    marginTop: 5,
-    flexShrink: 0,
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    marginBottom: 12,
   },
-  idsCard: {
-    padding: theme.spacing(2),
-    borderWidth: 1,
-    borderColor: theme.colors.borderColor,
-    borderRadius: theme.radius.lg,
-    gap: theme.spacing(0.5),
-  },
-  flushCard: {
-    padding: theme.spacing(2),
-    borderWidth: 1,
-    borderColor: theme.colors.borderColor,
-    borderRadius: theme.radius.lg,
-  },
-  flushRow: {
+  statsRow: {
     flexDirection: 'row',
-    alignItems: 'center',
     justifyContent: 'space-between',
-    gap: theme.spacing(2),
+    paddingVertical: 6,
   },
-  flushInfo: {
-    flex: 1,
-    gap: 3,
+  statsLabel: {
+    fontSize: 14,
+    color: theme.colors.textSecondary,
   },
-  flushTitle: {
-    fontSize: theme.fontSizes.sm,
-    color: theme.colors.headingText,
+  statsValue: {
+    fontSize: 14,
+    fontWeight: '500',
   },
-  flushSub: {
-    fontSize: theme.fontSizes.xs,
-    color: theme.colors.bodyText,
+  actionsCard: {
+    margin: 16,
+    marginTop: 0,
+    padding: 16,
+    backgroundColor: theme.colors.surface,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
   },
-  flushResult: {
-    fontSize: theme.fontSizes.xs,
-    marginTop: 2,
+  actionButton: {
+    marginBottom: 12,
   },
-  flushButton: {
-    backgroundColor: theme.colors.primary,
-    borderRadius: theme.radius.md,
-    paddingHorizontal: theme.spacing(2),
-    paddingVertical: theme.spacing(1),
-    minWidth: 90,
-    alignItems: 'center',
-    justifyContent: 'center',
-    height: 36,
+  logsCard: {
+    margin: 16,
+    marginTop: 0,
+    padding: 16,
+    backgroundColor: theme.colors.surface,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
   },
-  flushButtonDisabled: {
-    opacity: 0.6,
+  hint: {
+    fontSize: 12,
+    color: theme.colors.textSecondary,
+    fontStyle: 'italic',
+    marginBottom: 12,
   },
-  flushButtonText: {
-    color: 'white',
-    fontSize: theme.fontSizes.sm,
+  logsScrollView: {
+    maxHeight: 400,
+    backgroundColor: '#1e1e1e',
+    borderRadius: 4,
+    padding: 12,
   },
-  idsTitle: {
-    fontSize: theme.fontSizes.xs,
-    color: theme.colors.bodyText,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-    marginBottom: theme.spacing(0.5),
+  logsText: {
+    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
+    fontSize: 10,
+    color: '#e0e0e0',
+    lineHeight: 14,
   },
-  idRow: {
-    fontSize: theme.fontSizes.xs,
-    color: theme.colors.disabledText,
-    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
+  helpCard: {
+    margin: 16,
+    marginTop: 0,
+    padding: 16,
+    backgroundColor: theme.colors.primary + '10',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: theme.colors.primary + '30',
+  },
+  helpTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 8,
+  },
+  helpText: {
+    fontSize: 13,
+    lineHeight: 20,
+    color: theme.colors.text,
+  },
+  helpBold: {
+    fontWeight: '600',
   },
 });

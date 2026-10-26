@@ -63,3 +63,43 @@ export function getAuthorizationStatus(): Promise<string> {
 export function getDiagnostics(): Promise<LocationDiagnostics> {
     return BackgroundLocationModule.getDiagnostics();
 }
+
+// === File Logging Functions ===
+
+export interface LogStats {
+  current_size_bytes: number;
+  old_size_bytes: number;
+  total_size_bytes: number;
+  current_size_mb: string;
+  total_size_mb: string;
+  line_count: number;
+  max_size_mb: string;
+}
+
+/**
+ * Export all logs as a string (current + old rotated logs)
+ */
+export function exportLogs(): Promise<string> {
+    return BackgroundLocationModule.exportLogs();
+}
+
+/**
+ * Get recent logs (last N lines, default 100)
+ */
+export function getRecentLogs(lines: number = 100): Promise<string> {
+    return BackgroundLocationModule.getRecentLogs(lines);
+}
+
+/**
+ * Clear all logs
+ */
+export function clearLogs(): Promise<void> {
+    return BackgroundLocationModule.clearLogs();
+}
+
+/**
+ * Get log file statistics
+ */
+export function getLogStats(): Promise<LogStats> {
+    return BackgroundLocationModule.getLogStats();
+}

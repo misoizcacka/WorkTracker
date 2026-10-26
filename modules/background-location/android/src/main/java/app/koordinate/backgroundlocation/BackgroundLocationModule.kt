@@ -223,5 +223,63 @@ class BackgroundLocationModule : Module() {
                     promise.resolve(Unit)
                 }
         }
+        
+        // === File Logging Functions ===
+        
+        AsyncFunction("exportLogs") { promise: Promise ->
+            val context = appContext.reactContext?.applicationContext ?: run {
+                promise.reject("APP_CONTEXT_ERROR", "Context is null.", null)
+                return@AsyncFunction
+            }
+            
+            try {
+                val logs = LocationFileLogger.getLogsAsString(context)
+                promise.resolve(logs)
+            } catch (e: Exception) {
+                promise.reject("EXPORT_ERROR", "Failed to export logs: ${e.message}", e)
+            }
+        }
+        
+        AsyncFunction("getRecentLogs") { lines: Int?, promise: Promise ->
+            val context = appContext.reactContext?.applicationContext ?: run {
+                promise.reject("APP_CONTEXT_ERROR", "Context is null.", null)
+                return@AsyncFunction
+            }
+            
+            try {
+                val logs = LocationFileLogger.getRecentLogs(context, lines ?: 100)
+                promise.resolve(logs)
+            } catch (e: Exception) {
+                promise.reject("EXPORT_ERROR", "Failed to get recent logs: ${e.message}", e)
+            }
+        }
+        
+        AsyncFunction("clearLogs") { promise: Promise ->
+            val context = appContext.reactContext?.applicationContext ?: run {
+                promise.reject("APP_CONTEXT_ERROR", "Context is null.", null)
+                return@AsyncFunction
+            }
+            
+            try {
+                LocationFileLogger.clearLogs(context)
+                promise.resolve(Unit)
+            } catch (e: Exception) {
+                promise.reject("CLEAR_ERROR", "Failed to clear logs: ${e.message}", e)
+            }
+        }
+        
+        AsyncFunction("getLogStats") { promise: Promise ->
+            val context = appContext.reactContext?.applicationContext ?: run {
+                promise.reject("APP_CONTEXT_ERROR", "Context is null.", null)
+                return@AsyncFunction
+            }
+            
+            try {
+                val stats = LocationFileLogger.getLogStats(context)
+                promise.resolve(stats)
+            } catch (e: Exception) {
+                promise.reject("STATS_ERROR", "Failed to get log stats: ${e.message}", e)
+            }
+        }
     }
 }

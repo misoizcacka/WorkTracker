@@ -62,7 +62,7 @@ const EditInviteModal: React.FC<EditInviteModalProps> = ({ visible, onClose, inv
 
   return (
     <Modal
-      animationType="slide"
+      animationType="fade"
       transparent={true}
       visible={visible}
       onRequestClose={onClose}

@@ -82,13 +82,14 @@ const BreakDurationModal: React.FC<BreakDurationModalProps> = ({
   };
 
   const handleConfirm = () => {
-    if (!isValid || breakMinutes === null) return;
+    if (!isValid || breakMinutes === null || isLoading) return;
+    // Immediately call onConfirm to prevent double-tap issues
     onConfirm(breakMinutes);
   };
 
   return (
     <Modal
-      animationType="slide"
+      animationType="fade"
       transparent
       visible={visible}
       onRequestClose={onCancel}
@@ -192,6 +193,7 @@ const BreakDurationModal: React.FC<BreakDurationModalProps> = ({
                 style={[styles.confirmButton, (!isValid || isLoading) && styles.confirmButtonDisabled]}
                 onPress={handleConfirm}
                 disabled={!isValid || isLoading}
+                activeOpacity={0.7}
               >
                 {isLoading ? (
                   <ActivityIndicator size="small" color="white" />
