@@ -155,6 +155,22 @@ export default function MapOverviewScreen() {
 
   const renderWorkerItem = ({ item }: { item: Employee }) => {
     const isSelected = selectedWorkers.some(e => e.id === item.id);
+    const locationData = workerLocations.find(l => l.worker_id === item.id);
+    
+    // Calculate worker status based on location recency
+    const getWorkerStatus = () => {
+      if (!locationData) return { status: 'offline', color: '#9CA3AF', label: 'No data' };
+      
+      const lastSeenMs = new Date(locationData.timestamp).getTime();
+      const nowMs = Date.now();
+      const minutesAgo = (nowMs - lastSeenMs) / (1000 * 60);
+      
+      if (minutesAgo < 15) return { status: 'active', color: '#10B981', label: 'Active' };
+      if (minutesAgo < 60) return { status: 'idle', color: '#F59E0B', label: 'Idle' };
+      return { status: 'stale', color: '#EF4444', label: 'Stale' };
+    };
+    
+    const workerStatus = getWorkerStatus();
 
     return (
       <TouchableOpacity onPress={() => handleWorkerPress(item)} style={[styles.workerItem, isSelected && styles.selectedWorkerItem]}>
@@ -164,9 +180,14 @@ export default function MapOverviewScreen() {
             color={isSelected ? theme.colors.primary : theme.colors.bodyText}
             style={styles.workerIcon}
           />
-          <UserAvatar avatarUrl={item.avatar_url} size={40} style={styles.avatar} />
+          <View style={styles.avatarContainer}>
+            <UserAvatar avatarUrl={item.avatar_url} size={40} style={styles.avatar} />
+            {/* Status indicator dot */}
+            <View style={[styles.statusDot, { backgroundColor: workerStatus.color }]} />
+          </View>
           <View style={styles.itemInfo}>
             <Text style={[styles.itemName, isSelected && styles.selectedWorkerText]} fontType="medium">{item.full_name}</Text>
+            <Text style={styles.workerStatusText} fontType="regular">{workerStatus.label}</Text>
           </View>
           {isSelected && <Ionicons name="chevron-forward" size={16} color={theme.colors.primary} />}
       </TouchableOpacity>
@@ -438,6 +459,25 @@ const styles = StyleSheet.create({
     height: 40,
     borderRadius: 20,
     marginRight: theme.spacing(1.5),
+  },
+  avatarContainer: {
+    position: 'relative',
+    marginRight: theme.spacing(1.5),
+  },
+  statusDot: {
+    position: 'absolute',
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    bottom: 0,
+    right: 0,
+    borderWidth: 2,
+    borderColor: theme.colors.cardBackground,
+  },
+  workerStatusText: {
+    fontSize: theme.fontSizes.xs,
+    color: theme.colors.bodyText,
+    marginTop: theme.spacing(0.25),
   },
   projectColorBar: {
     width: 4,
