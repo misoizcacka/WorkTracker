@@ -54,14 +54,15 @@ export default function MapOverviewScreen() {
         });
       });
       
-      // Fetch recent location events for trail (last 8 hours)
+      // Fetch recent location events for trail (last 24 hours, up to 2000 events)
       const fetchRecentTrail = async () => {
         const { data, error } = await supabase
           .from('location_events')
           .select('worker_id, latitude, longitude, created_at, type')
           .in('worker_id', workerIds)
-          .gte('created_at', new Date(Date.now() - 8 * 60 * 60 * 1000).toISOString())
-          .order('created_at', { ascending: true });
+          .gte('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
+          .order('created_at', { ascending: true })
+          .limit(2000);
         
         if (!error && data) {
           setRecentLocationEvents(data);
@@ -241,6 +242,7 @@ export default function MapOverviewScreen() {
     return recentLocationEvents.map(e => ({
       latitude: e.latitude,
       longitude: e.longitude,
+      timestamp: e.created_at, // Include timestamp for time-based gradient
     }));
   }, [recentLocationEvents]);
 

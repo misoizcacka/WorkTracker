@@ -42,7 +42,7 @@ interface MapViewProps {
   showNameTag?: boolean;
   disableWorkerHover?: boolean;
   disableWorkerPopup?: boolean;
-  polylineCoordinates?: { latitude: number; longitude: number }[]; // Trail path for replay
+  polylineCoordinates?: { latitude: number; longitude: number; timestamp?: string }[]; // Trail path for replay
 }
 
 // --- MARKERS ---
@@ -624,69 +624,85 @@ export const MapView = React.forwardRef<any, MapViewProps>(({
         <CustomPopup popupInfo={popupInfo} map={mapRef.current} />
         <HoverPopup hoverInfo={hoverInfo} map={mapRef.current} />
 
-        {/* Polyline trail with gradient for location replay */}
-        {polylineCoordinates && polylineCoordinates.length >= 2 && (
-          <>
-            {polylineCoordinates.map((coord, i) => {
-              if (i === polylineCoordinates.length - 1) return null;
-              
-              const start = polylineCoordinates[i];
-              const end = polylineCoordinates[i + 1];
-              const progress = i / (polylineCoordinates.length - 1);
-              
-              // Gradient: Gray → Red → Dark Red
-              let color: string;
-              if (progress < 0.5) {
-                // First half: Gray → Red
-                const p = progress * 2;
-                const r = Math.round(156 + (239 - 156) * p);
-                const g = Math.round(163 + (68 - 163) * p);
-                const b = Math.round(175 + (68 - 175) * p);
-                color = `rgb(${r}, ${g}, ${b})`;
-              } else {
-                // Second half: Red → Dark Red
-                const p = (progress - 0.5) * 2;
-                const r = Math.round(239 + (153 - 239) * p);
-                const g = Math.round(68 + (27 - 68) * p);
-                const b = Math.round(68 + (27 - 68) * p);
-                color = `rgb(${r}, ${g}, ${b})`;
-              }
-              
-              return (
-                <Source
-                  key={`trail-segment-${i}`}
-                  id={`trail-segment-${i}`}
-                  type="geojson"
-                  data={{
-                    type: 'Feature',
-                    geometry: {
-                      type: 'LineString',
-                      coordinates: [
-                        [start.longitude, start.latitude],
-                        [end.longitude, end.latitude],
-                      ],
-                    },
-                    properties: {},
+        {/* Polyline trail with time-based gradient for location replay */}
+        {polylineCoordinates && polylineCoordinates.length >= 2 && (() => {
+          // Calculate time range for gradient
+          const timestamps = polylineCoordinates
+            .map(c => c.timestamp ? new Date(c.timestamp).getTime() : null)
+            .filter(t => t !== null) as number[];
+          
+          const hasTimestamps = timestamps.length >= 2;
+          const firstTime = hasTimestamps ? Math.min(...timestamps) : 0;
+          const lastTime = hasTimestamps ? Math.max(...timestamps) : 0;
+          const timeRange = lastTime - firstTime;
+          
+          return polylineCoordinates.map((coord, i) => {
+            if (i === polylineCoordinates.length - 1) return null;
+            
+            const start = polylineCoordinates[i];
+            const end = polylineCoordinates[i + 1];
+            
+            // Calculate progress based on time if available, otherwise use position
+            let progress: number;
+            if (hasTimestamps && start.timestamp && timeRange > 0) {
+              const currentTime = new Date(start.timestamp).getTime();
+              progress = (currentTime - firstTime) / timeRange;
+            } else {
+              progress = i / (polylineCoordinates.length - 1);
+            }
+            
+            // Gradient: Gray → Red → Dark Red
+            let color: string;
+            if (progress < 0.5) {
+              // First half: Gray → Red
+              const p = progress * 2;
+              const r = Math.round(156 + (239 - 156) * p);
+              const g = Math.round(163 + (68 - 163) * p);
+              const b = Math.round(175 + (68 - 175) * p);
+              color = `rgb(${r}, ${g}, ${b})`;
+            } else {
+              // Second half: Red → Dark Red
+              const p = (progress - 0.5) * 2;
+              const r = Math.round(239 + (153 - 239) * p);
+              const g = Math.round(68 + (27 - 68) * p);
+              const b = Math.round(68 + (27 - 68) * p);
+              color = `rgb(${r}, ${g}, ${b})`;
+            }
+            
+            return (
+              <Source
+                key={`trail-segment-${i}`}
+                id={`trail-segment-${i}`}
+                type="geojson"
+                data={{
+                  type: 'Feature',
+                  geometry: {
+                    type: 'LineString',
+                    coordinates: [
+                      [start.longitude, start.latitude],
+                      [end.longitude, end.latitude],
+                    ],
+                  },
+                  properties: {},
+                }}
+              >
+                <Layer
+                  id={`trail-segment-layer-${i}`}
+                  type="line"
+                  paint={{
+                    'line-color': color,
+                    'line-width': 5,
+                    'line-opacity': 0.8,
                   }}
-                >
-                  <Layer
-                    id={`trail-segment-layer-${i}`}
-                    type="line"
-                    paint={{
-                      'line-color': color,
-                      'line-width': 5,
-                      'line-opacity': 0.8,
-                    }}
-                    layout={{
-                      'line-join': 'round',
-                      'line-cap': 'round',
-                    }}
-                  />
-                </Source>
-              );
-            })}
-          </>
-        )}
+                  layout={{
+                    'line-join': 'round',
+                    'line-cap': 'round',
+                  }}
+                />
+              </Source>
+            );
+          });
+        })()}
 
         <NavigationControl />
         {spiderfiedMarkers.length > 0 && (
