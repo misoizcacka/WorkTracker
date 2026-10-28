@@ -148,6 +148,14 @@ class PeriodicLocationTrackingService : Service() {
             if (isNowInside != wasInside || !hasPreviousState) {
                 val isRealTransition = hasPreviousState
                 val isInitialEntry = !hasPreviousState && isNowInside
+                val isPhantomExit = !hasPreviousState && !isNowInside
+                
+                // Don't trigger exits for geofences we were never in
+                if (isPhantomExit) {
+                    sharedPrefs.edit().putBoolean(manualKey, isNowInside).apply()
+                    return@forEach
+                }
+                
                 if (!isRealTransition && !isInitialEntry) {
                     sharedPrefs.edit().putBoolean(manualKey, isNowInside).apply()
                     return@forEach

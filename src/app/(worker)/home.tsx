@@ -407,7 +407,13 @@ export default function Home() {
     const fetchAndSetLocation = async () => {
       if (!isMounted) return;
       try {
-        const location = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
+        // Add 10 second timeout to prevent infinite hang on iOS simulator
+        const locationPromise = Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
+        const timeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Location timeout')), 10000)
+        );
+        
+        const location = await Promise.race([locationPromise, timeoutPromise]) as any;
         const { latitude, longitude } = location.coords;
         if (isMounted) {
           setWorkerMapLocation({ latitude, longitude });
@@ -523,9 +529,16 @@ export default function Home() {
 
       let currentLocation;
       try {
-        const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
+        const locPromise = Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
+        const timeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Location timeout')), 10000)
+        );
+        const loc = await Promise.race([locPromise, timeoutPromise]) as any;
         currentLocation = { latitude: loc.coords.latitude, longitude: loc.coords.longitude };
-      } catch (err) { return; }
+      } catch (err) { 
+        Alert.alert(t('worker.home.locationError'), t('worker.home.locationTimeout') || 'Could not get your location. Please try again.');
+        return; 
+      }
 
       const d = getDistance(currentLocation, { latitude: targetProjectLocation.lat, longitude: targetProjectLocation.lon });
       if (d > relevantRadius) { Alert.alert(t('worker.home.tooFar'), t('worker.home.tooFarMsg', { name: projectLocationName })); return; }
@@ -546,8 +559,12 @@ export default function Home() {
     setIsBreakModalVisible(true);
     setIsLoadingCheckoutLocation(true);
     // Get GPS in background while user fills break duration
-    Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High })
-      .then(loc => {
+    const locPromise = Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
+    const timeoutPromise = new Promise((_, reject) => 
+      setTimeout(() => reject(new Error('Location timeout')), 10000)
+    );
+    Promise.race([locPromise, timeoutPromise])
+      .then((loc: any) => {
         pendingCheckoutLocationRef.current = { latitude: loc.coords.latitude, longitude: loc.coords.longitude };
         setIsLoadingCheckoutLocation(false);
       })
