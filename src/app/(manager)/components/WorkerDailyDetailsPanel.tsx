@@ -249,6 +249,9 @@ const WorkerDailyDetailsPanel = ({ workerId, date }: WorkerDailyDetailsPanelProp
         }));
         setAllLocationEvents(mappedEvents);
 
+        // Calculate distance from all location events
+        const distance = calculateKilometers(mappedEvents);
+
         // Set map region based on first location event
         if (detailsRes.data && detailsRes.data.length > 0) {
             setMapRegion({
@@ -257,11 +260,16 @@ const WorkerDailyDetailsPanel = ({ workerId, date }: WorkerDailyDetailsPanelProp
                 latitudeDelta: 0.05,
                 longitudeDelta: 0.05,
             });
-            setDailySummary(prev => (prev ? ({
-                ...prev,
-                approx_travelled_km: calculateKilometers(mappedEvents),
-            }) : null));
         }
+        
+        // Update summary with calculated distance
+        setDailySummary(prev => {
+          if (!prev) return null;
+          return {
+            ...prev,
+            approx_travelled_km: distance,
+          };
+        });
       }
       setLoading(false);
     };
@@ -381,8 +389,15 @@ const WorkerDailyDetailsPanel = ({ workerId, date }: WorkerDailyDetailsPanelProp
             <View style={styles.statDivider} />
             
             <View style={styles.statBox}>
+                <Text style={styles.statLabel} fontType="bold">Break Time</Text>
+                <Text style={styles.statValue} fontType="bold">{dailySummary.total_break_minutes}m</Text>
+            </View>
+            
+            <View style={styles.statDivider} />
+            
+            <View style={styles.statBox}>
                 <Text style={styles.statLabel} fontType="bold">Distance</Text>
-                <Text style={styles.statValue} fontType="bold">{dailySummary.approx_travelled_km}km</Text>
+                <Text style={styles.statValue} fontType="bold">{dailySummary.approx_travelled_km || 0}km</Text>
             </View>
             
             <View style={styles.statDivider} />
