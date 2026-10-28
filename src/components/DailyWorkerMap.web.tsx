@@ -196,7 +196,7 @@ const DailyWorkerMapWeb: React.FC<DailyWorkerMapProps & {
                 'symbol-placement': 'line',
                 'symbol-spacing': 80, // Arrow every 80 pixels
                 'text-field': '▶', // Unicode triangle arrow
-                'text-size': 12,
+                'text-size': 8, // Smaller to fit inside 5px line
                 'text-rotation-alignment': 'map',
                 'text-pitch-alignment': 'viewport',
                 'text-keep-upright': false,
@@ -205,9 +205,9 @@ const DailyWorkerMapWeb: React.FC<DailyWorkerMapProps & {
               }}
               paint={{
                 'text-color': '#FFFFFF', // White arrows
-                'text-opacity': 0.6, // Semi-transparent
+                'text-opacity': 0.5, // More subtle
                 'text-halo-color': '#000000', // Black outline for contrast
-                'text-halo-width': 1,
+                'text-halo-width': 0.5, // Thinner halo
               }}
             />
           </Source>
