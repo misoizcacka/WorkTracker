@@ -65,7 +65,10 @@ export default function MapOverviewScreen() {
           .limit(2000);
         
         if (!error && data) {
+          console.log('🗺️ Map Overview: Fetched', data.length, 'location events for trail');
           setRecentLocationEvents(data);
+        } else if (error) {
+          console.error('Error fetching trail:', error);
         }
       };
       fetchRecentTrail();
@@ -239,11 +242,13 @@ export default function MapOverviewScreen() {
   // Convert recent location events to polyline coordinates for trail
   const trailCoordinates = useMemo(() => {
     if (recentLocationEvents.length === 0) return undefined;
-    return recentLocationEvents.map(e => ({
+    const coords = recentLocationEvents.map(e => ({
       latitude: e.latitude,
       longitude: e.longitude,
       timestamp: e.created_at, // Include timestamp for time-based gradient
     }));
+    console.log('🗺️ Trail Coordinates:', coords.length, 'points');
+    return coords;
   }, [recentLocationEvents]);
 
   // Calculate initial region only once - use a static center (Berlin)
