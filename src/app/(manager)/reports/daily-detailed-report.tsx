@@ -24,6 +24,14 @@ const DailyDetailedReport = () => {
     const [workersWithActivity, setWorkersWithActivity] = useState<Set<string>>(new Set());
     const [loadingActivity, setLoadingActivity] = useState(false);
 
+    // Calculate max date (90 days ago from today)
+    const maxSelectableDate = useMemo(() => moment().subtract(90, 'days').toDate(), []);
+    
+    // Filter function to disable dates older than 90 days
+    const filterDate = useCallback((date: Date) => {
+        return moment(date).isAfter(maxSelectableDate);
+    }, [maxSelectableDate]);
+
     // Filter out managers, guests, and the current user from the employee list
     const availableWorkers = useMemo(() => {
         return employees.filter(emp => 
@@ -123,6 +131,8 @@ const DailyDetailedReport = () => {
                                 date={selectedDate}
                                 onDateChange={setSelectedDate}
                                 mode="date"
+                                filterDate={filterDate}
+                                maxDate={maxSelectableDate}
                             />
                         </View>
 
