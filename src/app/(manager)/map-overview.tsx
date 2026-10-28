@@ -189,21 +189,21 @@ export default function MapOverviewScreen() {
     // Calculate worker status based on GPS recency
     const getWorkerStatus = () => {
       if (!hasGPSToday) {
-        return { status: 'no-data', color: '#9CA3AF', label: 'No location data' };
+        return { status: 'no-data', color: '#9CA3AF', label: t('manager.mapOverview.statusNoLocationData') };
       }
       
       if (!locationData) {
         // Has GPS today but not loaded yet (not selected)
-        return { status: 'unknown', color: '#6B7280', label: 'Has location data' };
+        return { status: 'unknown', color: '#6B7280', label: t('manager.mapOverview.statusHasLocationData') };
       }
       
       const lastSeenMs = new Date(locationData.timestamp).getTime();
       const nowMs = Date.now();
       const minutesAgo = (nowMs - lastSeenMs) / (1000 * 60);
       
-      if (minutesAgo < 15) return { status: 'active', color: '#10B981', label: 'Active now' };
-      if (minutesAgo < 120) return { status: 'recent', color: '#F59E0B', label: 'Recent activity' };
-      return { status: 'earlier', color: '#F97316', label: 'Active earlier' };
+      if (minutesAgo < 15) return { status: 'active', color: '#10B981', label: t('manager.mapOverview.statusActiveNow') };
+      if (minutesAgo < 120) return { status: 'recent', color: '#F59E0B', label: t('manager.mapOverview.statusRecentActivity') };
+      return { status: 'earlier', color: '#F97316', label: t('manager.mapOverview.statusActiveEarlier') };
     };
     
     const workerStatus = getWorkerStatus();
@@ -343,10 +343,10 @@ export default function MapOverviewScreen() {
   return (
     <View style={{ flex: 1 }}>
       <SubNavBar items={[
-        { label: 'Projects', href: '/(manager)/projects' },
-        { label: 'Common Locations', href: '/(manager)/common-locations' },
-        { label: 'Live Map', href: '/(manager)/map-overview' },
-        { label: 'Location Replay', href: '/(manager)/location-replay' },
+        { label: t('manager.navigation.projects'), href: '/(manager)/projects' },
+        { label: t('manager.navigation.commonLocations'), href: '/(manager)/common-locations' },
+        { label: t('manager.navigation.liveMap'), href: '/(manager)/map-overview' },
+        { label: t('manager.navigation.locationReplay'), href: '/(manager)/location-replay' },
       ]} />
       <AnimatedScreen>
       <View style={styles.pageHeader}>

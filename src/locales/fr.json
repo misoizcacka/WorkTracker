@@ -517,7 +517,18 @@
       "searchWorkers": "Rechercher des travailleurs...",
       "searchProjects": "Rechercher des projets...",
       "selectWorkerHint": "Selectionnez un ou plusieurs travailleurs.",
-      "noWorkers": "Aucun travailleur actuellement pointe."
+      "noWorkers": "Aucun travailleur actuellement pointe.",
+      "statusActiveNow": "Actif maintenant",
+      "statusRecentActivity": "Activité récente",
+      "statusActiveEarlier": "Actif plus tôt",
+      "statusNoLocationData": "Aucune donnée de position",
+      "statusHasLocationData": "Données de position disponibles"
+    },
+    "navigation": {
+      "projects": "Projets",
+      "commonLocations": "Sites communs",
+      "liveMap": "Carte en direct",
+      "locationReplay": "Relecture de position"
     },
     "locations": {
       "title": "Sites communs",

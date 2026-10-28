@@ -517,7 +517,18 @@
       "searchWorkers": "Mitarbeiter suchen...",
       "searchProjects": "Projekte suchen...",
       "selectWorkerHint": "Waehlen Sie einen oder mehrere Mitarbeiter aus.",
-      "noWorkers": "Kein Mitarbeiter aktuell eingecheckt."
+      "noWorkers": "Kein Mitarbeiter aktuell eingecheckt.",
+      "statusActiveNow": "Jetzt aktiv",
+      "statusRecentActivity": "Kürzliche Aktivität",
+      "statusActiveEarlier": "Früher aktiv",
+      "statusNoLocationData": "Keine Standortdaten",
+      "statusHasLocationData": "Standortdaten vorhanden"
+    },
+    "navigation": {
+      "projects": "Projekte",
+      "commonLocations": "Gemeinsame Standorte",
+      "liveMap": "Live-Karte",
+      "locationReplay": "Standortwiedergabe"
     },
     "locations": {
       "title": "Gemeinsame Standorte",

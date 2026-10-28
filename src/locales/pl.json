@@ -494,7 +494,18 @@
       "searchWorkers": "Szukaj pracownikow...",
       "searchProjects": "Szukaj projektow...",
       "selectWorkerHint": "Wybierz jednego lub wiecej pracownikow.",
-      "noWorkers": "Zaden pracownik nie jest aktualnie zameldowany."
+      "noWorkers": "Zaden pracownik nie jest aktualnie zameldowany.",
+      "statusActiveNow": "Aktywny teraz",
+      "statusRecentActivity": "Niedawna aktywność",
+      "statusActiveEarlier": "Aktywny wcześniej",
+      "statusNoLocationData": "Brak danych lokalizacji",
+      "statusHasLocationData": "Ma dane lokalizacji"
+    },
+    "navigation": {
+      "projects": "Projekty",
+      "commonLocations": "Wspólne lokalizacje",
+      "liveMap": "Mapa na żywo",
+      "locationReplay": "Odtwarzanie lokalizacji"
     },
     "locations": {
       "title": "Wspolne lokalizacje",

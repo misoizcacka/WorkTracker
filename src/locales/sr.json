@@ -50,5 +50,27 @@
     "home": {
       "timeElapsed": "proteklo vreme"
     }
+  },
+  "manager": {
+    "mapOverview": {
+      "title": "Pregled mape",
+      "subtitle": "Vizualizujte lokacije radnika i projekata.",
+      "workers": "Radnici",
+      "projects": "Projekti",
+      "searchWorkers": "Pretraži radnike...",
+      "searchProjects": "Pretraži projekte...",
+      "selectWorkerHint": "Izaberite jednog ili više radnika da vidite njihove lokacije na mapi.",
+      "statusActiveNow": "Trenutno aktivan",
+      "statusRecentActivity": "Nedavna aktivnost",
+      "statusActiveEarlier": "Ranije aktivan",
+      "statusNoLocationData": "Nema podataka o lokaciji",
+      "statusHasLocationData": "Ima podatke o lokaciji"
+    },
+    "navigation": {
+      "projects": "Projekti",
+      "commonLocations": "Zajedničke lokacije",
+      "liveMap": "Mapa uživo",
+      "locationReplay": "Pregled lokacija"
+    }
   }
 }

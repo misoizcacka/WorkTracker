@@ -494,7 +494,18 @@
       "searchWorkers": "Sok medarbetare...",
       "searchProjects": "Sok projekt...",
       "selectWorkerHint": "Valj en eller flera medarbetare.",
-      "noWorkers": "Inga medarbetare incheckade for narvarande."
+      "noWorkers": "Inga medarbetare incheckade for narvarande.",
+      "statusActiveNow": "Aktiv nu",
+      "statusRecentActivity": "Senaste aktivitet",
+      "statusActiveEarlier": "Aktiv tidigare",
+      "statusNoLocationData": "Inga platsdata",
+      "statusHasLocationData": "Har platsdata"
+    },
+    "navigation": {
+      "projects": "Projekt",
+      "commonLocations": "Gemensamma platser",
+      "liveMap": "Livekarta",
+      "locationReplay": "Platsuppspelning"
     },
     "locations": {
       "title": "Gemensamma platser",

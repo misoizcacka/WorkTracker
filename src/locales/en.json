@@ -464,7 +464,18 @@
       "projects": "Projects",
       "searchWorkers": "Search workers...",
       "searchProjects": "Search projects...",
-      "selectWorkerHint": "Select one or more workers to view their locations on the map."
+      "selectWorkerHint": "Select one or more workers to view their locations on the map.",
+      "statusActiveNow": "Active now",
+      "statusRecentActivity": "Recent activity",
+      "statusActiveEarlier": "Active earlier",
+      "statusNoLocationData": "No location data",
+      "statusHasLocationData": "Has location data"
+    },
+    "navigation": {
+      "projects": "Projects",
+      "commonLocations": "Common Locations",
+      "liveMap": "Live Map",
+      "locationReplay": "Location Replay"
     },
     "locations": {
       "title": "Common Locations",

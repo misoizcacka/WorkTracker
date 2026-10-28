@@ -494,7 +494,18 @@
       "searchWorkers": "Medewerkers zoeken...",
       "searchProjects": "Projecten zoeken...",
       "selectWorkerHint": "Selecteer een of meer medewerkers.",
-      "noWorkers": "Momenteel geen medewerkers ingecheckt."
+      "noWorkers": "Momenteel geen medewerkers ingecheckt.",
+      "statusActiveNow": "Nu actief",
+      "statusRecentActivity": "Recente activiteit",
+      "statusActiveEarlier": "Eerder actief",
+      "statusNoLocationData": "Geen locatiegegevens",
+      "statusHasLocationData": "Heeft locatiegegevens"
+    },
+    "navigation": {
+      "projects": "Projecten",
+      "commonLocations": "Gemeenschappelijke locaties",
+      "liveMap": "Live kaart",
+      "locationReplay": "Locatieherhaling"
     },
     "locations": {
       "title": "Gemeenschappelijke locaties",
