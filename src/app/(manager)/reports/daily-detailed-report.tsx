@@ -27,9 +27,9 @@ const DailyDetailedReport = () => {
     // Calculate max date (90 days ago from today)
     const maxSelectableDate = useMemo(() => moment().subtract(90, 'days').toDate(), []);
     
-    // Filter function to disable dates older than 90 days
+    // Filter function to allow dates within 90 days (disable older dates)
     const filterDate = useCallback((date: Date) => {
-        return moment(date).isAfter(maxSelectableDate);
+        return moment(date).isAfter(maxSelectableDate) || moment(date).isSame(maxSelectableDate, 'day');
     }, [maxSelectableDate]);
 
     // Filter out managers, guests, and the current user from the employee list
