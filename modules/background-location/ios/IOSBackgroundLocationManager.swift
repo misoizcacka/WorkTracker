@@ -225,6 +225,13 @@ final class IOSBackgroundLocationManager: NSObject, CLLocationManagerDelegate {
   @objc
   private func handleAppBecameActive() {
     reconcileCurrentState()
+    
+    // Re-show notification when app comes to foreground if session is active
+    // iOS dismisses local notifications when the app is opened, so we need to re-show it
+    if stateStore.isSessionActive,
+       let locationName = stateStore.supabaseConfig?.locationName {
+      showForegroundNotification(locationName: locationName)
+    }
   }
 
   // ─── Geofence registration ────────────────────────────────────────────────
