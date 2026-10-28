@@ -159,7 +159,7 @@ export default function MapOverviewScreen() {
     
     // Calculate worker status based on location recency
     const getWorkerStatus = () => {
-      if (!locationData) return { status: 'offline', color: '#9CA3AF', label: 'No data' };
+      if (!locationData) return { status: 'offline', color: '#9CA3AF', label: 'No data today' };
       
       const lastSeenMs = new Date(locationData.timestamp).getTime();
       const nowMs = Date.now();
@@ -171,23 +171,37 @@ export default function MapOverviewScreen() {
     };
     
     const workerStatus = getWorkerStatus();
+    const isOffline = workerStatus.status === 'offline';
 
     return (
-      <TouchableOpacity onPress={() => handleWorkerPress(item)} style={[styles.workerItem, isSelected && styles.selectedWorkerItem]}>
+      <TouchableOpacity 
+        onPress={() => !isOffline && handleWorkerPress(item)} 
+        disabled={isOffline}
+        style={[
+          styles.workerItem, 
+          isSelected && styles.selectedWorkerItem,
+          isOffline && styles.disabledWorkerItem
+        ]}
+        activeOpacity={isOffline ? 1 : 0.7}
+      >
           <Ionicons
             name={isSelected ? "checkbox" : "square-outline"}
             size={20}
-            color={isSelected ? theme.colors.primary : theme.colors.bodyText}
+            color={isOffline ? '#9CA3AF' : isSelected ? theme.colors.primary : theme.colors.bodyText}
             style={styles.workerIcon}
           />
           <View style={styles.avatarContainer}>
-            <UserAvatar avatarUrl={item.avatar_url} size={40} style={styles.avatar} />
+            <UserAvatar avatarUrl={item.avatar_url} size={40} style={[styles.avatar, isOffline && styles.disabledAvatar]} />
             {/* Status indicator dot */}
             <View style={[styles.statusDot, { backgroundColor: workerStatus.color }]} />
           </View>
           <View style={styles.itemInfo}>
-            <Text style={[styles.itemName, isSelected && styles.selectedWorkerText]} fontType="medium">{item.full_name}</Text>
-            <Text style={styles.workerStatusText} fontType="regular">{workerStatus.label}</Text>
+            <Text style={[
+              styles.itemName, 
+              isSelected && styles.selectedWorkerText,
+              isOffline && styles.disabledText
+            ]} fontType="medium">{item.full_name}</Text>
+            <Text style={[styles.workerStatusText, isOffline && styles.disabledText]} fontType="regular">{workerStatus.label}</Text>
           </View>
           {isSelected && <Ionicons name="chevron-forward" size={16} color={theme.colors.primary} />}
       </TouchableOpacity>
@@ -478,6 +492,16 @@ const styles = StyleSheet.create({
     fontSize: theme.fontSizes.xs,
     color: theme.colors.bodyText,
     marginTop: theme.spacing(0.25),
+  },
+  disabledWorkerItem: {
+    opacity: 0.5,
+    backgroundColor: theme.colors.background,
+  },
+  disabledAvatar: {
+    opacity: 0.6,
+  },
+  disabledText: {
+    color: theme.colors.bodyText,
   },
   projectColorBar: {
     width: 4,
