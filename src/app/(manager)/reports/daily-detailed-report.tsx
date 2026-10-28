@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useContext, useEffect } from 'react';
+import React, { useState, useMemo, useContext, useEffect, useCallback } from 'react';
 import { View, StyleSheet, ActivityIndicator, FlatList, TouchableOpacity, TextInput, Platform } from 'react-native';
 import { Text } from '../../../components/Themed';
 import { Ionicons } from '@expo/vector-icons';
