@@ -125,12 +125,26 @@ const WorkerDailyDetailsPanel = ({ workerId, date }: WorkerDailyDetailsPanelProp
       }
     });
 
-    // Handle ongoing visits
+    // Handle ongoing visits (no exit event)
     activeVisits.forEach((startTime, name) => {
       const details = getSiteDetails(name);
       if (details) {
         const isToday = moment(date).isSame(moment(), 'day');
-        const endTime = isToday ? moment().toISOString() : moment(date).endOf('day').toISOString();
+        
+        // Use the last location event timestamp as the end time (actual work session end)
+        // instead of end-of-day (11:59 PM)
+        let endTime: string;
+        if (isToday) {
+          endTime = moment().toISOString();
+        } else if (allLocationEvents.length > 0) {
+          // Use last location event timestamp (e.g., last passive_tracking or active_tracking)
+          const lastEvent = allLocationEvents[allLocationEvents.length - 1];
+          endTime = lastEvent.timestamp;
+        } else {
+          // Fallback to end of day if no location events
+          endTime = moment(date).endOf('day').toISOString();
+        }
+        
         const visit: Visit = { startTime, endTime, isStillThere: isToday };
         const duration = moment(visit.endTime).diff(moment(visit.startTime), 'minutes');
         
