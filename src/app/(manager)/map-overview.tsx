@@ -28,6 +28,34 @@ export default function MapOverviewScreen() {
   const [searchTerm, setSearchTerm] = useState('');
   const [searchTermProject, setSearchTermProject] = useState('');
   const [workerLocations, setWorkerLocations] = useState<LatestLocation[]>([]);
+  const [workersWithGPSToday, setWorkersWithGPSToday] = useState<Set<string>>(new Set());
+
+  // Fetch workers who have GPS data today
+  useEffect(() => {
+    const fetchWorkersWithGPS = async () => {
+      try {
+        const today = new Date();
+        const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+        
+        const { data, error } = await supabase
+          .from('location_events')
+          .select('worker_id')
+          .gte('created_at', startOfDay.toISOString());
+        
+        if (error) throw error;
+        
+        const workerIds = new Set(data?.map(row => row.worker_id) || []);
+        setWorkersWithGPSToday(workerIds);
+      } catch (error) {
+        console.error('Error fetching workers with GPS today:', error);
+      }
+    };
+
+    fetchWorkersWithGPS();
+    // Refresh every 5 minutes to catch new workers who start their day
+    const interval = setInterval(fetchWorkersWithGPS, 5 * 60 * 1000);
+    return () => clearInterval(interval);
+  }, []);
 
   // Initial fetch of locations
   useEffect(() => {
@@ -156,42 +184,50 @@ export default function MapOverviewScreen() {
   const renderWorkerItem = ({ item }: { item: Employee }) => {
     const isSelected = selectedWorkers.some(e => e.id === item.id);
     const locationData = workerLocations.find(l => l.worker_id === item.id);
+    const hasGPSToday = workersWithGPSToday.has(item.id);
     
-    // Calculate worker status based on location recency
+    // Calculate worker status based on GPS recency
     const getWorkerStatus = () => {
-      if (!locationData) return { status: 'offline', color: '#9CA3AF', label: 'No data today' };
+      if (!hasGPSToday) {
+        return { status: 'no-data', color: '#9CA3AF', label: 'No location data' };
+      }
+      
+      if (!locationData) {
+        // Has GPS today but not loaded yet (not selected)
+        return { status: 'unknown', color: '#6B7280', label: 'Has location data' };
+      }
       
       const lastSeenMs = new Date(locationData.timestamp).getTime();
       const nowMs = Date.now();
       const minutesAgo = (nowMs - lastSeenMs) / (1000 * 60);
       
-      if (minutesAgo < 15) return { status: 'active', color: '#10B981', label: 'Active' };
-      if (minutesAgo < 60) return { status: 'idle', color: '#F59E0B', label: 'Idle' };
-      return { status: 'stale', color: '#EF4444', label: 'Stale' };
+      if (minutesAgo < 15) return { status: 'active', color: '#10B981', label: 'Active now' };
+      if (minutesAgo < 120) return { status: 'recent', color: '#F59E0B', label: 'Recent activity' };
+      return { status: 'earlier', color: '#F97316', label: 'Active earlier' };
     };
     
     const workerStatus = getWorkerStatus();
-    const isOffline = workerStatus.status === 'offline';
+    const isDisabled = workerStatus.status === 'no-data';
 
     return (
       <TouchableOpacity 
-        onPress={() => !isOffline && handleWorkerPress(item)} 
-        disabled={isOffline}
+        onPress={() => !isDisabled && handleWorkerPress(item)} 
+        disabled={isDisabled}
         style={[
           styles.workerItem, 
           isSelected && styles.selectedWorkerItem,
-          isOffline && styles.disabledWorkerItem
+          isDisabled && styles.disabledWorkerItem
         ]}
-        activeOpacity={isOffline ? 1 : 0.7}
+        activeOpacity={isDisabled ? 1 : 0.7}
       >
           <Ionicons
             name={isSelected ? "checkbox" : "square-outline"}
             size={20}
-            color={isOffline ? '#9CA3AF' : isSelected ? theme.colors.primary : theme.colors.bodyText}
+            color={isDisabled ? '#9CA3AF' : isSelected ? theme.colors.primary : theme.colors.bodyText}
             style={styles.workerIcon}
           />
           <View style={styles.avatarContainer}>
-            <UserAvatar avatarUrl={item.avatar_url} size={40} style={[styles.avatar, isOffline && styles.disabledAvatar]} />
+            <UserAvatar avatarUrl={item.avatar_url} size={40} style={[styles.avatar, isDisabled && styles.disabledAvatar]} />
             {/* Status indicator dot */}
             <View style={[styles.statusDot, { backgroundColor: workerStatus.color }]} />
           </View>
@@ -199,9 +235,9 @@ export default function MapOverviewScreen() {
             <Text style={[
               styles.itemName, 
               isSelected && styles.selectedWorkerText,
-              isOffline && styles.disabledText
+              isDisabled && styles.disabledText
             ]} fontType="medium">{item.full_name}</Text>
-            <Text style={[styles.workerStatusText, isOffline && styles.disabledText]} fontType="regular">{workerStatus.label}</Text>
+            <Text style={[styles.workerStatusText, isDisabled && styles.disabledText]} fontType="regular">{workerStatus.label}</Text>
           </View>
           {isSelected && <Ionicons name="chevron-forward" size={16} color={theme.colors.primary} />}
       </TouchableOpacity>
