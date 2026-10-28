@@ -470,7 +470,7 @@ export const MapView = React.forwardRef<any, MapViewProps>(({
   const handleMapMove = useCallback((evt: ViewStateChangeEvent) => {
     if (region) {
       // Controlled mode: don't update internal state, but call parent callback
-      if (onRegionChangeComplete) {
+      if (onRegionChangeComplete && mapRef.current) {
         const { longitude, latitude } = evt.viewState;
         const bounds = mapRef.current.getBounds();
         // Calculate latitudeDelta/longitudeDelta from bounds here
