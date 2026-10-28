@@ -41,14 +41,14 @@ interface WorkerDailyDetailsPanelProps {
 }
 
 const haversineDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
-  const R = 6371;
+  const R = 6371; // Earth radius in km
   const dLat = (lat2 - lat1) * Math.PI / 180;
   const dLon = (lon2 - lon1) * Math.PI / 180;
   const a =
     Math.sin(dLat / 2) * Math.sin(dLat / 2) +
     Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
     Math.sin(dLon / 2) * Math.sin(dLon / 2);
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)));
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)); // Fixed formula
   return R * c;
 };
 
@@ -190,13 +190,17 @@ const WorkerDailyDetailsPanel = ({ workerId, date }: WorkerDailyDetailsPanelProp
   });
 
   const calculateKilometers = useCallback((eventList: LocationEvent[]) => {
+    console.log('Calculating distance from', eventList.length, 'location events');
     let totalKm = 0;
     for (let i = 0; i < eventList.length - 1; i++) {
       const p1 = eventList[i];
       const p2 = eventList[i + 1];
-      totalKm += haversineDistance(p1.lat, p1.lng, p2.lat, p2.lng);
+      const dist = haversineDistance(p1.lat, p1.lng, p2.lat, p2.lng);
+      totalKm += dist;
     }
-    return parseFloat(totalKm.toFixed(2));
+    const result = parseFloat(totalKm.toFixed(2));
+    console.log('Total distance calculated:', result, 'km');
+    return result;
   }, []);
 
   useEffect(() => {
@@ -251,6 +255,7 @@ const WorkerDailyDetailsPanel = ({ workerId, date }: WorkerDailyDetailsPanelProp
 
         // Calculate distance from all location events
         const distance = calculateKilometers(mappedEvents);
+        console.log('Setting distance in summary:', distance);
 
         // Set map region based on first location event
         if (detailsRes.data && detailsRes.data.length > 0) {
@@ -264,11 +269,14 @@ const WorkerDailyDetailsPanel = ({ workerId, date }: WorkerDailyDetailsPanelProp
         
         // Update summary with calculated distance
         setDailySummary(prev => {
+          console.log('Previous summary:', prev);
           if (!prev) return null;
-          return {
+          const updated = {
             ...prev,
             approx_travelled_km: distance,
           };
+          console.log('Updated summary:', updated);
+          return updated;
         });
       }
       setLoading(false);
