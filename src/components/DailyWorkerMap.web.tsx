@@ -78,10 +78,33 @@ const DailyWorkerMapWeb: React.FC<DailyWorkerMapProps & {
   style,
 }) => {
   const mapRef = useRef<MapRef | null>(null);
+  
+  // Compute initial center from first location in trail
+  const computedInitialRegion = useMemo(() => {
+    // Try to get first coordinate from fullTrail
+    if (fullTrailGeoJSON.features.length > 0) {
+      const firstFeature = fullTrailGeoJSON.features[0];
+      if (firstFeature.geometry.type === 'LineString' && firstFeature.geometry.coordinates.length > 0) {
+        const [lng, lat] = firstFeature.geometry.coordinates[0];
+        return { longitude: lng, latitude: lat, zoom: 13 };
+      }
+    }
+    // Fallback to assignment points
+    if (assignmentPointsGeoJSON.features.length > 0) {
+      const firstPoint = assignmentPointsGeoJSON.features[0];
+      if (firstPoint.geometry.type === 'Point') {
+        const [lng, lat] = firstPoint.geometry.coordinates;
+        return { longitude: lng, latitude: lat, zoom: 13 };
+      }
+    }
+    // Last resort: London (should never happen if there's location data)
+    return { longitude: -0.1278, latitude: 51.5074, zoom: 12 };
+  }, [fullTrailGeoJSON, assignmentPointsGeoJSON]);
+
   const [viewState, setViewState] = useState<ViewState>({
-    longitude: region?.longitude || initialRegion?.longitude || -0.1278,
-    latitude: region?.latitude || initialRegion?.latitude || 51.5074,
-    zoom: zoom || region?.zoom || initialRegion?.zoom || 12,
+    longitude: region?.longitude || initialRegion?.longitude || computedInitialRegion.longitude,
+    latitude: region?.latitude || initialRegion?.latitude || computedInitialRegion.latitude,
+    zoom: zoom || region?.zoom || initialRegion?.zoom || computedInitialRegion.zoom,
     bearing: 0,
     pitch: 0,
     padding: { top: 0, bottom: 0, left: 0, right: 0 }
@@ -204,10 +227,10 @@ const DailyWorkerMapWeb: React.FC<DailyWorkerMapProps & {
                 'text-ignore-placement': true,
               }}
               paint={{
-                'text-color': '#FFFFFF', // White arrows
-                'text-opacity': 0.5, // More subtle
-                'text-halo-color': '#000000', // Black outline for contrast
-                'text-halo-width': 0.5, // Thinner halo
+                'text-color': '#E5E7EB', // Very light gray
+                'text-opacity': 0.9, // More opaque
+                'text-halo-color': '#1F2937', // Dark gray outline
+                'text-halo-width': 1, // Thicker outline for better contrast
               }}
             />
           </Source>
