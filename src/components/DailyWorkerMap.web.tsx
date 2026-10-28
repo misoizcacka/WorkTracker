@@ -194,16 +194,20 @@ const DailyWorkerMapWeb: React.FC<DailyWorkerMapProps & {
               type="symbol"
               layout={{
                 'symbol-placement': 'line',
-                'symbol-spacing': 100, // Arrow every 100 pixels
-                'icon-image': 'triangle-15', // Built-in triangle pointing right
-                'icon-size': 0.6,
-                'icon-rotate': 90, // Rotate to point forward along line
-                'icon-rotation-alignment': 'map',
-                'icon-allow-overlap': true,
-                'icon-ignore-placement': true,
+                'symbol-spacing': 80, // Arrow every 80 pixels
+                'text-field': '▶', // Unicode triangle arrow
+                'text-size': 12,
+                'text-rotation-alignment': 'map',
+                'text-pitch-alignment': 'viewport',
+                'text-keep-upright': false,
+                'text-allow-overlap': true,
+                'text-ignore-placement': true,
               }}
               paint={{
-                'icon-opacity': 0.7,
+                'text-color': '#FFFFFF', // White arrows
+                'text-opacity': 0.6, // Semi-transparent
+                'text-halo-color': '#000000', // Black outline for contrast
+                'text-halo-width': 1,
               }}
             />
           </Source>
