@@ -1,4 +1,5 @@
 import React, { useState, useContext, useCallback, useMemo, useEffect, useRef } from 'react';
+import { Platform } from 'react-native';
 import { supabase } from '../utils/supabase';
 import {
   Project,
@@ -510,22 +511,32 @@ export function AssignmentsProvider({ children }: { children: React.ReactNode })
       const session = await fetchActiveWorkSession(user.id);
       if (session) {
         setActiveWorkSession(session);
-        // Mirror to local SQLite so offline restarts can find it
-        try {
-          await insertLocalWorkSession({ ...session, synced: true });
-        } catch {}
+        // Mirror to local SQLite so offline restarts can find it (mobile only)
+        if (Platform.OS !== 'web') {
+          try {
+            await insertLocalWorkSession({ ...session, synced: true });
+          } catch {}
+        }
         return;
       }
-      // Supabase returned nothing — check local SQLite for an unsynced active session
-      const localActive = await getLocalActiveWorkSession(user.id);
-      setActiveWorkSession(localActive);
-    } catch (err: any) {
-      // Supabase unreachable (offline) — fall back to local SQLite
-      try {
+      // Supabase returned nothing — check local SQLite for an unsynced active session (mobile only)
+      if (Platform.OS !== 'web') {
         const localActive = await getLocalActiveWorkSession(user.id);
         setActiveWorkSession(localActive);
-      } catch (localErr) {
-        console.error('Error fetching active work session from local SQLite:', localErr);
+      } else {
+        setActiveWorkSession(null);
+      }
+    } catch (err: any) {
+      // Supabase unreachable (offline) — fall back to local SQLite (mobile only)
+      if (Platform.OS !== 'web') {
+        try {
+          const localActive = await getLocalActiveWorkSession(user.id);
+          setActiveWorkSession(localActive);
+        } catch (localErr) {
+          console.error('Error fetching active work session from local SQLite:', localErr);
+          setActiveWorkSession(null);
+        }
+      } else {
         setActiveWorkSession(null);
       }
     }
