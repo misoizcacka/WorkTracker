@@ -231,15 +231,31 @@ export default function MapOverviewScreen() {
             {/* Status indicator dot */}
             <View style={[styles.statusDot, { backgroundColor: workerStatus.color }]} />
           </View>
-          <View style={styles.itemInfo}>
-            <Text style={[
-              styles.itemName, 
-              isSelected && styles.selectedWorkerText,
-              isDisabled && styles.disabledText
-            ]} fontType="medium">{item.full_name}</Text>
-            <Text style={[styles.workerStatusText, isDisabled && styles.disabledText]} fontType="regular">{workerStatus.label}</Text>
+          <View style={styles.workerItemInfo}>
+            <Text 
+              style={[
+                styles.workerItemName, 
+                isSelected && styles.selectedWorkerText,
+                isDisabled && styles.disabledText
+              ]} 
+              fontType="medium"
+              numberOfLines={1}
+              ellipsizeMode="tail"
+            >
+              {item.full_name}
+            </Text>
+            <Text 
+              style={[styles.workerStatusText, isDisabled && styles.disabledText]} 
+              fontType="regular"
+              numberOfLines={1}
+            >
+              {workerStatus.label}
+            </Text>
           </View>
-          {isSelected && <Ionicons name="chevron-forward" size={16} color={theme.colors.primary} />}
+          {/* Always render arrow container to reserve space */}
+          <View style={styles.arrowContainer}>
+            {isSelected && <Ionicons name="chevron-forward" size={16} color={theme.colors.primary} />}
+          </View>
       </TouchableOpacity>
     );
   };
@@ -491,9 +507,9 @@ const styles = StyleSheet.create({
   workerItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: theme.spacing(1.5),
+    padding: theme.spacing(1),
     borderRadius: theme.radius.md,
-    marginBottom: theme.spacing(1),
+    marginBottom: theme.spacing(0.5),
     backgroundColor: theme.colors.pageBackground,
   },
   selectedWorkerItem: {
@@ -502,17 +518,16 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   workerIcon: {
-    marginRight: theme.spacing(1.5),
+    marginRight: theme.spacing(1),
   },
   avatar: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    marginRight: theme.spacing(1.5),
   },
   avatarContainer: {
     position: 'relative',
-    marginRight: theme.spacing(1.5),
+    marginRight: theme.spacing(1),
   },
   statusDot: {
     position: 'absolute',
@@ -524,10 +539,26 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: theme.colors.cardBackground,
   },
+  workerItemInfo: { 
+    flex: 1,
+    paddingVertical: theme.spacing(0.5),
+    minWidth: 0, // Allow text to shrink
+  },
+  workerItemName: {
+    fontSize: theme.fontSizes.md,
+    color: theme.colors.headingText,
+  },
   workerStatusText: {
     fontSize: theme.fontSizes.xs,
     color: theme.colors.bodyText,
     marginTop: theme.spacing(0.25),
+  },
+  arrowContainer: {
+    width: 16,
+    height: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: theme.spacing(0.5),
   },
   disabledWorkerItem: {
     opacity: 0.5,
