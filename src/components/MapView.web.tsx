@@ -301,16 +301,28 @@ export const MapView = React.forwardRef<any, MapViewProps>(({
     })),
   ], [selectedWorkers, selectedProjects]);
 
+  // Track when selection changes (not just location updates) to trigger fitBounds
+  const selectionKey = useMemo(() => {
+    const workerIds = selectedWorkers.map(w => w.id).sort().join(',');
+    const projectIds = selectedProjects.map(p => p.id).sort().join(',');
+    return `${workerIds}|${projectIds}`;
+  }, [selectedWorkers, selectedProjects]);
+
+  const prevSelectionKeyRef = useRef<string>(selectionKey);
+
   useEffect(() => {
-    // Only auto-fit when map first loads with markers, not on every location update
-    // This prevents the annoying zoom out/in behavior when markers move
-    if (region || !isMapLoaded || !mapRef.current) return;
+    // Only auto-fit when workers/projects selection changes, not on location updates
+    if (!isMapLoaded || !mapRef.current) return;
+    
+    const selectionChanged = prevSelectionKeyRef.current !== selectionKey;
+    prevSelectionKeyRef.current = selectionKey;
+    
+    // If region is controlled externally, don't auto-fit
+    if (region) return;
     
     const map = mapRef.current;
     const allLocations = features.map(f => f.geometry.coordinates as [number, number]);
     
-    // Only fit bounds if we don't have any features yet (initial load)
-    // Once markers are placed, let the user control the zoom
     if (features.length === 0) {
       if (initialRegion) {
         map.easeTo({ center: [initialRegion.longitude, initialRegion.latitude], zoom: initialRegion.zoom || 10, duration: 1000 });
@@ -318,14 +330,15 @@ export const MapView = React.forwardRef<any, MapViewProps>(({
       return;
     }
     
-    // Only auto-fit on the very first load when features appear
-    // We detect this by checking if we previously had zero features
-    const boundsToFit = new LngLatBounds();
-    allLocations.forEach(loc => boundsToFit.extend(loc));
-    if (!boundsToFit.isEmpty()) {
-      map.fitBounds(boundsToFit, { padding: 100, maxZoom: 15, duration: 1000 });
+    // Only fit bounds when selection changed, not on every location update
+    if (selectionChanged) {
+      const boundsToFit = new LngLatBounds();
+      allLocations.forEach(loc => boundsToFit.extend(loc));
+      if (!boundsToFit.isEmpty()) {
+        map.fitBounds(boundsToFit, { padding: 100, maxZoom: 15, duration: 1000 });
+      }
     }
-  }, [isMapLoaded, region, initialRegion]); // Removed features from dependencies to prevent refitting on location updates
+  }, [isMapLoaded, region, initialRegion, selectionKey, features.length]);
 
   const supercluster = useMemo(() => {
     const sc = new Supercluster({ radius: 40, maxZoom: 16 });
