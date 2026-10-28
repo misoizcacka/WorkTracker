@@ -624,34 +624,68 @@ export const MapView = React.forwardRef<any, MapViewProps>(({
         <CustomPopup popupInfo={popupInfo} map={mapRef.current} />
         <HoverPopup hoverInfo={hoverInfo} map={mapRef.current} />
 
-        {/* Polyline trail for location replay */}
+        {/* Polyline trail with gradient for location replay */}
         {polylineCoordinates && polylineCoordinates.length >= 2 && (
-          <Source
-            id="replay-trail"
-            type="geojson"
-            data={{
-              type: 'Feature',
-              geometry: {
-                type: 'LineString',
-                coordinates: polylineCoordinates.map(c => [c.longitude, c.latitude]),
-              },
-              properties: {},
-            }}
-          >
-            <Layer
-              id="replay-trail-layer"
-              type="line"
-              paint={{
-                'line-color': '#2563EB',
-                'line-width': 3,
-                'line-opacity': 0.75,
-              }}
-              layout={{
-                'line-join': 'round',
-                'line-cap': 'round',
-              }}
-            />
-          </Source>
+          <>
+            {polylineCoordinates.map((coord, i) => {
+              if (i === polylineCoordinates.length - 1) return null;
+              
+              const start = polylineCoordinates[i];
+              const end = polylineCoordinates[i + 1];
+              const progress = i / (polylineCoordinates.length - 1);
+              
+              // Gradient: Gray → Red → Dark Red
+              let color: string;
+              if (progress < 0.5) {
+                // First half: Gray → Red
+                const p = progress * 2;
+                const r = Math.round(156 + (239 - 156) * p);
+                const g = Math.round(163 + (68 - 163) * p);
+                const b = Math.round(175 + (68 - 175) * p);
+                color = `rgb(${r}, ${g}, ${b})`;
+              } else {
+                // Second half: Red → Dark Red
+                const p = (progress - 0.5) * 2;
+                const r = Math.round(239 + (153 - 239) * p);
+                const g = Math.round(68 + (27 - 68) * p);
+                const b = Math.round(68 + (27 - 68) * p);
+                color = `rgb(${r}, ${g}, ${b})`;
+              }
+              
+              return (
+                <Source
+                  key={`trail-segment-${i}`}
+                  id={`trail-segment-${i}`}
+                  type="geojson"
+                  data={{
+                    type: 'Feature',
+                    geometry: {
+                      type: 'LineString',
+                      coordinates: [
+                        [start.longitude, start.latitude],
+                        [end.longitude, end.latitude],
+                      ],
+                    },
+                    properties: {},
+                  }}
+                >
+                  <Layer
+                    id={`trail-segment-layer-${i}`}
+                    type="line"
+                    paint={{
+                      'line-color': color,
+                      'line-width': 5,
+                      'line-opacity': 0.8,
+                    }}
+                    layout={{
+                      'line-join': 'round',
+                      'line-cap': 'round',
+                    }}
+                  />
+                </Source>
+              );
+            })}
+          </>
         )}
 
         <NavigationControl />

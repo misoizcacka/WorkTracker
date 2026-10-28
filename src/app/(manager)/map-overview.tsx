@@ -28,6 +28,7 @@ export default function MapOverviewScreen() {
   const [searchTerm, setSearchTerm] = useState('');
   const [searchTermProject, setSearchTermProject] = useState('');
   const [workerLocations, setWorkerLocations] = useState<LatestLocation[]>([]);
+  const [recentLocationEvents, setRecentLocationEvents] = useState<any[]>([]); // For trail visualization
 
   // Initial fetch of locations
   useEffect(() => {
@@ -52,8 +53,24 @@ export default function MapOverviewScreen() {
           return merged;
         });
       });
+      
+      // Fetch recent location events for trail (last 8 hours)
+      const fetchRecentTrail = async () => {
+        const { data, error } = await supabase
+          .from('location_events')
+          .select('worker_id, latitude, longitude, created_at, type')
+          .in('worker_id', workerIds)
+          .gte('created_at', new Date(Date.now() - 8 * 60 * 60 * 1000).toISOString())
+          .order('created_at', { ascending: true });
+        
+        if (!error && data) {
+          setRecentLocationEvents(data);
+        }
+      };
+      fetchRecentTrail();
     } else {
       setWorkerLocations([]);
+      setRecentLocationEvents([]);
     }
   }, [selectedWorkers]);
 
@@ -218,6 +235,15 @@ export default function MapOverviewScreen() {
     }));
   }, [selectedProjects]);
 
+  // Convert recent location events to polyline coordinates for trail
+  const trailCoordinates = useMemo(() => {
+    if (recentLocationEvents.length === 0) return undefined;
+    return recentLocationEvents.map(e => ({
+      latitude: e.latitude,
+      longitude: e.longitude,
+    }));
+  }, [recentLocationEvents]);
+
   // Calculate initial region only once - use a static center (Berlin)
   // Map will auto-fit to show all markers on first load, then stay put
   const mapInitialRegion = useMemo(() => {
@@ -275,6 +301,7 @@ export default function MapOverviewScreen() {
                 initialRegion={mapInitialRegion}
                 selectedWorkers={mapViewSelectedWorkers}
                 selectedProjects={mapViewSelectedProjects}
+                polylineCoordinates={trailCoordinates}
               />
             )}
           </View>
