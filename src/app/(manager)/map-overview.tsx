@@ -65,7 +65,13 @@ export default function MapOverviewScreen() {
           .limit(2000);
         
         if (!error && data) {
+          // Count event types
+          const typeCounts = data.reduce((acc: any, e) => {
+            acc[e.type] = (acc[e.type] || 0) + 1;
+            return acc;
+          }, {});
           console.log('🗺️ Map Overview: Fetched', data.length, 'location events for trail');
+          console.log('📊 Event types breakdown:', typeCounts);
           setRecentLocationEvents(data);
         } else if (error) {
           console.error('Error fetching trail:', error);
