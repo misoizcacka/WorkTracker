@@ -86,7 +86,7 @@ const AddAssignmentModal: React.FC<AddAssignmentModalProps> = ({
 
   return (
     <Modal
-      animationType="slide"
+      animationType="fade"
       transparent={true}
       visible={isVisible}
       onRequestClose={onClose}

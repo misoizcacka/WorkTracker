@@ -141,7 +141,7 @@ const InvitePersonModal: React.FC<InvitePersonModalProps> = ({ visible, onClose 
 
   return (
     <Modal
-      animationType="slide"
+      animationType="fade"
       transparent={true}
       visible={visible}
       onRequestClose={onClose}

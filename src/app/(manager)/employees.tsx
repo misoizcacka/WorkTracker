@@ -427,7 +427,7 @@ export default function ManagerEmployees() {
         />
       )}
       <Modal
-        animationType="slide"
+        animationType="fade"
         transparent={true}
         visible={accessLinkModalVisible}
         onRequestClose={() => setAccessLinkModalVisible(false)}

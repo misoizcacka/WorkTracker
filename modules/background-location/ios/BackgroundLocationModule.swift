@@ -69,5 +69,22 @@ public class BackgroundLocationModule: Module {
     AsyncFunction("getAuthorizationStatus") {
       IOSBackgroundLocationManager.shared.authorizationStatus()
     }
+
+    // ─── Logging / Diagnostics (matching Android API) ───────────────────────
+    AsyncFunction("getRecentLogs") { (maxLines: Int) -> String in
+      return LocationFileLogger.shared.getRecentLogs(maxLines: maxLines)
+    }
+
+    AsyncFunction("exportLogs") { () -> String in
+      return LocationFileLogger.shared.exportAllLogs()
+    }
+
+    AsyncFunction("getLogStats") { () -> [String: Any] in
+      return LocationFileLogger.shared.getLogStats()
+    }
+
+    AsyncFunction("clearLogs") {
+      LocationFileLogger.shared.clearLogs()
+    }
   }
 }

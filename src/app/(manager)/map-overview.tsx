@@ -218,20 +218,17 @@ export default function MapOverviewScreen() {
     }));
   }, [selectedProjects]);
 
+  // Calculate initial region only once - use a static center (Berlin)
+  // Map will auto-fit to show all markers on first load, then stay put
   const mapInitialRegion = useMemo(() => {
-    const firstWorkerWithLocation = mapViewSelectedWorkers.find(worker => worker.location);
-    const firstProjectWithLocation = mapViewSelectedProjects.find(project => project.location);
-    const initialLocation = firstWorkerWithLocation?.location || firstProjectWithLocation?.location;
-
     return {
-      latitude: initialLocation?.latitude ?? 52.5200,
-      longitude: initialLocation?.longitude ?? 13.4050,
+      latitude: 52.5200,
+      longitude: 13.4050,
       latitudeDelta: 0.2,
       longitudeDelta: 0.2,
+      zoom: 10,
     };
-  }, [mapViewSelectedWorkers, mapViewSelectedProjects]);
-
-  const mapRegionKey = `${mapInitialRegion.latitude}-${mapInitialRegion.longitude}`;
+  }, []); // Empty dependency array - only calculate once on mount
 
 
   return (
@@ -275,7 +272,6 @@ export default function MapOverviewScreen() {
               </Card>
             ) : (
               <MapView
-                key={mapRegionKey}
                 initialRegion={mapInitialRegion}
                 selectedWorkers={mapViewSelectedWorkers}
                 selectedProjects={mapViewSelectedProjects}

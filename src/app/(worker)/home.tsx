@@ -57,6 +57,7 @@ export default function Home() {
   const [pendingAction, setPendingAction] = useState<'checking_in' | 'checking_out' | null>(null);
   const [lastOnSiteAssignmentId, setLastOnSiteAssignmentId] = useState<string | null>(null);
   const [isBreakModalVisible, setIsBreakModalVisible] = useState(false);
+  const [isLoadingCheckoutLocation, setIsLoadingCheckoutLocation] = useState(false);
   // Stores the GPS location captured when user taps "Check Out", used after break modal confirms
   const pendingCheckoutLocationRef = React.useRef<{ latitude: number; longitude: number } | null>(null);
   // iOS only: seconds since last native location tick â€” >600 means process was force-swiped
@@ -406,7 +407,13 @@ export default function Home() {
     const fetchAndSetLocation = async () => {
       if (!isMounted) return;
       try {
-        const location = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
+        // Add 10 second timeout to prevent infinite hang on iOS simulator
+        const locationPromise = Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
+        const timeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Location timeout')), 10000)
+        );
+        
+        const location = await Promise.race([locationPromise, timeoutPromise]) as any;
         const { latitude, longitude } = location.coords;
         if (isMounted) {
           setWorkerMapLocation({ latitude, longitude });
@@ -522,9 +529,16 @@ export default function Home() {
 
       let currentLocation;
       try {
-        const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
+        const locPromise = Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
+        const timeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Location timeout')), 10000)
+        );
+        const loc = await Promise.race([locPromise, timeoutPromise]) as any;
         currentLocation = { latitude: loc.coords.latitude, longitude: loc.coords.longitude };
-      } catch (err) { return; }
+      } catch (err) { 
+        Alert.alert(t('worker.home.locationError'), t('worker.home.locationTimeout') || 'Could not get your location. Please try again.');
+        return; 
+      }
 
       const d = getDistance(currentLocation, { latitude: targetProjectLocation.lat, longitude: targetProjectLocation.lon });
       if (d > relevantRadius) { Alert.alert(t('worker.home.tooFar'), t('worker.home.tooFarMsg', { name: projectLocationName })); return; }
@@ -543,12 +557,21 @@ export default function Home() {
   const handleCheckOut = async () => {
     if (!activeWorkSession) return;
     setIsBreakModalVisible(true);
+    setIsLoadingCheckoutLocation(true);
     // Get GPS in background while user fills break duration
-    Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High })
-      .then(loc => {
+    const locPromise = Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
+    const timeoutPromise = new Promise((_, reject) => 
+      setTimeout(() => reject(new Error('Location timeout')), 10000)
+    );
+    Promise.race([locPromise, timeoutPromise])
+      .then((loc: any) => {
         pendingCheckoutLocationRef.current = { latitude: loc.coords.latitude, longitude: loc.coords.longitude };
+        setIsLoadingCheckoutLocation(false);
       })
-      .catch(() => pendingCheckoutLocationRef.current = null);
+      .catch(() => {
+        pendingCheckoutLocationRef.current = null;
+        setIsLoadingCheckoutLocation(false);
+      });
   };
 
   const handleBreakConfirm = async (breakMinutes: number) => {
@@ -577,6 +600,7 @@ export default function Home() {
 
   const handleBreakCancel = () => {
     setIsBreakModalVisible(false);
+    setIsLoadingCheckoutLocation(false);
     pendingCheckoutLocationRef.current = null;
   };
 
@@ -831,7 +855,7 @@ export default function Home() {
         workedMinutes={activeWorkSession ? Math.floor((Date.now() - new Date(activeWorkSession.start_time).getTime()) / 60000) : 0}
         onConfirm={handleBreakConfirm}
         onCancel={handleBreakCancel}
-        isLoading={isProcessingCheckInOut}
+        isLoading={isProcessingCheckInOut || isLoadingCheckoutLocation}
       />
     </AnimatedScreen>
   );

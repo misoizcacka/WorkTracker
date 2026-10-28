@@ -5,10 +5,21 @@ import { Session, User } from '@supabase/supabase-js';
 import * as SecureStore from 'expo-secure-store'; 
 import 'react-native-get-random-values'; 
 import { v4 as uuidv4 } from 'uuid'; 
-import { Platform } from 'react-native';
+import { Platform, AppState, AppStateStatus } from 'react-native';
 import NetInfo from '@react-native-community/netinfo';
 
 const COMPANY_DETAILS_CACHE_KEY = 'cached_company_details';
+const NETWORK_TIMEOUT_MS = 10000; // 10 second timeout for network calls
+
+// Timeout wrapper for async operations
+function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<T>((_, reject) =>
+      setTimeout(() => reject(new Error('Network timeout')), timeoutMs)
+    ),
+  ]);
+}
 
 // Define the shape of the context value
 interface AuthContextType {
@@ -138,11 +149,14 @@ export function SessionProvider(props: React.PropsWithChildren<{}>) {
     let companyDetails: CompanyDetails | null = null;
 
     try {
-      const { data: directCompanyDetails, error: companyDetailsError } = await supabase
+      const { data: directCompanyDetails, error: companyDetailsError } = await withTimeout(
+        supabase
           .from('companies')
           .select('name, country, subscription_period_end, scheduled_worker_seats, scheduled_change_effective_at')
           .eq('id', currentCompanyId)
-          .maybeSingle();
+          .maybeSingle(),
+        NETWORK_TIMEOUT_MS
+      );
 
       if (companyDetailsError) {
         console.error('Error fetching company details in AuthContext:', companyDetailsError);
@@ -155,9 +169,12 @@ export function SessionProvider(props: React.PropsWithChildren<{}>) {
 
     if (!companyDetails) {
       try {
-        const { data: rpcCompanyDetails, error: rpcCompanyDetailsError } = await supabase
-          .rpc('get_my_company_details')
-          .maybeSingle();
+        const { data: rpcCompanyDetails, error: rpcCompanyDetailsError } = await withTimeout(
+          supabase
+            .rpc('get_my_company_details')
+            .maybeSingle(),
+          NETWORK_TIMEOUT_MS
+        );
 
         if (rpcCompanyDetailsError) {
           console.error('Error fetching company details fallback in AuthContext:', rpcCompanyDetailsError);
@@ -199,9 +216,12 @@ export function SessionProvider(props: React.PropsWithChildren<{}>) {
       if (isOnline && finalPeriodEnd && new Date(finalPeriodEnd) < new Date()) {
         console.log('Subscription period ended, syncing with Stripe...');
         try {
-          const { data: syncData, error: syncError } = await supabase.functions.invoke('sync-subscription-status', {
-            body: { companyId: currentCompanyId }
-          });
+          const { data: syncData, error: syncError } = await withTimeout(
+            supabase.functions.invoke('sync-subscription-status', {
+              body: { companyId: currentCompanyId }
+            }),
+            NETWORK_TIMEOUT_MS
+          );
           if (!syncError && syncData) {
             finalPeriodEnd = syncData.periodEnd;
             if (syncData.clearedScheduledDowngrade) {
@@ -346,14 +366,38 @@ export function SessionProvider(props: React.PropsWithChildren<{}>) {
     };
   }, [fetchUserDetailsAndCompany]);
 
+  // Refresh user data when app comes to foreground after being backgrounded
+  useEffect(() => {
+    const handleAppStateChange = (nextAppState: AppStateStatus) => {
+      if (nextAppState === 'active' && user) {
+        // App came to foreground - refresh user data with timeout protection
+        console.log('AuthContext: App resumed, refreshing user data...');
+        fetchUserDetailsAndCompany(user).catch(err => {
+          console.warn('AuthContext: Failed to refresh on app resume:', err);
+        });
+      }
+    };
+
+    const subscription = AppState.addEventListener('change', handleAppStateChange);
+    return () => {
+      subscription?.remove();
+    };
+  }, [user, fetchUserDetailsAndCompany]);
+
   const refreshUser = useCallback(async () => {
     const netState = await NetInfo.fetch();
     const isOnline = netState.isConnected && netState.isInternetReachable !== false;
     if (!isOnline) return; // Nothing to refresh offline — cached state is already loaded
     try {
-      const { data: { session: refreshedSession }, error: sessionError } = await supabase.auth.refreshSession();
+      const { data: { session: refreshedSession }, error: sessionError } = await withTimeout(
+        supabase.auth.refreshSession(),
+        NETWORK_TIMEOUT_MS
+      );
       if (sessionError) return;
-      const { data: { user: latestUser } } = await supabase.auth.getUser();
+      const { data: { user: latestUser } } = await withTimeout(
+        supabase.auth.getUser(),
+        NETWORK_TIMEOUT_MS
+      );
       if (latestUser) {
         setUser(latestUser);
         fetchUserDetailsAndCompany(latestUser);

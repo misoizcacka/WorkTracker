@@ -116,6 +116,8 @@ final class IOSBackgroundLocationManager: NSObject, CLLocationManagerDelegate {
     showForegroundNotification(locationName: supabaseConfig.locationName)
     scheduleBackgroundRefresh()
 
+    LocationFileLogger.shared.info("Service", "Location tracking started: \(geofenceAssignments.count) geofences registered")
+    
     flushPendingEvents()
   }
 
@@ -225,6 +227,13 @@ final class IOSBackgroundLocationManager: NSObject, CLLocationManagerDelegate {
   @objc
   private func handleAppBecameActive() {
     reconcileCurrentState()
+    
+    // Re-show notification when app comes to foreground if session is active
+    // iOS dismisses local notifications when the app is opened, so we need to re-show it
+    if stateStore.isSessionActive,
+       let locationName = stateStore.supabaseConfig?.locationName {
+      showForegroundNotification(locationName: locationName)
+    }
   }
 
   // ─── Geofence registration ────────────────────────────────────────────────
@@ -340,6 +349,9 @@ final class IOSBackgroundLocationManager: NSObject, CLLocationManagerDelegate {
       notes: "Periodic update (\(trackingType))",
       config: config
     )
+    
+    LocationFileLogger.shared.info("LocationUpdate", "🟢 Periodic update (\(trackingType)): (\(String(format: "%.6f", location.coordinate.latitude)), \(String(format: "%.6f", location.coordinate.longitude))) accuracy: \(String(format: "%.1f", location.horizontalAccuracy))m")
+    )
     stateStore.lastLocationEventAt = Date()
   }
 
@@ -365,6 +377,8 @@ final class IOSBackgroundLocationManager: NSObject, CLLocationManagerDelegate {
     let latitude = locationManager.location?.coordinate.latitude ?? assignment.latitude
     let longitude = locationManager.location?.coordinate.longitude ?? assignment.longitude
     let type = isInside ? "enter_geofence" : "exit_geofence"
+
+    LocationFileLogger.shared.info("Geofence", "🟢 \(isInside ? "ENTER" : "EXIT") geofence \(assignment.id.prefix(8)) via \(source)")
 
     performBackgroundWork {
       await self.emitEvent(

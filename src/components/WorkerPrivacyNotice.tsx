@@ -74,8 +74,7 @@ export function WorkerPrivacyNotice({ onAccept }: Props) {
 
       <View style={styles.footer}>
         <TouchableOpacity style={styles.acceptButton} onPress={handleAccept} activeOpacity={0.85}>
-          <Ionicons name="checkmark-circle-outline" size={20} color="#fff" />
-          <Text style={styles.acceptButtonText} fontType="bold">{t('worker.privacy.confirm')}</Text>
+          <Text style={styles.acceptButtonText} fontType="regular">{t('worker.privacy.confirm')}</Text>
         </TouchableOpacity>
       </View>
     </View>

@@ -84,8 +84,9 @@ object BackgroundLocationManager {
     // Starts the periodic location updates
     fun startPeriodicUpdates(context: Context) {
         Log.d(TAG, "Attempting to start periodic location updates.")
+        // No network constraint — fallback ping must work offline to keep tracking alive
         val constraints = Constraints.Builder()
-            .setRequiredNetworkType(NetworkType.CONNECTED)
+            .setRequiresBatteryNotLow(false)  // Run even on low battery (foreground service justifies it)
             .build()
 
         val workRequest = PeriodicWorkRequestBuilder<PeriodicLocationPingWorker>(
