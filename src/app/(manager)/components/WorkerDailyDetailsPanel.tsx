@@ -438,22 +438,33 @@ const WorkerDailyDetailsPanel = ({ workerId, date }: WorkerDailyDetailsPanelProp
             <View style={styles.sectionHeader}>
                 <Text style={styles.sectionTitle} fontType="bold">Location Replay</Text>
             </View>
-            <View style={styles.mapContainer}>
-                <View style={styles.mapViewWrapper}>
-                    <DailyWorkerMap
-                        style={{ flex: 1 }}
-                        zoom={mapZoom}
-                        onWebZoomChange={setMapZoom}
-                        assignments={assignments}
-                        locationEvents={locationEvents}
-                        workerId={workerId || ''}
-                        assignmentPointsGeoJSON={assignmentPointsGeoJSON}
-                        assignmentSegmentsGeoJSON={assignmentSegmentsGeoJSON}
-                        fullTrailGeoJSON={fullTrailGeoJSON}
-                        trackingDotsGeoJSON={trackingDotsGeoJSON}
-                    />
-                </View>
-            </View>
+            {locationEvents.length > 0 ? (
+              <View style={styles.mapContainer}>
+                  <View style={styles.mapViewWrapper}>
+                      <DailyWorkerMap
+                          style={{ flex: 1 }}
+                          zoom={mapZoom}
+                          onWebZoomChange={setMapZoom}
+                          assignments={assignments}
+                          locationEvents={locationEvents}
+                          workerId={workerId || ''}
+                          assignmentPointsGeoJSON={assignmentPointsGeoJSON}
+                          assignmentSegmentsGeoJSON={assignmentSegmentsGeoJSON}
+                          fullTrailGeoJSON={fullTrailGeoJSON}
+                          trackingDotsGeoJSON={trackingDotsGeoJSON}
+                      />
+                  </View>
+              </View>
+            ) : (
+              <View style={styles.mapContainer}>
+                  <View style={styles.noMapDataContainer}>
+                      <Ionicons name="map-outline" size={48} color={theme.colors.borderColor} />
+                      <Text style={styles.noMapDataText} fontType="regular">
+                          No location data available for this date
+                      </Text>
+                  </View>
+              </View>
+            )}
         </View>
       </View>
     </ScrollView>
@@ -632,6 +643,18 @@ const styles = StyleSheet.create({
     },
     mapViewWrapper: {
         flex: 1,
+    },
+    noMapDataContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        padding: theme.spacing(4),
+    },
+    noMapDataText: {
+        marginTop: theme.spacing(2),
+        fontSize: theme.fontSizes.md,
+        color: theme.colors.borderColor,
+        textAlign: 'center',
     }
 });
 

@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useContext } from 'react';
+import React, { useState, useMemo, useContext, useEffect } from 'react';
 import { View, StyleSheet, ActivityIndicator, FlatList, TouchableOpacity, TextInput, Platform } from 'react-native';
 import { Text } from '../../../components/Themed';
 import { Ionicons } from '@expo/vector-icons';
@@ -11,6 +11,7 @@ import { EmployeesContext, EmployeesContextType } from '../../../context/Employe
 import CrossPlatformDatePicker from '../../../components/CrossPlatformDatePicker';
 import { useSession } from '~/context/AuthContext';
 import WorkerDailyDetailsPanel from '../components/WorkerDailyDetailsPanel';
+import { supabase } from '~/utils/supabase';
 
 const DailyDetailedReport = () => {
     const router = useRouter();
@@ -20,6 +21,8 @@ const DailyDetailedReport = () => {
     const [selectedDate, setSelectedDate] = useState(new Date());
     const [selectedWorkerId, setSelectedWorkerId] = useState<string | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
+    const [workersWithActivity, setWorkersWithActivity] = useState<Set<string>>(new Set());
+    const [loadingActivity, setLoadingActivity] = useState(false);
 
     // Filter out managers, guests, and the current user from the employee list
     const availableWorkers = useMemo(() => {
@@ -30,23 +33,68 @@ const DailyDetailedReport = () => {
         );
     }, [employees, user?.id, searchTerm]);
 
+    // Fetch workers with activity on selected date
+    useEffect(() => {
+        const fetchWorkersWithActivity = async () => {
+            if (availableWorkers.length === 0) return;
+            
+            setLoadingActivity(true);
+            const viewerTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+            
+            try {
+                const { data, error } = await supabase.rpc('get_workers_with_activity', {
+                    report_date: moment(selectedDate).format('YYYY-MM-DD'),
+                    p_timezone: viewerTimeZone,
+                });
+
+                if (!error && data) {
+                    setWorkersWithActivity(new Set(data.map((row: any) => row.worker_id)));
+                }
+            } catch (err) {
+                console.error('Error fetching workers with activity:', err);
+            } finally {
+                setLoadingActivity(false);
+            }
+        };
+
+        fetchWorkersWithActivity();
+    }, [selectedDate, availableWorkers.length]);
+
     const renderWorkerItem = ({ item }: { item: any }) => {
         const isSelected = selectedWorkerId === item.id;
+        const hasActivity = workersWithActivity.has(item.id);
+        
         return (
             <TouchableOpacity
-                style={[styles.workerItem, isSelected && styles.selectedWorkerItem]}
-                onPress={() => setSelectedWorkerId(item.id)}
+                style={[
+                    styles.workerItem, 
+                    isSelected && styles.selectedWorkerItem,
+                    !hasActivity && styles.disabledWorkerItem
+                ]}
+                onPress={() => hasActivity && setSelectedWorkerId(item.id)}
+                disabled={!hasActivity}
             >
                 <Ionicons
                     name={isSelected ? "person" : "person-outline"}
                     size={20}
-                    color={isSelected ? theme.colors.primary : theme.colors.bodyText}
+                    color={!hasActivity ? theme.colors.borderColor : (isSelected ? theme.colors.primary : theme.colors.bodyText)}
                     style={styles.workerIcon}
                 />
                 <View style={styles.workerInfo}>
-                    <Text style={[styles.workerName, isSelected && styles.selectedWorkerText]} fontType="medium" numberOfLines={1}>
+                    <Text 
+                        style={[
+                            styles.workerName, 
+                            isSelected && styles.selectedWorkerText,
+                            !hasActivity && styles.disabledWorkerText
+                        ]} 
+                        fontType="medium" 
+                        numberOfLines={1}
+                    >
                         {item.full_name}
                     </Text>
+                    {!hasActivity && (
+                        <Text style={styles.noDataText} fontType="regular">No activity</Text>
+                    )}
                 </View>
                 {isSelected && <Ionicons name="chevron-forward" size={16} color={theme.colors.primary} />}
             </TouchableOpacity>
@@ -229,6 +277,18 @@ const styles = StyleSheet.create({
     },
     selectedWorkerText: {
         color: theme.colors.primary,
+    },
+    disabledWorkerItem: {
+        opacity: 0.5,
+        backgroundColor: theme.colors.pageBackground,
+    },
+    disabledWorkerText: {
+        color: theme.colors.borderColor,
+    },
+    noDataText: {
+        fontSize: theme.fontSizes.sm,
+        color: theme.colors.borderColor,
+        marginTop: theme.spacing(0.25),
     },
     rightPanel: {
         flex: 1,
