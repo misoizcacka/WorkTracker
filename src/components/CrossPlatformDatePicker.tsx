@@ -131,10 +131,9 @@ const CrossPlatformDatePicker: React.FC<CrossPlatformDatePickerProps> = ({ date,
             dateFormat={mode === "month" ? "MM/yyyy" : "MMMM d, yyyy"}
             showMonthYearPicker={mode === "month"}
             locale="en-US"
-            popperPlacement="bottom-start" // Adjust placement as needed
+            popperPlacement="bottom-start"
             popperContainer={Portal}
             filterDate={filterDate}
-            maxDate={maxDate}
           />
       </>
     );
