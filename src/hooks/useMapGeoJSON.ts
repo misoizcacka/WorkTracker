@@ -124,6 +124,8 @@ export const useMapGeoJSON = ({ assignments, locationEvents, reportDate }: UseMa
       new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
     );
 
+    console.log('🗺️ Daily Report: Building trail from', sortedLocationEvents.length, 'location events');
+
     if (sortedLocationEvents.length < 2) {
       return {
         type: 'FeatureCollection',

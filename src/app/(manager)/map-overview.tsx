@@ -28,7 +28,6 @@ export default function MapOverviewScreen() {
   const [searchTerm, setSearchTerm] = useState('');
   const [searchTermProject, setSearchTermProject] = useState('');
   const [workerLocations, setWorkerLocations] = useState<LatestLocation[]>([]);
-  const [recentLocationEvents, setRecentLocationEvents] = useState<any[]>([]); // For trail visualization
 
   // Initial fetch of locations
   useEffect(() => {
@@ -53,34 +52,8 @@ export default function MapOverviewScreen() {
           return merged;
         });
       });
-      
-      // Fetch recent location events for trail (last 24 hours, up to 2000 events)
-      const fetchRecentTrail = async () => {
-        const { data, error } = await supabase
-          .from('location_events')
-          .select('worker_id, latitude, longitude, created_at, type')
-          .in('worker_id', workerIds)
-          .gte('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
-          .order('created_at', { ascending: true })
-          .limit(2000);
-        
-        if (!error && data) {
-          // Count event types
-          const typeCounts = data.reduce((acc: any, e) => {
-            acc[e.type] = (acc[e.type] || 0) + 1;
-            return acc;
-          }, {});
-          console.log('🗺️ Map Overview: Fetched', data.length, 'location events for trail');
-          console.log('📊 Event types breakdown:', typeCounts);
-          setRecentLocationEvents(data);
-        } else if (error) {
-          console.error('Error fetching trail:', error);
-        }
-      };
-      fetchRecentTrail();
     } else {
       setWorkerLocations([]);
-      setRecentLocationEvents([]);
     }
   }, [selectedWorkers]);
 
@@ -245,18 +218,6 @@ export default function MapOverviewScreen() {
     }));
   }, [selectedProjects]);
 
-  // Convert recent location events to polyline coordinates for trail
-  const trailCoordinates = useMemo(() => {
-    if (recentLocationEvents.length === 0) return undefined;
-    const coords = recentLocationEvents.map(e => ({
-      latitude: e.latitude,
-      longitude: e.longitude,
-      timestamp: e.created_at, // Include timestamp for time-based gradient
-    }));
-    console.log('🗺️ Trail Coordinates:', coords.length, 'points');
-    return coords;
-  }, [recentLocationEvents]);
-
   // Calculate initial region only once - use a static center (Berlin)
   // Map will auto-fit to show all markers on first load, then stay put
   const mapInitialRegion = useMemo(() => {
@@ -314,7 +275,6 @@ export default function MapOverviewScreen() {
                 initialRegion={mapInitialRegion}
                 selectedWorkers={mapViewSelectedWorkers}
                 selectedProjects={mapViewSelectedProjects}
-                polylineCoordinates={trailCoordinates}
               />
             )}
           </View>
