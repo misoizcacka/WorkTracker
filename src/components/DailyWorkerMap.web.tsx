@@ -18,9 +18,11 @@ const fullTrailLayerStyle: LineLayerSpecification = {
   type: 'line',
   source: 'full-trail-source',
   paint: {
-    'line-color': '#888888',
-    'line-width': 2,
-    'line-opacity': 0.5,
+    'line-color': ['get', 'color'], // Use color from properties
+    'line-width': 5, // Thicker line
+    'line-opacity': 0.8, // More visible
+    'line-cap': 'round', // Rounded caps
+    'line-join': 'round', // Rounded joins
   },
 };
 
@@ -30,8 +32,10 @@ const assignmentSegmentsLayerStyle: LineLayerSpecification = {
   source: 'assignment-segments-source',
   paint: {
     'line-color': theme.colors.primary,
-    'line-width': 4,
-    'line-opacity': 0.8,
+    'line-width': 6, // Thicker for emphasis
+    'line-opacity': 0.9,
+    'line-cap': 'round',
+    'line-join': 'round',
   },
 };
 
@@ -40,11 +44,12 @@ const trackingDotsLayerStyle: CircleLayerSpecification = {
   type: 'circle',
   source: 'tracking-dots-source',
   paint: {
-    'circle-radius': 3,
-    'circle-color': theme.colors.secondary,
-    'circle-opacity': 0.6,
-    'circle-stroke-width': 1,
+    'circle-radius': 2, // Smaller
+    'circle-color': '#6B7280', // Subtle gray
+    'circle-opacity': 0.3, // More transparent
+    'circle-stroke-width': 0.5,
     'circle-stroke-color': '#ffffff',
+    'circle-stroke-opacity': 0.5,
   },
 };
 
@@ -179,6 +184,24 @@ const DailyWorkerMapWeb: React.FC<DailyWorkerMapProps & {
         {fullTrailGeoJSON && (
           <Source id="full-trail-source" type="geojson" data={fullTrailGeoJSON}>
             <Layer {...fullTrailLayerStyle} />
+            {/* Direction arrows on the trail */}
+            <Layer
+              id="trail-arrows"
+              type="symbol"
+              layout={{
+                'symbol-placement': 'line',
+                'symbol-spacing': 100, // Arrow every 100 pixels
+                'icon-image': 'triangle-15', // Built-in triangle pointing right
+                'icon-size': 0.6,
+                'icon-rotate': 90, // Rotate to point forward along line
+                'icon-rotation-alignment': 'map',
+                'icon-allow-overlap': true,
+                'icon-ignore-placement': true,
+              }}
+              paint={{
+                'icon-opacity': 0.7,
+              }}
+            />
           </Source>
         )}
 
