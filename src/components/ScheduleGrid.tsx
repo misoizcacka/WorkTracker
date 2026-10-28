@@ -201,13 +201,21 @@ const WorkerColumn = React.memo(function WorkerColumn({
   onAddAssignment,
   isPastDate
 }: WorkerColumnProps) {
-
+  // TODO: Implement proper hourly rate checking using employee_hourly_rates table
+  const hasHourlyWage = true; // Temporarily disabled - needs proper implementation
+  
   return (
     <View style={styles.workerColumn}>
       <View style={styles.workerColumnHeader}>
         <Text style={styles.workerName} fontType="medium">{employee.full_name}</Text>
+        {!hasHourlyWage && (
+          <View style={styles.wageWarningBadge}>
+            <Ionicons name="warning" size={14} color="#EF4444" />
+            <Text style={styles.wageWarningText} fontType="regular">No wage</Text>
+          </View>
+        )}
       </View>
-      <Droppable droppableId={`worker-${employee.id}`} type="TASK" direction="vertical" isDropDisabled={isPastDate}>
+      <Droppable droppableId={`worker-${employee.id}`} type="TASK" direction="vertical" isDropDisabled={isPastDate || !hasHourlyWage}>
         {(provided, snapshot) => (
                     <View
                       ref={(ref: any) => provided.innerRef(ref)}
@@ -318,6 +326,20 @@ const styles = StyleSheet.create({
   workerName: {
     fontSize: theme.fontSizes.md,
     color: theme.colors.headingText,
+  },
+  wageWarningBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing(0.5),
+    marginTop: theme.spacing(0.5),
+    paddingHorizontal: theme.spacing(0.75),
+    paddingVertical: theme.spacing(0.25),
+    backgroundColor: '#FEF2F2',
+    borderRadius: theme.radius.sm,
+  },
+  wageWarningText: {
+    fontSize: theme.fontSizes.xs,
+    color: '#EF4444',
   },
   timelineScrollView: {
     flex: 1,

@@ -141,20 +141,56 @@ export default function ProjectAssignmentScreen() {
   // renderWorkerItem (from old project-assignment.tsx, uses Image)
   const renderWorkerItem = ({ item }: { item: Employee }) => {
     const isSelected = selectedWorkers.some(e => e.id === item.id);
+    // TODO: Implement proper hourly rate checking using employee_hourly_rates table
+    const hasHourlyWage = true; // Temporarily disabled - needs proper implementation
 
     return (
-      <TouchableOpacity onPress={() => handleWorkerPress(item)} style={[styles.workerItem, isSelected && styles.selectedWorkerItem]}>
+      <TouchableOpacity 
+        onPress={() => handleWorkerPress(item)} 
+        disabled={!hasHourlyWage}
+        style={[
+          styles.workerItem, 
+          isSelected && styles.selectedWorkerItem,
+          !hasHourlyWage && styles.disabledWorkerItem
+        ]}
+      >
           <Ionicons
             name={isSelected ? "checkbox" : "square-outline"}
             size={20}
-            color={isSelected ? theme.colors.primary : theme.colors.bodyText}
+            color={!hasHourlyWage ? '#9CA3AF' : isSelected ? theme.colors.primary : theme.colors.bodyText}
             style={styles.workerIcon}
           />
-          <UserAvatar avatarUrl={item.avatar_url} size={40} style={styles.avatar} />
+          <UserAvatar 
+            avatarUrl={item.avatar_url} 
+            size={40} 
+            style={[styles.avatar, !hasHourlyWage && styles.disabledAvatar]} 
+          />
           <View style={styles.workerInfo}>
-            <Text style={[styles.itemName, isSelected && styles.selectedWorkerText]} fontType="medium">{item.full_name}</Text>
+            <Text 
+              style={[
+                styles.itemName, 
+                isSelected && styles.selectedWorkerText,
+                !hasHourlyWage && styles.disabledText
+              ]} 
+              fontType="medium"
+            >
+              {item.full_name}
+            </Text>
+            {!hasHourlyWage && (
+              <Text style={styles.warningText} fontType="regular">
+                No hourly wage set
+              </Text>
+            )}
           </View>
-          {isSelected && <Ionicons name="chevron-forward" size={16} color={theme.colors.primary} />}
+          {!hasHourlyWage && (
+            <Ionicons 
+              name="warning" 
+              size={20} 
+              color="#EF4444" 
+              style={styles.warningIcon}
+            />
+          )}
+          {isSelected && hasHourlyWage && <Ionicons name="chevron-forward" size={16} color={theme.colors.primary} />}
       </TouchableOpacity>
     );
   };
@@ -621,6 +657,24 @@ const styles = StyleSheet.create({
   },
   workerInfo: {
     flex: 1,
+  },
+  disabledWorkerItem: {
+    opacity: 0.5,
+    backgroundColor: theme.colors.background,
+  },
+  disabledAvatar: {
+    opacity: 0.6,
+  },
+  disabledText: {
+    color: theme.colors.bodyText,
+  },
+  warningText: {
+    fontSize: theme.fontSizes.xs,
+    color: '#EF4444',
+    marginTop: theme.spacing(0.25),
+  },
+  warningIcon: {
+    marginLeft: theme.spacing(1),
   },
   itemName: {
     color: theme.colors.headingText,
