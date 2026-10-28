@@ -359,16 +359,48 @@ const WorkerDailyDetailsPanel = ({ workerId, date }: WorkerDailyDetailsPanelProp
   }
 
   if (events.length === 0 && !dailySummary) {
+    const daysOld = moment().diff(moment(date), 'days');
+    const isDataDeleted = daysOld > 90;
+    
     return (
       <View style={styles.centerContainer}>
-        <Ionicons name="calendar-outline" size={64} color={theme.colors.borderColor} />
-        <Text style={styles.emptyText} fontType="regular">No activity found for this worker on the selected date.</Text>
+        <Ionicons name={isDataDeleted ? "shield-checkmark-outline" : "calendar-outline"} size={64} color={theme.colors.borderColor} />
+        <Text style={styles.emptyText} fontType="regular">
+          {isDataDeleted 
+            ? "Detailed location data has been deleted per GDPR (90-day retention)."
+            : "No activity found for this worker on the selected date."}
+        </Text>
+        {isDataDeleted && (
+          <Text style={styles.emptySubtext} fontType="regular">
+            Work hours are preserved in Time Tracking Reports.
+          </Text>
+        )}
       </View>
     );
   }
 
+  // Calculate days old for warning banner
+  const daysOld = moment().diff(moment(date), 'days');
+  const showWarning = daysOld >= 60 && daysOld <= 90;
+  const deletionDate = moment(date).add(90, 'days').format('MMM D, YYYY');
+
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      {/* GDPR Retention Warning Banner */}
+      {showWarning && (
+        <View style={styles.warningBanner}>
+          <Ionicons name="time-outline" size={20} color={theme.colors.warning} style={styles.warningIcon} />
+          <View style={styles.warningContent}>
+            <Text style={styles.warningTitle} fontType="bold">
+              Location data will be deleted on {deletionDate}
+            </Text>
+            <Text style={styles.warningText} fontType="regular">
+              GPS location data is automatically deleted after 90 days (GDPR compliance). Time-tracking data is preserved.
+            </Text>
+          </View>
+        </View>
+      )}
+      
       {dailySummary && (
         <View style={styles.statsRow}>
             <View style={styles.workerInfo}>
@@ -490,6 +522,37 @@ const styles = StyleSheet.create({
         fontSize: theme.fontSizes.md,
         color: theme.colors.bodyText,
         textAlign: 'center',
+    },
+    emptySubtext: {
+        marginTop: theme.spacing(1),
+        fontSize: theme.fontSizes.sm,
+        color: theme.colors.borderColor,
+        textAlign: 'center',
+    },
+    warningBanner: {
+        flexDirection: 'row',
+        backgroundColor: '#FFF4E5',
+        borderLeftWidth: 4,
+        borderLeftColor: theme.colors.warning || '#F59E0B',
+        padding: theme.spacing(2),
+        marginBottom: theme.spacing(3),
+        borderRadius: theme.radius.md,
+    },
+    warningIcon: {
+        marginRight: theme.spacing(1.5),
+        marginTop: theme.spacing(0.25),
+    },
+    warningContent: {
+        flex: 1,
+    },
+    warningTitle: {
+        fontSize: theme.fontSizes.md,
+        color: '#92400E',
+        marginBottom: theme.spacing(0.5),
+    },
+    warningText: {
+        fontSize: theme.fontSizes.sm,
+        color: '#78350F',
     },
     statsRow: {
         flexDirection: 'row',
