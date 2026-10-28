@@ -17,12 +17,14 @@ const fullTrailLayerStyle: LineLayerSpecification = {
   id: 'full-trail-layer',
   type: 'line',
   source: 'full-trail-source',
+  layout: {
+    'line-cap': 'round',
+    'line-join': 'round',
+  },
   paint: {
     'line-color': ['get', 'color'], // Use color from properties
     'line-width': 5, // Thicker line
     'line-opacity': 0.8, // More visible
-    'line-cap': 'round', // Rounded caps
-    'line-join': 'round', // Rounded joins
   },
 };
 
@@ -30,12 +32,14 @@ const assignmentSegmentsLayerStyle: LineLayerSpecification = {
   id: 'assignment-segments-layer',
   type: 'line',
   source: 'assignment-segments-source',
+  layout: {
+    'line-cap': 'round',
+    'line-join': 'round',
+  },
   paint: {
     'line-color': theme.colors.primary,
     'line-width': 6, // Thicker for emphasis
     'line-opacity': 0.9,
-    'line-cap': 'round',
-    'line-join': 'round',
   },
 };
 
