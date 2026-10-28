@@ -54,7 +54,8 @@ const haversineDistance = (lat1: number, lon1: number, lat2: number, lon2: numbe
 
 const WorkerDailyDetailsPanel = ({ workerId, date }: WorkerDailyDetailsPanelProps) => {
   const { getEmployeeById } = React.useContext(EmployeesContext) as EmployeesContextType;
-  const [events, setEvents] = useState<DailyEvent[]>([]);
+  const [events, setEvents] = useState<DailyEvent[]>([]); // Geofence transitions only (for timeline)
+  const [allLocationEvents, setAllLocationEvents] = useState<LocationEvent[]>([]); // ALL events for map
   const [dailySummary, setDailySummary] = useState<DailySummary | null>(null);
   const [loading, setLoading] = useState(false);
   const [loadingSummary, setLoadingSummary] = useState(false);
@@ -63,14 +64,8 @@ const WorkerDailyDetailsPanel = ({ workerId, date }: WorkerDailyDetailsPanelProp
   const [projects, setProjects] = useState<any[]>([]);
   const [commonLocations, setCommonLocations] = useState<any[]>([]);
 
-  const locationEvents: LocationEvent[] = useMemo(() => {
-    return events.map(event => ({
-      lat: event.latitude,
-      lng: event.longitude,
-      timestamp: event.event_timestamp,
-      type: event.event_type
-    }));
-  }, [events]);
+  // Use allLocationEvents for map (includes active/passive tracking)
+  const locationEvents: LocationEvent[] = allLocationEvents;
 
   const assignments: any[] = useMemo(() => {
     interface Visit {
@@ -180,12 +175,12 @@ const WorkerDailyDetailsPanel = ({ workerId, date }: WorkerDailyDetailsPanelProp
     reportDate: date 
   });
 
-  const calculateKilometers = useCallback((eventList: DailyEvent[]) => {
+  const calculateKilometers = useCallback((eventList: LocationEvent[]) => {
     let totalKm = 0;
     for (let i = 0; i < eventList.length - 1; i++) {
       const p1 = eventList[i];
       const p2 = eventList[i + 1];
-      totalKm += haversineDistance(p1.latitude, p1.longitude, p2.latitude, p2.longitude);
+      totalKm += haversineDistance(p1.lat, p1.lng, p2.lat, p2.lng);
     }
     return parseFloat(totalKm.toFixed(2));
   }, []);
@@ -200,10 +195,17 @@ const WorkerDailyDetailsPanel = ({ workerId, date }: WorkerDailyDetailsPanelProp
     const fetchDetails = async () => {
       setLoading(true);
       
-      const [projRes, locRes, detailsRes] = await Promise.all([
+      const [projRes, locRes, detailsRes, allEventsRes] = await Promise.all([
         supabase.from('projects').select('*'),
         supabase.from('common_locations').select('*'),
+        // Geofence transitions only (for timeline)
         supabase.rpc('get_worker_daily_details', {
+          worker_id_param: workerId,
+          report_date: moment(date).format('YYYY-MM-DD'),
+          p_timezone: viewerTimeZone,
+        }),
+        // ALL location events (for map path)
+        supabase.rpc('get_worker_daily_location_events', {
           worker_id_param: workerId,
           report_date: moment(date).format('YYYY-MM-DD'),
           p_timezone: viewerTimeZone,
@@ -218,6 +220,22 @@ const WorkerDailyDetailsPanel = ({ workerId, date }: WorkerDailyDetailsPanelProp
         setEvents([]);
       } else {
         setEvents(detailsRes.data || []);
+      }
+
+      if (allEventsRes.error) {
+        console.error('Error fetching all location events:', allEventsRes.error);
+        setAllLocationEvents([]);
+      } else {
+        // Convert to LocationEvent format for map
+        const mappedEvents = (allEventsRes.data || []).map((e: any) => ({
+          lat: e.latitude,
+          lng: e.longitude,
+          timestamp: e.event_timestamp,
+          type: e.event_type
+        }));
+        setAllLocationEvents(mappedEvents);
+
+        // Set map region based on first location event
         if (detailsRes.data && detailsRes.data.length > 0) {
             setMapRegion({
                 latitude: detailsRes.data[0].latitude,
@@ -227,7 +245,7 @@ const WorkerDailyDetailsPanel = ({ workerId, date }: WorkerDailyDetailsPanelProp
             });
             setDailySummary(prev => (prev ? ({
                 ...prev,
-                approx_travelled_km: calculateKilometers(detailsRes.data),
+                approx_travelled_km: calculateKilometers(mappedEvents),
             }) : null));
         }
       }
