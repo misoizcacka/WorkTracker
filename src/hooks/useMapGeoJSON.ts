@@ -124,29 +124,50 @@ export const useMapGeoJSON = ({ assignments, locationEvents, reportDate }: UseMa
       new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
     );
 
-    const coordinates = sortedLocationEvents.map(event => [event.lng, event.lat]);
-
-    if (coordinates.length === 0) {
+    if (sortedLocationEvents.length < 2) {
       return {
         type: 'FeatureCollection',
         features: [],
       };
     }
 
+    // Get time range for gradient calculation
+    const firstTime = new Date(sortedLocationEvents[0].timestamp).getTime();
+    const lastTime = new Date(sortedLocationEvents[sortedLocationEvents.length - 1].timestamp).getTime();
+    
+    // Helper function to get color based on time progress
+    const getColorForTime = (timestamp: string): string => {
+      const eventTime = new Date(timestamp).getTime();
+      const progress = (eventTime - firstTime) / (lastTime - firstTime);
+      
+      if (progress < 0.33) return '#9CA3AF'; // Light gray (morning)
+      if (progress < 0.66) return '#EF4444'; // Bright red (midday)
+      return '#991B1B'; // Dark red (evening)
+    };
+
+    // Create individual line segments with colors
+    const features: Feature<LineString>[] = [];
+    for (let i = 0; i < sortedLocationEvents.length - 1; i++) {
+      const start = sortedLocationEvents[i];
+      const end = sortedLocationEvents[i + 1];
+      
+      features.push({
+        type: 'Feature',
+        properties: {
+          color: getColorForTime(start.timestamp),
+          timestamp: start.timestamp,
+          type: start.type,
+        },
+        geometry: {
+          type: 'LineString',
+          coordinates: [[start.lng, start.lat], [end.lng, end.lat]],
+        },
+      });
+    }
+
     return {
       type: 'FeatureCollection',
-      features: [
-        {
-          type: 'Feature',
-          properties: {
-            name: 'Worker Full Trail',
-          },
-          geometry: {
-            type: 'LineString',
-            coordinates: coordinates,
-          },
-        },
-      ],
+      features: features,
     };
   }, [locationEvents]);
 

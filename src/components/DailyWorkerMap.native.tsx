@@ -46,14 +46,22 @@ const DailyWorkerMapNative: React.FC<DailyWorkerMapProps> = (props) => {
     fullTrailGeoJSON,
   } = props;
 
-  // Render full trail
-  const trailCoordinates = useMemo(() => {
+  // Render full trail with gradient colors
+  const trailSegments = useMemo(() => {
     if (!fullTrailGeoJSON || fullTrailGeoJSON.features.length === 0) return [];
-    const coordinates = (fullTrailGeoJSON.features[0].geometry as LineString).coordinates;
-    return coordinates.map(coord => ({
-      latitude: coord[1],
-      longitude: coord[0],
-    }));
+    
+    return fullTrailGeoJSON.features.map(feature => {
+      const coordinates = (feature.geometry as LineString).coordinates;
+      const color = feature.properties?.color || '#9CA3AF';
+      
+      return {
+        coordinates: coordinates.map(coord => ({
+          latitude: coord[1],
+          longitude: coord[0],
+        })),
+        color: color,
+      };
+    });
   }, [fullTrailGeoJSON]);
 
   // Render assignment segments
@@ -103,16 +111,18 @@ const DailyWorkerMapNative: React.FC<DailyWorkerMapProps> = (props) => {
         region={region}
       >
         {/* Render full trail */}
-        {trailCoordinates.length > 1 && (
+        {/* Render full trail with gradient */}
+        {trailSegments.map((segment, segIndex) => (
           <Polyline
-            coordinates={trailCoordinates}
-            strokeColor="#888888"
-            strokeWidth={2}
+            key={`trail-${segIndex}`}
+            coordinates={segment.coordinates}
+            strokeColor={segment.color}
+            strokeWidth={5}
             lineCap="round"
             lineJoin="round"
             zIndex={1}
           />
-        )}
+        ))}
 
         {/* Render assignment segments */}
         {assignmentSegments.map((segment, segIndex) => (
@@ -120,7 +130,7 @@ const DailyWorkerMapNative: React.FC<DailyWorkerMapProps> = (props) => {
             key={`segment-${segIndex}`}
             coordinates={segment}
             strokeColor={theme.colors.primary}
-            strokeWidth={4}
+            strokeWidth={6}
             lineCap="round"
             lineJoin="round"
             zIndex={2}
