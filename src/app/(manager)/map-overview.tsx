@@ -218,17 +218,39 @@ export default function MapOverviewScreen() {
     }));
   }, [selectedProjects]);
 
-  // Calculate initial region only once - use a static center (Berlin)
-  // Map will auto-fit to show all markers on first load, then stay put
+  // Calculate initial region from first selected worker or project
   const mapInitialRegion = useMemo(() => {
+    // Try to get first worker location
+    if (mapViewSelectedWorkers.length > 0 && mapViewSelectedWorkers[0].location) {
+      return {
+        latitude: mapViewSelectedWorkers[0].location.latitude,
+        longitude: mapViewSelectedWorkers[0].location.longitude,
+        latitudeDelta: 0.1,
+        longitudeDelta: 0.1,
+        zoom: 12,
+      };
+    }
+    
+    // Try to get first project location
+    if (mapViewSelectedProjects.length > 0 && mapViewSelectedProjects[0].location) {
+      return {
+        latitude: mapViewSelectedProjects[0].location.latitude,
+        longitude: mapViewSelectedProjects[0].location.longitude,
+        latitudeDelta: 0.1,
+        longitudeDelta: 0.1,
+        zoom: 12,
+      };
+    }
+    
+    // Default to world view if nothing selected (won't be used since map is hidden)
     return {
-      latitude: 52.5200,
-      longitude: 13.4050,
-      latitudeDelta: 0.2,
-      longitudeDelta: 0.2,
-      zoom: 10,
+      latitude: 0,
+      longitude: 0,
+      latitudeDelta: 180,
+      longitudeDelta: 180,
+      zoom: 2,
     };
-  }, []); // Empty dependency array - only calculate once on mount
+  }, [mapViewSelectedWorkers, mapViewSelectedProjects]);
 
 
   return (
