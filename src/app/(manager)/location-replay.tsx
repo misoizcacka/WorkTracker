@@ -3,6 +3,7 @@ import { View, StyleSheet, Platform, useWindowDimensions } from 'react-native';
 import { Text } from '~/components/Themed';
 import SubNavBar from '~/components/SubNavBar';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import moment from 'moment';
 
 import AnimatedScreen from '~/components/AnimatedScreen';
@@ -11,6 +12,7 @@ import LocationReplayMapOnlyPanel from '~/app/(manager)/components/LocationRepla
 import { theme } from '~/theme';
 
 const LocationReplayPage = () => {
+  const { t } = useTranslation();
   const router = useRouter();
   const { width } = useWindowDimensions();
   const isLargeScreen = width >= 900;
