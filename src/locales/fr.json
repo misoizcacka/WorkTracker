@@ -528,7 +528,10 @@
       "projects": "Projets",
       "commonLocations": "Sites communs",
       "liveMap": "Carte en direct",
-      "locationReplay": "Relecture de position"
+      "locationReplay": "Relecture de position",
+      "employees": "Employés",
+      "assignments": "Affectations",
+      "corrections": "Corrections"
     },
     "locations": {
       "title": "Sites communs",

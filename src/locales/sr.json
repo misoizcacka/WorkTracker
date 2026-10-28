@@ -70,7 +70,10 @@
       "projects": "Projekti",
       "commonLocations": "Zajedničke lokacije",
       "liveMap": "Mapa uživo",
-      "locationReplay": "Pregled lokacija"
+      "locationReplay": "Pregled lokacija",
+      "employees": "Zaposleni",
+      "assignments": "Dodele",
+      "corrections": "Ispravke"
     }
   }
 }

@@ -528,7 +528,10 @@
       "projects": "Projekte",
       "commonLocations": "Gemeinsame Standorte",
       "liveMap": "Live-Karte",
-      "locationReplay": "Standortwiedergabe"
+      "locationReplay": "Standortwiedergabe",
+      "employees": "Mitarbeiter",
+      "assignments": "Zuweisungen",
+      "corrections": "Korrekturen"
     },
     "locations": {
       "title": "Gemeinsame Standorte",

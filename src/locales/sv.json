@@ -505,7 +505,10 @@
       "projects": "Projekt",
       "commonLocations": "Gemensamma platser",
       "liveMap": "Livekarta",
-      "locationReplay": "Platsuppspelning"
+      "locationReplay": "Platsuppspelning",
+      "employees": "Anställda",
+      "assignments": "Uppdrag",
+      "corrections": "Korrigeringar"
     },
     "locations": {
       "title": "Gemensamma platser",

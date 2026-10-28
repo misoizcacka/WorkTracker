@@ -505,7 +505,10 @@
       "projects": "Projekty",
       "commonLocations": "Wspólne lokalizacje",
       "liveMap": "Mapa na żywo",
-      "locationReplay": "Odtwarzanie lokalizacji"
+      "locationReplay": "Odtwarzanie lokalizacji",
+      "employees": "Pracownicy",
+      "assignments": "Przydziały",
+      "corrections": "Korekty"
     },
     "locations": {
       "title": "Wspolne lokalizacje",

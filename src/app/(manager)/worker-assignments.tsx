@@ -323,9 +323,9 @@ export default function ProjectAssignmentScreen() {
       <DragDropContext onDragEnd={onDragEnd}>
         <View style={{ flex: 1, backgroundColor: theme.colors.pageBackground }}>
           <SubNavBar items={[
-            { label: 'Employees', href: '/(manager)/employees' },
-            { label: 'Assignments', href: '/(manager)/worker-assignments' },
-            { label: 'Corrections', href: '/(manager)/corrections' },
+            { label: t('manager.navigation.employees'), href: '/(manager)/employees' },
+            { label: t('manager.navigation.assignments'), href: '/(manager)/worker-assignments' },
+            { label: t('manager.navigation.corrections'), href: '/(manager)/corrections' },
           ]} />
           <View style={styles.pageHeader}>
             <Text style={styles.pageTitle} fontType="bold">{t('manager.assignments.title')}</Text>

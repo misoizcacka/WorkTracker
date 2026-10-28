@@ -505,7 +505,10 @@
       "projects": "Projecten",
       "commonLocations": "Gemeenschappelijke locaties",
       "liveMap": "Live kaart",
-      "locationReplay": "Locatieherhaling"
+      "locationReplay": "Locatieherhaling",
+      "employees": "Werknemers",
+      "assignments": "Opdrachten",
+      "corrections": "Correcties"
     },
     "locations": {
       "title": "Gemeenschappelijke locaties",

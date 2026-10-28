@@ -227,10 +227,10 @@ export default function ManagerProjects() {
   return (
     <View style={{ flex: 1 }}>
       <SubNavBar items={[
-        { label: 'Projects', href: '/(manager)/projects' },
-        { label: 'Common Locations', href: '/(manager)/common-locations' },
-        { label: 'Live Map', href: '/(manager)/map-overview' },
-        { label: 'Location Replay', href: '/(manager)/location-replay' },
+        { label: t('manager.navigation.projects'), href: '/(manager)/projects' },
+        { label: t('manager.navigation.commonLocations'), href: '/(manager)/common-locations' },
+        { label: t('manager.navigation.liveMap'), href: '/(manager)/map-overview' },
+        { label: t('manager.navigation.locationReplay'), href: '/(manager)/location-replay' },
       ]} />
       <AnimatedScreen>
       <View style={styles.pageHeader}>

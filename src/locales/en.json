@@ -475,7 +475,10 @@
       "projects": "Projects",
       "commonLocations": "Common Locations",
       "liveMap": "Live Map",
-      "locationReplay": "Location Replay"
+      "locationReplay": "Location Replay",
+      "employees": "Employees",
+      "assignments": "Assignments",
+      "corrections": "Corrections"
     },
     "locations": {
       "title": "Common Locations",
