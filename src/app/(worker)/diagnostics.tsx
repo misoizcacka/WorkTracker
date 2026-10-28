@@ -17,17 +17,23 @@ export default function DiagnosticsScreen() {
 
   const loadLogs = async () => {
     try {
-      const recentLogs = await BackgroundLocation.getRecentLogs(200);
-      setLogs(recentLogs || 'No logs available');
-      
-      const logStats = await BackgroundLocation.getLogStats();
-      setStats(logStats);
+      // iOS doesn't have file-based logging yet, only Android does
+      if (Platform.OS === 'android') {
+        const recentLogs = await BackgroundLocation.getRecentLogs(200);
+        setLogs(recentLogs || 'No logs available');
+        
+        const logStats = await BackgroundLocation.getLogStats();
+        setStats(logStats);
+      } else {
+        setLogs('File-based logging is only available on Android.\n\nOn iOS, use Xcode console to view NSLog output.');
+        setStats(null);
+      }
       
       const diag = await BackgroundLocation.getDiagnostics();
       setDiagnostics(diag);
     } catch (error) {
-      console.error('Failed to load logs:', error);
-      setLogs('Failed to load logs: ' + error);
+      console.error('Failed to load diagnostics:', error);
+      setLogs('Failed to load diagnostics: ' + error);
     }
   };
 
@@ -42,6 +48,11 @@ export default function DiagnosticsScreen() {
   };
 
   const handleExport = async () => {
+    if (Platform.OS !== 'android') {
+      Alert.alert('Not Available', 'Log export is only available on Android. On iOS, use Xcode console to capture logs.');
+      return;
+    }
+    
     try {
       const allLogs = await BackgroundLocation.exportLogs();
       
