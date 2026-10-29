@@ -87,11 +87,12 @@ class GeofenceBroadcastReceiver : BroadcastReceiver() {
                         }
                         
                         if (!canTriggerTransition) {
-                            Log.w(TAG, "⚠️ Geofence $eventType blocked by quality check: ${quality.source.label}, trust: ${quality.trustScore}%")
+                            val qualityInfo = qualityResult?.let { "${it.source.label}, trust: ${it.trustScore}%" } ?: "too poor quality"
+                            Log.w(TAG, "⚠️ Geofence $eventType blocked by quality check: $qualityInfo")
                             LocationFileLogger.w(
                                 context,
                                 "Geofence",
-                                "⚠️ Geofence $eventType blocked: GPS required for exit (got: ${quality.source.label}, trust: ${quality.trustScore}%)"
+                                "⚠️ Geofence $eventType blocked: GPS required for exit (got: $qualityInfo)"
                             )
                             return@launch  // Don't send the event
                         }
