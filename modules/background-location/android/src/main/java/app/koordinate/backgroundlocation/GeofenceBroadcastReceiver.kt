@@ -69,20 +69,21 @@ class GeofenceBroadcastReceiver : BroadcastReceiver() {
                     // - ENTER: Accept GPS or high-quality WiFi
                     // - EXIT: Require GPS only (no WiFi exits)
                     if (location != null) {
-                        val quality = LocationQualityDetector.getLocationQuality(
-                            location.accuracy,
-                            location.hasSpeed() && location.speed > 0.5f
-                        )
+                        val qualityResult = Constants.getLocationQuality(location)
                         
-                        val canTriggerTransition = if (transition == Geofence.GEOFENCE_TRANSITION_ENTER) {
-                            // ENTER: Allow GPS or high-quality WiFi
-                            val isGPS = quality.source == LocationSource.GPS_HIGH_QUALITY || 
-                                        quality.source == LocationSource.GPS_MEDIUM_QUALITY
-                            val isGoodWiFi = quality.trustScore >= 60
-                            isGPS || isGoodWiFi
+                        val canTriggerTransition = if (qualityResult != null) {
+                            if (transition == Geofence.GEOFENCE_TRANSITION_ENTER) {
+                                // ENTER: Allow GPS or high-quality WiFi
+                                val isGPS = qualityResult.source == LocationSource.GPS_HIGH_QUALITY || 
+                                            qualityResult.source == LocationSource.GPS_MEDIUM_QUALITY
+                                val isGoodWiFi = qualityResult.trustScore >= 60
+                                isGPS || isGoodWiFi
+                            } else {
+                                // EXIT: Require GPS only (trust >= 75)
+                                qualityResult.trustScore >= 75
+                            }
                         } else {
-                            // EXIT: Require GPS only (trust >= 75)
-                            quality.trustScore >= 75
+                            false // Reject if quality is too poor
                         }
                         
                         if (!canTriggerTransition) {
