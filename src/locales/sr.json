@@ -28,7 +28,18 @@
     "passwordsMismatch": "Lozinke se ne podudaraju.",
     "invalidEmail": "Molimo unesite ispravnu email adresu.",
     "passwordTooShort": "Lozinka mora imati najmanje 6 karaktera.",
-    "continueButton": "Nastavi"
+    "continueButton": "Nastavi",
+    "errors": {
+      "fullNameRequired": "Puno ime je obavezno.",
+      "emailRequired": "Email je obavezan.",
+      "emailInvalid": "Email adresa je neispravna.",
+      "emailAlreadyRegistered": "Ovaj email je već registrovan. Molimo prijavite se.",
+      "passwordRequired": "Lozinka je obavezna.",
+      "passwordLength": "Lozinka mora imati najmanje 6 karaktera.",
+      "passwordWeak": "Lozinka je previše slaba. Molimo koristite jaču lozinku.",
+      "companyNameRequired": "Naziv kompanije je obavezan.",
+      "tooManyAttempts": "Previše pokušaja registracije. Molimo sačekajte nekoliko minuta i pokušajte ponovo."
+    }
   },
   "pricing": {
     "title": "Odaberite svoj plan",
