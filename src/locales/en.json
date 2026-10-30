@@ -134,9 +134,31 @@
       "fullNameRequired": "Full name is required.",
       "emailRequired": "Email is required.",
       "emailInvalid": "Email address is invalid.",
+      "emailAlreadyRegistered": "This email is already registered. Please sign in instead.",
       "passwordRequired": "Password is required.",
       "passwordLength": "Password must be at least 6 characters long.",
-      "companyNameRequired": "Company name is required."
+      "passwordWeak": "Password is too weak. Please use a stronger password.",
+      "companyNameRequired": "Company name is required.",
+      "tooManyAttempts": "Too many signup attempts. Please wait a few minutes and try again."
+    }
+  },
+  "verifyEmail": {
+    "title": "Check your email",
+    "description": "We sent a verification link to:",
+    "yourEmail": "your email address",
+    "step1": "Open your email inbox",
+    "step2": "Click the \"Verify Email Address\" button",
+    "step3": "Return here to continue",
+    "resendSuccess": "Email sent! Check your inbox.",
+    "checkButton": "I verified my email",
+    "checking": "Checking...",
+    "resendButton": "Resend verification email",
+    "changeEmail": "Wrong email? Go back",
+    "helpText": "Didn't receive the email? Check your spam folder or try resending.",
+    "errors": {
+      "rateLimitExceeded": "Please wait a few minutes before requesting another email.",
+      "unknown": "Failed to resend email.",
+      "notVerified": "Email not verified yet. Please check your inbox and click the link."
     }
   },
   "guest": {

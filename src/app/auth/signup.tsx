@@ -66,11 +66,35 @@ export default function Signup() {
       });
 
       if (error) {
-        setErrors({ general: error.message });
+        // Handle specific error cases with user-friendly messages
+        let friendlyError = error.message;
+        
+        if (error.message.toLowerCase().includes('rate limit')) {
+          friendlyError = t('signup.errors.tooManyAttempts');
+        } else if (error.message.toLowerCase().includes('already registered')) {
+          friendlyError = t('signup.errors.emailAlreadyRegistered');
+        } else if (error.message.toLowerCase().includes('invalid email')) {
+          friendlyError = t('signup.errors.emailInvalid');
+        } else if (error.message.toLowerCase().includes('weak password')) {
+          friendlyError = t('signup.errors.passwordWeak');
+        }
+        
+        setErrors({ general: friendlyError });
         return;
       }
 
       if (data.user) {
+        // Check if email verification is required
+        if (!data.user.email_confirmed_at) {
+          // Email verification required - redirect to verify screen
+          router.replace({
+            pathname: '/auth/verify-email',
+            params: { email: email }
+          });
+          return;
+        }
+
+        // Email already verified, continue with setup
         // Log GDPR consent
         await Promise.all([
           logConsent({ userId: data.user.id, consentType: 'terms' }),
