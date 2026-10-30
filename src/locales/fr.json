@@ -136,7 +136,29 @@
       "emailInvalid": "L'adresse e-mail est invalide.",
       "passwordRequired": "Le mot de passe est requis.",
       "passwordLength": "Le mot de passe doit comporter au moins 6 caractères.",
-      "companyNameRequired": "Le nom de l'entreprise est requis."
+      "companyNameRequired": "Le nom de l'entreprise est requis.",
+      "emailAlreadyRegistered": "Cet e-mail est déjà enregistré. Veuillez vous connecter à la place.",
+      "passwordWeak": "Le mot de passe est trop faible. Veuillez utiliser un mot de passe plus fort.",
+      "tooManyAttempts": "Trop de tentatives d'inscription. Veuillez attendre quelques minutes et réessayer."
+    }
+  },
+  "verifyEmail": {
+    "title": "Vérifiez votre e-mail",
+    "description": "Nous avons envoyé un lien de vérification à :",
+    "yourEmail": "votre adresse e-mail",
+    "step1": "Ouvrez votre boîte de réception",
+    "step2": "Cliquez sur le bouton \"Vérifier l'adresse e-mail\"",
+    "step3": "Revenez ici pour continuer",
+    "resendSuccess": "E-mail envoyé ! Vérifiez votre boîte de réception.",
+    "checkButton": "J'ai vérifié mon e-mail",
+    "checking": "Vérification en cours...",
+    "resendButton": "Renvoyer l'e-mail de vérification",
+    "changeEmail": "Mauvais e-mail ? Retour",
+    "helpText": "Vous n'avez pas reçu l'e-mail ? Vérifiez votre dossier spam ou renvoyez-le.",
+    "errors": {
+      "rateLimitExceeded": "Veuillez attendre quelques minutes avant de demander un autre e-mail.",
+      "unknown": "Échec de l'envoi de l'e-mail.",
+      "notVerified": "E-mail pas encore vérifié. Veuillez vérifier votre boîte et cliquer sur le lien."
     }
   },
   "guest": {

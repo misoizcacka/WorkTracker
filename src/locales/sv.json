@@ -136,7 +136,29 @@
       "emailInvalid": "E-postadressen är ogiltig.",
       "passwordRequired": "Lösenord krävs.",
       "passwordLength": "Lösenordet måste vara minst 6 tecken långt.",
-      "companyNameRequired": "Företagsnamn krävs."
+      "companyNameRequired": "Företagsnamn krävs.",
+      "emailAlreadyRegistered": "Den här e-postadressen är redan registrerad. Vänligen logga in istället.",
+      "passwordWeak": "Lösenordet är för svagt. Vänligen använd ett starkare lösenord.",
+      "tooManyAttempts": "För många registreringsförsök. Vänligen vänta några minuter och försök igen."
+    }
+  },
+  "verifyEmail": {
+    "title": "Kontrollera din e-post",
+    "description": "Vi har skickat en verifieringslänk till:",
+    "yourEmail": "din e-postadress",
+    "step1": "Öppna din inkorg",
+    "step2": "Klicka på knappen \"Verifiera e-postadress\"",
+    "step3": "Kom tillbaka hit för att fortsätta",
+    "resendSuccess": "E-post skickad! Kontrollera din inkorg.",
+    "checkButton": "Jag har verifierat min e-post",
+    "checking": "Kontrollerar...",
+    "resendButton": "Skicka verifieringsmail igen",
+    "changeEmail": "Fel e-post? Gå tillbaka",
+    "helpText": "Fick du inte e-posten? Kolla din skräppost eller skicka igen.",
+    "errors": {
+      "rateLimitExceeded": "Vänligen vänta några minuter innan du begär ett nytt e-postmeddelande.",
+      "unknown": "Det gick inte att skicka e-post igen.",
+      "notVerified": "E-post inte verifierad ännu. Kontrollera din inkorg och klicka på länken."
     }
   },
   "guestHeader": {

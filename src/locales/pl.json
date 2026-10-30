@@ -136,7 +136,29 @@
       "emailInvalid": "Adres e-mail jest nieprawidłowy.",
       "passwordRequired": "Hasło jest wymagane.",
       "passwordLength": "Hasło musi mieć co najmniej 6 znaków.",
-      "companyNameRequired": "Nazwa firmy jest wymagana."
+      "companyNameRequired": "Nazwa firmy jest wymagana.",
+      "emailAlreadyRegistered": "Ten adres e-mail jest już zarejestrowany. Proszę się zalogować.",
+      "passwordWeak": "Hasło jest zbyt słabe. Proszę użyć silniejszego hasła.",
+      "tooManyAttempts": "Zbyt wiele prób rejestracji. Proszę poczekać kilka minut i spróbować ponownie."
+    }
+  },
+  "verifyEmail": {
+    "title": "Sprawdź swoją pocztę",
+    "description": "Wysłaliśmy link weryfikacyjny na adres:",
+    "yourEmail": "twój adres e-mail",
+    "step1": "Otwórz swoją skrzynkę odbiorczą",
+    "step2": "Kliknij przycisk \"Zweryfikuj adres e-mail\"",
+    "step3": "Wróć tutaj, aby kontynuować",
+    "resendSuccess": "E-mail wysłany! Sprawdź swoją skrzynkę.",
+    "checkButton": "Zweryfikowałem swój e-mail",
+    "checking": "Sprawdzanie...",
+    "resendButton": "Wyślij ponownie e-mail weryfikacyjny",
+    "changeEmail": "Zły e-mail? Wróć",
+    "helpText": "Nie otrzymałeś e-maila? Sprawdź folder spam lub wyślij ponownie.",
+    "errors": {
+      "rateLimitExceeded": "Proszę poczekać kilka minut przed wysłaniem kolejnego e-maila.",
+      "unknown": "Nie udało się wysłać e-maila ponownie.",
+      "notVerified": "E-mail jeszcze nie zweryfikowany. Sprawdź swoją skrzynkę i kliknij w link."
     }
   },
   "guest": {

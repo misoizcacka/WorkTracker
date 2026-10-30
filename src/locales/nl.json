@@ -136,7 +136,29 @@
       "emailInvalid": "E-mailadres is ongeldig.",
       "passwordRequired": "Wachtwoord is verplicht.",
       "passwordLength": "Het wachtwoord moet minimaal 6 tekens lang zijn.",
-      "companyNameRequired": "Bedrijfsnaam is verplicht."
+      "companyNameRequired": "Bedrijfsnaam is verplicht.",
+      "emailAlreadyRegistered": "Dit e-mailadres is al geregistreerd. Log alstublieft in.",
+      "passwordWeak": "Het wachtwoord is te zwak. Gebruik alstublieft een sterker wachtwoord.",
+      "tooManyAttempts": "Te veel registratiepogingen. Wacht alstublieft een paar minuten en probeer het opnieuw."
+    }
+  },
+  "verifyEmail": {
+    "title": "Controleer uw e-mail",
+    "description": "We hebben een verificatielink gestuurd naar:",
+    "yourEmail": "uw e-mailadres",
+    "step1": "Open uw inbox",
+    "step2": "Klik op de knop \"E-mailadres verifiëren\"",
+    "step3": "Kom hier terug om door te gaan",
+    "resendSuccess": "E-mail verzonden! Controleer uw inbox.",
+    "checkButton": "Ik heb mijn e-mail geverifieerd",
+    "checking": "Controleren...",
+    "resendButton": "Verificatie-e-mail opnieuw versturen",
+    "changeEmail": "Verkeerd e-mailadres? Ga terug",
+    "helpText": "E-mail niet ontvangen? Controleer uw spam-map of verstuur opnieuw.",
+    "errors": {
+      "rateLimitExceeded": "Wacht alstublieft een paar minuten voordat u een nieuwe e-mail aanvraagt.",
+      "unknown": "E-mail opnieuw versturen mislukt.",
+      "notVerified": "E-mail nog niet geverifieerd. Controleer uw inbox en klik op de link."
     }
   },
   "guest": {

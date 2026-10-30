@@ -136,7 +136,29 @@
       "emailInvalid": "E-Mail-Adresse ist ungültig.",
       "passwordRequired": "Passwort ist erforderlich.",
       "passwordLength": "Das Passwort muss mindestens 6 Zeichen lang sein.",
-      "companyNameRequired": "Firmenname ist erforderlich."
+      "companyNameRequired": "Firmenname ist erforderlich.",
+      "emailAlreadyRegistered": "Diese E-Mail ist bereits registriert. Bitte melden Sie sich stattdessen an.",
+      "passwordWeak": "Das Passwort ist zu schwach. Bitte verwenden Sie ein stärkeres Passwort.",
+      "tooManyAttempts": "Zu viele Registrierungsversuche. Bitte warten Sie einige Minuten und versuchen Sie es erneut."
+    }
+  },
+  "verifyEmail": {
+    "title": "Überprüfen Sie Ihre E-Mail",
+    "description": "Wir haben einen Bestätigungslink an folgende Adresse gesendet:",
+    "yourEmail": "Ihre E-Mail-Adresse",
+    "step1": "Öffnen Sie Ihr E-Mail-Postfach",
+    "step2": "Klicken Sie auf die Schaltfläche \"E-Mail-Adresse bestätigen\"",
+    "step3": "Kehren Sie hierher zurück, um fortzufahren",
+    "resendSuccess": "E-Mail gesendet! Überprüfen Sie Ihr Postfach.",
+    "checkButton": "Ich habe meine E-Mail bestätigt",
+    "checking": "Überprüfung läuft...",
+    "resendButton": "Bestätigungs-E-Mail erneut senden",
+    "changeEmail": "Falsche E-Mail? Zurück gehen",
+    "helpText": "E-Mail nicht erhalten? Überprüfen Sie Ihren Spam-Ordner oder senden Sie sie erneut.",
+    "errors": {
+      "rateLimitExceeded": "Bitte warten Sie einige Minuten, bevor Sie eine weitere E-Mail anfordern.",
+      "unknown": "E-Mail konnte nicht erneut gesendet werden.",
+      "notVerified": "E-Mail noch nicht bestätigt. Bitte überprüfen Sie Ihr Postfach und klicken Sie auf den Link."
     }
   },
   "guest": {

@@ -136,7 +136,29 @@
       "emailInvalid": "La dirección de correo electrónico no es válida.",
       "passwordRequired": "La contraseña es obligatoria.",
       "passwordLength": "La contraseña debe tener al menos 6 caracteres.",
-      "companyNameRequired": "El nombre de la empresa es obligatorio."
+      "companyNameRequired": "El nombre de la empresa es obligatorio.",
+      "emailAlreadyRegistered": "Este correo electrónico ya está registrado. Por favor, inicie sesión en su lugar.",
+      "passwordWeak": "La contraseña es demasiado débil. Por favor, use una contraseña más fuerte.",
+      "tooManyAttempts": "Demasiados intentos de registro. Por favor, espere unos minutos y vuelva a intentarlo."
+    }
+  },
+  "verifyEmail": {
+    "title": "Revisa tu correo electrónico",
+    "description": "Enviamos un enlace de verificación a:",
+    "yourEmail": "tu dirección de correo electrónico",
+    "step1": "Abre tu bandeja de entrada",
+    "step2": "Haz clic en el botón \"Verificar dirección de correo\"",
+    "step3": "Regresa aquí para continuar",
+    "resendSuccess": "¡Correo enviado! Revisa tu bandeja de entrada.",
+    "checkButton": "Ya verifiqué mi correo",
+    "checking": "Verificando...",
+    "resendButton": "Reenviar correo de verificación",
+    "changeEmail": "¿Correo incorrecto? Volver atrás",
+    "helpText": "¿No recibiste el correo? Revisa tu carpeta de spam o reenvíalo.",
+    "errors": {
+      "rateLimitExceeded": "Por favor, espera unos minutos antes de solicitar otro correo.",
+      "unknown": "Error al reenviar el correo.",
+      "notVerified": "Correo aún no verificado. Por favor, revisa tu bandeja y haz clic en el enlace."
     }
   },
   "guest": {
