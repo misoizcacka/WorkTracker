@@ -231,6 +231,18 @@ export default function RootLayout() {
         return;
       }
 
+      // 1b. Logged in but email not verified → verify-email screen
+      if (user && !user.email_confirmed_at) {
+        const inVerifyEmail = segments[0] === 'auth' && segments[1] === 'verify-email';
+        if (!inVerifyEmail) {
+          router.replace({
+            pathname: '/auth/verify-email',
+            params: { email: user.email ?? '' }
+          });
+        }
+        return;
+      }
+
       // 2. Worker on web → mobile-only
       if (Platform.OS === 'web' && userRole === 'worker' && !inMobileOnly) {
         router.replace('/mobile-only');
