@@ -6,11 +6,13 @@ import {
   Pressable,
   useWindowDimensions,
   ScrollView,
+  Platform,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Text } from '../../components/Themed';
 import { Button } from '../../components/Button';
+import { Card } from '../../components/Card';
 import { theme } from '../../theme';
 import AnimatedScreen from '../../components/AnimatedScreen';
 import { GuestHeader } from '../../components/GuestHeader';
@@ -25,6 +27,7 @@ export default function VerifyEmail() {
   const { email } = useLocalSearchParams<{ email?: string }>();
   const { width } = useWindowDimensions();
   const isLargeScreen = width > BREAKPOINT;
+  const isMobile = width < 640;
 
   const [isResending, setIsResending] = useState(false);
   const [resendSuccess, setResendSuccess] = useState(false);
@@ -39,7 +42,6 @@ export default function VerifyEmail() {
         router.replace('/subscription/setup');
       }
     };
-
     const interval = setInterval(checkVerification, 3000);
     return () => clearInterval(interval);
   }, []);
@@ -49,7 +51,6 @@ export default function VerifyEmail() {
     setIsResending(true);
     setResendError('');
     setResendSuccess(false);
-
     try {
       const { error } = await supabase.auth.resend({ type: 'signup', email });
       if (error) {
@@ -83,151 +84,170 @@ export default function VerifyEmail() {
 
   return (
     <AnimatedScreen>
-      <GuestHeader variant="auth" />
-      <ScrollView
-        contentContainerStyle={[
-          styles.scrollContent,
-          isLargeScreen && styles.scrollContentLarge,
-        ]}
-        keyboardShouldPersistTaps="handled"
-      >
-        <View style={[styles.card, isLargeScreen && styles.cardLarge]}>
+      <View style={styles.container}>
+        <GuestHeader variant="auth" authAction="signin" />
+        <ScrollView
+          contentContainerStyle={[
+            styles.scrollContent,
+            isMobile && styles.scrollContentMobile,
+          ]}
+          keyboardShouldPersistTaps="handled"
+        >
+          <Card style={isMobile ? [styles.card, styles.mobileCard] : styles.card}>
 
-          {/* Icon */}
-          <View style={styles.iconWrap}>
-            <Ionicons name="mail-outline" size={32} color={theme.colors.bodyText} />
-          </View>
+            {/* Icon */}
+            <View style={styles.iconWrap}>
+              <Ionicons name="mail-outline" size={28} color={theme.colors.bodyText} />
+            </View>
 
-          {/* Title */}
-          <Text style={styles.title} fontType="bold">
-            {t('verifyEmail.title', 'Check your email')}
-          </Text>
-
-          {/* Subtitle */}
-          <Text style={styles.subtitle} fontType="regular">
-            {t('verifyEmail.description', 'We sent a verification link to')}
-          </Text>
-
-          {/* Email address */}
-          {email ? (
-            <Text style={styles.emailAddress} fontType="medium">
-              {email}
+            {/* Title */}
+            <Text style={styles.title} fontType="bold">
+              {t('verifyEmail.title', 'Check your email')}
             </Text>
-          ) : null}
 
-          {/* Divider */}
-          <View style={styles.divider} />
+            {/* Subtitle + email */}
+            <Text style={styles.subtitle} fontType="regular">
+              {t('verifyEmail.description', 'We sent a verification link to')}
+            </Text>
+            {email ? (
+              <Text style={styles.emailAddress} fontType="medium">
+                {email}
+              </Text>
+            ) : null}
 
-          {/* Steps */}
-          <View style={styles.steps}>
-            {[
-              t('verifyEmail.step1', 'Open your email inbox'),
-              t('verifyEmail.step2', 'Click "Verify Email Address"'),
-              t('verifyEmail.step3', 'Come back here — we\'ll continue automatically'),
-            ].map((step, i) => (
-              <View key={i} style={styles.stepRow}>
-                <View style={styles.stepNumber}>
-                  <Text style={styles.stepNumberText} fontType="medium">{i + 1}</Text>
+            {/* Divider */}
+            <View style={styles.divider} />
+
+            {/* Steps */}
+            <View style={styles.steps}>
+              {[
+                t('verifyEmail.step1', 'Open your email inbox'),
+                t('verifyEmail.step2', 'Click "Verify Email Address"'),
+                t('verifyEmail.step3', 'Come back here — we\'ll continue automatically'),
+              ].map((step, i) => (
+                <View key={i} style={styles.stepRow}>
+                  <View style={styles.stepNumber}>
+                    <Text style={styles.stepNumberText} fontType="medium">{i + 1}</Text>
+                  </View>
+                  <Text style={styles.stepText} fontType="regular">{step}</Text>
                 </View>
-                <Text style={styles.stepText} fontType="regular">{step}</Text>
-              </View>
-            ))}
-          </View>
-
-          {/* Feedback messages */}
-          {resendSuccess && (
-            <View style={styles.feedbackRow}>
-              <Ionicons name="checkmark-circle-outline" size={16} color={theme.colors.success} />
-              <Text style={styles.feedbackTextSuccess} fontType="regular">
-                {t('verifyEmail.resendSuccess', 'Email sent! Check your inbox.')}
-              </Text>
+              ))}
             </View>
-          )}
-          {resendError ? (
-            <View style={styles.feedbackRow}>
-              <Ionicons name="alert-circle-outline" size={16} color={theme.colors.errorText} />
-              <Text style={styles.feedbackTextError} fontType="regular">
-                {resendError}
-              </Text>
-            </View>
-          ) : null}
 
-          {/* Primary action */}
-          <Button
-            title={isChecking
-              ? t('verifyEmail.checking', 'Checking...')
-              : t('verifyEmail.checkButton', 'I verified my email')}
-            onPress={handleCheckManually}
-            disabled={isChecking}
-            style={styles.primaryButton}
-          />
-
-          {/* Secondary actions */}
-          <Pressable
-            onPress={handleResendEmail}
-            disabled={isResending}
-            style={({ pressed }) => [styles.secondaryButton, pressed && styles.secondaryButtonPressed]}
-          >
-            {isResending
-              ? <ActivityIndicator size="small" color={theme.colors.bodyText} />
-              : (
-                <Text style={styles.secondaryButtonText} fontType="medium">
-                  {t('verifyEmail.resendButton', 'Resend email')}
+            {/* Feedback */}
+            {resendSuccess && (
+              <View style={styles.feedbackRow}>
+                <Ionicons name="checkmark-circle-outline" size={16} color={theme.colors.success} />
+                <Text style={styles.feedbackSuccess} fontType="regular">
+                  {t('verifyEmail.resendSuccess', 'Email sent! Check your inbox.')}
                 </Text>
-              )
-            }
-          </Pressable>
+              </View>
+            )}
+            {!!resendError && (
+              <View style={styles.feedbackRow}>
+                <Ionicons name="alert-circle-outline" size={16} color={theme.colors.errorText} />
+                <Text style={styles.feedbackError} fontType="regular">
+                  {resendError}
+                </Text>
+              </View>
+            )}
 
-          <Pressable
-            onPress={() => router.back()}
-            style={({ pressed }) => [styles.ghostButton, pressed && styles.ghostButtonPressed]}
-          >
-            <Text style={styles.ghostButtonText} fontType="regular">
-              {t('verifyEmail.changeEmail', 'Wrong email? Go back')}
+            {/* Primary CTA */}
+            <Button
+              title={isChecking
+                ? t('verifyEmail.checking', 'Checking...')
+                : t('verifyEmail.checkButton', 'I verified my email')}
+              onPress={handleCheckManually}
+              disabled={isChecking}
+              style={styles.primaryButton}
+            />
+
+            {/* Resend */}
+            <Pressable
+              onPress={handleResendEmail}
+              disabled={isResending}
+              style={({ pressed }) => [styles.secondaryButton, pressed && { opacity: 0.6 }]}
+            >
+              {isResending
+                ? <ActivityIndicator size="small" color={theme.colors.bodyText} />
+                : (
+                  <Text style={styles.secondaryButtonText} fontType="medium">
+                    {t('verifyEmail.resendButton', 'Resend email')}
+                  </Text>
+                )
+              }
+            </Pressable>
+
+            {/* Go back */}
+            <Pressable
+              onPress={() => router.back()}
+              style={({ pressed }) => [styles.ghostButton, pressed && { opacity: 0.6 }]}
+            >
+              <Text style={styles.ghostButtonText} fontType="regular">
+                {t('verifyEmail.changeEmail', 'Wrong email? Go back')}
+              </Text>
+            </Pressable>
+
+            {/* Help */}
+            <Text style={styles.helpText} fontType="regular">
+              {t('verifyEmail.helpText', "Can't find it? Check your spam folder.")}
             </Text>
-          </Pressable>
 
-          {/* Help text */}
-          <Text style={styles.helpText} fontType="regular">
-            {t('verifyEmail.helpText', "Can't find it? Check your spam folder.")}
-          </Text>
-
-        </View>
-      </ScrollView>
+          </Card>
+        </ScrollView>
+      </View>
     </AnimatedScreen>
   );
 }
 
 const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: theme.colors.pageBackground,
+  },
   scrollContent: {
     flexGrow: 1,
-    backgroundColor: theme.colors.pageBackground,
-    paddingHorizontal: theme.spacing(2),
-    paddingTop: theme.spacing(4),
-    paddingBottom: theme.spacing(6),
-  },
-  scrollContentLarge: {
-    alignItems: 'center',
     justifyContent: 'center',
-    paddingTop: theme.spacing(8),
+    alignItems: 'center',
+    padding: theme.spacing(3),
+  },
+  scrollContentMobile: {
+    padding: 0,
+    paddingTop: theme.spacing(2),
+    justifyContent: 'flex-start',
   },
   card: {
-    backgroundColor: '#ffffff',
-    borderRadius: theme.radius.lg,
+    width: '100%',
+    maxWidth: 420,
+    backgroundColor: theme.colors.cardBackground,
+    borderRadius: theme.radius.xl,
+    padding: theme.spacing(5),
     borderWidth: 1,
     borderColor: theme.colors.borderColor,
-    padding: theme.spacing(4),
+    ...Platform.select({
+      web: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 10 },
+        shadowOpacity: 0.1,
+        shadowRadius: 20,
+      },
+    }),
   },
-  cardLarge: {
-    width: '100%',
-    maxWidth: 480,
+  mobileCard: {
+    borderWidth: 0,
+    borderRadius: 0,
+    shadowColor: 'transparent',
+    shadowOpacity: 0,
+    elevation: 0,
+    backgroundColor: theme.colors.pageBackground,
+    maxWidth: '100%',
+    padding: theme.spacing(3),
   },
 
-  // Icon
   iconWrap: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    width: 52,
+    height: 52,
+    borderRadius: 26,
     backgroundColor: theme.colors.pageBackground,
     borderWidth: 1,
     borderColor: theme.colors.borderColor,
@@ -236,16 +256,15 @@ const styles = StyleSheet.create({
     marginBottom: theme.spacing(3),
   },
 
-  // Title / subtitle
   title: {
-    fontSize: 22,
+    fontSize: 26,
     color: theme.colors.headingText,
     marginBottom: theme.spacing(1),
   },
   subtitle: {
     fontSize: 15,
     color: theme.colors.bodyText,
-    marginBottom: 4,
+    marginBottom: 2,
   },
   emailAddress: {
     fontSize: 15,
@@ -259,7 +278,6 @@ const styles = StyleSheet.create({
     marginBottom: theme.spacing(3),
   },
 
-  // Steps
   steps: {
     gap: theme.spacing(2),
     marginBottom: theme.spacing(3),
@@ -289,35 +307,30 @@ const styles = StyleSheet.create({
     color: theme.colors.bodyText,
   },
 
-  // Feedback
   feedbackRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: theme.spacing(1),
     marginBottom: theme.spacing(2),
   },
-  feedbackTextSuccess: {
+  feedbackSuccess: {
     fontSize: 14,
     color: theme.colors.success,
+    flex: 1,
   },
-  feedbackTextError: {
+  feedbackError: {
     fontSize: 14,
     color: theme.colors.errorText,
     flex: 1,
   },
 
-  // Buttons
   primaryButton: {
     marginBottom: theme.spacing(1.5),
   },
   secondaryButton: {
     paddingVertical: theme.spacing(1.5),
     alignItems: 'center',
-    borderRadius: theme.radius.sm,
     marginBottom: theme.spacing(0.5),
-  },
-  secondaryButtonPressed: {
-    opacity: 0.6,
   },
   secondaryButtonText: {
     fontSize: 15,
@@ -326,18 +339,12 @@ const styles = StyleSheet.create({
   ghostButton: {
     paddingVertical: theme.spacing(1.5),
     alignItems: 'center',
-    borderRadius: theme.radius.sm,
     marginBottom: theme.spacing(3),
-  },
-  ghostButtonPressed: {
-    opacity: 0.6,
   },
   ghostButtonText: {
     fontSize: 14,
     color: theme.colors.disabledText,
   },
-
-  // Help
   helpText: {
     fontSize: 13,
     color: theme.colors.disabledText,
