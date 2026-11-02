@@ -7,7 +7,7 @@ import { getAvatarPublicUrl } from '../services/profile';
 interface UserAvatarProps {
   avatarUrl?: string | null;
   size?: number;
-  style?: ViewStyle;
+  style?: ViewStyle | ViewStyle[];
   imageStyle?: ImageStyle;
   iconColor?: string;
   placeholderBackgroundColor?: string;
@@ -27,16 +27,18 @@ const UserAvatar: React.FC<UserAvatarProps> = ({
 }) => {
   const publicUrl = avatarUrl ? getAvatarPublicUrl(avatarUrl) : null;
 
-  const containerStyle: ViewStyle = {
-    width: size,
-    height: size,
-    borderRadius: size / 2,
-    overflow: 'hidden',
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: placeholderBackgroundColor,
-    ...style,
-  };
+  const containerStyle: ViewStyle[] = [
+    {
+      width: size,
+      height: size,
+      borderRadius: size / 2,
+      overflow: 'hidden',
+      justifyContent: 'center',
+      alignItems: 'center',
+      backgroundColor: placeholderBackgroundColor,
+    },
+    style,
+  ].filter(Boolean) as ViewStyle[];
 
   if (publicUrl) {
     return (

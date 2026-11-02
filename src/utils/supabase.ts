@@ -10,6 +10,9 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     persistSession: true,
     storage: AsyncStorage,
     autoRefreshToken: true,
+    // Detect OAuth/email tokens in URL and auto-exchange for session (web only)
+    // This enables email verification links to work when opened in new tabs
+    detectSessionInUrl: Platform.OS === 'web',
     // On web, Supabase's navigator.locks causes a console error when the lock
     // can't be acquired immediately on init. Known bug: github.com/supabase/supabase-js/issues/1517
     // Workaround: bypass the LockManager on web with a simple pass-through function.

@@ -67,7 +67,6 @@ export default function SubscriptionSetupPage() {
   const handleContinue = async () => {
     setError(null);
     setIsSubmitting(true);
-    console.log("Analytics: Pricing selection proceeded to payment.");
 
     try {
       if (!user) {

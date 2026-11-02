@@ -196,9 +196,9 @@ const CorrectionsPage = () => {
     return (
         <View style={{ flex: 1 }}>
           <SubNavBar items={[
-            { label: 'Employees', href: '/(manager)/employees' },
-            { label: 'Assignments', href: '/(manager)/worker-assignments' },
-            { label: 'Corrections', href: '/(manager)/corrections' },
+            { label: t('manager.navigation.employees'), href: '/(manager)/employees' },
+            { label: t('manager.navigation.assignments'), href: '/(manager)/worker-assignments' },
+            { label: t('manager.navigation.corrections'), href: '/(manager)/corrections' },
           ]} />
           <AnimatedScreen>
           <View style={styles.pageHeader}>

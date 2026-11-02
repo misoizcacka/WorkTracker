@@ -1,6 +1,6 @@
 import 'react-native-get-random-values';
 import 'react-native-gesture-handler';
-import React, { useEffect, useState, useCallback } from 'react'; // Added useState, useCallback
+import React, { useEffect, useState, useCallback, useRef } from 'react'; // Added useState, useCallback, useRef
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { SessionProvider, useSession } from '../context/AuthContext';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
@@ -35,97 +35,172 @@ SplashScreen.preventAutoHideAsync();
 
 const toastConfig: ToastConfig = {
   success: (props) => (
-    <BaseToast
-      {...props}
-      style={{ 
-        borderLeftColor: theme.colors.success,
-        backgroundColor: 'white',
-        borderRadius: theme.radius.md,
-        borderWidth: 1,
-        borderColor: theme.colors.borderColor,
-        height: 'auto',
-        minHeight: 60,
-        paddingVertical: 10,
-        ...Platform.select({
-          web: {
-            boxShadow: '0px 4px 12px rgba(0,0,0,0.08)',
-          }
-        })
-      }}
-      contentContainerStyle={{ paddingHorizontal: 15 }}
-      text1Style={{
-        fontSize: theme.fontSizes.md,
-        fontFamily: theme.font['bold'],
-        color: theme.colors.headingText
-      }}
-      text2Style={{
-        fontSize: theme.fontSizes.sm,
-        fontFamily: theme.font['regular'],
-        color: theme.colors.bodyText
-      }}
-    />
+    <View style={{ position: 'relative' }}>
+      <BaseToast
+        {...props}
+        style={{ 
+          borderLeftColor: 'transparent',
+          backgroundColor: 'rgba(16, 185, 129, 0.08)', // Transparent green glass
+          backdropFilter: 'blur(20px) saturate(180%)',
+          WebkitBackdropFilter: 'blur(20px) saturate(180%)',
+          borderRadius: theme.radius.lg,
+          borderWidth: 1,
+          borderColor: 'rgba(16, 185, 129, 0.2)',
+          height: 'auto',
+          minHeight: 60,
+          paddingVertical: 10,
+          overflow: 'hidden',
+          ...Platform.select({
+            web: {
+              boxShadow: '0 8px 32px rgba(0, 0, 0, 0.12), 0 0 0 1px rgba(255, 255, 255, 0.1) inset',
+            },
+            default: {
+              shadowColor: '#000',
+              shadowOffset: { width: 0, height: 4 },
+              shadowOpacity: 0.15,
+              shadowRadius: 12,
+              elevation: 5,
+            },
+          }),
+        }}
+        contentContainerStyle={{ paddingHorizontal: 15 }}
+        text1Style={{
+          fontSize: theme.fontSizes.md,
+          fontFamily: theme.font['bold'],
+          color: '#065f46',
+        }}
+        text2Style={{
+          fontSize: theme.fontSizes.sm,
+          fontFamily: theme.font['regular'],
+          color: '#047857',
+        }}
+      />
+      {/* Glossy shine overlay */}
+      <View style={{
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        height: '50%',
+        background: 'linear-gradient(180deg, rgba(255, 255, 255, 0.4) 0%, rgba(255, 255, 255, 0) 100%)',
+        borderTopLeftRadius: theme.radius.lg,
+        borderTopRightRadius: theme.radius.lg,
+        pointerEvents: 'none',
+        ...(Platform.OS === 'web' ? {} : { display: 'none' }), // Web only
+      }} />
+    </View>
   ),
   error: (props) => (
-    <ErrorToast
-      {...props}
-      style={{ 
-        borderLeftColor: theme.colors.danger,
-        backgroundColor: 'white',
-        borderRadius: theme.radius.md,
-        borderWidth: 1,
-        borderColor: theme.colors.borderColor,
-        height: 'auto',
-        minHeight: 60,
-        paddingVertical: 10,
-        ...Platform.select({
-          web: {
-            boxShadow: '0px 4px 12px rgba(0,0,0,0.08)',
-          }
-        })
-      }}
-      contentContainerStyle={{ paddingHorizontal: 15 }}
-      text1Style={{
-        fontSize: theme.fontSizes.md,
-        fontFamily: theme.font['bold'],
-        color: theme.colors.headingText
-      }}
-      text2Style={{
-        fontSize: theme.fontSizes.sm,
-        fontFamily: theme.font['regular'],
-        color: theme.colors.bodyText
-      }}
-    />
+    <View style={{ position: 'relative' }}>
+      <ErrorToast
+        {...props}
+        style={{ 
+          borderLeftColor: 'transparent',
+          backgroundColor: 'rgba(239, 68, 68, 0.08)', // Transparent red glass
+          backdropFilter: 'blur(20px) saturate(180%)',
+          WebkitBackdropFilter: 'blur(20px) saturate(180%)',
+          borderRadius: theme.radius.lg,
+          borderWidth: 1,
+          borderColor: 'rgba(239, 68, 68, 0.2)',
+          height: 'auto',
+          minHeight: 60,
+          paddingVertical: 10,
+          overflow: 'hidden',
+          ...Platform.select({
+            web: {
+              boxShadow: '0 8px 32px rgba(0, 0, 0, 0.12), 0 0 0 1px rgba(255, 255, 255, 0.1) inset',
+            },
+            default: {
+              shadowColor: '#000',
+              shadowOffset: { width: 0, height: 4 },
+              shadowOpacity: 0.15,
+              shadowRadius: 12,
+              elevation: 5,
+            },
+          }),
+        }}
+        contentContainerStyle={{ paddingHorizontal: 15 }}
+        text1Style={{
+          fontSize: theme.fontSizes.md,
+          fontFamily: theme.font['bold'],
+          color: '#7f1d1d',
+        }}
+        text2Style={{
+          fontSize: theme.fontSizes.sm,
+          fontFamily: theme.font['regular'],
+          color: '#991b1b',
+        }}
+      />
+      {/* Glossy shine overlay */}
+      <View style={{
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        height: '50%',
+        background: 'linear-gradient(180deg, rgba(255, 255, 255, 0.4) 0%, rgba(255, 255, 255, 0) 100%)',
+        borderTopLeftRadius: theme.radius.lg,
+        borderTopRightRadius: theme.radius.lg,
+        pointerEvents: 'none',
+        ...(Platform.OS === 'web' ? {} : { display: 'none' }),
+      }} />
+    </View>
   ),
   info: (props) => (
-    <BaseToast
-      {...props}
-      style={{ 
-        borderLeftColor: theme.colors.secondary,
-        backgroundColor: 'white',
-        borderRadius: theme.radius.md,
-        borderWidth: 1,
-        borderColor: theme.colors.borderColor,
-        height: 'auto',
-        minHeight: 60,
-        paddingVertical: 10,
-        ...Platform.select({
-          web: {
-            boxShadow: '0px 4px 12px rgba(0,0,0,0.08)',
-          }
-        })
-      }}
-      contentContainerStyle={{ paddingHorizontal: 15 }}
-      text1Style={{
-        fontSize: theme.fontSizes.md,
-        fontFamily: theme.font['bold'],
-        color: theme.colors.headingText
-      }}
-      text2Style={{
-        fontSize: theme.fontSizes.sm,
-        fontFamily: theme.font['regular'],
-        color: theme.colors.bodyText
-      }}
-    />
+    <View style={{ position: 'relative' }}>
+      <BaseToast
+        {...props}
+        style={{ 
+          borderLeftColor: 'transparent',
+          backgroundColor: 'rgba(59, 130, 246, 0.08)', // Transparent blue glass
+          backdropFilter: 'blur(20px) saturate(180%)',
+          WebkitBackdropFilter: 'blur(20px) saturate(180%)',
+          borderRadius: theme.radius.lg,
+          borderWidth: 1,
+          borderColor: 'rgba(59, 130, 246, 0.2)',
+          height: 'auto',
+          minHeight: 60,
+          paddingVertical: 10,
+          overflow: 'hidden',
+          ...Platform.select({
+            web: {
+              boxShadow: '0 8px 32px rgba(0, 0, 0, 0.12), 0 0 0 1px rgba(255, 255, 255, 0.1) inset',
+            },
+            default: {
+              shadowColor: '#000',
+              shadowOffset: { width: 0, height: 4 },
+              shadowOpacity: 0.15,
+              shadowRadius: 12,
+              elevation: 5,
+            },
+          }),
+        }}
+        contentContainerStyle={{ paddingHorizontal: 15 }}
+        text1Style={{
+          fontSize: theme.fontSizes.md,
+          fontFamily: theme.font['bold'],
+          color: '#1e3a8a',
+        }}
+        text2Style={{
+          fontSize: theme.fontSizes.sm,
+          fontFamily: theme.font['regular'],
+          color: '#1e40af',
+        }}
+      />
+      {/* Glossy shine overlay */}
+      <View style={{
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        height: '50%',
+        background: 'linear-gradient(180deg, rgba(255, 255, 255, 0.4) 0%, rgba(255, 255, 255, 0) 100%)',
+        borderTopLeftRadius: theme.radius.lg,
+        borderTopRightRadius: theme.radius.lg,
+        pointerEvents: 'none',
+        ...(Platform.OS === 'web' ? {} : { display: 'none' }),
+      }} />
+    </View>
   )
 };
 
@@ -209,24 +284,120 @@ export default function RootLayout() {
 }
 
   function Main() {
-    const { user, isLoading, userCompanyId, isCompanyIdLoading, userRole, isCompanyDetailsComplete } = useSession()!;
+    const { user, isLoading, userCompanyId, isCompanyIdLoading, userRole, isCompanyDetailsComplete, refreshUser } = useSession()!;
     const segments = useSegments();
     const router = useRouter();
+    const [isCreatingCompany, setIsCreatingCompany] = useState(false);
 
+    // Handle post-verification company creation
+    useEffect(() => {
+      const setupCompanyAfterVerification = async () => {
+        if (isCreatingCompany) return;
+        if (!user || !user.email_confirmed_at) return;
+        if (userRole !== 'owner') return;
+        if (userCompanyId) return;
+        if (isCompanyIdLoading) return;
+
+        setIsCreatingCompany(true);
+        
+        try {
+          const { supabase } = await import('../utils/supabase');
+          const { logConsent } = await import('../services/consent');
+          
+          // Check if company already exists
+          const { data: existingEmployee } = await supabase
+            .from('employees')
+            .select('company_id')
+            .eq('id', user.id)
+            .maybeSingle();
+
+          if (existingEmployee?.company_id) {
+            await refreshUser();
+            router.replace('/subscription/setup');
+            return;
+          }
+
+          // Log GDPR consent
+          await Promise.all([
+            logConsent({ userId: user.id, consentType: 'terms' }),
+            logConsent({ userId: user.id, consentType: 'privacy' }),
+            logConsent({ userId: user.id, consentType: 'dpa' }),
+          ]);
+
+          // Get current session to ensure JWT is fresh
+          const { data: sessionData } = await supabase.auth.getSession();
+          console.log('[Edge Function Call] Has session:', !!sessionData.session);
+          console.log('[Edge Function Call] User email confirmed:', user.email_confirmed_at);
+
+          const { data, error } = await supabase.functions.invoke('create-owner-and-company', {
+            body: {
+              userId: user.id,
+              fullName: user.user_metadata?.full_name ?? '',
+              email: user.email ?? '',
+              companyName: 'New Company',
+            },
+          });
+
+          if (error) {
+            console.error('[Edge Function Call] Error:', error);
+            await refreshUser();
+            router.replace('/subscription/setup');
+          } else {
+            console.log('[Edge Function Call] Success:', data);
+            await refreshUser();
+            router.replace(data?.company?.id
+              ? { pathname: '/subscription/setup', params: { companyId: data.company.id } }
+              : '/subscription/setup'
+            );
+          }
+        } catch (err) {
+          await refreshUser();
+          router.replace('/subscription/setup');
+        } finally {
+          setIsCreatingCompany(false);
+        }
+      };
+
+      setupCompanyAfterVerification();
+    }, [user, userCompanyId, isCompanyIdLoading, userRole, isCreatingCompany]);
+
+    const lastRouteCheckRef = useRef<string>('');
+    
     useEffect(() => {
       if (isLoading || isCompanyIdLoading) return;
 
       const inAuthGroup = segments[0] === '(guest)' || segments[0] === 'auth' || segments[0] === 'onboarding' || segments[0] === 'join';
       const inPaymentFlow = segments[0] === '(guest)' && segments.includes('payment');
+      const inPaymentSuccess = inPaymentFlow && segments.includes('success');
       const inSubscriptionFlow = segments[0] === 'subscription';
       const inManagerApp = segments[0] === '(manager)';
       const inWorkerApp = segments[0] === '(worker)';
       const inMobileOnly = segments[0] === 'mobile-only';
+      const onCompanySetup = inManagerApp && segments[1] === 'company-setup';
+      
+      // Create a fingerprint of the current state to prevent unnecessary re-runs
+      const stateFingerprint = `${segments.join('/')}_${userRole}_${user?.app_metadata?.subscription_status}_${isCompanyDetailsComplete}_${!!user}`;
+      if (lastRouteCheckRef.current === stateFingerprint) {
+        return;
+      }
+      lastRouteCheckRef.current = stateFingerprint;
 
       // 1. Not logged in → guest
       if (!user) {
         if (!inAuthGroup) {
           router.replace(Platform.OS !== 'web' ? '/(guest)/login' : '/(guest)/');
+        }
+        return;
+      }
+
+      // 1b. Logged in but email not verified → verify-email screen
+      if (user && !user.email_confirmed_at) {
+        const inVerifyEmail = segments[0] === 'auth' && segments[1] === 'verify-email';
+        if (!inVerifyEmail) {
+          router.replace({
+            pathname: '/auth/verify-email',
+            params: { email: user.email ?? '' }
+          });
         }
         return;
       }
@@ -241,7 +412,6 @@ export default function RootLayout() {
       const companySetupComplete = isCompanyDetailsComplete || !!user.user_metadata?.company_setup_complete;
 
       // 3. Owner without subscription → subscription setup
-      //    But never interrupt an active payment flow or subscription flow
       if (userRole === 'owner' && subscriptionStatus !== 'active') {
         if (!inSubscriptionFlow && !inPaymentFlow) {
           router.replace('/subscription/setup');
@@ -249,16 +419,22 @@ export default function RootLayout() {
         return;
       }
 
+      // 3b. On payment success page → don't redirect
+      if (inPaymentSuccess) {
+        return;
+      }
+
       // 4. Owner with subscription but company not set up → company-setup
-      //    But never interrupt if they're already in the manager app or payment flow
       if (userRole === 'owner' && subscriptionStatus === 'active' && !companySetupComplete) {
         if (!inManagerApp && !inPaymentFlow && !inSubscriptionFlow) {
           router.replace('/(manager)/company-setup');
+        } else if (onCompanySetup) {
+          // Already on company-setup, stay here
         }
         return;
       }
 
-      // 5. Fully set up → send to app if not already there
+      // 5. Fully set up → send to app
       if (user && userRole) {
         if (!inManagerApp && !inWorkerApp && !inMobileOnly) {
           router.replace(userRole === 'worker' ? '/(worker)/home' : '/(manager)/dashboard');

@@ -3,6 +3,7 @@ import { View, StyleSheet, Platform, useWindowDimensions } from 'react-native';
 import { Text } from '~/components/Themed';
 import SubNavBar from '~/components/SubNavBar';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import moment from 'moment';
 
 import AnimatedScreen from '~/components/AnimatedScreen';
@@ -11,6 +12,7 @@ import LocationReplayMapOnlyPanel from '~/app/(manager)/components/LocationRepla
 import { theme } from '~/theme';
 
 const LocationReplayPage = () => {
+  const { t } = useTranslation();
   const router = useRouter();
   const { width } = useWindowDimensions();
   const isLargeScreen = width >= 900;
@@ -55,10 +57,10 @@ const LocationReplayPage = () => {
   return (
     <View style={{ flex: 1 }}>
       <SubNavBar items={[
-        { label: 'Projects', href: '/(manager)/projects' },
-        { label: 'Common Locations', href: '/(manager)/common-locations' },
-        { label: 'Live Map', href: '/(manager)/map-overview' },
-        { label: 'Location Replay', href: '/(manager)/location-replay' },
+        { label: t('manager.navigation.projects'), href: '/(manager)/projects' },
+        { label: t('manager.navigation.commonLocations'), href: '/(manager)/common-locations' },
+        { label: t('manager.navigation.liveMap'), href: '/(manager)/map-overview' },
+        { label: t('manager.navigation.locationReplay'), href: '/(manager)/location-replay' },
       ]} />
       <AnimatedScreen>
       <View style={styles.pageHeader}>

@@ -28,7 +28,38 @@
     "passwordsMismatch": "Lozinke se ne podudaraju.",
     "invalidEmail": "Molimo unesite ispravnu email adresu.",
     "passwordTooShort": "Lozinka mora imati najmanje 6 karaktera.",
-    "continueButton": "Nastavi"
+    "continueButton": "Nastavi",
+    "errors": {
+      "fullNameRequired": "Puno ime je obavezno.",
+      "emailRequired": "Email je obavezan.",
+      "emailInvalid": "Email adresa je neispravna.",
+      "emailAlreadyRegistered": "Ovaj email je već registrovan. Molimo prijavite se.",
+      "passwordRequired": "Lozinka je obavezna.",
+      "passwordLength": "Lozinka mora imati najmanje 6 karaktera.",
+      "passwordWeak": "Lozinka je previše slaba. Molimo koristite jaču lozinku.",
+      "companyNameRequired": "Naziv kompanije je obavezan.",
+      "tooManyAttempts": "Previše pokušaja registracije. Molimo sačekajte nekoliko minuta i pokušajte ponovo."
+    }
+  },
+  "verifyEmail": {
+    "title": "Provjerite vašu e-poštu",
+    "description": "Poslali smo verifikacijski link na:",
+    "yourEmail": "vašu e-mail adresu",
+    "step1": "Otvorite vaš inbox",
+    "step2": "Kliknite na \"Verifikuj e-mail adresu\"",
+    "step3": "Vratite se ovdje — automatski ćemo to detektovati",
+    "resendSuccess": "E-mail je poslat! Provjerite vaš inbox.",
+    "checkButton": "Verifikovao sam svoju e-poštu",
+    "checking": "Provjera...",
+    "resendButton": "Ponovo pošalji verifikacijski e-mail",
+    "resendCooldown": "Ponovo pošalji za {{seconds}}s",
+    "changeEmail": "Pogrešan e-mail? Idi nazad",
+    "helpText": "Ne možete ga pronaći? Provjerite spam folder.",
+    "errors": {
+      "rateLimitExceeded": "Molimo sačekajte nekoliko minuta prije nego što zatražite novi e-mail.",
+      "unknown": "Slanje e-maila nije uspjelo.",
+      "notVerified": "E-mail još nije verifikovan. Provjerite vaš inbox i kliknite na link."
+    }
   },
   "pricing": {
     "title": "Odaberite svoj plan",
@@ -44,11 +75,55 @@
   "payment": {
     "title": "Plaćanje uspešno!",
     "description": "Vaša pretplata je uspešno podešena. Sada se možete prijaviti u aplikaciju sa svojim novim menadžerskim nalogom.",
+    "successTitle": "Plaćanje uspešno!",
+    "successDescription": "Vaše plaćanje je uspešno. Kliknite ispod da nastavite sa podešavanjem kompanije.",
+    "successDescriptionNeedsLogin": "Vaše plaćanje je uspešno! Molimo prijavite se da nastavite sa podešavanjem kompanije.",
+    "paymentSuccessful": "Plaćanje uspešno! Prijavite se da nastavite.",
+    "loginToContinue": "Prijavite se da nastavite",
+    "capacityUpdatedTitle": "Kapacitet ažuriran!",
+    "capacityUpdatedDescription": "Vaša nova radna mesta su sada aktivna i spremna za upotrebu.",
+    "failedTitle": "Plaćanje nije uspelo",
+    "cancelTitle": "Plaćanje otkazano",
+    "cancelDescription": "Vaše plaćanje nije završeno. Niste naplaćeni. Možete pokušati ponovo kad god želite.",
+    "returnToSetup": "Nazad na podešavanje pretplate",
+    "verifying": "Proveravamo vaše plaćanje...",
+    "continueToSetup": "Nastavite sa podešavanjem kompanije",
+    "backToAccount": "Nazad na nalog",
+    "tryAgain": "Pokušajte ponovo",
+    "noSessionId": "ID sesije nije naveden.",
+    "verificationFailed": "Verifikacija plaćanja nije uspela.",
+    "verificationError": "Došlo je do neočekivane greške tokom verifikacije.",
+    "genericVerificationError": "Verifikacija plaćanja nije uspela zbog interne greške. Molimo pokušajte ponovo ili kontaktirajte podršku.",
     "goToLoginButton": "Idi na prijavu"
   },
   "worker": {
     "home": {
       "timeElapsed": "proteklo vreme"
+    }
+  },
+  "manager": {
+    "mapOverview": {
+      "title": "Pregled mape",
+      "subtitle": "Vizualizujte lokacije radnika i projekata.",
+      "workers": "Radnici",
+      "projects": "Projekti",
+      "searchWorkers": "Pretraži radnike...",
+      "searchProjects": "Pretraži projekte...",
+      "selectWorkerHint": "Izaberite jednog ili više radnika da vidite njihove lokacije na mapi.",
+      "statusActiveNow": "Trenutno aktivan",
+      "statusRecentActivity": "Nedavna aktivnost",
+      "statusActiveEarlier": "Ranije aktivan",
+      "statusNoLocationData": "Nema podataka o lokaciji",
+      "statusHasLocationData": "Ima podatke o lokaciji"
+    },
+    "navigation": {
+      "projects": "Projekti",
+      "commonLocations": "Zajedničke lokacije",
+      "liveMap": "Mapa uživo",
+      "locationReplay": "Pregled lokacija",
+      "employees": "Zaposleni",
+      "assignments": "Dodele",
+      "corrections": "Ispravke"
     }
   }
 }

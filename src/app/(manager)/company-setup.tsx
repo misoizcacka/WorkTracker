@@ -24,6 +24,7 @@ export default function CompanySetup() {
   const [selectedCountry, setSelectedCountry] = useState<{ name: string; emoji: string, code: string } | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [hasFetchedOnce, setHasFetchedOnce] = useState(false);
 
   useEffect(() => {
     if (isLoading) return;
@@ -37,6 +38,9 @@ export default function CompanySetup() {
         setLoading(false);
         return;
     }
+
+    // Only fetch once to prevent infinite loop
+    if (hasFetchedOnce) return;
 
     const fetchCompanyDetails = async () => {
         setLoading(true);
@@ -63,10 +67,11 @@ export default function CompanySetup() {
             setError('An unexpected error occurred.');
         } finally {
             setLoading(false);
+            setHasFetchedOnce(true);
         }
     };
     fetchCompanyDetails();
-  }, [user, session, userCompanyId, router, isLoading]);
+  }, [user, session, userCompanyId, router, isLoading, hasFetchedOnce]);
 
   const handleSaveCompanyDetails = async () => {
     if (!companyName.trim()) {

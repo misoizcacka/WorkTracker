@@ -99,14 +99,14 @@ const LocationReplayMapOnlyPanel = ({ workerId, date }: LocationReplayMapOnlyPan
 
     const fetchDetails = async () => {
       setLoading(true);
-      const { data, error } = await supabase.rpc('get_worker_daily_details', {
+      const { data, error } = await supabase.rpc('get_worker_daily_location_events', {
         worker_id_param: workerId,
         report_date: moment(date).format('YYYY-MM-DD'),
         p_timezone: viewerTimeZone,
       });
 
       if (error) {
-        console.error('Error fetching daily details:', error);
+        console.error('Error fetching daily location events:', error);
         setEvents([]);
       } else {
         setEvents(data || []);

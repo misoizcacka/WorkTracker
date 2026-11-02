@@ -41,14 +41,14 @@ interface WorkerDailyDetailsPanelProps {
 }
 
 const haversineDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
-  const R = 6371;
+  const R = 6371; // Earth radius in km
   const dLat = (lat2 - lat1) * Math.PI / 180;
   const dLon = (lon2 - lon1) * Math.PI / 180;
   const a =
     Math.sin(dLat / 2) * Math.sin(dLat / 2) +
     Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
     Math.sin(dLon / 2) * Math.sin(dLon / 2);
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)));
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)); // Fixed formula
   return R * c;
 };
 
@@ -125,12 +125,26 @@ const WorkerDailyDetailsPanel = ({ workerId, date }: WorkerDailyDetailsPanelProp
       }
     });
 
-    // Handle ongoing visits
+    // Handle ongoing visits (no exit event)
     activeVisits.forEach((startTime, name) => {
       const details = getSiteDetails(name);
       if (details) {
         const isToday = moment(date).isSame(moment(), 'day');
-        const endTime = isToday ? moment().toISOString() : moment(date).endOf('day').toISOString();
+        
+        // Use the last location event timestamp as the end time (actual work session end)
+        // instead of end-of-day (11:59 PM)
+        let endTime: string;
+        if (isToday) {
+          endTime = moment().toISOString();
+        } else if (allLocationEvents.length > 0) {
+          // Use last location event timestamp (e.g., last passive_tracking or active_tracking)
+          const lastEvent = allLocationEvents[allLocationEvents.length - 1];
+          endTime = lastEvent.timestamp;
+        } else {
+          // Fallback to end of day if no location events
+          endTime = moment(date).endOf('day').toISOString();
+        }
+        
         const visit: Visit = { startTime, endTime, isStillThere: isToday };
         const duration = moment(visit.endTime).diff(moment(visit.startTime), 'minutes');
         
@@ -176,13 +190,17 @@ const WorkerDailyDetailsPanel = ({ workerId, date }: WorkerDailyDetailsPanelProp
   });
 
   const calculateKilometers = useCallback((eventList: LocationEvent[]) => {
+    console.log('Calculating distance from', eventList.length, 'location events');
     let totalKm = 0;
     for (let i = 0; i < eventList.length - 1; i++) {
       const p1 = eventList[i];
       const p2 = eventList[i + 1];
-      totalKm += haversineDistance(p1.lat, p1.lng, p2.lat, p2.lng);
+      const dist = haversineDistance(p1.lat, p1.lng, p2.lat, p2.lng);
+      totalKm += dist;
     }
-    return parseFloat(totalKm.toFixed(2));
+    const result = parseFloat(totalKm.toFixed(2));
+    console.log('Total distance calculated:', result, 'km');
+    return result;
   }, []);
 
   useEffect(() => {
@@ -235,6 +253,10 @@ const WorkerDailyDetailsPanel = ({ workerId, date }: WorkerDailyDetailsPanelProp
         }));
         setAllLocationEvents(mappedEvents);
 
+        // Calculate distance from all location events
+        const distance = calculateKilometers(mappedEvents);
+        console.log('Setting distance in summary:', distance);
+
         // Set map region based on first location event
         if (detailsRes.data && detailsRes.data.length > 0) {
             setMapRegion({
@@ -243,11 +265,19 @@ const WorkerDailyDetailsPanel = ({ workerId, date }: WorkerDailyDetailsPanelProp
                 latitudeDelta: 0.05,
                 longitudeDelta: 0.05,
             });
-            setDailySummary(prev => (prev ? ({
-                ...prev,
-                approx_travelled_km: calculateKilometers(mappedEvents),
-            }) : null));
         }
+        
+        // Update summary with calculated distance
+        setDailySummary(prev => {
+          console.log('Previous summary:', prev);
+          if (!prev) return null;
+          const updated = {
+            ...prev,
+            approx_travelled_km: distance,
+          };
+          console.log('Updated summary:', updated);
+          return updated;
+        });
       }
       setLoading(false);
     };
@@ -329,16 +359,48 @@ const WorkerDailyDetailsPanel = ({ workerId, date }: WorkerDailyDetailsPanelProp
   }
 
   if (events.length === 0 && !dailySummary) {
+    const daysOld = moment().diff(moment(date), 'days');
+    const isDataDeleted = daysOld > 90;
+    
     return (
       <View style={styles.centerContainer}>
-        <Ionicons name="calendar-outline" size={64} color={theme.colors.borderColor} />
-        <Text style={styles.emptyText} fontType="regular">No activity found for this worker on the selected date.</Text>
+        <Ionicons name={isDataDeleted ? "shield-checkmark-outline" : "calendar-outline"} size={64} color={theme.colors.borderColor} />
+        <Text style={styles.emptyText} fontType="regular">
+          {isDataDeleted 
+            ? "Detailed location data has been deleted per GDPR (90-day retention)."
+            : "No activity found for this worker on the selected date."}
+        </Text>
+        {isDataDeleted && (
+          <Text style={styles.emptySubtext} fontType="regular">
+            Work hours are preserved in Time Tracking Reports.
+          </Text>
+        )}
       </View>
     );
   }
 
+  // Calculate days old for warning banner
+  const daysOld = moment().diff(moment(date), 'days');
+  const showWarning = daysOld >= 60 && daysOld <= 90;
+  const deletionDate = moment(date).add(90, 'days').format('MMM D, YYYY');
+
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      {/* GDPR Retention Warning Banner */}
+      {showWarning && (
+        <View style={styles.warningBanner}>
+          <Ionicons name="time-outline" size={20} color={theme.colors.warning} style={styles.warningIcon} />
+          <View style={styles.warningContent}>
+            <Text style={styles.warningTitle} fontType="bold">
+              Location data will be deleted on {deletionDate}
+            </Text>
+            <Text style={styles.warningText} fontType="regular">
+              GPS location data is automatically deleted after 90 days (GDPR compliance). Time-tracking data is preserved.
+            </Text>
+          </View>
+        </View>
+      )}
+      
       {dailySummary && (
         <View style={styles.statsRow}>
             <View style={styles.workerInfo}>
@@ -367,8 +429,15 @@ const WorkerDailyDetailsPanel = ({ workerId, date }: WorkerDailyDetailsPanelProp
             <View style={styles.statDivider} />
             
             <View style={styles.statBox}>
+                <Text style={styles.statLabel} fontType="bold">Break Time</Text>
+                <Text style={styles.statValue} fontType="bold">{dailySummary.total_break_minutes}m</Text>
+            </View>
+            
+            <View style={styles.statDivider} />
+            
+            <View style={styles.statBox}>
                 <Text style={styles.statLabel} fontType="bold">Distance</Text>
-                <Text style={styles.statValue} fontType="bold">{dailySummary.approx_travelled_km}km</Text>
+                <Text style={styles.statValue} fontType="bold">{dailySummary.approx_travelled_km || 0}km</Text>
             </View>
             
             <View style={styles.statDivider} />
@@ -401,22 +470,33 @@ const WorkerDailyDetailsPanel = ({ workerId, date }: WorkerDailyDetailsPanelProp
             <View style={styles.sectionHeader}>
                 <Text style={styles.sectionTitle} fontType="bold">Location Replay</Text>
             </View>
-            <View style={styles.mapContainer}>
-                <View style={styles.mapViewWrapper}>
-                    <DailyWorkerMap
-                        style={{ flex: 1 }}
-                        zoom={mapZoom}
-                        onWebZoomChange={setMapZoom}
-                        assignments={assignments}
-                        locationEvents={locationEvents}
-                        workerId={workerId || ''}
-                        assignmentPointsGeoJSON={assignmentPointsGeoJSON}
-                        assignmentSegmentsGeoJSON={assignmentSegmentsGeoJSON}
-                        fullTrailGeoJSON={fullTrailGeoJSON}
-                        trackingDotsGeoJSON={trackingDotsGeoJSON}
-                    />
-                </View>
-            </View>
+            {locationEvents.length > 0 ? (
+              <View style={styles.mapContainer}>
+                  <View style={styles.mapViewWrapper}>
+                      <DailyWorkerMap
+                          style={{ flex: 1 }}
+                          zoom={mapZoom}
+                          onWebZoomChange={setMapZoom}
+                          assignments={assignments}
+                          locationEvents={locationEvents}
+                          workerId={workerId || ''}
+                          assignmentPointsGeoJSON={assignmentPointsGeoJSON}
+                          assignmentSegmentsGeoJSON={assignmentSegmentsGeoJSON}
+                          fullTrailGeoJSON={fullTrailGeoJSON}
+                          trackingDotsGeoJSON={trackingDotsGeoJSON}
+                      />
+                  </View>
+              </View>
+            ) : (
+              <View style={styles.mapContainer}>
+                  <View style={styles.noMapDataContainer}>
+                      <Ionicons name="map-outline" size={48} color={theme.colors.borderColor} />
+                      <Text style={styles.noMapDataText} fontType="regular">
+                          No location data available for this date
+                      </Text>
+                  </View>
+              </View>
+            )}
         </View>
       </View>
     </ScrollView>
@@ -442,6 +522,37 @@ const styles = StyleSheet.create({
         fontSize: theme.fontSizes.md,
         color: theme.colors.bodyText,
         textAlign: 'center',
+    },
+    emptySubtext: {
+        marginTop: theme.spacing(1),
+        fontSize: theme.fontSizes.sm,
+        color: theme.colors.borderColor,
+        textAlign: 'center',
+    },
+    warningBanner: {
+        flexDirection: 'row',
+        backgroundColor: '#FFF4E5',
+        borderLeftWidth: 4,
+        borderLeftColor: theme.colors.warning || '#F59E0B',
+        padding: theme.spacing(2),
+        marginBottom: theme.spacing(3),
+        borderRadius: theme.radius.md,
+    },
+    warningIcon: {
+        marginRight: theme.spacing(1.5),
+        marginTop: theme.spacing(0.25),
+    },
+    warningContent: {
+        flex: 1,
+    },
+    warningTitle: {
+        fontSize: theme.fontSizes.md,
+        color: '#92400E',
+        marginBottom: theme.spacing(0.5),
+    },
+    warningText: {
+        fontSize: theme.fontSizes.sm,
+        color: '#78350F',
     },
     statsRow: {
         flexDirection: 'row',
@@ -595,6 +706,18 @@ const styles = StyleSheet.create({
     },
     mapViewWrapper: {
         flex: 1,
+    },
+    noMapDataContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        padding: theme.spacing(4),
+    },
+    noMapDataText: {
+        marginTop: theme.spacing(2),
+        fontSize: theme.fontSizes.md,
+        color: theme.colors.borderColor,
+        textAlign: 'center',
     }
 });
 

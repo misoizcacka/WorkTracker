@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from "react";
-import { View, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, RefreshControl, ScrollView } from "react-native";
+import { View, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, RefreshControl, ScrollView, Platform } from "react-native";
 import { Text } from "../../components/Themed";
 import { Card } from "../../components/Card";
 import AnimatedScreen from "../../components/AnimatedScreen";
@@ -263,7 +263,7 @@ export default function WorkerDashboardScreen() {
                       <Ionicons name="chevron-down" size={16} color={theme.colors.primary} style={{ marginLeft: 4 }} />
                     )}
                   </TouchableOpacity>
-                  <Ionicons name="stats-chart" size={20} color={theme.colors.primaryMuted} />
+                  <Ionicons name="stats-chart" size={20} color={theme.colors.disabledText} />
                 </View>
 
                 {error ? (
@@ -353,12 +353,13 @@ const styles = StyleSheet.create({
   subtitle: {
     fontSize: theme.fontSizes.md,
     color: theme.colors.bodyText,
-    marginTop: 2,
+    marginTop: 4,
   },
   summaryCard: {
     borderRadius: theme.radius.lg,
     padding: theme.spacing(3),
     marginBottom: theme.spacing(3),
+    backgroundColor: theme.colors.cardBackground,
     borderWidth: 1,
     borderColor: theme.colors.borderColor,
   },
@@ -371,14 +372,17 @@ const styles = StyleSheet.create({
   periodPicker: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: theme.colors.primary + '10',
+    backgroundColor: theme.colors.cardBackground,
     paddingHorizontal: theme.spacing(1.5),
     paddingVertical: theme.spacing(0.5),
-    borderRadius: theme.radius.pill,
+    borderRadius: theme.radius.lg,
+    borderWidth: 1,
+    borderColor: theme.colors.borderColor,
   },
   periodText: {
     fontSize: theme.fontSizes.sm,
-    color: theme.colors.primary,
+    color: theme.colors.headingText,
+    fontWeight: '600',
   },
   statsGrid: {
     flexDirection: 'row',
@@ -390,7 +394,8 @@ const styles = StyleSheet.create({
   },
   statValue: {
     fontSize: 28,
-    color: theme.colors.headingText,
+    color: theme.colors.headingText, // Black text for readability
+    fontWeight: '700',
   },
   statLabel: {
     fontSize: theme.fontSizes.xs,
@@ -398,6 +403,7 @@ const styles = StyleSheet.create({
     marginTop: 4,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
+    fontWeight: '500',
   },
   divider: {
     width: 1,
@@ -408,26 +414,28 @@ const styles = StyleSheet.create({
     marginBottom: theme.spacing(3),
   },
   filterContent: {
-    gap: theme.spacing(1),
+    gap: theme.spacing(1.5),
   },
   filterPill: {
     paddingHorizontal: theme.spacing(2),
     paddingVertical: theme.spacing(1),
-    borderRadius: theme.radius.pill,
+    borderRadius: theme.radius.lg,
     backgroundColor: theme.colors.cardBackground,
     borderWidth: 1,
     borderColor: theme.colors.borderColor,
   },
   filterPillActive: {
-    backgroundColor: theme.colors.primary,
-    borderColor: theme.colors.primary,
+    backgroundColor: theme.colors.headingText, // Dark gray/black for active
+    borderColor: theme.colors.headingText,
   },
   filterLabel: {
     fontSize: theme.fontSizes.sm,
     color: theme.colors.bodyText,
+    fontWeight: '500',
   },
   filterLabelActive: {
     color: 'white',
+    fontWeight: '600',
   },
   sectionHeader: {
     flexDirection: 'row',
@@ -438,12 +446,14 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: theme.fontSizes.lg,
     color: theme.colors.headingText,
+    fontWeight: '700',
   },
   dailyCard: {
     marginHorizontal: theme.spacing(3),
     marginBottom: theme.spacing(2),
     padding: theme.spacing(2.5),
     borderRadius: theme.radius.lg,
+    backgroundColor: theme.colors.cardBackground,
     borderWidth: 1,
     borderColor: theme.colors.borderColor,
   },
@@ -456,15 +466,17 @@ const styles = StyleSheet.create({
   dateBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 8,
   },
   dateText: {
     fontSize: theme.fontSizes.md,
     color: theme.colors.headingText,
+    fontWeight: '600',
   },
   dailyHours: {
     fontSize: theme.fontSizes.lg,
-    color: theme.colors.primary,
+    color: theme.colors.headingText, // Black text, not red
+    fontWeight: '700',
   },
   projectsRow: {
     flexDirection: 'row',
@@ -478,18 +490,24 @@ const styles = StyleSheet.create({
     fontSize: theme.fontSizes.sm,
     color: theme.colors.bodyText,
     flex: 1,
+    fontWeight: '500',
   },
   emptyState: {
     alignItems: 'center',
-    paddingVertical: 60,
+    paddingVertical: 80,
+    paddingHorizontal: theme.spacing(4),
   },
   emptyText: {
-    color: theme.colors.disabledText,
+    color: theme.colors.bodyText,
     marginTop: 16,
     fontSize: theme.fontSizes.md,
+    fontWeight: '500',
+    textAlign: 'center',
   },
   errorText: {
     color: theme.colors.danger,
     textAlign: 'center',
+    fontSize: theme.fontSizes.md,
+    fontWeight: '500',
   }
 });

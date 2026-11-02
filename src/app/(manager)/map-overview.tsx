@@ -28,6 +28,34 @@ export default function MapOverviewScreen() {
   const [searchTerm, setSearchTerm] = useState('');
   const [searchTermProject, setSearchTermProject] = useState('');
   const [workerLocations, setWorkerLocations] = useState<LatestLocation[]>([]);
+  const [workersWithGPSToday, setWorkersWithGPSToday] = useState<Set<string>>(new Set());
+
+  // Fetch workers who have GPS data today
+  useEffect(() => {
+    const fetchWorkersWithGPS = async () => {
+      try {
+        const today = new Date();
+        const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+        
+        const { data, error } = await supabase
+          .from('location_events')
+          .select('worker_id')
+          .gte('created_at', startOfDay.toISOString());
+        
+        if (error) throw error;
+        
+        const workerIds = new Set(data?.map(row => row.worker_id) || []);
+        setWorkersWithGPSToday(workerIds);
+      } catch (error) {
+        console.error('Error fetching workers with GPS today:', error);
+      }
+    };
+
+    fetchWorkersWithGPS();
+    // Refresh every 5 minutes to catch new workers who start their day
+    const interval = setInterval(fetchWorkersWithGPS, 5 * 60 * 1000);
+    return () => clearInterval(interval);
+  }, []);
 
   // Initial fetch of locations
   useEffect(() => {
@@ -155,20 +183,79 @@ export default function MapOverviewScreen() {
 
   const renderWorkerItem = ({ item }: { item: Employee }) => {
     const isSelected = selectedWorkers.some(e => e.id === item.id);
+    const locationData = workerLocations.find(l => l.worker_id === item.id);
+    const hasGPSToday = workersWithGPSToday.has(item.id);
+    
+    // Calculate worker status based on GPS recency
+    const getWorkerStatus = () => {
+      if (!hasGPSToday) {
+        return { status: 'no-data', color: '#9CA3AF', label: t('manager.mapOverview.statusNoLocationData') };
+      }
+      
+      if (!locationData) {
+        // Has GPS today but not loaded yet (not selected)
+        return { status: 'unknown', color: '#6B7280', label: t('manager.mapOverview.statusHasLocationData') };
+      }
+      
+      const lastSeenMs = new Date(locationData.timestamp).getTime();
+      const nowMs = Date.now();
+      const minutesAgo = (nowMs - lastSeenMs) / (1000 * 60);
+      
+      if (minutesAgo < 15) return { status: 'active', color: '#10B981', label: t('manager.mapOverview.statusActiveNow') };
+      if (minutesAgo < 120) return { status: 'recent', color: '#F59E0B', label: t('manager.mapOverview.statusRecentActivity') };
+      return { status: 'earlier', color: '#F97316', label: t('manager.mapOverview.statusActiveEarlier') };
+    };
+    
+    const workerStatus = getWorkerStatus();
+    const isDisabled = workerStatus.status === 'no-data';
 
     return (
-      <TouchableOpacity onPress={() => handleWorkerPress(item)} style={[styles.workerItem, isSelected && styles.selectedWorkerItem]}>
+      <TouchableOpacity 
+        onPress={() => !isDisabled && handleWorkerPress(item)} 
+        disabled={isDisabled}
+        style={[
+          styles.workerItem, 
+          isSelected && styles.selectedWorkerItem,
+          isDisabled && styles.disabledWorkerItem
+        ]}
+        activeOpacity={isDisabled ? 1 : 0.7}
+      >
           <Ionicons
             name={isSelected ? "checkbox" : "square-outline"}
             size={20}
-            color={isSelected ? theme.colors.primary : theme.colors.bodyText}
+            color={isDisabled ? '#9CA3AF' : isSelected ? theme.colors.primary : theme.colors.bodyText}
             style={styles.workerIcon}
           />
-          <UserAvatar avatarUrl={item.avatar_url} size={40} style={styles.avatar} />
-          <View style={styles.itemInfo}>
-            <Text style={[styles.itemName, isSelected && styles.selectedWorkerText]} fontType="medium">{item.full_name}</Text>
+          <View style={styles.avatarContainer}>
+            <UserAvatar avatarUrl={item.avatar_url} size={40} style={[styles.avatar, isDisabled && styles.disabledAvatar]} />
+            {/* Status indicator dot */}
+            <View style={[styles.statusDot, { backgroundColor: workerStatus.color }]} />
           </View>
-          {isSelected && <Ionicons name="chevron-forward" size={16} color={theme.colors.primary} />}
+          <View style={styles.workerItemInfo}>
+            <Text 
+              style={[
+                styles.workerItemName, 
+                isSelected && styles.selectedWorkerText,
+                isDisabled && styles.disabledText
+              ]} 
+              fontType="medium"
+              numberOfLines={1}
+              ellipsizeMode="tail"
+            >
+              {item.full_name}
+            </Text>
+            <Text 
+              style={[styles.workerStatusText, isDisabled && styles.disabledText]} 
+              fontType="regular"
+              numberOfLines={1}
+            >
+              {workerStatus.label}
+            </Text>
+          </View>
+          {/* Always render arrow container to reserve space */}
+          <View style={styles.arrowContainer}>
+            {isSelected && <Ionicons name="chevron-forward" size={16} color={theme.colors.primary} />}
+          </View>
       </TouchableOpacity>
     );
   };
@@ -218,26 +305,48 @@ export default function MapOverviewScreen() {
     }));
   }, [selectedProjects]);
 
-  // Calculate initial region only once - use a static center (Berlin)
-  // Map will auto-fit to show all markers on first load, then stay put
+  // Calculate initial region from first selected worker or project
   const mapInitialRegion = useMemo(() => {
+    // Try to get first worker location
+    if (mapViewSelectedWorkers.length > 0 && mapViewSelectedWorkers[0].location) {
+      return {
+        latitude: mapViewSelectedWorkers[0].location.latitude,
+        longitude: mapViewSelectedWorkers[0].location.longitude,
+        latitudeDelta: 0.1,
+        longitudeDelta: 0.1,
+        zoom: 12,
+      };
+    }
+    
+    // Try to get first project location
+    if (mapViewSelectedProjects.length > 0 && mapViewSelectedProjects[0].location) {
+      return {
+        latitude: mapViewSelectedProjects[0].location.latitude,
+        longitude: mapViewSelectedProjects[0].location.longitude,
+        latitudeDelta: 0.1,
+        longitudeDelta: 0.1,
+        zoom: 12,
+      };
+    }
+    
+    // Default to world view if nothing selected (won't be used since map is hidden)
     return {
-      latitude: 52.5200,
-      longitude: 13.4050,
-      latitudeDelta: 0.2,
-      longitudeDelta: 0.2,
-      zoom: 10,
+      latitude: 0,
+      longitude: 0,
+      latitudeDelta: 180,
+      longitudeDelta: 180,
+      zoom: 2,
     };
-  }, []); // Empty dependency array - only calculate once on mount
+  }, [mapViewSelectedWorkers, mapViewSelectedProjects]);
 
 
   return (
     <View style={{ flex: 1 }}>
       <SubNavBar items={[
-        { label: 'Projects', href: '/(manager)/projects' },
-        { label: 'Common Locations', href: '/(manager)/common-locations' },
-        { label: 'Live Map', href: '/(manager)/map-overview' },
-        { label: 'Location Replay', href: '/(manager)/location-replay' },
+        { label: t('manager.navigation.projects'), href: '/(manager)/projects' },
+        { label: t('manager.navigation.commonLocations'), href: '/(manager)/common-locations' },
+        { label: t('manager.navigation.liveMap'), href: '/(manager)/map-overview' },
+        { label: t('manager.navigation.locationReplay'), href: '/(manager)/location-replay' },
       ]} />
       <AnimatedScreen>
       <View style={styles.pageHeader}>
@@ -398,9 +507,9 @@ const styles = StyleSheet.create({
   workerItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: theme.spacing(1.5),
+    padding: theme.spacing(1),
     borderRadius: theme.radius.md,
-    marginBottom: theme.spacing(1),
+    marginBottom: theme.spacing(0.5),
     backgroundColor: theme.colors.pageBackground,
   },
   selectedWorkerItem: {
@@ -409,13 +518,57 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   workerIcon: {
-    marginRight: theme.spacing(1.5),
+    marginRight: theme.spacing(1),
   },
   avatar: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    marginRight: theme.spacing(1.5),
+  },
+  avatarContainer: {
+    position: 'relative',
+    marginRight: theme.spacing(1),
+  },
+  statusDot: {
+    position: 'absolute',
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    bottom: 0,
+    right: 0,
+    borderWidth: 2,
+    borderColor: theme.colors.cardBackground,
+  },
+  workerItemInfo: { 
+    flex: 1,
+    paddingVertical: theme.spacing(0.5),
+    minWidth: 0, // Allow text to shrink
+  },
+  workerItemName: {
+    fontSize: theme.fontSizes.md,
+    color: theme.colors.headingText,
+  },
+  workerStatusText: {
+    fontSize: theme.fontSizes.xs,
+    color: theme.colors.bodyText,
+    marginTop: theme.spacing(0.25),
+  },
+  arrowContainer: {
+    width: 16,
+    height: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: theme.spacing(0.5),
+  },
+  disabledWorkerItem: {
+    opacity: 0.5,
+    backgroundColor: theme.colors.background,
+  },
+  disabledAvatar: {
+    opacity: 0.6,
+  },
+  disabledText: {
+    color: theme.colors.bodyText,
   },
   projectColorBar: {
     width: 4,

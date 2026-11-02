@@ -17,12 +17,14 @@ const fullTrailLayerStyle: LineLayerSpecification = {
   id: 'full-trail-layer',
   type: 'line',
   source: 'full-trail-source',
+  layout: {
+    'line-cap': 'round',
+    'line-join': 'round',
+  },
   paint: {
     'line-color': ['get', 'color'], // Use color from properties
     'line-width': 5, // Thicker line
     'line-opacity': 0.8, // More visible
-    'line-cap': 'round', // Rounded caps
-    'line-join': 'round', // Rounded joins
   },
 };
 
@@ -30,12 +32,14 @@ const assignmentSegmentsLayerStyle: LineLayerSpecification = {
   id: 'assignment-segments-layer',
   type: 'line',
   source: 'assignment-segments-source',
+  layout: {
+    'line-cap': 'round',
+    'line-join': 'round',
+  },
   paint: {
     'line-color': theme.colors.primary,
     'line-width': 6, // Thicker for emphasis
     'line-opacity': 0.9,
-    'line-cap': 'round',
-    'line-join': 'round',
   },
 };
 
@@ -74,10 +78,33 @@ const DailyWorkerMapWeb: React.FC<DailyWorkerMapProps & {
   style,
 }) => {
   const mapRef = useRef<MapRef | null>(null);
+  
+  // Compute initial center from first location in trail
+  const computedInitialRegion = useMemo(() => {
+    // Try to get first coordinate from fullTrail
+    if (fullTrailGeoJSON.features.length > 0) {
+      const firstFeature = fullTrailGeoJSON.features[0];
+      if (firstFeature.geometry.type === 'LineString' && firstFeature.geometry.coordinates.length > 0) {
+        const [lng, lat] = firstFeature.geometry.coordinates[0];
+        return { longitude: lng, latitude: lat, zoom: 13 };
+      }
+    }
+    // Fallback to assignment points
+    if (assignmentPointsGeoJSON.features.length > 0) {
+      const firstPoint = assignmentPointsGeoJSON.features[0];
+      if (firstPoint.geometry.type === 'Point') {
+        const [lng, lat] = firstPoint.geometry.coordinates;
+        return { longitude: lng, latitude: lat, zoom: 13 };
+      }
+    }
+    // Last resort: London (should never happen if there's location data)
+    return { longitude: -0.1278, latitude: 51.5074, zoom: 12 };
+  }, [fullTrailGeoJSON, assignmentPointsGeoJSON]);
+
   const [viewState, setViewState] = useState<ViewState>({
-    longitude: region?.longitude || initialRegion?.longitude || -0.1278,
-    latitude: region?.latitude || initialRegion?.latitude || 51.5074,
-    zoom: zoom || region?.zoom || initialRegion?.zoom || 12,
+    longitude: region?.longitude || initialRegion?.longitude || computedInitialRegion.longitude,
+    latitude: region?.latitude || initialRegion?.latitude || computedInitialRegion.latitude,
+    zoom: zoom || region?.zoom || initialRegion?.zoom || computedInitialRegion.zoom,
     bearing: 0,
     pitch: 0,
     padding: { top: 0, bottom: 0, left: 0, right: 0 }
@@ -190,16 +217,20 @@ const DailyWorkerMapWeb: React.FC<DailyWorkerMapProps & {
               type="symbol"
               layout={{
                 'symbol-placement': 'line',
-                'symbol-spacing': 100, // Arrow every 100 pixels
-                'icon-image': 'triangle-15', // Built-in triangle pointing right
-                'icon-size': 0.6,
-                'icon-rotate': 90, // Rotate to point forward along line
-                'icon-rotation-alignment': 'map',
-                'icon-allow-overlap': true,
-                'icon-ignore-placement': true,
+                'symbol-spacing': 80, // Arrow every 80 pixels
+                'text-field': '▶', // Unicode triangle arrow
+                'text-size': 8, // Smaller to fit inside 5px line
+                'text-rotation-alignment': 'map',
+                'text-pitch-alignment': 'viewport',
+                'text-keep-upright': false,
+                'text-allow-overlap': true,
+                'text-ignore-placement': true,
               }}
               paint={{
-                'icon-opacity': 0.7,
+                'text-color': '#E5E7EB', // Very light gray
+                'text-opacity': 0.9, // More opaque
+                'text-halo-color': '#1F2937', // Dark gray outline
+                'text-halo-width': 1, // Thicker outline for better contrast
               }}
             />
           </Source>

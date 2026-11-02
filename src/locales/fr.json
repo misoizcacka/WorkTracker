@@ -136,7 +136,30 @@
       "emailInvalid": "L'adresse e-mail est invalide.",
       "passwordRequired": "Le mot de passe est requis.",
       "passwordLength": "Le mot de passe doit comporter au moins 6 caractères.",
-      "companyNameRequired": "Le nom de l'entreprise est requis."
+      "companyNameRequired": "Le nom de l'entreprise est requis.",
+      "emailAlreadyRegistered": "Cet e-mail est déjà enregistré. Veuillez vous connecter à la place.",
+      "passwordWeak": "Le mot de passe est trop faible. Veuillez utiliser un mot de passe plus fort.",
+      "tooManyAttempts": "Trop de tentatives d'inscription. Veuillez attendre quelques minutes et réessayer."
+    }
+  },
+  "verifyEmail": {
+    "title": "Vérifiez votre e-mail",
+    "description": "Nous avons envoyé un lien de vérification à :",
+    "yourEmail": "votre adresse e-mail",
+    "step1": "Ouvrez votre boîte de réception",
+    "step2": "Cliquez sur le bouton \"Vérifier l'adresse e-mail\"",
+    "step3": "Revenez ici pour continuer",
+    "resendSuccess": "E-mail envoyé ! Vérifiez votre boîte de réception.",
+    "checkButton": "J'ai vérifié mon e-mail",
+    "checking": "Vérification en cours...",
+    "resendButton": "Renvoyer l'e-mail de vérification",
+    "resendCooldown": "Renvoyer dans {{seconds}}s",
+    "changeEmail": "Mauvais e-mail ? Retour",
+    "helpText": "Vous n'avez pas reçu l'e-mail ? Vérifiez votre dossier spam ou renvoyez-le.",
+    "errors": {
+      "rateLimitExceeded": "Veuillez attendre quelques minutes avant de demander un autre e-mail.",
+      "unknown": "Échec de l'envoi de l'e-mail.",
+      "notVerified": "E-mail pas encore vérifié. Veuillez vérifier votre boîte et cliquer sur le lien."
     }
   },
   "guest": {
@@ -191,6 +214,9 @@
   "payment": {
     "successTitle": "Paiement réussi !",
     "successDescription": "Votre paiement à été effectué avec succès. Cliquez ci-dessous pour accéder à la configuration de votre entreprise.",
+    "successDescriptionNeedsLogin": "Votre paiement a été effectué avec succès ! Veuillez vous connecter pour continuer la configuration de votre entreprise.",
+    "paymentSuccessful": "Paiement réussi ! Connectez-vous pour continuer.",
+    "loginToContinue": "Se connecter pour continuer",
     "capacityUpdatedTitle": "Capacité mise à jour !",
     "capacityUpdatedDescription": "Vos nouveaux postes de travailleurs sont désormais actifs et disponibles.",
     "failedTitle": "Paiement échoué",
@@ -517,7 +543,21 @@
       "searchWorkers": "Rechercher des travailleurs...",
       "searchProjects": "Rechercher des projets...",
       "selectWorkerHint": "Selectionnez un ou plusieurs travailleurs.",
-      "noWorkers": "Aucun travailleur actuellement pointe."
+      "noWorkers": "Aucun travailleur actuellement pointe.",
+      "statusActiveNow": "Actif maintenant",
+      "statusRecentActivity": "Activité récente",
+      "statusActiveEarlier": "Actif plus tôt",
+      "statusNoLocationData": "Aucune donnée de position",
+      "statusHasLocationData": "Données de position disponibles"
+    },
+    "navigation": {
+      "projects": "Projets",
+      "commonLocations": "Sites communs",
+      "liveMap": "Carte en direct",
+      "locationReplay": "Relecture de position",
+      "employees": "Employés",
+      "assignments": "Affectations",
+      "corrections": "Corrections"
     },
     "locations": {
       "title": "Sites communs",
