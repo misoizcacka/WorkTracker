@@ -87,6 +87,7 @@ export default function Signup() {
         // Check if email verification is required
         if (!data.user.email_confirmed_at) {
           // Email verification required - redirect to verify screen
+          // create-owner-and-company will run AFTER email is verified
           router.replace({
             pathname: '/auth/verify-email',
             params: { email: email }
@@ -94,8 +95,7 @@ export default function Signup() {
           return;
         }
 
-        // Email already verified, continue with setup
-        // Log GDPR consent
+        // Email already confirmed (e.g. confirmations disabled) - run setup immediately
         await Promise.all([
           logConsent({ userId: data.user.id, consentType: 'terms' }),
           logConsent({ userId: data.user.id, consentType: 'privacy' }),
@@ -115,7 +115,7 @@ export default function Signup() {
           setErrors({ general: t('signup.failedToFinalizeSetup') });
           return;
         }
-        
+
         const { company } = edgeFunctionData;
         router.replace({ pathname: '/subscription/setup', params: { companyId: company.id } });
         refreshUser().catch((refreshError) => {

@@ -18,6 +18,8 @@ import AnimatedScreen from '../../components/AnimatedScreen';
 import { GuestHeader } from '../../components/GuestHeader';
 import { supabase } from '../../utils/supabase';
 import { useTranslation } from 'react-i18next';
+import { useSession } from '../../context/AuthContext';
+import { logConsent } from '../../services/consent';
 
 const COOLDOWN_SECONDS = 60;
 
@@ -35,13 +37,48 @@ export default function VerifyEmail() {
   const [isChecking, setIsChecking] = useState(false);
   const [cooldown, setCooldown] = useState(0);
   const cooldownRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const { refreshUser } = useSession()!;
+
+  const continueAfterVerification = async () => {
+    // Now that email is verified, create the owner + company record
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    // Log GDPR consent
+    await Promise.all([
+      logConsent({ userId: user.id, consentType: 'terms' }),
+      logConsent({ userId: user.id, consentType: 'privacy' }),
+      logConsent({ userId: user.id, consentType: 'dpa' }),
+    ]);
+
+    const { data: edgeFunctionData, error: edgeFunctionError } = await supabase.functions.invoke('create-owner-and-company', {
+      body: {
+        userId: user.id,
+        fullName: user.user_metadata?.full_name ?? '',
+        email: user.email ?? '',
+        companyName: 'New Company',
+      },
+    });
+
+    if (edgeFunctionError) {
+      console.error('create-owner-and-company failed:', edgeFunctionError);
+      // Still try to continue — maybe it already exists
+    }
+
+    await refreshUser();
+    const company = edgeFunctionData?.company;
+    router.replace(company?.id
+      ? { pathname: '/subscription/setup', params: { companyId: company.id } }
+      : '/subscription/setup'
+    );
+  };
 
   // Auto-check every 3 seconds if email was verified
   useEffect(() => {
     const checkVerification = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (user?.email_confirmed_at) {
-        router.replace('/subscription/setup');
+        await continueAfterVerification();
       }
     };
     const interval = setInterval(checkVerification, 3000);
@@ -104,7 +141,7 @@ export default function VerifyEmail() {
     setResendError('');
     const { data: { user } } = await supabase.auth.getUser();
     if (user?.email_confirmed_at) {
-      router.replace('/subscription/setup');
+      await continueAfterVerification();
     } else {
       setResendError(t('verifyEmail.errors.notVerified'));
       setTimeout(() => setResendError(''), 4000);
