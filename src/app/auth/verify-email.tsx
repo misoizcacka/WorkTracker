@@ -203,14 +203,11 @@ export default function VerifyEmail() {
               ))}
             </View>
 
-            {/* Feedback — styled like employees action buttons */}
+            {/* Feedback */}
             {resendSuccess && (
-              <View style={[styles.feedbackBadge, styles.feedbackBadgeSuccess]}>
-                <Ionicons name="checkmark-circle-outline" size={15} color={theme.colors.success} />
-                <Text style={styles.feedbackTextSuccess} fontType="medium">
-                  {t('verifyEmail.resendSuccess', 'Email sent! Check your inbox.')}
-                </Text>
-              </View>
+              <Text style={styles.feedbackTextSuccess} fontType="medium">
+                {t('verifyEmail.resendSuccess', 'Email sent! Check your inbox.')}
+              </Text>
             )}
             {!!resendError && (
               <View style={[styles.feedbackBadge, styles.feedbackBadgeError]}>
@@ -336,22 +333,26 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: theme.spacing(3),
+    alignSelf: 'center',
   },
 
   title: {
     fontSize: 26,
     color: theme.colors.headingText,
     marginBottom: theme.spacing(1),
+    textAlign: 'center',
   },
   subtitle: {
     fontSize: 15,
     color: theme.colors.bodyText,
     marginBottom: 2,
+    textAlign: 'center',
   },
   emailAddress: {
     fontSize: 15,
     color: theme.colors.headingText,
     marginBottom: theme.spacing(3),
+    textAlign: 'center',
   },
 
   divider: {
@@ -389,7 +390,7 @@ const styles = StyleSheet.create({
     color: theme.colors.bodyText,
   },
 
-  // Feedback badge — same style as employees actionButton
+  // Feedback
   feedbackBadge: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -399,11 +400,6 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     borderWidth: 1,
     marginBottom: theme.spacing(2),
-    alignSelf: 'flex-start',
-  },
-  feedbackBadgeSuccess: {
-    borderColor: theme.colors.success + '40',
-    backgroundColor: theme.statusColors.successBackground,
   },
   feedbackBadgeError: {
     borderColor: theme.colors.danger + '40',
@@ -412,10 +408,13 @@ const styles = StyleSheet.create({
   feedbackTextSuccess: {
     fontSize: 13,
     color: theme.colors.success,
+    textAlign: 'center',
+    marginBottom: theme.spacing(2),
   },
   feedbackTextError: {
     fontSize: 13,
     color: theme.colors.errorText,
+    flex: 1,
   },
 
   primaryButton: {
