@@ -222,7 +222,10 @@ export default function VerifyEmail() {
 
             {/* Go back */}
             <Pressable
-              onPress={() => router.back()}
+              onPress={async () => {
+                await supabase.auth.signOut();
+                router.replace('/auth/signup');
+              }}
               style={({ pressed }) => [styles.ghostButton, pressed && { opacity: 0.6 }]}
             >
               <Text style={styles.ghostButtonText} fontType="regular">
