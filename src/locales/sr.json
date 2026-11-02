@@ -41,6 +41,26 @@
       "tooManyAttempts": "Previše pokušaja registracije. Molimo sačekajte nekoliko minuta i pokušajte ponovo."
     }
   },
+  "verifyEmail": {
+    "title": "Provjerite vašu e-poštu",
+    "description": "Poslali smo verifikacijski link na:",
+    "yourEmail": "vašu e-mail adresu",
+    "step1": "Otvorite vaš inbox",
+    "step2": "Kliknite na \"Verifikuj e-mail adresu\"",
+    "step3": "Vratite se ovdje — automatski ćemo to detektovati",
+    "resendSuccess": "E-mail je poslat! Provjerite vaš inbox.",
+    "checkButton": "Verifikovao sam svoju e-poštu",
+    "checking": "Provjera...",
+    "resendButton": "Ponovo pošalji verifikacijski e-mail",
+    "resendCooldown": "Ponovo pošalji za {{seconds}}s",
+    "changeEmail": "Pogrešan e-mail? Idi nazad",
+    "helpText": "Ne možete ga pronaći? Provjerite spam folder.",
+    "errors": {
+      "rateLimitExceeded": "Molimo sačekajte nekoliko minuta prije nego što zatražite novi e-mail.",
+      "unknown": "Slanje e-maila nije uspjelo.",
+      "notVerified": "E-mail još nije verifikovan. Provjerite vaš inbox i kliknite na link."
+    }
+  },
   "pricing": {
     "title": "Odaberite svoj plan",
     "description": "Odaberite broj radnika da biste izračunali svoju mesečnu pretplatu.",

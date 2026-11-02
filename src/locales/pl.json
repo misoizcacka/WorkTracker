@@ -153,6 +153,7 @@
     "checkButton": "Zweryfikowałem swój e-mail",
     "checking": "Sprawdzanie...",
     "resendButton": "Wyślij ponownie e-mail weryfikacyjny",
+    "resendCooldown": "Wyślij ponownie za {{seconds}}s",
     "changeEmail": "Zły e-mail? Wróć",
     "helpText": "Nie otrzymałeś e-maila? Sprawdź folder spam lub wyślij ponownie.",
     "errors": {

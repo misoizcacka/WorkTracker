@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   StyleSheet,
@@ -19,20 +19,22 @@ import { GuestHeader } from '../../components/GuestHeader';
 import { supabase } from '../../utils/supabase';
 import { useTranslation } from 'react-i18next';
 
-const BREAKPOINT = 900;
+const COOLDOWN_SECONDS = 60;
 
 export default function VerifyEmail() {
   const router = useRouter();
   const { t } = useTranslation();
   const { email } = useLocalSearchParams<{ email?: string }>();
   const { width } = useWindowDimensions();
-  const isLargeScreen = width > BREAKPOINT;
+  const isLargeScreen = width > 900;
   const isMobile = width < 640;
 
   const [isResending, setIsResending] = useState(false);
   const [resendSuccess, setResendSuccess] = useState(false);
   const [resendError, setResendError] = useState('');
   const [isChecking, setIsChecking] = useState(false);
+  const [cooldown, setCooldown] = useState(0);
+  const cooldownRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Auto-check every 3 seconds if email was verified
   useEffect(() => {
@@ -46,13 +48,39 @@ export default function VerifyEmail() {
     return () => clearInterval(interval);
   }, []);
 
+  // Cooldown timer
+  const startCooldown = () => {
+    setCooldown(COOLDOWN_SECONDS);
+    cooldownRef.current = setInterval(() => {
+      setCooldown(prev => {
+        if (prev <= 1) {
+          if (cooldownRef.current) clearInterval(cooldownRef.current);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+  };
+
+  useEffect(() => {
+    return () => {
+      if (cooldownRef.current) clearInterval(cooldownRef.current);
+    };
+  }, []);
+
   const handleResendEmail = async () => {
-    if (!email) return;
+    if (!email || cooldown > 0 || isResending) return;
+
     setIsResending(true);
     setResendError('');
     setResendSuccess(false);
+
     try {
-      const { error } = await supabase.auth.resend({ type: 'signup', email });
+      const { error } = await supabase.auth.resend({
+        type: 'signup',
+        email: email as string,
+      });
+
       if (error) {
         if (error.message.toLowerCase().includes('rate limit')) {
           setResendError(t('verifyEmail.errors.rateLimitExceeded'));
@@ -61,7 +89,8 @@ export default function VerifyEmail() {
         }
       } else {
         setResendSuccess(true);
-        setTimeout(() => setResendSuccess(false), 5000);
+        startCooldown();
+        setTimeout(() => setResendSuccess(false), 6000);
       }
     } catch (err: any) {
       setResendError(err.message || t('verifyEmail.errors.unknown'));
@@ -72,6 +101,7 @@ export default function VerifyEmail() {
 
   const handleCheckManually = async () => {
     setIsChecking(true);
+    setResendError('');
     const { data: { user } } = await supabase.auth.getUser();
     if (user?.email_confirmed_at) {
       router.replace('/subscription/setup');
@@ -81,6 +111,8 @@ export default function VerifyEmail() {
     }
     setIsChecking(false);
   };
+
+  const resendDisabled = cooldown > 0 || isResending;
 
   return (
     <AnimatedScreen>
@@ -123,7 +155,7 @@ export default function VerifyEmail() {
               {[
                 t('verifyEmail.step1', 'Open your email inbox'),
                 t('verifyEmail.step2', 'Click "Verify Email Address"'),
-                t('verifyEmail.step3', 'Come back here — we\'ll continue automatically'),
+                t('verifyEmail.step3', 'Come back here — we\'ll detect it automatically'),
               ].map((step, i) => (
                 <View key={i} style={styles.stepRow}>
                   <View style={styles.stepNumber}>
@@ -134,19 +166,19 @@ export default function VerifyEmail() {
               ))}
             </View>
 
-            {/* Feedback */}
+            {/* Feedback — styled like employees action buttons */}
             {resendSuccess && (
-              <View style={styles.feedbackRow}>
-                <Ionicons name="checkmark-circle-outline" size={16} color={theme.colors.success} />
-                <Text style={styles.feedbackSuccess} fontType="regular">
+              <View style={[styles.feedbackBadge, styles.feedbackBadgeSuccess]}>
+                <Ionicons name="checkmark-circle-outline" size={15} color={theme.colors.success} />
+                <Text style={styles.feedbackTextSuccess} fontType="medium">
                   {t('verifyEmail.resendSuccess', 'Email sent! Check your inbox.')}
                 </Text>
               </View>
             )}
             {!!resendError && (
-              <View style={styles.feedbackRow}>
-                <Ionicons name="alert-circle-outline" size={16} color={theme.colors.errorText} />
-                <Text style={styles.feedbackError} fontType="regular">
+              <View style={[styles.feedbackBadge, styles.feedbackBadgeError]}>
+                <Ionicons name="alert-circle-outline" size={15} color={theme.colors.errorText} />
+                <Text style={styles.feedbackTextError} fontType="regular">
                   {resendError}
                 </Text>
               </View>
@@ -162,17 +194,27 @@ export default function VerifyEmail() {
               style={styles.primaryButton}
             />
 
-            {/* Resend */}
+            {/* Resend with cooldown */}
             <Pressable
               onPress={handleResendEmail}
-              disabled={isResending}
-              style={({ pressed }) => [styles.secondaryButton, pressed && { opacity: 0.6 }]}
+              disabled={resendDisabled}
+              style={({ pressed }) => [
+                styles.secondaryButton,
+                resendDisabled && styles.secondaryButtonDisabled,
+                pressed && !resendDisabled && { opacity: 0.6 },
+              ]}
             >
               {isResending
                 ? <ActivityIndicator size="small" color={theme.colors.bodyText} />
                 : (
-                  <Text style={styles.secondaryButtonText} fontType="medium">
-                    {t('verifyEmail.resendButton', 'Resend email')}
+                  <Text
+                    style={[styles.secondaryButtonText, resendDisabled && styles.secondaryButtonTextDisabled]}
+                    fontType="medium"
+                  >
+                    {cooldown > 0
+                      ? t('verifyEmail.resendCooldown', `Resend in ${cooldown}s`, { seconds: cooldown })
+                      : t('verifyEmail.resendButton', 'Resend email')
+                    }
                   </Text>
                 )
               }
@@ -307,21 +349,33 @@ const styles = StyleSheet.create({
     color: theme.colors.bodyText,
   },
 
-  feedbackRow: {
+  // Feedback badge — same style as employees actionButton
+  feedbackBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: theme.spacing(1),
+    paddingHorizontal: theme.spacing(1.5),
+    paddingVertical: theme.spacing(1),
+    borderRadius: 6,
+    borderWidth: 1,
     marginBottom: theme.spacing(2),
+    alignSelf: 'flex-start',
   },
-  feedbackSuccess: {
-    fontSize: 14,
+  feedbackBadgeSuccess: {
+    borderColor: theme.colors.success + '40',
+    backgroundColor: theme.statusColors.successBackground,
+  },
+  feedbackBadgeError: {
+    borderColor: theme.colors.danger + '40',
+    backgroundColor: theme.colors.errorBackground,
+  },
+  feedbackTextSuccess: {
+    fontSize: 13,
     color: theme.colors.success,
-    flex: 1,
   },
-  feedbackError: {
-    fontSize: 14,
+  feedbackTextError: {
+    fontSize: 13,
     color: theme.colors.errorText,
-    flex: 1,
   },
 
   primaryButton: {
@@ -332,9 +386,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: theme.spacing(0.5),
   },
+  secondaryButtonDisabled: {
+    opacity: 0.45,
+  },
   secondaryButtonText: {
     fontSize: 15,
     color: theme.colors.bodyText,
+  },
+  secondaryButtonTextDisabled: {
+    color: theme.colors.disabledText,
   },
   ghostButton: {
     paddingVertical: theme.spacing(1.5),

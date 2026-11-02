@@ -153,6 +153,7 @@
     "checkButton": "Ik heb mijn e-mail geverifieerd",
     "checking": "Controleren...",
     "resendButton": "Verificatie-e-mail opnieuw versturen",
+    "resendCooldown": "Opnieuw versturen over {{seconds}}s",
     "changeEmail": "Verkeerd e-mailadres? Ga terug",
     "helpText": "E-mail niet ontvangen? Controleer uw spam-map of verstuur opnieuw.",
     "errors": {

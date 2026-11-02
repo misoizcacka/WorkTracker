@@ -153,6 +153,7 @@
     "checkButton": "Ya verifiqué mi correo",
     "checking": "Verificando...",
     "resendButton": "Reenviar correo de verificación",
+    "resendCooldown": "Reenviar en {{seconds}}s",
     "changeEmail": "¿Correo incorrecto? Volver atrás",
     "helpText": "¿No recibiste el correo? Revisa tu carpeta de spam o reenvíalo.",
     "errors": {

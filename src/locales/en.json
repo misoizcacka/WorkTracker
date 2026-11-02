@@ -153,6 +153,7 @@
     "checkButton": "I verified my email",
     "checking": "Checking...",
     "resendButton": "Resend verification email",
+    "resendCooldown": "Resend in {{seconds}}s",
     "changeEmail": "Wrong email? Go back",
     "helpText": "Didn't receive the email? Check your spam folder or try resending.",
     "errors": {

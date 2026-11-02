@@ -153,6 +153,7 @@
     "checkButton": "Jag har verifierat min e-post",
     "checking": "Kontrollerar...",
     "resendButton": "Skicka verifieringsmail igen",
+    "resendCooldown": "Skicka igen om {{seconds}}s",
     "changeEmail": "Fel e-post? Gå tillbaka",
     "helpText": "Fick du inte e-posten? Kolla din skräppost eller skicka igen.",
     "errors": {

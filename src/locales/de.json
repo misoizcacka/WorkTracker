@@ -153,6 +153,7 @@
     "checkButton": "Ich habe meine E-Mail bestätigt",
     "checking": "Überprüfung läuft...",
     "resendButton": "Bestätigungs-E-Mail erneut senden",
+    "resendCooldown": "Erneut senden in {{seconds}}s",
     "changeEmail": "Falsche E-Mail? Zurück gehen",
     "helpText": "E-Mail nicht erhalten? Überprüfen Sie Ihren Spam-Ordner oder senden Sie sie erneut.",
     "errors": {
