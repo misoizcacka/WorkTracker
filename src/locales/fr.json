@@ -214,6 +214,9 @@
   "payment": {
     "successTitle": "Paiement réussi !",
     "successDescription": "Votre paiement à été effectué avec succès. Cliquez ci-dessous pour accéder à la configuration de votre entreprise.",
+    "successDescriptionNeedsLogin": "Votre paiement a été effectué avec succès ! Veuillez vous connecter pour continuer la configuration de votre entreprise.",
+    "paymentSuccessful": "Paiement réussi ! Connectez-vous pour continuer.",
+    "loginToContinue": "Se connecter pour continuer",
     "capacityUpdatedTitle": "Capacité mise à jour !",
     "capacityUpdatedDescription": "Vos nouveaux postes de travailleurs sont désormais actifs et disponibles.",
     "failedTitle": "Paiement échoué",

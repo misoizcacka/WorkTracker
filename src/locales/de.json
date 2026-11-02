@@ -214,6 +214,9 @@
   "payment": {
     "successTitle": "Zahlung erfolgreich!",
     "successDescription": "Ihre Zahlung war erfolgreich. Klicken Sie unten, um mit der Unternehmenseinrichtung fortzufahren.",
+    "successDescriptionNeedsLogin": "Ihre Zahlung war erfolgreich! Bitte melden Sie sich an, um mit der Einrichtung Ihres Unternehmens fortzufahren.",
+    "paymentSuccessful": "Zahlung erfolgreich! Melden Sie sich an, um fortzufahren.",
+    "loginToContinue": "Anmelden um fortzufahren",
     "capacityUpdatedTitle": "Kapazität aktualisiert!",
     "capacityUpdatedDescription": "Ihre neuen Mitarbeiterplätze sind jetzt aktiv und einsatzbereit.",
     "failedTitle": "Zahlung fehlgeschlagen",

@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef } from 'react';
-import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   StyleSheet,
@@ -66,7 +65,10 @@ export default function VerifyEmail() {
       // Still try to continue — maybe it already exists
     }
 
+    // Wait for user refresh to complete before navigating
+    // This ensures userCompanyId is populated in AuthContext
     await refreshUser();
+    
     const company = edgeFunctionData?.company;
     router.replace(company?.id
       ? { pathname: '/subscription/setup', params: { companyId: company.id } }

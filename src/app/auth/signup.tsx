@@ -13,6 +13,12 @@ import { GuestHeader } from '~/components/GuestHeader';
 import { supabase } from '../../utils/supabase';
 import { useTranslation } from 'react-i18next';
 import { logConsent } from '../../services/consent';
+import {
+  isRateLimitError,
+  isUserAlreadyExistsError,
+  isWeakPasswordError,
+  isInvalidEmailError,
+} from '../../utils/authErrors';
 
 const BREAKPOINT = 900;
 
@@ -30,6 +36,21 @@ export default function Signup() {
   const [passwordVisible, setPasswordVisible] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState<{ fullName?: string; email?: string; password?: string; general?: string }>({});
+
+  // Redirect if already logged in
+  useEffect(() => {
+    if (user) {
+      // User is already logged in, redirect them to appropriate page
+      if (userRole === 'owner') {
+        router.replace('/(manager)/dashboard');
+      } else if (userRole === 'worker') {
+        router.replace('/(worker)/home');
+      } else {
+        // Unknown role, redirect to home
+        router.replace('/');
+      }
+    }
+  }, [user, userRole, router]);
 
   const handleSignup = async () => {
     const newErrors: { fullName?: string; email?: string; password?: string; } = {};
@@ -66,16 +87,22 @@ export default function Signup() {
       });
 
       if (error) {
-        // Handle specific error cases with user-friendly messages
+        // Handle specific error cases using proper error codes (not fragile string matching)
         let friendlyError = error.message;
         
-        if (error.message.toLowerCase().includes('rate limit')) {
+        if (isRateLimitError(error)) {
           friendlyError = t('signup.errors.tooManyAttempts');
-        } else if (error.message.toLowerCase().includes('already registered')) {
-          friendlyError = t('signup.errors.emailAlreadyRegistered');
-        } else if (error.message.toLowerCase().includes('invalid email')) {
+        } else if (isUserAlreadyExistsError(error)) {
+          // User exists but might be unconfirmed - redirect to verify-email screen
+          // They can use the "Resend email" button there
+          router.replace({
+            pathname: '/auth/verify-email',
+            params: { email: email }
+          });
+          return;
+        } else if (isInvalidEmailError(error)) {
           friendlyError = t('signup.errors.emailInvalid');
-        } else if (error.message.toLowerCase().includes('weak password')) {
+        } else if (isWeakPasswordError(error)) {
           friendlyError = t('signup.errors.passwordWeak');
         }
         

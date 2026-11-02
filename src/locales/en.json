@@ -213,6 +213,9 @@
   "payment": {
     "successTitle": "Payment Successful!",
     "successDescription": "Your payment was successful. Click below to continue to your company setup.",
+    "successDescriptionNeedsLogin": "Your payment was successful! Please log in to continue setting up your company.",
+    "paymentSuccessful": "Payment successful! Log in to continue.",
+    "loginToContinue": "Log In to Continue",
     "capacityUpdatedTitle": "Capacity Updated!",
     "capacityUpdatedDescription": "Your new worker seats are now active and ready to use.",
     "failedTitle": "Payment Failed",

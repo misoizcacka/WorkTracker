@@ -31,31 +31,40 @@ const AssignmentCard = ({ item, onPress }: { item: AssignmentItem; onPress: (ref
     <TouchableOpacity
       onPress={() => item.type === 'project' && onPress(item.ref_id)}
       disabled={item.type === 'common_location'}
-      activeOpacity={item.type === 'project' ? 0.7 : 1}
+      activeOpacity={0.8}
+      style={{ transform: [{ scale: 1 }] }}
     >
-      <View style={[styles.assignmentRow, isActive && styles.assignmentRowActive]}>
-        <View style={[styles.visitDot, visited ? styles.visitDotVisited : styles.visitDotUnvisited]}>
-          {visited && <Ionicons name="checkmark" size={12} color="white" />}
-        </View>
+      <View style={[
+        styles.assignmentCard,
+        isActive && styles.assignmentCardActive
+      ]}>
+        <View style={styles.cardContent}>
+          <View style={[
+            styles.visitDot, 
+            visited ? (isActive ? styles.visitDotActive : styles.visitDotVisited) : styles.visitDotUnvisited
+          ]}>
+            {visited && <Ionicons name="checkmark" size={12} color="white" />}
+          </View>
 
-        <View style={styles.assignmentInfo}>
-          <Text style={styles.projectName} fontType="bold" numberOfLines={1}>{item.name}</Text>
-          {item.address ? (
-            <Text style={styles.projectAddress} numberOfLines={1}>{item.address}</Text>
-          ) : item.startTime ? (
-            <Text style={styles.projectAddress}>{item.startTime}</Text>
-          ) : null}
-        </View>
+          <View style={styles.assignmentInfo}>
+            <Text style={styles.projectName} fontType="bold" numberOfLines={1}>{item.name}</Text>
+            {item.address ? (
+              <Text style={styles.projectAddress} numberOfLines={1}>{item.address}</Text>
+            ) : item.startTime ? (
+              <Text style={styles.projectAddress}>{item.startTime}</Text>
+            ) : null}
+          </View>
 
-        <View style={styles.assignmentRight}>
-          {isActive && (
-            <View style={styles.activePill}>
-              <Text style={styles.activePillText} fontType="bold">{t('worker.projects.active')}</Text>
-            </View>
-          )}
-          {item.type === 'project' && (
-            <Ionicons name="chevron-forward" size={16} color={theme.colors.disabledText} />
-          )}
+          <View style={styles.assignmentRight}>
+            {isActive && (
+              <View style={styles.activePill}>
+                <Text style={styles.activePillText}>{t('worker.projects.active')}</Text>
+              </View>
+            )}
+            {item.type === 'project' && (
+              <Ionicons name="chevron-forward" size={20} color={theme.colors.disabledText} />
+            )}
+          </View>
         </View>
       </View>
     </TouchableOpacity>
@@ -137,7 +146,7 @@ export default function ProjectsScreen() {
           </View>
         ) : (
           <View style={styles.listContainer}>
-            {todaysAssignments.map((item) => (
+            {todaysAssignments.map((item, index) => (
               <AssignmentCard 
                 key={item.id} 
                 item={item} 
@@ -204,22 +213,36 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   listContainer: {
+    gap: theme.spacing(2),
+  },
+  assignmentCard: {
     borderRadius: theme.radius.lg,
-    borderWidth: 1,
+    borderWidth: 2,
     borderColor: theme.colors.borderColor,
     backgroundColor: theme.colors.cardBackground,
     overflow: 'hidden',
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.05,
+        shadowRadius: 2,
+      },
+      android: {
+        elevation: 1,
+      },
+    }),
   },
-  assignmentRow: {
+  assignmentCardActive: {
+    borderColor: theme.colors.secondary, // Red outline for active
+    borderWidth: 2,
+    backgroundColor: '#FFF5F5', // Very light red tint
+  },
+  cardContent: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: theme.spacing(2),
-    paddingVertical: theme.spacing(1.5),
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.borderColor,
-  },
-  assignmentRowActive: {
-    backgroundColor: theme.colors.primaryMuted,
+    paddingVertical: theme.spacing(2),
   },
   visitDot: {
     width: 22,
@@ -230,13 +253,19 @@ const styles = StyleSheet.create({
     marginRight: theme.spacing(2),
     flexShrink: 0,
   },
+  visitDotActive: {
+    backgroundColor: theme.colors.secondary, // Red for active
+    borderRadius: 11,
+  },
   visitDotVisited: {
-    backgroundColor: theme.colors.primary,
+    backgroundColor: theme.colors.primary, // Black for completed
+    borderRadius: 11,
   },
   visitDotUnvisited: {
     backgroundColor: 'transparent',
-    borderWidth: 2,
+    borderWidth: 2.5, // Thicker border for better visibility
     borderColor: theme.colors.borderColor,
+    borderRadius: 11,
   },
   assignmentInfo: {
     flex: 1,
@@ -256,13 +285,15 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   activePill: {
-    backgroundColor: theme.colors.primary,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
+    backgroundColor: theme.colors.secondary, // Solid red background
+    paddingHorizontal: 10,
+    paddingVertical: 4,
     borderRadius: theme.radius.pill,
   },
   activePillText: {
     color: 'white',
     fontSize: 11,
+    letterSpacing: 0.3,
+    fontWeight: '500', // Medium weight, not bold
   },
 });

@@ -14,6 +14,7 @@ import { useSession } from '../../context/AuthContext';
 import { useTranslation } from 'react-i18next';
 import { InvitesContext } from '../../context/InvitesContext';
 import { normalizeInviteCode } from '../../utils/invites';
+import { isEmailNotConfirmedError } from '../../utils/authErrors';
 
 const { width } = Dimensions.get('window');
 
@@ -31,6 +32,18 @@ export default function Login() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [inviteCode, setInviteCode] = useState('');
   const [errors, setErrors] = useState<{ email?: string; password?: string; general?: string }>({});
+  const [showPaymentSuccessMessage, setShowPaymentSuccessMessage] = useState(false);
+
+  // Check if user just completed payment in a different tab
+  useEffect(() => {
+    if (Platform.OS === 'web') {
+      const paymentCompleted = localStorage.getItem('paymentJustCompleted');
+      if (paymentCompleted === 'true') {
+        setShowPaymentSuccessMessage(true);
+        localStorage.removeItem('paymentJustCompleted');
+      }
+    }
+  }, []);
 
   useEffect(() => {
     if (user) {
@@ -57,6 +70,16 @@ export default function Login() {
     try {
       const { data, error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) {
+        // Check for unconfirmed email using proper error code
+        if (isEmailNotConfirmedError(error)) {
+          // Redirect to verify-email screen so they can resend
+          router.replace({
+            pathname: '/auth/verify-email',
+            params: { email: email }
+          });
+          return;
+        }
+        
         setErrors({ general: t('login.errors.invalidCredentials') });
         console.error('Login error:', error.message);
       } else {
@@ -170,6 +193,14 @@ export default function Login() {
           <Card style={isMobile ? [styles.loginCard, styles.mobileCard] : styles.loginCard}>
             <Text style={styles.title} fontType="bold">{t('login.loginHeading')}</Text>
             <Text style={styles.description} fontType="regular">{t('login.loginDescription')}</Text>
+
+            {showPaymentSuccessMessage && (
+              <View style={styles.successContainer}>
+                <Text style={styles.successText} fontType="medium">
+                  {t('payment.paymentSuccessful', 'Payment successful! Log in to continue.')}
+                </Text>
+              </View>
+            )}
 
             {errors.general && (
               <View style={styles.errorContainer}>
@@ -372,6 +403,19 @@ const styles = StyleSheet.create({
   },
   errorText: {
     color: theme.colors.errorText,
+    textAlign: 'center',
+    fontSize: 14,
+  },
+  successContainer: {
+    backgroundColor: '#D1FAE5',
+    borderRadius: theme.radius.md,
+    padding: theme.spacing(2),
+    marginBottom: theme.spacing(3),
+    borderWidth: 1,
+    borderColor: '#059669',
+  },
+  successText: {
+    color: '#059669',
     textAlign: 'center',
     fontSize: 14,
   },

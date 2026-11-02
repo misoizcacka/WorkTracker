@@ -63,7 +63,7 @@ const CustomMonthPicker: React.FC<CustomMonthPickerProps> = ({
             <Card style={styles.modalView}>
               <View style={styles.yearSelector}>
                 <TouchableOpacity onPress={() => setSelectedYear(selectedYear - 1)} style={styles.arrow}>
-                  <Ionicons name="chevron-back" size={28} color={theme.colors.primary} />
+                  <Ionicons name="chevron-back" size={28} color={theme.colors.headingText} />
                 </TouchableOpacity>
                 <Text style={styles.yearText}>{selectedYear}</Text>
                 <TouchableOpacity
@@ -74,7 +74,7 @@ const CustomMonthPicker: React.FC<CustomMonthPickerProps> = ({
                   <Ionicons
                     name="chevron-forward"
                     size={28}
-                    color={selectedYear >= moment().year() ? theme.colors.disabledText : theme.colors.primary}
+                    color={selectedYear >= moment().year() ? theme.colors.disabledText : theme.colors.headingText}
                   />
                 </TouchableOpacity>
               </View>
@@ -171,11 +171,11 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.pageBackground,
   },
   selectedMonthButton: {
-    backgroundColor: theme.colors.primary,
+    backgroundColor: theme.colors.secondary, // Red for selected
   },
   currentMonthIndicator: {
-    borderWidth: 1,
-    borderColor: theme.colors.primary,
+    borderWidth: 2,
+    borderColor: theme.colors.secondary, // Red border for current month
   },
   disabledMonthButton: {
     backgroundColor: theme.colors.pageBackground,

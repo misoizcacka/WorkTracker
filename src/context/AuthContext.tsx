@@ -113,25 +113,27 @@ export function SessionProvider(props: React.PropsWithChildren<{}>) {
     const isOnline = netState.isConnected && netState.isInternetReachable !== false;
 
     if (!isOnline) {
-      // Try to load previously cached company details from SecureStore
-      try {
-        const cached = await SecureStore.getItemAsync(COMPANY_DETAILS_CACHE_KEY);
-        if (cached) {
-          const parsed = JSON.parse(cached);
-          if (parsed.company_id === currentCompanyId) {
-            setUserCompanyName(parsed.name ?? null);
-            setUserCompanyCountry(parsed.country ?? null);
-            setUserSubscriptionPeriodEnd(parsed.subscription_period_end ?? null);
-            setUserScheduledWorkerSeats(parsed.scheduled_worker_seats ?? null);
-            setUserScheduledChangeEffectiveAt(parsed.scheduled_change_effective_at ?? null);
-            const isExpired = parsed.subscription_period_end && new Date(parsed.subscription_period_end) < new Date();
-            setIsSubscriptionExpired(!!isExpired);
-            const isPlaceholderName = !parsed.name || parsed.name === 'New Company' || parsed.name?.startsWith('New Company - ');
-            setIsCompanyDetailsComplete(!isPlaceholderName && !!parsed.country);
+      // Try to load previously cached company details (native only)
+      if (Platform.OS !== 'web') {
+        try {
+          const cached = await SecureStore.getItemAsync(COMPANY_DETAILS_CACHE_KEY);
+          if (cached) {
+            const parsed = JSON.parse(cached);
+            if (parsed.company_id === currentCompanyId) {
+              setUserCompanyName(parsed.name ?? null);
+              setUserCompanyCountry(parsed.country ?? null);
+              setUserSubscriptionPeriodEnd(parsed.subscription_period_end ?? null);
+              setUserScheduledWorkerSeats(parsed.scheduled_worker_seats ?? null);
+              setUserScheduledChangeEffectiveAt(parsed.scheduled_change_effective_at ?? null);
+              const isExpired = parsed.subscription_period_end && new Date(parsed.subscription_period_end) < new Date();
+              setIsSubscriptionExpired(!!isExpired);
+              const isPlaceholderName = !parsed.name || parsed.name === 'New Company' || parsed.name?.startsWith('New Company - ');
+              setIsCompanyDetailsComplete(!isPlaceholderName && !!parsed.country);
+            }
           }
+        } catch (cacheErr) {
+          console.warn('AuthContext: failed to read cached company details:', cacheErr);
         }
-      } catch (cacheErr) {
-        console.warn('AuthContext: failed to read cached company details:', cacheErr);
       }
       setIsCompanyIdLoading(false);
       return;
@@ -149,14 +151,16 @@ export function SessionProvider(props: React.PropsWithChildren<{}>) {
     let companyDetails: CompanyDetails | null = null;
 
     try {
-      const { data: directCompanyDetails, error: companyDetailsError } = await withTimeout(
+      const directResult = await withTimeout(
         supabase
           .from('companies')
           .select('name, country, subscription_period_end, scheduled_worker_seats, scheduled_change_effective_at')
           .eq('id', currentCompanyId)
-          .maybeSingle(),
+          .maybeSingle() as unknown as Promise<any>,
         NETWORK_TIMEOUT_MS
       );
+      
+      const { data: directCompanyDetails, error: companyDetailsError } = directResult;
 
       if (companyDetailsError) {
         console.error('Error fetching company details in AuthContext:', companyDetailsError);
@@ -169,12 +173,14 @@ export function SessionProvider(props: React.PropsWithChildren<{}>) {
 
     if (!companyDetails) {
       try {
-        const { data: rpcCompanyDetails, error: rpcCompanyDetailsError } = await withTimeout(
+        const rpcResult = await withTimeout(
           supabase
             .rpc('get_my_company_details')
-            .maybeSingle(),
+            .maybeSingle() as unknown as Promise<any>,
           NETWORK_TIMEOUT_MS
         );
+        
+        const { data: rpcCompanyDetails, error: rpcCompanyDetailsError } = rpcResult;
 
         if (rpcCompanyDetailsError) {
           console.error('Error fetching company details fallback in AuthContext:', rpcCompanyDetailsError);
@@ -189,8 +195,8 @@ export function SessionProvider(props: React.PropsWithChildren<{}>) {
       }
     }
 
-    // If both network fetches failed, try cache as last resort
-    if (!companyDetails) {
+    // If both network fetches failed, try cache as last resort (native only)
+    if (!companyDetails && Platform.OS !== 'web') {
       try {
         const cached = await SecureStore.getItemAsync(COMPANY_DETAILS_CACHE_KEY);
         if (cached) {
@@ -241,20 +247,25 @@ export function SessionProvider(props: React.PropsWithChildren<{}>) {
       setIsSubscriptionExpired(!!isExpired);
 
       const isPlaceholderName = !companyDetails.name || companyDetails.name === 'New Company' || companyDetails.name?.startsWith('New Company - ');
-      setIsCompanyDetailsComplete(!isPlaceholderName && !!companyDetails.country);
+      const newIsComplete = !isPlaceholderName && !!companyDetails.country;
+      
+      // Only update if the value actually changed to prevent infinite loops
+      setIsCompanyDetailsComplete(prev => prev === newIsComplete ? prev : newIsComplete);
 
-      // Cache successful fetch to SecureStore for offline use
-      try {
-        await SecureStore.setItemAsync(COMPANY_DETAILS_CACHE_KEY, JSON.stringify({
-          company_id: currentCompanyId,
-          name: companyDetails.name,
-          country: companyDetails.country,
-          subscription_period_end: finalPeriodEnd,
-          scheduled_worker_seats: companyDetails.scheduled_worker_seats ?? null,
-          scheduled_change_effective_at: companyDetails.scheduled_change_effective_at ?? null,
-        }));
-      } catch (cacheErr) {
-        console.warn('AuthContext: failed to cache company details:', cacheErr);
+      // Cache successful fetch for offline use (native only)
+      if (Platform.OS !== 'web') {
+        try {
+          await SecureStore.setItemAsync(COMPANY_DETAILS_CACHE_KEY, JSON.stringify({
+            company_id: currentCompanyId,
+            name: companyDetails.name,
+            country: companyDetails.country,
+            subscription_period_end: finalPeriodEnd,
+            scheduled_worker_seats: companyDetails.scheduled_worker_seats ?? null,
+            scheduled_change_effective_at: companyDetails.scheduled_change_effective_at ?? null,
+          }));
+        } catch (cacheErr) {
+          console.warn('AuthContext: failed to cache company details:', cacheErr);
+        }
       }
     }
 
@@ -400,7 +411,8 @@ export function SessionProvider(props: React.PropsWithChildren<{}>) {
       );
       if (latestUser) {
         setUser(latestUser);
-        fetchUserDetailsAndCompany(latestUser);
+        // Wait for company details to be fetched before resolving
+        await fetchUserDetailsAndCompany(latestUser);
       }
     } catch (err) {
       console.warn('refreshUser: network error, skipping refresh:', err);
@@ -424,9 +436,17 @@ export function SessionProvider(props: React.PropsWithChildren<{}>) {
       setIsCompanyDetailsComplete(false);
       setUserRole(null);
       await setStorageItemAsync('biometricUser', null);
-      await SecureStore.deleteItemAsync('worker_auth_credentials');
-      await SecureStore.deleteItemAsync('device_token');
-      await SecureStore.deleteItemAsync('device_secret');
+      
+      // SecureStore is only available on native platforms
+      if (Platform.OS !== 'web') {
+        try {
+          await SecureStore.deleteItemAsync('worker_auth_credentials');
+          await SecureStore.deleteItemAsync('device_token');
+          await SecureStore.deleteItemAsync('device_secret');
+        } catch (err) {
+          console.warn('Error clearing SecureStore:', err);
+        }
+      }
     },
     session,
     user,

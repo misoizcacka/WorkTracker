@@ -17,7 +17,7 @@ const { width } = Dimensions.get('window');
 export default function PaymentSuccess() {
   const { session_id } = useLocalSearchParams();
   const router = useRouter();
-  const { refreshUser } = useSession();
+  const { refreshUser, user, userRole, userCompanyId } = useSession();
   const { t } = useTranslation();
   const { width } = useWindowDimensions();
   const isMobile = width < 640;
@@ -25,8 +25,21 @@ export default function PaymentSuccess() {
   const [status, setStatus] = useState('verifying');
   const [isUpdate, setIsUpdate] = useState(false);
   const [error, setError] = useState('');
+  const [isReadyToRedirect, setIsReadyToRedirect] = useState(false);
 
   useEffect(() => {
+    const checkInitialSession = async () => {
+      // Check if session exists in storage immediately on load
+      const { data: { session: storageSession } } = await supabase.auth.getSession();
+      
+      // If no session, try to refresh
+      if (!storageSession) {
+        await supabase.auth.refreshSession();
+      }
+    };
+    
+    checkInitialSession();
+    
     if (session_id) {
       verifyPayment();
     } else {
@@ -34,6 +47,17 @@ export default function PaymentSuccess() {
       setError(t('payment.noSessionId', 'No session ID provided.'));
     }
   }, [session_id]);
+
+  // Wait for user context to be populated before redirecting
+  useEffect(() => {
+    if (isReadyToRedirect && user && status === 'success') {
+      const targetRoute = isUpdate ? '/(manager)/account' : '/(manager)/company-setup';
+      
+      setTimeout(() => {
+        router.push(targetRoute);
+      }, 2000);
+    }
+  }, [isReadyToRedirect, user, userRole, status, isUpdate]);
 
   const verifyPayment = async () => {
     setStatus('verifying');
@@ -51,13 +75,26 @@ export default function PaymentSuccess() {
       }
 
       if (data.status === 'success') {
-        await refreshUser();
         setIsUpdate(data.type === 'seat_increase');
         setStatus('success');
 
         if (Platform.OS === 'web') {
           localStorage.removeItem('pendingSubscription');
         }
+        
+        // Refresh to get updated subscription status
+        await refreshUser();
+        
+        // Verify session was refreshed
+        const { data: { user: finalUser } } = await supabase.auth.getUser();
+        
+        if (!finalUser) {
+          setError(t('payment.sessionLost', 'Session refresh failed. Please log in again.'));
+          return;
+        }
+
+        // Signal that we're ready to redirect once context updates
+        setIsReadyToRedirect(true);
       } else {
         setStatus('failed');
         setError(data.message || t('payment.verificationFailed', 'Payment verification failed.'));
@@ -86,6 +123,9 @@ export default function PaymentSuccess() {
           </>
         );
       case 'success':
+        // Check if payment succeeded but session was lost (new tab scenario)
+        const needsLogin = !user;
+        
         return (
           <>
             <View style={styles.iconCircle}>
@@ -95,14 +135,27 @@ export default function PaymentSuccess() {
                 {isUpdate ? t('payment.capacityUpdatedTitle') : t('payment.successTitle')}
             </Text>
             <Text style={styles.description} fontType='regular'>
-                {isUpdate
+                {needsLogin 
+                  ? t('payment.successDescriptionNeedsLogin', 'Your payment was successful! Please log in to continue setting up your company.')
+                  : isUpdate
                     ? t('payment.capacityUpdatedDescription')
                     : t('payment.successDescription')
                 }
             </Text>
+            {!needsLogin && (
+              <Text style={[styles.description, { fontSize: 14, color: theme.colors.disabledText, marginTop: -theme.spacing(2) }]} fontType='regular'>
+                  {t('payment.redirecting', 'Redirecting in 2 seconds...')}
+              </Text>
+            )}
             <Button
-              title={isUpdate ? t('payment.backToAccount') : t('payment.continueToSetup')}
-              onPress={() => router.replace(isUpdate ? '/(manager)/account' : '/(manager)/company-setup')}
+              title={needsLogin 
+                ? t('payment.loginToContinue', 'Log In to Continue')
+                : isUpdate ? t('payment.backToAccount') : t('payment.continueToSetup')
+              }
+              onPress={() => router.replace(needsLogin 
+                ? '/(guest)/login' 
+                : isUpdate ? '/(manager)/account' : '/(manager)/company-setup'
+              )}
               style={styles.ctaButton}
             />
           </>

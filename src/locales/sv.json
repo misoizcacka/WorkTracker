@@ -237,6 +237,9 @@
   "payment": {
     "successTitle": "Betalning lyckades!",
     "successDescription": "Din betalning genomfördes. Klicka nedan för att fortsätta till företagsinställningarna.",
+    "successDescriptionNeedsLogin": "Din betalning genomfördes! Logga in för att fortsätta med företagsinställningarna.",
+    "paymentSuccessful": "Betalning lyckades! Logga in för att fortsätta.",
+    "loginToContinue": "Logga in för att fortsätta",
     "capacityUpdatedTitle": "Kapacitet uppdaterad!",
     "capacityUpdatedDescription": "Dina nya medarbetarplatser är nu aktiva och redo att användas.",
     "failedTitle": "Betalning misslyckades",

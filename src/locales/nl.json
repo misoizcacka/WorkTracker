@@ -214,6 +214,9 @@
   "payment": {
     "successTitle": "Betaling geslaagd!",
     "successDescription": "Uw betaling is succesvol verwerkt. Klik hieronder om door te gaan naar de bedrijfsinstellingen.",
+    "successDescriptionNeedsLogin": "Uw betaling is succesvol verwerkt! Log in om door te gaan met het instellen van uw bedrijf.",
+    "paymentSuccessful": "Betaling geslaagd! Log in om door te gaan.",
+    "loginToContinue": "Inloggen om door te gaan",
     "capacityUpdatedTitle": "Capaciteit bijgewerkt!",
     "capacityUpdatedDescription": "Uw nieuwe medewerkersplaatsen zijn nu actief en beschikbaar.",
     "failedTitle": "Betaling mislukt",

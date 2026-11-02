@@ -214,6 +214,9 @@
   "payment": {
     "successTitle": "Płatność zakończona sukcesem!",
     "successDescription": "Twoja płatność została zrealizowana pomyślnie. Kliknij poniżej, aby przejść do konfiguracji firmy.",
+    "successDescriptionNeedsLogin": "Twoja płatność została zrealizowana pomyślnie! Zaloguj się, aby kontynuować konfigurację firmy.",
+    "paymentSuccessful": "Płatność zakończona sukcesem! Zaloguj się, aby kontynuować.",
+    "loginToContinue": "Zaloguj się, aby kontynuować",
     "capacityUpdatedTitle": "Pojemność zaktualizowana!",
     "capacityUpdatedDescription": "Nowe miejsca pracowników są teraz aktywne i gotowe do użycia.",
     "failedTitle": "Płatność nieudana",
