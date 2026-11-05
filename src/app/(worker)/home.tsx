@@ -65,7 +65,7 @@ export default function Home() {
 
   const { processedAssignments, loadAssignmentsForDate, loadWorkSessionsForDate, isLoading: assignmentsLoading, activeWorkSession, loadedWorkSessions, startWorkSession, endWorkSession, lastCheckoutAssignmentId, isOffline, isSyncingToCloud } = useAssignments();
 
-  const isDataLoading = assignmentsLoading || projectsLoading || projects.length === 0;
+  const isDataLoading = assignmentsLoading || projectsLoading;
   const DEFAULT_RADIUS = 150; // meters â€” fallback when no per-project radius is set
 
   const checkedIn = !!activeWorkSession;
