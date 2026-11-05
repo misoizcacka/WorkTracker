@@ -35,154 +35,148 @@ SplashScreen.preventAutoHideAsync();
 
 const toastConfig: ToastConfig = {
   success: (props) => (
-    <View style={{ position: 'relative' }}>
+    <View style={{ position: 'relative', marginHorizontal: 16, maxWidth: 400, alignSelf: 'center' }}>
       <BaseToast
         {...props}
         style={{ 
           borderLeftColor: 'transparent',
-          backgroundColor: 'rgba(16, 185, 129, 0.08)', // Transparent green glass
-          backdropFilter: 'blur(20px) saturate(180%)',
-          WebkitBackdropFilter: 'blur(20px) saturate(180%)',
-          borderRadius: theme.radius.lg,
-          borderWidth: 1,
-          borderColor: 'rgba(16, 185, 129, 0.2)',
+          backgroundColor: '#d1fae5', // Fully opaque green
+          borderRadius: theme.radius.xl,
+          borderWidth: 0,
           height: 'auto',
           minHeight: 60,
-          paddingVertical: 10,
+          paddingVertical: 12,
           overflow: 'hidden',
           ...Platform.select({
             web: {
-              boxShadow: '0 8px 32px rgba(0, 0, 0, 0.12), 0 0 0 1px rgba(255, 255, 255, 0.1) inset',
+              boxShadow: '0 4px 16px rgba(0, 0, 0, 0.08), 0 1px 0 rgba(255, 255, 255, 0.8) inset',
             },
             default: {
               shadowColor: '#000',
-              shadowOffset: { width: 0, height: 4 },
-              shadowOpacity: 0.15,
-              shadowRadius: 12,
-              elevation: 5,
+              shadowOffset: { width: 0, height: 2 },
+              shadowOpacity: 0.08,
+              shadowRadius: 16,
+              elevation: 4,
             },
           }),
         }}
-        contentContainerStyle={{ paddingHorizontal: 15 }}
+        contentContainerStyle={{ paddingHorizontal: 16 }}
         text1Style={{
-          fontSize: theme.fontSizes.md,
+          fontSize: 15,
           fontFamily: theme.font['bold'],
           color: '#065f46',
+          letterSpacing: -0.2,
         }}
         text2Style={{
-          fontSize: theme.fontSizes.sm,
+          fontSize: 14,
           fontFamily: theme.font['regular'],
           color: '#047857',
+          letterSpacing: -0.1,
         }}
       />
-      {/* Glossy shine overlay */}
+      {/* iOS-style glossy shine */}
       <View style={{
         position: 'absolute',
         top: 0,
         left: 0,
         right: 0,
-        height: '50%',
-        background: 'linear-gradient(180deg, rgba(255, 255, 255, 0.4) 0%, rgba(255, 255, 255, 0) 100%)',
-        borderTopLeftRadius: theme.radius.lg,
-        borderTopRightRadius: theme.radius.lg,
+        height: 1,
+        backgroundColor: 'rgba(255, 255, 255, 0.8)',
+        borderTopLeftRadius: theme.radius.xl,
+        borderTopRightRadius: theme.radius.xl,
         pointerEvents: 'none',
-        ...(Platform.OS === 'web' ? {} : { display: 'none' }), // Web only
       }} />
     </View>
   ),
   error: (props) => (
-    <View style={{ position: 'relative' }}>
+    <View style={{ position: 'relative', marginHorizontal: 16, maxWidth: 400, alignSelf: 'center' }}>
       <ErrorToast
         {...props}
         style={{ 
           borderLeftColor: 'transparent',
-          backgroundColor: 'rgba(239, 68, 68, 0.08)', // Transparent red glass
-          backdropFilter: 'blur(20px) saturate(180%)',
-          WebkitBackdropFilter: 'blur(20px) saturate(180%)',
-          borderRadius: theme.radius.lg,
-          borderWidth: 1,
-          borderColor: 'rgba(239, 68, 68, 0.2)',
+          backgroundColor: '#fee2e2', // Fully opaque red
+          borderRadius: theme.radius.xl,
+          borderWidth: 0,
           height: 'auto',
           minHeight: 60,
-          paddingVertical: 10,
+          paddingVertical: 12,
           overflow: 'hidden',
           ...Platform.select({
             web: {
-              boxShadow: '0 8px 32px rgba(0, 0, 0, 0.12), 0 0 0 1px rgba(255, 255, 255, 0.1) inset',
+              boxShadow: '0 4px 16px rgba(0, 0, 0, 0.08), 0 1px 0 rgba(255, 255, 255, 0.8) inset',
             },
             default: {
               shadowColor: '#000',
-              shadowOffset: { width: 0, height: 4 },
-              shadowOpacity: 0.15,
-              shadowRadius: 12,
-              elevation: 5,
+              shadowOffset: { width: 0, height: 2 },
+              shadowOpacity: 0.08,
+              shadowRadius: 16,
+              elevation: 4,
             },
           }),
         }}
-        contentContainerStyle={{ paddingHorizontal: 15 }}
+        contentContainerStyle={{ paddingHorizontal: 16 }}
         text1Style={{
-          fontSize: theme.fontSizes.md,
+          fontSize: 15,
           fontFamily: theme.font['bold'],
           color: '#7f1d1d',
+          letterSpacing: -0.2,
         }}
         text2Style={{
-          fontSize: theme.fontSizes.sm,
+          fontSize: 14,
           fontFamily: theme.font['regular'],
           color: '#991b1b',
+          letterSpacing: -0.1,
         }}
       />
-      {/* Glossy shine overlay */}
+      {/* iOS-style glossy shine */}
       <View style={{
         position: 'absolute',
         top: 0,
         left: 0,
         right: 0,
-        height: '50%',
-        background: 'linear-gradient(180deg, rgba(255, 255, 255, 0.4) 0%, rgba(255, 255, 255, 0) 100%)',
-        borderTopLeftRadius: theme.radius.lg,
-        borderTopRightRadius: theme.radius.lg,
+        height: 1,
+        backgroundColor: 'rgba(255, 255, 255, 0.8)',
+        borderTopLeftRadius: theme.radius.xl,
+        borderTopRightRadius: theme.radius.xl,
         pointerEvents: 'none',
-        ...(Platform.OS === 'web' ? {} : { display: 'none' }),
       }} />
     </View>
   ),
   info: (props) => (
-    <View style={{ position: 'relative' }}>
+    <View style={{ position: 'relative', marginHorizontal: 16, maxWidth: 400, alignSelf: 'center' }}>
       <BaseToast
         {...props}
         style={{ 
           borderLeftColor: 'transparent',
-          backgroundColor: 'rgba(59, 130, 246, 0.08)', // Transparent blue glass
-          backdropFilter: 'blur(20px) saturate(180%)',
-          WebkitBackdropFilter: 'blur(20px) saturate(180%)',
-          borderRadius: theme.radius.lg,
-          borderWidth: 1,
-          borderColor: 'rgba(59, 130, 246, 0.2)',
+          backgroundColor: '#dbeafe', // Fully opaque blue
+          borderRadius: theme.radius.xl,
+          borderWidth: 0,
           height: 'auto',
           minHeight: 60,
-          paddingVertical: 10,
+          paddingVertical: 12,
           overflow: 'hidden',
           ...Platform.select({
             web: {
-              boxShadow: '0 8px 32px rgba(0, 0, 0, 0.12), 0 0 0 1px rgba(255, 255, 255, 0.1) inset',
+              boxShadow: '0 4px 16px rgba(0, 0, 0, 0.08), 0 1px 0 rgba(255, 255, 255, 0.8) inset',
             },
             default: {
               shadowColor: '#000',
-              shadowOffset: { width: 0, height: 4 },
-              shadowOpacity: 0.15,
-              shadowRadius: 12,
-              elevation: 5,
+              shadowOffset: { width: 0, height: 2 },
+              shadowOpacity: 0.08,
+              shadowRadius: 16,
+              elevation: 4,
             },
           }),
         }}
-        contentContainerStyle={{ paddingHorizontal: 15 }}
+        contentContainerStyle={{ paddingHorizontal: 16 }}
         text1Style={{
-          fontSize: theme.fontSizes.md,
+          fontSize: 15,
           fontFamily: theme.font['bold'],
           color: '#1e3a8a',
+          letterSpacing: -0.2,
         }}
         text2Style={{
-          fontSize: theme.fontSizes.sm,
+          fontSize: 14,
           fontFamily: theme.font['regular'],
           color: '#1e40af',
         }}
