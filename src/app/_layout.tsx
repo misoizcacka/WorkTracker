@@ -35,7 +35,7 @@ SplashScreen.preventAutoHideAsync();
 
 const toastConfig: ToastConfig = {
   success: (props) => (
-    <View style={{ position: 'relative', marginHorizontal: 16, maxWidth: 400, alignSelf: 'center' }}>
+    <View style={{ position: 'relative', marginHorizontal: 16, width: '90%', maxWidth: 400, alignSelf: 'center' }}>
       <BaseToast
         {...props}
         style={{ 
@@ -89,7 +89,7 @@ const toastConfig: ToastConfig = {
     </View>
   ),
   error: (props) => (
-    <View style={{ position: 'relative', marginHorizontal: 16, maxWidth: 400, alignSelf: 'center' }}>
+    <View style={{ position: 'relative', marginHorizontal: 16, width: '90%', maxWidth: 400, alignSelf: 'center' }}>
       <ErrorToast
         {...props}
         style={{ 
@@ -143,7 +143,7 @@ const toastConfig: ToastConfig = {
     </View>
   ),
   info: (props) => (
-    <View style={{ position: 'relative', marginHorizontal: 16, maxWidth: 400, alignSelf: 'center' }}>
+    <View style={{ position: 'relative', marginHorizontal: 16, width: '90%', maxWidth: 400, alignSelf: 'center' }}>
       <BaseToast
         {...props}
         style={{ 
