@@ -35,7 +35,8 @@ SplashScreen.preventAutoHideAsync();
 
 const toastConfig: ToastConfig = {
   success: (props) => (
-    <View style={{ position: 'relative', marginHorizontal: 16, width: '90%', maxWidth: 400, alignSelf: 'center' }}>
+    <View style={{ paddingHorizontal: 16, width: '100%', alignItems: 'center' }}>
+      <View style={{ position: 'relative', width: '100%', maxWidth: 400 }}>
       <BaseToast
         {...props}
         style={{ 
@@ -86,10 +87,12 @@ const toastConfig: ToastConfig = {
         borderTopRightRadius: theme.radius.xl,
         pointerEvents: 'none',
       }} />
+      </View>
     </View>
   ),
   error: (props) => (
-    <View style={{ position: 'relative', marginHorizontal: 16, width: '90%', maxWidth: 400, alignSelf: 'center' }}>
+    <View style={{ paddingHorizontal: 16, width: '100%', alignItems: 'center' }}>
+      <View style={{ position: 'relative', width: '100%', maxWidth: 400 }}>
       <ErrorToast
         {...props}
         style={{ 
@@ -140,10 +143,12 @@ const toastConfig: ToastConfig = {
         borderTopRightRadius: theme.radius.xl,
         pointerEvents: 'none',
       }} />
+      </View>
     </View>
   ),
   info: (props) => (
-    <View style={{ position: 'relative', marginHorizontal: 16, width: '90%', maxWidth: 400, alignSelf: 'center' }}>
+    <View style={{ paddingHorizontal: 16, width: '100%', alignItems: 'center' }}>
+      <View style={{ position: 'relative', width: '100%', maxWidth: 400 }}>
       <BaseToast
         {...props}
         style={{ 
@@ -181,19 +186,19 @@ const toastConfig: ToastConfig = {
           color: '#1e40af',
         }}
       />
-      {/* Glossy shine overlay */}
+      {/* iOS-style glossy shine */}
       <View style={{
         position: 'absolute',
         top: 0,
         left: 0,
         right: 0,
-        height: '50%',
-        background: 'linear-gradient(180deg, rgba(255, 255, 255, 0.4) 0%, rgba(255, 255, 255, 0) 100%)',
-        borderTopLeftRadius: theme.radius.lg,
-        borderTopRightRadius: theme.radius.lg,
+        height: 1,
+        backgroundColor: 'rgba(255, 255, 255, 0.8)',
+        borderTopLeftRadius: theme.radius.xl,
+        borderTopRightRadius: theme.radius.xl,
         pointerEvents: 'none',
-        ...(Platform.OS === 'web' ? {} : { display: 'none' }),
       }} />
+      </View>
     </View>
   )
 };
