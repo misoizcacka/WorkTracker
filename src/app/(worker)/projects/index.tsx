@@ -96,7 +96,12 @@ export default function ProjectsScreen() {
   }, [fetchData]);
 
   const currentWorkersAssignments = useMemo(() => {
-    return user?.id ? processedAssignments[user.id] || [] : [];
+    const today = moment().format('YYYY-MM-DD');
+    const allAssignments = user?.id ? processedAssignments[user.id] || [] : [];
+    // Filter to only today's assignments
+    return allAssignments.filter((assignment: ProcessedAssignmentStepWithStatus) => 
+      (assignment as any).assigned_date === today
+    );
   }, [user?.id, processedAssignments]);
 
   const todaysAssignments = useMemo((): AssignmentItem[] => {
