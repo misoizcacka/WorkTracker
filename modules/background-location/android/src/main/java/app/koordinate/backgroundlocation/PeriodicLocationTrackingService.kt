@@ -163,7 +163,7 @@ class PeriodicLocationTrackingService : Service() {
                 
                 // HYBRID GEOFENCE POLICY:
                 // - ENTER: Accept GPS OR high-quality WiFi (trust >= 60, well inside geofence)
-                // - EXIT: Require GPS (trust >= 75, no WiFi exits - too risky)
+                // - EXIT: Accept GPS medium quality (trust >= 60) OR high-quality WiFi when clearly outside (>225m from geofence)
                 val eventType = if (isNowInside) "enter_geofence" else "exit_geofence"
                 val canTriggerTransition: Boolean = if (quality == null) {
                     false
@@ -174,8 +174,12 @@ class PeriodicLocationTrackingService : Service() {
                     val isGoodWiFi = quality.trustScore >= 60 && location.accuracy < it.radius * 0.4f
                     isGPS || isGoodWiFi
                 } else {
-                    // EXIT: Require GPS only
-                    quality.trustScore >= 75  // GPS_MEDIUM_QUALITY or better
+                    // EXIT: Accept GPS (medium quality or better) OR high-quality WiFi when clearly outside
+                    val isGPS = quality.source == LocationSource.GPS_HIGH_QUALITY || 
+                                quality.source == LocationSource.GPS_MEDIUM_QUALITY
+                    val isWellOutside = dist > it.radius * 1.5f  // 150m * 1.5 = 225m outside geofence center
+                    val isGoodWiFi = quality.trustScore >= 60 && isWellOutside
+                    isGPS || isGoodWiFi
                 }
                 
                 if (!canTriggerTransition) {
@@ -184,7 +188,7 @@ class PeriodicLocationTrackingService : Service() {
                     } else if (isNowInside) {
                         "WiFi quality insufficient for entry (trust: ${quality.trustScore}%, accuracy: ${location.accuracy.toInt()}m)"
                     } else {
-                        "GPS required for exit (got: ${quality.source.label}, trust: ${quality.trustScore}%)"
+                        "GPS or high-quality WiFi required for exit (got: ${quality.source.label}, trust: ${quality.trustScore}%, dist: ${dist.toInt()}m)"
                     }
                     LocationFileLogger.w(
                         this@PeriodicLocationTrackingService,
@@ -192,6 +196,8 @@ class PeriodicLocationTrackingService : Service() {
                         "⚠️ Geofence $eventType blocked: $reason"
                     )
                     Log.w("PeriodicLocationTrackingService", "Skipping geofence transition: $reason")
+                    // DO NOT update state - keep trying until we get good quality
+                    // CRITICAL: Skip mode switch too! Don't let blocked exits trigger ACTIVE mode
                     return@forEach
                 }
                 
@@ -227,6 +233,7 @@ class PeriodicLocationTrackingService : Service() {
                 }
 
                 if (it.id == currentAssignmentId) {
+                    Log.d("PeriodicLocationTrackingService", "🔄 Current assignment ${it.id.take(8)}: isNowInside=$isNowInside, switching mode to ${if (!isNowInside) "ACTIVE" else "PASSIVE"}")
                     sharedPrefs.edit().putBoolean(Constants.SHARED_PREFS_KEY_IS_INSIDE_GEOFENCE, isNowInside).apply()
                     startLocationUpdates(!isNowInside)
                 }
@@ -433,35 +440,50 @@ class PeriodicLocationTrackingService : Service() {
                     val currentLocation = fusedLocationClient.lastLocation.await()
                     
                     if (currentLocation != null) {
-                        // Check if worker is inside ANY geofence
-                        val isInsideAny = activeAssignments.any { assignment ->
-                            val geofenceLocation = Location("geofence").apply {
-                                latitude = assignment.latitude
-                                longitude = assignment.longitude
+                        // Check location quality before using it for initial mode
+                        val quality = Constants.getLocationQuality(currentLocation)
+                        val isTrustedLocation = quality != null && quality.trustScore >= 60
+                        
+                        if (!isTrustedLocation) {
+                            Log.w("PeriodicLocationTrackingService", 
+                                "Initial location quality too low (trust: ${quality?.trustScore}%), defaulting to ACTIVE mode for safety")
+                            LocationFileLogger.w(
+                                this@PeriodicLocationTrackingService,
+                                "Service",
+                                "Initial location quality insufficient (source: ${quality?.source?.label}, trust: ${quality?.trustScore}%), defaulting to ACTIVE mode"
+                            )
+                            startLocationUpdates(true)
+                        } else {
+                            // Check if worker is inside ANY geofence
+                            val isInsideAny = activeAssignments.any { assignment ->
+                                val geofenceLocation = Location("geofence").apply {
+                                    latitude = assignment.latitude
+                                    longitude = assignment.longitude
+                                }
+                                val distance = currentLocation.distanceTo(geofenceLocation)
+                                val inside = distance <= assignment.radius
+                                
+                                if (inside) {
+                                    Log.d("PeriodicLocationTrackingService", 
+                                        "Worker is inside geofence ${assignment.id.take(8)} (${distance.toInt()}m from center, source: ${quality.source.label})")
+                                }
+                                inside
                             }
-                            val distance = currentLocation.distanceTo(geofenceLocation)
-                            val inside = distance <= assignment.radius
                             
-                            if (inside) {
-                                Log.d("PeriodicLocationTrackingService", 
-                                    "Worker is inside geofence ${assignment.id.take(8)} (${distance.toInt()}m from center)")
-                            }
-                            inside
+                            // Save the CORRECT initial state
+                            sharedPrefs.edit()
+                                .putBoolean(Constants.SHARED_PREFS_KEY_IS_INSIDE_GEOFENCE, isInsideAny)
+                                .apply()
+                            
+                            // Start in the CORRECT mode from the beginning
+                            startLocationUpdates(!isInsideAny)
+                            
+                            LocationFileLogger.i(
+                                this@PeriodicLocationTrackingService,
+                                "Service",
+                                "Initial mode determined: ${if (isInsideAny) "PASSIVE (inside geofence)" else "ACTIVE (outside all geofences)"} (source: ${quality.source.label}, trust: ${quality.trustScore}%)"
+                            )
                         }
-                        
-                        // Save the CORRECT initial state
-                        sharedPrefs.edit()
-                            .putBoolean(Constants.SHARED_PREFS_KEY_IS_INSIDE_GEOFENCE, isInsideAny)
-                            .apply()
-                        
-                        // Start in the CORRECT mode from the beginning
-                        startLocationUpdates(!isInsideAny)
-                        
-                        LocationFileLogger.i(
-                            this@PeriodicLocationTrackingService,
-                            "Service",
-                            "Initial mode determined: ${if (isInsideAny) "PASSIVE (inside geofence)" else "ACTIVE (outside all geofences)"}"
-                        )
                     } else {
                         // Couldn't get location - use safe default (ACTIVE)
                         Log.w("PeriodicLocationTrackingService", "No last location available, defaulting to ACTIVE mode")

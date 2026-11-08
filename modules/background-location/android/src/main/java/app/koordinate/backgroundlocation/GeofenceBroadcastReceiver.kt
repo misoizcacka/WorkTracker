@@ -67,7 +67,7 @@ class GeofenceBroadcastReceiver : BroadcastReceiver() {
                     // Validate location quality before accepting geofence transitions
                     // Same hybrid policy as PeriodicLocationTrackingService:
                     // - ENTER: Accept GPS or high-quality WiFi
-                    // - EXIT: Require GPS only (no WiFi exits)
+                    // - EXIT: Accept GPS medium quality OR high-quality WiFi when clearly outside
                     if (location != null) {
                         val qualityResult = Constants.getLocationQuality(location)
                         
@@ -79,8 +79,12 @@ class GeofenceBroadcastReceiver : BroadcastReceiver() {
                                 val isGoodWiFi = qualityResult.trustScore >= 60
                                 isGPS || isGoodWiFi
                             } else {
-                                // EXIT: Require GPS only (trust >= 75)
-                                qualityResult.trustScore >= 75
+                                // EXIT: Accept GPS medium quality (60%) OR high-quality WiFi
+                                // Note: We don't have geofence radius here, so we accept WiFi at trust >= 60
+                                val isGPS = qualityResult.source == LocationSource.GPS_HIGH_QUALITY || 
+                                            qualityResult.source == LocationSource.GPS_MEDIUM_QUALITY
+                                val isGoodWiFi = qualityResult.trustScore >= 60
+                                isGPS || isGoodWiFi
                             }
                         } else {
                             false // Reject if quality is too poor
@@ -92,7 +96,7 @@ class GeofenceBroadcastReceiver : BroadcastReceiver() {
                             LocationFileLogger.w(
                                 context,
                                 "Geofence",
-                                "⚠️ Geofence $eventType blocked: GPS required for exit (got: $qualityInfo)"
+                                "⚠️ Geofence $eventType blocked: quality check failed (got: $qualityInfo)"
                             )
                             return@launch  // Don't send the event
                         }
@@ -111,14 +115,46 @@ class GeofenceBroadcastReceiver : BroadcastReceiver() {
                         context.startService(serviceIntent)
                     }
 
-                    // Synchronize manual fallback flags
-                    val isInside = transition == Geofence.GEOFENCE_TRANSITION_ENTER
+                    // Synchronize manual fallback flags and filter geofences
                     val editor = sharedPrefs.edit()
-                    editor.putBoolean(Constants.SHARED_PREFS_KEY_IS_INSIDE_GEOFENCE, isInside)
-                    triggeringIds.forEach { editor.putBoolean("manual_inside_$it", isInside) }
+                    
+                    // Filter triggeringIds based on enter/exit state
+                    val validIds = if (transition == Geofence.GEOFENCE_TRANSITION_ENTER) {
+                        // For ENTER: fire for all geofences (worker is entering)
+                        editor.putBoolean(Constants.SHARED_PREFS_KEY_IS_INSIDE_GEOFENCE, true)
+                        triggeringIds.forEach { editor.putBoolean("manual_inside_$it", true) }
+                        triggeringIds
+                    } else {
+                        // For EXIT: ONLY fire for geofences the worker actually entered
+                        val wasInside = triggeringIds.filter { id ->
+                            sharedPrefs.getBoolean("manual_inside_$id", false)
+                        }
+                        
+                        if (wasInside.isEmpty()) {
+                            Log.w(TAG, "⚠️ Exit event triggered for geofences never entered: $triggeringIds. Ignoring.")
+                            LocationFileLogger.w(
+                                context,
+                                "Geofence",
+                                "⚠️ Exit blocked: worker never entered geofences $triggeringIds"
+                            )
+                            return@launch  // Don't send any events
+                        }
+                        
+                        // Update flags only for geofences we're actually exiting
+                        wasInside.forEach { editor.putBoolean("manual_inside_$it", false) }
+                        
+                        // Update global flag: still inside if ANY geofence remains active
+                        val stillInsideAny = triggeringIds.any { id ->
+                            sharedPrefs.getBoolean("manual_inside_$id", false) && id !in wasInside
+                        }
+                        editor.putBoolean(Constants.SHARED_PREFS_KEY_IS_INSIDE_GEOFENCE, stillInsideAny)
+                        
+                        wasInside
+                    }
+                    
                     editor.apply()
 
-                    triggeringIds.forEach { id ->
+                    validIds.forEach { id ->
                         BackgroundLocationManager.sendGeofenceTransitionEvent(
                             context, id, eventType, workerId, companyId, lat, lon, supabaseService
                         )
