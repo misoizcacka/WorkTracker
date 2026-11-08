@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, StyleSheet, ScrollView, TouchableOpacity, Linking } from 'react-native';
+import { View, StyleSheet, ScrollView, TouchableOpacity, Linking, Platform } from 'react-native';
 import { Text } from './Themed';
 import { theme } from '../theme';
 import { Ionicons } from '@expo/vector-icons';
@@ -7,6 +7,7 @@ import { useTranslation } from 'react-i18next';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSession } from '../context/AuthContext';
 import { logConsent } from '../services/consent';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export const PRIVACY_NOTICE_ACCEPTED_KEY = 'privacy_notice_accepted';
 
@@ -17,6 +18,7 @@ interface Props {
 export function WorkerPrivacyNotice({ onAccept }: Props) {
   const { t } = useTranslation();
   const { user } = useSession();
+  const insets = useSafeAreaInsets();
 
   const handleAccept = async () => {
     await AsyncStorage.setItem(PRIVACY_NOTICE_ACCEPTED_KEY, 'true');
@@ -41,7 +43,13 @@ export function WorkerPrivacyNotice({ onAccept }: Props) {
 
   return (
     <View style={styles.container}>
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView 
+        contentContainerStyle={[
+          styles.content,
+          { paddingBottom: theme.spacing(4) + 52 + theme.spacing(3) + insets.bottom }
+        ]} 
+        showsVerticalScrollIndicator={false}
+      >
         {/* Icon */}
         <View style={styles.iconWrap}>
           <Ionicons name="shield-checkmark-outline" size={48} color={theme.colors.primary} />
@@ -72,7 +80,7 @@ export function WorkerPrivacyNotice({ onAccept }: Props) {
         <Text style={styles.poweredBy} fontType="regular">{t('worker.privacy.poweredBy')}</Text>
       </ScrollView>
 
-      <View style={styles.footer}>
+      <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, theme.spacing(2)) }]}>
         <TouchableOpacity style={styles.acceptButton} onPress={handleAccept} activeOpacity={0.85}>
           <Text style={styles.acceptButtonText} fontType="regular">{t('worker.privacy.confirm')}</Text>
         </TouchableOpacity>
@@ -88,7 +96,6 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: theme.spacing(4),
-    paddingBottom: theme.spacing(12),
   },
   iconWrap: {
     alignItems: 'center',
@@ -155,7 +162,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     padding: theme.spacing(3),
-    paddingBottom: theme.spacing(4),
+    paddingTop: theme.spacing(2),
     backgroundColor: theme.colors.pageBackground,
     borderTopWidth: 1,
     borderTopColor: theme.colors.borderColor,

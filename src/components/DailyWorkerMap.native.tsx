@@ -64,6 +64,23 @@ const DailyWorkerMapNative: React.FC<DailyWorkerMapProps> = (props) => {
     });
   }, [fullTrailGeoJSON]);
 
+  // Get start and end points
+  const startPoint = useMemo(() => {
+    if (!fullTrailGeoJSON || fullTrailGeoJSON.features.length === 0) return null;
+    const firstFeature = fullTrailGeoJSON.features[0];
+    const coords = (firstFeature.geometry as LineString).coordinates;
+    if (coords.length === 0) return null;
+    return { latitude: coords[0][1], longitude: coords[0][0] };
+  }, [fullTrailGeoJSON]);
+
+  const endPoint = useMemo(() => {
+    if (!fullTrailGeoJSON || fullTrailGeoJSON.features.length === 0) return null;
+    const lastFeature = fullTrailGeoJSON.features[fullTrailGeoJSON.features.length - 1];
+    const coords = (lastFeature.geometry as LineString).coordinates;
+    if (coords.length === 0) return null;
+    return { latitude: coords[coords.length - 1][1], longitude: coords[coords.length - 1][0] };
+  }, [fullTrailGeoJSON]);
+
   // Render assignment segments
   const assignmentSegments = useMemo(() => {
     if (!assignmentSegmentsGeoJSON || assignmentSegmentsGeoJSON.features.length === 0) return [];
@@ -110,14 +127,13 @@ const DailyWorkerMapNative: React.FC<DailyWorkerMapProps> = (props) => {
         initialRegion={region}
         region={region}
       >
-        {/* Render full trail */}
         {/* Render full trail with gradient */}
         {trailSegments.map((segment, segIndex) => (
           <Polyline
             key={`trail-${segIndex}`}
             coordinates={segment.coordinates}
             strokeColor={segment.color}
-            strokeWidth={5}
+            strokeWidth={7}
             lineCap="round"
             lineJoin="round"
             zIndex={1}
@@ -130,12 +146,30 @@ const DailyWorkerMapNative: React.FC<DailyWorkerMapProps> = (props) => {
             key={`segment-${segIndex}`}
             coordinates={segment}
             strokeColor={theme.colors.primary}
-            strokeWidth={6}
+            strokeWidth={8}
             lineCap="round"
             lineJoin="round"
             zIndex={2}
           />
         ))}
+
+        {/* Start Point Marker */}
+        {startPoint && (
+          <Marker coordinate={startPoint} zIndex={4}>
+            <View style={styles.startMarker}>
+              <Text style={styles.startMarkerText} fontType="bold">START</Text>
+            </View>
+          </Marker>
+        )}
+
+        {/* End Point Marker */}
+        {endPoint && (
+          <Marker coordinate={endPoint} zIndex={4}>
+            <View style={styles.endMarker}>
+              <Text style={styles.endMarkerText} fontType="bold">END</Text>
+            </View>
+          </Marker>
+        )}
 
         {/* Render assignment points */}
         {assignmentMarkers.map((marker) => (
@@ -183,13 +217,13 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
   },
   assignmentMarker: {
-    backgroundColor: theme.colors.success,
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+    backgroundColor: theme.colors.primary,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 2,
+    borderWidth: 3,
     borderColor: '#ffffff',
     elevation: 4,
     shadowColor: '#000',
@@ -199,7 +233,41 @@ const styles = StyleSheet.create({
   },
   assignmentMarkerText: {
     color: '#ffffff',
-    fontSize: 12,
+    fontSize: 13,
+  },
+  startMarker: {
+    backgroundColor: '#10B981', // Green
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    borderWidth: 3,
+    borderColor: '#ffffff',
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+  },
+  startMarkerText: {
+    color: '#ffffff',
+    fontSize: 11,
+  },
+  endMarker: {
+    backgroundColor: '#EF4444', // Red
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    borderWidth: 3,
+    borderColor: '#ffffff',
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+  },
+  endMarkerText: {
+    color: '#ffffff',
+    fontSize: 11,
   },
   calloutContainer: {
     backgroundColor: theme.colors.cardBackground,
