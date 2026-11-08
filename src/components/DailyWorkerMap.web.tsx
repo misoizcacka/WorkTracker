@@ -23,8 +23,25 @@ const fullTrailLayerStyle: LineLayerSpecification = {
   },
   paint: {
     'line-color': ['get', 'color'], // Use color from properties
-    'line-width': 5, // Thicker line
-    'line-opacity': 0.8, // More visible
+    'line-width': 6,
+    'line-opacity': 0.85,
+  },
+};
+
+// Add a subtle outer glow to the trail
+const fullTrailGlowStyle: LineLayerSpecification = {
+  id: 'full-trail-glow-layer',
+  type: 'line',
+  source: 'full-trail-source',
+  layout: {
+    'line-cap': 'round',
+    'line-join': 'round',
+  },
+  paint: {
+    'line-color': ['get', 'color'],
+    'line-width': 10,
+    'line-opacity': 0.2,
+    'line-blur': 4,
   },
 };
 
@@ -38,8 +55,8 @@ const assignmentSegmentsLayerStyle: LineLayerSpecification = {
   },
   paint: {
     'line-color': theme.colors.primary,
-    'line-width': 6, // Thicker for emphasis
-    'line-opacity': 0.9,
+    'line-width': 8, // Thicker for emphasis
+    'line-opacity': 1,
   },
 };
 
@@ -48,12 +65,12 @@ const trackingDotsLayerStyle: CircleLayerSpecification = {
   type: 'circle',
   source: 'tracking-dots-source',
   paint: {
-    'circle-radius': 2, // Smaller
-    'circle-color': '#6B7280', // Subtle gray
-    'circle-opacity': 0.3, // More transparent
-    'circle-stroke-width': 0.5,
+    'circle-radius': 3, // Larger
+    'circle-color': '#4B5563', // Darker gray for visibility
+    'circle-opacity': 0.6, // More visible
+    'circle-stroke-width': 1,
     'circle-stroke-color': '#ffffff',
-    'circle-stroke-opacity': 0.5,
+    'circle-stroke-opacity': 0.8,
   },
 };
 
@@ -86,7 +103,7 @@ const DailyWorkerMapWeb: React.FC<DailyWorkerMapProps & {
       const firstFeature = fullTrailGeoJSON.features[0];
       if (firstFeature.geometry.type === 'LineString' && firstFeature.geometry.coordinates.length > 0) {
         const [lng, lat] = firstFeature.geometry.coordinates[0];
-        return { longitude: lng, latitude: lat, zoom: 13 };
+        return { longitude: lng, latitude: lat, zoom: 15 }; // Increased from 13 to 15
       }
     }
     // Fallback to assignment points
@@ -94,7 +111,7 @@ const DailyWorkerMapWeb: React.FC<DailyWorkerMapProps & {
       const firstPoint = assignmentPointsGeoJSON.features[0];
       if (firstPoint.geometry.type === 'Point') {
         const [lng, lat] = firstPoint.geometry.coordinates;
-        return { longitude: lng, latitude: lat, zoom: 13 };
+        return { longitude: lng, latitude: lat, zoom: 15 }; // Increased from 13 to 15
       }
     }
     // Last resort: London (should never happen if there's location data)
@@ -110,6 +127,47 @@ const DailyWorkerMapWeb: React.FC<DailyWorkerMapProps & {
     padding: { top: 0, bottom: 0, left: 0, right: 0 }
   });
   const [mapLoaded, setMapLoaded] = useState(false);
+  const [hoveredSiteId, setHoveredSiteId] = useState<string | null>(null);
+  const [legendExpanded, setLegendExpanded] = useState(false);
+
+  // Get start and end points from trail
+  const startPoint = useMemo(() => {
+    if (fullTrailGeoJSON.features.length > 0) {
+      const firstFeature = fullTrailGeoJSON.features[0];
+      if (firstFeature.geometry.type === 'LineString' && firstFeature.geometry.coordinates.length > 0) {
+        const [lng, lat] = firstFeature.geometry.coordinates[0];
+        return { lng, lat };
+      }
+    }
+    return null;
+  }, [fullTrailGeoJSON]);
+
+  const endPoint = useMemo(() => {
+    if (fullTrailGeoJSON.features.length > 0) {
+      const lastFeature = fullTrailGeoJSON.features[fullTrailGeoJSON.features.length - 1];
+      if (lastFeature.geometry.type === 'LineString' && lastFeature.geometry.coordinates.length > 0) {
+        const coords = lastFeature.geometry.coordinates;
+        const [lng, lat] = coords[coords.length - 1];
+        return { lng, lat };
+      }
+    }
+    return null;
+  }, [fullTrailGeoJSON]);
+
+  // Check if start and end points are very close (within ~50 meters)
+  const startEndOverlap = useMemo(() => {
+    if (!startPoint || !endPoint) return false;
+    const R = 6371000; // Earth radius in meters
+    const dLat = (endPoint.lat - startPoint.lat) * Math.PI / 180;
+    const dLng = (endPoint.lng - startPoint.lng) * Math.PI / 180;
+    const a =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos(startPoint.lat * Math.PI / 180) * Math.cos(endPoint.lat * Math.PI / 180) *
+      Math.sin(dLng / 2) * Math.sin(dLng / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    const distance = R * c;
+    return distance < 50; // Less than 50 meters
+  }, [startPoint, endPoint]);
 
   // Update viewState when region or zoom props change
   useEffect(() => {
@@ -167,7 +225,7 @@ const DailyWorkerMapWeb: React.FC<DailyWorkerMapProps & {
     if (allCoords.length > 0) {
       const bounds = new maplibregl.LngLatBounds();
       allCoords.forEach(coord => bounds.extend(coord));
-      mapRef.current.getMap().fitBounds(bounds, { padding: 200, duration: 1000 });
+      mapRef.current.getMap().fitBounds(bounds, { padding: 80, duration: 1000 }); // Reduced padding from 200 to 80
     }
   }, [mapLoaded, assignmentPointsGeoJSON, fullTrailGeoJSON, trackingDotsGeoJSON]);
 
@@ -196,6 +254,58 @@ const DailyWorkerMapWeb: React.FC<DailyWorkerMapProps & {
 
   return (
     <View style={[styles.mapContainer, style]}>
+      {/* Legend - Collapsible */}
+      <View style={styles.legend}>
+        <View 
+          style={styles.legendHeader}
+          onMouseEnter={() => setLegendExpanded(true)}
+          onMouseLeave={() => setLegendExpanded(false)}
+        >
+          <Ionicons name="information-circle" size={20} color={theme.colors.primary} />
+          <Text style={styles.legendTitle} fontType="regular">Legend</Text>
+          <Ionicons 
+            name={legendExpanded ? "chevron-up" : "chevron-down"} 
+            size={16} 
+            color={theme.colors.bodyText} 
+          />
+        </View>
+        
+        {legendExpanded && (
+          <View style={styles.legendContent}>
+            <View style={styles.legendItem}>
+              <View style={styles.startMarkerLegend}>
+                <Ionicons name="play" size={10} color="white" />
+              </View>
+              <Text style={styles.legendText}>Start Point</Text>
+            </View>
+            
+            <View style={styles.legendItem}>
+              <View style={styles.endMarkerLegend}>
+                <Ionicons name="flag" size={10} color="white" />
+              </View>
+              <Text style={styles.legendText}>End Point</Text>
+            </View>
+            
+            <View style={styles.legendItem}>
+              <View style={styles.suitcaseMarkerLegend}>
+                <Ionicons name="briefcase" size={10} color="white" />
+              </View>
+              <Text style={styles.legendText}>Project Site (hover for details)</Text>
+            </View>
+            
+            <View style={styles.legendItem}>
+              <View style={[styles.trailLine, { backgroundColor: '#3B82F6' }]} />
+              <Text style={styles.legendText}>Travel Path</Text>
+            </View>
+            
+            <View style={styles.legendItem}>
+              <View style={styles.trackingDot} />
+              <Text style={styles.legendText}>GPS Tracking Point</Text>
+            </View>
+          </View>
+        )}
+      </View>
+
       <Map
         ref={mapRef}
         {...viewState}
@@ -210,27 +320,23 @@ const DailyWorkerMapWeb: React.FC<DailyWorkerMapProps & {
         {/* Full Trail Source and Layer */}
         {fullTrailGeoJSON && (
           <Source id="full-trail-source" type="geojson" data={fullTrailGeoJSON}>
+            {/* Outer glow */}
+            <Layer {...fullTrailGlowStyle} />
+            {/* Main trail */}
             <Layer {...fullTrailLayerStyle} />
-            {/* Direction arrows on the trail */}
+            {/* Animated dashed line for direction */}
             <Layer
-              id="trail-arrows"
-              type="symbol"
+              id="trail-direction"
+              type="line"
               layout={{
-                'symbol-placement': 'line',
-                'symbol-spacing': 80, // Arrow every 80 pixels
-                'text-field': '▶', // Unicode triangle arrow
-                'text-size': 8, // Smaller to fit inside 5px line
-                'text-rotation-alignment': 'map',
-                'text-pitch-alignment': 'viewport',
-                'text-keep-upright': false,
-                'text-allow-overlap': true,
-                'text-ignore-placement': true,
+                'line-cap': 'round',
+                'line-join': 'round',
               }}
               paint={{
-                'text-color': '#E5E7EB', // Very light gray
-                'text-opacity': 0.9, // More opaque
-                'text-halo-color': '#1F2937', // Dark gray outline
-                'text-halo-width': 1, // Thicker outline for better contrast
+                'line-color': '#FFFFFF',
+                'line-width': 2,
+                'line-opacity': 0.6,
+                'line-dasharray': [0, 2, 2], // Creates dots along the line
               }}
             />
           </Source>
@@ -250,35 +356,77 @@ const DailyWorkerMapWeb: React.FC<DailyWorkerMapProps & {
           </Source>
         )}
 
-        {/* Project Markers with Suitcase Icon */}
+        {/* Project Markers with Suitcase Icon - Lower z-index */}
         {assignments && assignments.map((site, idx) => (
           <Marker
             key={`marker-${site.id}-${idx}`}
             longitude={site.lng}
             latitude={site.lat}
             anchor="center"
+            style={{ zIndex: 1 }}
           >
-            <View style={styles.suitcaseMarker}>
+            <View 
+              style={[
+                styles.suitcaseMarker,
+                hoveredSiteId === `${site.id}-${idx}` && styles.suitcaseMarkerHover
+              ]}
+              onMouseEnter={() => setHoveredSiteId(`${site.id}-${idx}`)}
+              onMouseLeave={() => setHoveredSiteId(null)}
+            >
               <Ionicons name="briefcase" size={18} color="white" />
             </View>
           </Marker>
         ))}
 
-        {/* Permanent Popups for all project sites */}
-        {assignments && assignments.map((site, idx) => {
+        {/* Start Point Marker - High z-index */}
+        {startPoint && (
+          <Marker 
+            longitude={startPoint.lng} 
+            latitude={startPoint.lat} 
+            anchor={startEndOverlap ? "bottom-left" : "center"}
+            offset={startEndOverlap ? [-10, -10] : [0, 0]}
+            style={{ zIndex: 100 }}
+          >
+            <View style={styles.startMarker}>
+              <Ionicons name="play" size={16} color="white" />
+              <Text style={styles.markerLabel} fontType="bold">START</Text>
+            </View>
+          </Marker>
+        )}
+
+        {/* End Point Marker - High z-index */}
+        {endPoint && (
+          <Marker 
+            longitude={endPoint.lng} 
+            latitude={endPoint.lat} 
+            anchor={startEndOverlap ? "top-right" : "center"}
+            offset={startEndOverlap ? [10, 10] : [0, 0]}
+            style={{ zIndex: 99 }}
+          >
+            <View style={styles.endMarker}>
+              <Ionicons name="flag" size={16} color="white" />
+              <Text style={styles.markerLabel} fontType="bold">END</Text>
+            </View>
+          </Marker>
+        )}
+
+        {/* Hover Popups for project sites */}
+        {hoveredSiteId && assignments && assignments.map((site, idx) => {
+          if (hoveredSiteId !== `${site.id}-${idx}`) return null;
+          
           const duration = site.totalDurationMinutes || 0;
           const durationStr = `${Math.floor(duration / 60)}h ${duration % 60}m`;
           
           return (
             <Popup
-              key={`${site.id}-${idx}`}
+              key={`popup-${site.id}-${idx}`}
               longitude={site.lng}
               latitude={site.lat}
-              anchor="bottom"
+              anchor="top"
               closeButton={false}
               closeOnClick={false}
-              offset={10}
-              maxWidth="240px"
+              offset={20}
+              maxWidth="280px"
             >
               <View style={styles.card}>
                 <Text style={styles.cardTitle} fontType="bold">{site.name}</Text>
@@ -329,60 +477,182 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     borderWidth: 1,
     borderColor: theme.colors.borderColor,
+    position: 'relative',
   },
-  suitcaseMarker: {
-    backgroundColor: theme.colors.primary,
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+  legend: {
+    position: 'absolute',
+    top: 16,
+    left: 16,
+    backgroundColor: 'rgba(255, 255, 255, 0.75)', // More transparent (75% instead of 85%)
+    backdropFilter: 'blur(8px)',
+    borderRadius: theme.radius.md,
+    zIndex: 10,
+    minWidth: 60,
+    maxWidth: 240,
+    borderWidth: 1,
+    borderColor: 'rgba(0, 0, 0, 0.1)',
+    boxShadow: '0 2px 12px rgba(0,0,0,0.15)',
+    cursor: 'pointer',
+  },
+  legendHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 10,
+    gap: 8,
+  },
+  legendTitle: {
+    fontSize: 12,
+    color: theme.colors.headingText,
+    flex: 1,
+  },
+  legendContent: {
+    paddingHorizontal: 10,
+    paddingBottom: 10,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(0, 0, 0, 0.08)',
+    paddingTop: 8,
+  },
+  legendItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  legendText: {
+    fontSize: 10,
+    color: theme.colors.bodyText,
+    marginLeft: 8,
+  },
+  startMarker: {
+    backgroundColor: '#10B981', // Green
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 8,
+    paddingVertical: 6,
+    borderRadius: 16,
+    borderWidth: 3,
+    borderColor: 'white',
+    boxShadow: '0 4px 12px rgba(16, 185, 129, 0.6)',
+    gap: 4,
+  },
+  startMarkerLegend: {
+    backgroundColor: '#10B981',
+    width: 20,
+    height: 20,
+    borderRadius: 10,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 2,
     borderColor: 'white',
-    // We use standard web shadow for markers on web
+  },
+  endMarker: {
+    backgroundColor: '#EF4444', // Red
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 8,
+    paddingVertical: 6,
+    borderRadius: 16,
+    borderWidth: 3,
+    borderColor: 'white',
+    boxShadow: '0 4px 12px rgba(239, 68, 68, 0.6)',
+    gap: 4,
+  },
+  endMarkerLegend: {
+    backgroundColor: '#EF4444',
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: 'white',
+  },
+  markerLabel: {
+    color: '#ffffff',
+    fontSize: 10,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  suitcaseMarker: {
+    backgroundColor: theme.colors.primary,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 3,
+    borderColor: 'white',
     boxShadow: '0 2px 4px rgba(0,0,0,0.3)',
+    cursor: 'pointer',
+    transition: 'transform 0.2s',
+  },
+  suitcaseMarkerHover: {
+    transform: [{ scale: 1.2 }],
+    boxShadow: '0 4px 12px rgba(0,0,0,0.4)',
+  },
+  suitcaseMarkerLegend: {
+    backgroundColor: theme.colors.primary,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: 'white',
+  },
+  trailLine: {
+    width: 24,
+    height: 4,
+    borderRadius: 2,
+  },
+  trackingDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#4B5563',
+    borderWidth: 1,
+    borderColor: 'white',
   },
   card: {
     backgroundColor: 'white',
-    padding: 8,
-    minWidth: 160,
+    padding: 10,
+    minWidth: 200,
   },
   cardTitle: {
-    fontSize: 13,
+    fontSize: 14,
     color: theme.colors.headingText,
     marginBottom: 2,
   },
   cardAddress: {
-    fontSize: 10,
+    fontSize: 11,
     color: theme.colors.bodyText,
-    marginBottom: 6,
+    marginBottom: 8,
   },
   cardDivider: {
     height: 1,
     backgroundColor: theme.colors.borderColor,
-    marginBottom: 6,
+    marginBottom: 8,
   },
   cardRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 2,
+    marginBottom: 4,
   },
   visitRow: {
-    marginBottom: 4,
+    marginBottom: 6,
   },
   visitDivider: {
     height: 1,
     backgroundColor: theme.colors.borderColor,
     opacity: 0.5,
-    marginVertical: 4,
+    marginVertical: 6,
     borderStyle: 'dashed',
   },
   cardLabel: {
-    fontSize: 10,
+    fontSize: 11,
     color: theme.colors.bodyText,
   },
   cardValue: {
-    fontSize: 10,
+    fontSize: 11,
     color: theme.colors.headingText,
   },
 });

@@ -528,7 +528,7 @@ export default function NewManagerDashboard() {
                         <View style={styles.workerInfo}>
                           <Text style={styles.workerName} fontType="medium">{w.full_name}</Text>
                         </View>
-                        <Ionicons name="ellipse-outline" size={16} color={theme.colors.disabledText} />
+                        <Ionicons name="time-outline" size={16} color={theme.colors.disabledText} />
                       </View>
                     ))}
                     {notClockedIn.length > 8 && (
@@ -556,9 +556,21 @@ export default function NewManagerDashboard() {
                   <View key={activity.id} style={styles.activityItem}>
                     <View style={styles.activityIconContainer}>
                       <Ionicons
-                        name={activity.type === 'work_session' ? 'time-outline' : 'location-outline'}
+                        name={
+                          activity.event.includes('checked in') ? 'time' :
+                          activity.event.includes('checked out') ? 'time-outline' :
+                          activity.event.includes('entered') ? 'enter-outline' :
+                          activity.event.includes('exited') ? 'exit-outline' :
+                          'location-outline'
+                        }
                         size={18}
-                        color={activity.type === 'work_session' ? theme.colors.secondary : theme.colors.primary}
+                        color={
+                          activity.event.includes('checked in') ? theme.colors.primary :
+                          activity.event.includes('checked out') ? theme.colors.primary :
+                          activity.event.includes('entered') ? theme.colors.success :
+                          activity.event.includes('exited') ? theme.colors.danger :
+                          theme.colors.primary
+                        }
                       />
                     </View>
                     <View style={styles.activityContent}>

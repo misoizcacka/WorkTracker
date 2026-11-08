@@ -11,6 +11,7 @@ import * as XLSX from 'xlsx-js-style';
 import { exportWorkbookToExcel } from '../../../utils/exportHelpers';
 import { EmployeesContext, EmployeesContextType } from '../../../context/EmployeesContext';
 import { useSession } from '../../../context/AuthContext';
+import CrossPlatformDatePicker from '../../../components/CrossPlatformDatePicker';
 
 /** Maps ISO 3166-1 alpha-2 country codes to their currency symbol. */
 function getCurrencySymbol(country: string | null): string {
@@ -44,18 +45,41 @@ const PayrollReport = () => {
   const { userCompanyName, userCompanyCountry } = useSession();
   const currency = getCurrencySymbol(userCompanyCountry);
   const visibleWorkerIds = useMemo(() => new Set(employees.filter(employee => employee.role === 'worker').map(employee => employee.id)), [employees]);
+  
+  // Date range mode: 'month' or 'custom'
+  const [dateMode, setDateMode] = useState<'month' | 'custom'>('month');
   const [selectedMonth, setSelectedMonth] = useState(moment().month() + 1);
   const [selectedYear, setSelectedYear] = useState(moment().year());
+  const [startDate, setStartDate] = useState(moment().startOf('month').toDate());
+  const [endDate, setEndDate] = useState(moment().endOf('month').toDate());
+  
   const [reportData, setReportData] = useState<PayrollReportItem[]>([]);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     const fetchReportData = async () => {
       setLoading(true);
-      const { data, error } = await supabase.rpc('get_monthly_payroll_report', {
-        report_year: selectedYear,
-        report_month: selectedMonth,
-      });
+      
+      let data, error;
+      
+      if (dateMode === 'month') {
+        const result = await supabase.rpc('get_monthly_payroll_report', {
+          report_year: selectedYear,
+          report_month: selectedMonth,
+        });
+        data = result.data;
+        error = result.error;
+      } else {
+        // Custom date range
+        const workerIds = Array.from(visibleWorkerIds);
+        const result = await supabase.rpc('get_monthly_payroll_report', {
+          p_worker_ids: workerIds,
+          p_start_date: moment(startDate).format('YYYY-MM-DD'),
+          p_end_date: moment(endDate).format('YYYY-MM-DD'),
+        });
+        data = result.data;
+        error = result.error;
+      }
 
       if (error) {
         console.error('Error fetching payroll report:', error);
@@ -69,7 +93,7 @@ const PayrollReport = () => {
     };
 
     fetchReportData();
-  }, [selectedMonth, selectedYear, visibleWorkerIds]);
+  }, [dateMode, selectedMonth, selectedYear, startDate, endDate, visibleWorkerIds]);
 
   const handlePrevMonth = () => {
     const newDate = moment({ year: selectedYear, month: selectedMonth - 1 }).subtract(1, 'month');
@@ -87,8 +111,14 @@ const PayrollReport = () => {
   const totalBreakMinutes = reportData.reduce((sum: number, item) => sum + (item.total_break_minutes || 0), 0);
   const totalCorrectionMinutes = reportData.reduce((sum: number, item) => sum + (item.total_correction_minutes || 0), 0);
   const totalPayableHours = reportData.reduce((sum: number, item) => sum + (item.payable_hours || 0), 0);
-  const period = moment({ year: selectedYear, month: selectedMonth - 1 });
-  const periodLabel = period.format('MMMM YYYY');
+  const totalPayableMoney = reportData.reduce((sum: number, item) => sum + (item.total_pay || 0), 0);
+  
+  const period = dateMode === 'month' 
+    ? moment({ year: selectedYear, month: selectedMonth - 1 })
+    : null;
+  const periodLabel = dateMode === 'month' 
+    ? period!.format('MMMM YYYY')
+    : `${moment(startDate).format('MMM D, YYYY')} - ${moment(endDate).format('MMM D, YYYY')}`;
   const generatedAt = moment().format('MMM D, YYYY HH:mm');
   const reportCompanyName = userCompanyName || 'Company';
 
@@ -204,7 +234,7 @@ const PayrollReport = () => {
     // --- Summary Sheet Styling ---
     summarySheet['!rows'] = [
       { hpt: 40 }, { hpt: 25 }, { hpt: 25 }, { hpt: 25 }, { hpt: 15 },
-      { hpt: 30 }, { hpt: 25 }, { hpt: 25 }, { hpt: 25 }, { hpt: 25 }, { hpt: 30 },
+      { hpt: 30 }, { hpt: 25 }, { hpt: 25 }, { hpt: 25 }, { hpt: 25 }, { hpt: 30 }, { hpt: 35 },
       { hpt: 15 }, { hpt: 30 }, { hpt: 25 }, { hpt: 25 }, { hpt: 25 },
     ];
     styleRow(summarySheet, 0, 0, 1, titleStyle);
@@ -228,6 +258,19 @@ const PayrollReport = () => {
       font: { bold: true, sz: 12, color: { rgb: excelColors.primary }, name: fontName },
       fill: solidFill(excelColors.primaryMuted),
       numFmt: '#,##0.00',
+    });
+    
+    // Total Payable Amount in Summary
+    setCellStyle(summarySheet, XLSX.utils.encode_cell({ r: 11, c: 0 }), {
+      ...labelStyle,
+      fill: solidFill(excelColors.success),
+      font: { bold: true, color: { rgb: excelColors.white }, sz: 11, name: fontName },
+    });
+    setCellStyle(summarySheet, XLSX.utils.encode_cell({ r: 11, c: 1 }), {
+      ...valueStyle,
+      font: { bold: true, sz: 14, color: { rgb: excelColors.success }, name: fontName },
+      fill: solidFill('#E8F5E9'),
+      alignment: { horizontal: 'right', vertical: 'center', indent: 1 },
     });
 
     styleRow(summarySheet, 12, 0, 1, sectionHeaderStyle);
@@ -330,6 +373,7 @@ const PayrollReport = () => {
       ['Total Break Deductions (min)', totalBreakMinutes],
       ['Total Manual Corrections (min)', totalCorrectionMinutes],
       ['FINAL PAYABLE HOURS', Number(totalPayableHours.toFixed(2))],
+      ['TOTAL PAYABLE AMOUNT', `${currency}${totalPayableMoney.toFixed(2)}`],
       [],
       ['ADMINISTRATIVE NOTES'],
       ['• Payable Hours = (Work Hours) - (Break Time) + (Corrections).'],
@@ -385,7 +429,9 @@ const PayrollReport = () => {
 
     applyWorkbookStyling(summarySheet, payrollSheet, definitionsSheet);
 
-    const fileName = `Koordinate_Payroll_Report_${period.format('MMMM_YYYY')}`;
+    const fileName = `Koordinate_Payroll_Report_${dateMode === 'month' 
+      ? moment({ year: selectedYear, month: selectedMonth - 1 }).format('MMMM_YYYY')
+      : `${moment(startDate).format('YYYY-MM-DD')}_to_${moment(endDate).format('YYYY-MM-DD')}`}`;
     await exportWorkbookToExcel(wb, fileName);
   };
 
@@ -404,31 +450,100 @@ const PayrollReport = () => {
       </View>
 
       <View style={styles.mainContentCard}>
-        {/* --- Top Toolbar: Navigator & Export --- */}
+        {/* --- Top Toolbar: Mode Toggle, Navigator/Date Picker & Export --- */}
         <View style={styles.headerControls}>
-          <View style={styles.monthNavigator}>
-            <TouchableOpacity style={styles.monthNavButton} onPress={handlePrevMonth}>
-              <Ionicons name="chevron-back" size={24} color={theme.colors.primary} />
+          {/* Date Mode Toggle */}
+          <View style={styles.modeToggle}>
+            <TouchableOpacity
+              style={[styles.modeButton, dateMode === 'month' && styles.modeButtonActive]}
+              onPress={() => setDateMode('month')}
+            >
+              <Ionicons 
+                name="calendar-outline" 
+                size={18} 
+                color={dateMode === 'month' ? 'white' : theme.colors.bodyText} 
+              />
+              <Text 
+                style={[styles.modeButtonText, dateMode === 'month' && styles.modeButtonTextActive]} 
+                fontType={dateMode === 'month' ? 'bold' : 'regular'}
+              >
+                Monthly
+              </Text>
             </TouchableOpacity>
-            <Text style={styles.monthDisplayText} fontType="bold">
-              {moment({ year: selectedYear, month: selectedMonth - 1 }).format('MMMM YYYY')}
-            </Text>
-            <TouchableOpacity style={styles.monthNavButton} onPress={handleNextMonth}>
-              <Ionicons name="chevron-forward" size={24} color={theme.colors.primary} />
+            <TouchableOpacity
+              style={[styles.modeButton, dateMode === 'custom' && styles.modeButtonActive]}
+              onPress={() => setDateMode('custom')}
+            >
+              <Ionicons 
+                name="calendar-number-outline" 
+                size={18} 
+                color={dateMode === 'custom' ? 'white' : theme.colors.bodyText} 
+              />
+              <Text 
+                style={[styles.modeButtonText, dateMode === 'custom' && styles.modeButtonTextActive]} 
+                fontType={dateMode === 'custom' ? 'bold' : 'regular'}
+              >
+                Custom Range
+              </Text>
             </TouchableOpacity>
           </View>
+
+          {/* Month Navigator or Custom Date Picker */}
+          {dateMode === 'month' ? (
+            <View style={styles.monthNavigator}>
+              <TouchableOpacity style={styles.monthNavButton} onPress={handlePrevMonth}>
+                <Ionicons name="chevron-back" size={24} color={theme.colors.primary} />
+              </TouchableOpacity>
+              <Text style={styles.monthDisplayText} fontType="bold">
+                {moment({ year: selectedYear, month: selectedMonth - 1 }).format('MMMM YYYY')}
+              </Text>
+              <TouchableOpacity style={styles.monthNavButton} onPress={handleNextMonth}>
+                <Ionicons name="chevron-forward" size={24} color={theme.colors.primary} />
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <View style={styles.dateRangePicker}>
+              <View style={styles.datePickerGroup}>
+                <CrossPlatformDatePicker
+                  date={startDate}
+                  onDateChange={setStartDate}
+                  mode="date"
+                />
+              </View>
+              <Ionicons name="arrow-forward" size={16} color={theme.colors.bodyText} style={styles.dateArrow} />
+              <View style={styles.datePickerGroup}>
+                <CrossPlatformDatePicker
+                  date={endDate}
+                  onDateChange={setEndDate}
+                  mode="date"
+                />
+              </View>
+            </View>
+          )}
 
           <View style={styles.exportActions}>
             <TouchableOpacity 
               style={[
-                styles.iconActionButton,
-                { backgroundColor: reportData.length === 0 ? theme.colors.borderColor : theme.colors.success },
+                styles.exportButton,
+                reportData.length === 0 && styles.exportButtonDisabled,
               ]}
               onPress={handleExportExcel}
               disabled={reportData.length === 0}
             >
-              <Ionicons name="download-outline" size={20} color="white" />
-              <Text style={styles.iconActionText} fontType="bold">Excel</Text>
+              <Ionicons 
+                name="download-outline" 
+                size={16} 
+                color={reportData.length === 0 ? theme.colors.disabledText : theme.colors.success} 
+              />
+              <Text 
+                style={[
+                  styles.exportButtonText,
+                  reportData.length === 0 && styles.exportButtonTextDisabled
+                ]} 
+                fontType="medium"
+              >
+                Excel
+              </Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -447,9 +562,15 @@ const PayrollReport = () => {
             <Text style={styles.statLabel} fontType="regular">Total Correction</Text>
             <Text style={styles.statValue} fontType="bold">{totalCorrectionMinutes}m</Text>
           </View>
-          <View style={styles.statBox}>
-            <Text style={[styles.statLabel, { color: theme.colors.primary }]} fontType="bold">Total Payable</Text>
+          <View style={[styles.statBox, styles.statDivider]}>
+            <Text style={[styles.statLabel, { color: theme.colors.primary }]} fontType="bold">Payable Hours</Text>
             <Text style={[styles.statValue, { color: theme.colors.primary }]} fontType="bold">{totalPayableHours.toFixed(2)}h</Text>
+          </View>
+          <View style={styles.statBox}>
+            <Text style={[styles.statLabel, { color: theme.colors.success }]} fontType="bold">Total Payable</Text>
+            <Text style={[styles.statValue, { color: theme.colors.success, fontSize: theme.fontSizes['2xl'] }]} fontType="bold">
+              {currency}{totalPayableMoney.toFixed(2)}
+            </Text>
           </View>
         </View>
 
@@ -576,6 +697,56 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     gap: theme.spacing(2),
   },
+  modeToggle: {
+    flexDirection: 'row',
+    backgroundColor: theme.colors.pageBackground,
+    borderRadius: theme.radius.lg,
+    padding: theme.spacing(0.5),
+    borderWidth: 1,
+    borderColor: theme.colors.borderColor,
+  },
+  modeButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: theme.spacing(1),
+    paddingHorizontal: theme.spacing(2),
+    borderRadius: theme.radius.md,
+    gap: theme.spacing(0.5),
+  },
+  modeButtonActive: {
+    backgroundColor: theme.colors.primary,
+  },
+  modeButtonText: {
+    fontSize: theme.fontSizes.sm,
+    color: theme.colors.bodyText,
+  },
+  modeButtonTextActive: {
+    color: 'white',
+  },
+  dateRangePicker: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: theme.colors.pageBackground,
+    borderRadius: theme.radius.lg,
+    paddingVertical: theme.spacing(0.5),
+    paddingHorizontal: theme.spacing(1),
+    borderWidth: 1,
+    borderColor: theme.colors.borderColor,
+    gap: theme.spacing(0.5),
+  },
+  datePickerGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing(0.5),
+    paddingHorizontal: theme.spacing(0.5),
+  },
+  dateLabel: {
+    fontSize: theme.fontSizes.xs,
+    color: theme.colors.bodyText,
+  },
+  dateArrow: {
+    paddingHorizontal: theme.spacing(0.5),
+  },
   monthNavigator: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -600,17 +771,28 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: theme.spacing(1),
   },
-  iconActionButton: {
+  exportButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: theme.spacing(1),
-    paddingHorizontal: theme.spacing(2),
-    borderRadius: theme.radius.md,
+    gap: theme.spacing(0.75),
+    paddingVertical: theme.spacing(0.75),
+    paddingHorizontal: theme.spacing(1.5),
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: theme.colors.success + '40',
+    backgroundColor: theme.colors.success + '10',
   },
-  iconActionText: {
-    color: 'white',
-    marginLeft: theme.spacing(1),
+  exportButtonDisabled: {
+    borderColor: theme.colors.borderColor,
+    backgroundColor: theme.colors.pageBackground,
+    opacity: 0.5,
+  },
+  exportButtonText: {
     fontSize: theme.fontSizes.sm,
+    color: theme.colors.success,
+  },
+  exportButtonTextDisabled: {
+    color: theme.colors.disabledText,
   },
   statsRow: {
     flexDirection: 'row',
@@ -625,6 +807,7 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
+    minWidth: 140,
   },
   statDivider: {
     borderLeftWidth: 1,

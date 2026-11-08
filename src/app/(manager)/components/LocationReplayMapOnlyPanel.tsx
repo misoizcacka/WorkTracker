@@ -17,7 +17,7 @@ const viewerTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'
 interface DailyEvent {
   event_id: string;
   event_timestamp: string;
-  event_type: 'enter_geofence' | 'exit_geofence';
+  event_type: 'enter_geofence' | 'exit_geofence' | 'active_tracking' | 'passive_tracking';
   ref_name: string;
   latitude: number;
   longitude: number;
@@ -94,6 +94,12 @@ const LocationReplayMapOnlyPanel = ({ workerId, date }: LocationReplayMapOnlyPan
         setEvents([]);
         setDailySummary(null);
         setMapWorker([]);
+        setInferredLocation(null);
+        setSelectedMapTime(null);
+        setTemporarySelectedMapTime(null);
+        setSliderMinTime(null);
+        setSliderMaxTime(null);
+        setMapRegion(undefined);
         return;
     };
 
@@ -155,6 +161,11 @@ const LocationReplayMapOnlyPanel = ({ workerId, date }: LocationReplayMapOnlyPan
   // Effect to initialize selectedMapTime and map region when all data is loaded
   useEffect(() => {
     if (!dailySummary || !date || (loading || loadingSummary)) {
+      return;
+    }
+
+    // Don't initialize if there are no events
+    if (events.length === 0) {
       return;
     }
 
@@ -236,6 +247,36 @@ const LocationReplayMapOnlyPanel = ({ workerId, date }: LocationReplayMapOnlyPan
     }
   }, [inferredLocation, mapZoom]);
 
+  // Filter and deduplicate geofence events for timeline (keep all events for map trail)
+  const timelineEvents = useMemo(() => {
+    const geofenceEvents = events.filter(e => 
+      e.event_type === 'enter_geofence' || e.event_type === 'exit_geofence'
+    );
+    
+    // Deduplicate consecutive same-type events for same location
+    const deduplicatedEvents: DailyEvent[] = [];
+    let lastEvent: DailyEvent | null = null;
+    
+    geofenceEvents.forEach((event) => {
+      // Check if this is a duplicate of the immediately previous event
+      if (lastEvent && 
+          lastEvent.ref_name === event.ref_name && 
+          lastEvent.event_type === event.event_type) {
+        return; // Skip consecutive duplicate
+      }
+      
+      // Check for events at exact same timestamp
+      if (lastEvent && lastEvent.event_timestamp === event.event_timestamp) {
+        return; // Skip same-timestamp duplicate
+      }
+      
+      deduplicatedEvents.push(event);
+      lastEvent = event;
+    });
+    
+    return deduplicatedEvents;
+  }, [events]);
+
   const trailCoordinates = useMemo(() => {
     if (!inferredLocation || events.length === 0) return [];
     const idx = events.findIndex(e => e.event_id === inferredLocation.event_id);
@@ -248,6 +289,8 @@ const LocationReplayMapOnlyPanel = ({ workerId, date }: LocationReplayMapOnlyPan
     const name = inferredLocation.ref_name;
     if (inferredLocation.event_type === 'enter_geofence') return `Entered ${name}`;
     if (inferredLocation.event_type === 'exit_geofence') return `Left ${name}`;
+    if (inferredLocation.event_type === 'active_tracking') return `Active tracking`;
+    if (inferredLocation.event_type === 'passive_tracking') return `Passive tracking`;
     return name || null;
   }, [inferredLocation]);
 
@@ -273,8 +316,12 @@ const LocationReplayMapOnlyPanel = ({ workerId, date }: LocationReplayMapOnlyPan
           <ActivityIndicator size="large" color={theme.colors.primary} style={{flex: 1, marginTop: 50}}/>
       ) : (
           <>
-              {events.length === 0 && !dailySummary ? (
-                  <Card style={{padding: 20, alignItems: 'center'}}><Text fontType="regular">No data found for this day.</Text></Card>
+              {(events.length === 0 || !dailySummary) ? (
+                  <Card style={{flex: 1, justifyContent: 'center', alignItems: 'center', padding: theme.spacing(3)}}>
+                    <Text style={{ color: theme.colors.bodyText, fontSize: 16, textAlign: 'center' }} fontType="regular">
+                      No location data found for this worker on this date.
+                    </Text>
+                  </Card>
               ) : (
                   <Card style={styles.mapCard}>
                       <View style={styles.mapViewContainer}>
@@ -305,19 +352,59 @@ const LocationReplayMapOnlyPanel = ({ workerId, date }: LocationReplayMapOnlyPan
                               {eventLabel && (
                                   <Text style={styles.eventLabel} fontType="medium">{eventLabel}</Text>
                               )}
-                              <Slider
+                              
+                              {/* Timeline with event markers */}
+                              <View style={styles.timelineContainer}>
+                                <Slider
                                   style={styles.timelineSlider}
                                   minimumValue={sliderMinTime}
                                   maximumValue={sliderMaxTime}
-                                  value={temporarySelectedMapTime || sliderMinTime} // Use temporary value
+                                  value={temporarySelectedMapTime || sliderMinTime}
                                   onValueChange={(val) => { setTemporarySelectedMapTime(val); setSelectedMapTime(val); }}
                                   minimumTrackTintColor={theme.colors.primary}
                                   maximumTrackTintColor={theme.colors.borderColor}
                                   thumbTintColor={theme.colors.primary}
-                              />
+                                />
+                                
+                                {/* Event markers on timeline - only geofence events */}
+                                <View style={styles.eventMarkersContainer}>
+                                  {timelineEvents.map((event) => {
+                                    const eventTime = moment(event.event_timestamp).valueOf();
+                                    const position = ((eventTime - sliderMinTime) / (sliderMaxTime - sliderMinTime)) * 100;
+                                    
+                                    return (
+                                      <View
+                                        key={event.event_id}
+                                        style={[
+                                          styles.eventMarker,
+                                          {
+                                            left: `${position}%`,
+                                            backgroundColor: event.event_type === 'enter_geofence' 
+                                              ? theme.colors.success 
+                                              : theme.colors.danger,
+                                          }
+                                        ]}
+                                      />
+                                    );
+                                  })}
+                                </View>
+                              </View>
+                              
                               <View style={styles.timeLabelsContainer}>
                                   <Text style={styles.timeLabel}>{new Intl.DateTimeFormat(undefined, { timeZone: viewerTimeZone, hour: '2-digit', minute: '2-digit', hour12: false }).format(new Date(sliderMinTime))}</Text>
                                   <Text style={styles.timeLabel} fontType="regular">{new Intl.DateTimeFormat(undefined, { timeZone: viewerTimeZone, hour: '2-digit', minute: '2-digit', hour12: false }).format(new Date(sliderMaxTime))}</Text>
+                              </View>
+                              
+                              {/* Legend for event markers */}
+                              <View style={styles.legendContainer}>
+                                <View style={styles.legendItem}>
+                                  <View style={[styles.legendDot, { backgroundColor: theme.colors.success }]} />
+                                  <Text style={styles.legendText}>Entered Location</Text>
+                                </View>
+                                <View style={styles.legendItem}>
+                                  <View style={[styles.legendDot, { backgroundColor: theme.colors.danger }]} />
+                                  <Text style={styles.legendText}>Exited Location</Text>
+                                </View>
                               </View>
                           </View>
                       )}
@@ -353,9 +440,32 @@ const styles = StyleSheet.create({
         marginBottom: theme.spacing(1),
         textAlign: 'center',
     },
+    timelineContainer: {
+        position: 'relative',
+        width: '100%',
+        height: 40,
+    },
     timelineSlider: {
         width: '100%',
         height: 40,
+    },
+    eventMarkersContainer: {
+        position: 'absolute',
+        top: 18,
+        left: 0,
+        right: 0,
+        height: 4,
+        pointerEvents: 'none',
+    },
+    eventMarker: {
+        position: 'absolute',
+        width: 8,
+        height: 8,
+        borderRadius: 4,
+        borderWidth: 2,
+        borderColor: 'white',
+        marginLeft: -4,
+        marginTop: -2,
     },
     timeLabelsContainer: {
         flexDirection: 'row',
@@ -372,6 +482,31 @@ const styles = StyleSheet.create({
         color: theme.colors.primary,
         textAlign: 'center',
         marginBottom: theme.spacing(1),
+    },
+    legendContainer: {
+        flexDirection: 'row',
+        justifyContent: 'center',
+        gap: 16,
+        marginTop: theme.spacing(2),
+        paddingTop: theme.spacing(2),
+        borderTopWidth: 1,
+        borderTopColor: theme.colors.borderColor,
+    },
+    legendItem: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+    },
+    legendDot: {
+        width: 8,
+        height: 8,
+        borderRadius: 4,
+        borderWidth: 2,
+        borderColor: 'white',
+    },
+    legendText: {
+        fontSize: 11,
+        color: theme.colors.bodyText,
     },
 });
 

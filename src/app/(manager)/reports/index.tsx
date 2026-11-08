@@ -16,13 +16,6 @@ export default function ReportsHub() {
 
   const reports = [
     {
-      title: t('manager.reports.employeeHoursTitle'),
-      description: t('manager.reports.employeeHoursDesc'),
-      icon: 'time-outline',
-      path: 'employee-hours-report',
-      comingSoon: false,
-    },
-    {
       title: t('manager.reports.payrollSummaryTitle'),
       description: t('manager.reports.payrollSummaryDesc'),
       icon: 'cash-outline',

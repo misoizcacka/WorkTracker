@@ -16,11 +16,12 @@ const viewerTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'
 interface DailyEvent {
   event_id: string;
   event_timestamp: string;
-  event_type: 'enter_geofence' | 'exit_geofence';
+  event_type: 'enter_geofence' | 'exit_geofence' | 'checkin' | 'checkout' | 'checkout_at_location';
   ref_name: string;
   ref_address: string;
   latitude: number;
   longitude: number;
+  work_session_id?: string; // For check-in/check-out events
 }
 
 interface DailySummary {
@@ -54,8 +55,9 @@ const haversineDistance = (lat1: number, lon1: number, lat2: number, lon2: numbe
 
 const WorkerDailyDetailsPanel = ({ workerId, date }: WorkerDailyDetailsPanelProps) => {
   const { getEmployeeById } = React.useContext(EmployeesContext) as EmployeesContextType;
-  const [events, setEvents] = useState<DailyEvent[]>([]); // Geofence transitions only (for timeline)
+  const [events, setEvents] = useState<DailyEvent[]>([]); // Geofence transitions + checkout events (for timeline)
   const [allLocationEvents, setAllLocationEvents] = useState<LocationEvent[]>([]); // ALL events for map
+  const [workSessions, setWorkSessions] = useState<any[]>([]); // Work sessions for the day
   const [dailySummary, setDailySummary] = useState<DailySummary | null>(null);
   const [loading, setLoading] = useState(false);
   const [loadingSummary, setLoadingSummary] = useState(false);
@@ -122,7 +124,32 @@ const WorkerDailyDetailsPanel = ({ workerId, date }: WorkerDailyDetailsPanelProp
           }
           activeVisits.delete(event.ref_name);
         }
+      } else if (event.event_type === 'checkout_at_location') {
+        // Handle checkout events - close any active visit for this location
+        const startTime = activeVisits.get(event.ref_name);
+        if (startTime) {
+          const details = getSiteDetails(event.ref_name);
+          if (details) {
+            const existing = projectGroups.get(event.ref_name);
+            const visit: Visit = { startTime, endTime: event.event_timestamp };
+            const duration = moment(visit.endTime).diff(moment(visit.startTime), 'minutes');
+            
+            if (existing) {
+              existing.visits.push(visit);
+              existing.totalDurationMinutes += duration;
+            } else {
+              projectGroups.set(event.ref_name, {
+                ...details,
+                name: event.ref_name,
+                visits: [visit],
+                totalDurationMinutes: duration
+              });
+            }
+          }
+          activeVisits.delete(event.ref_name);
+        }
       }
+      // Skip 'checkin' and 'checkout' events - they don't affect geofence logic
     });
 
     // Handle ongoing visits (no exit event)
@@ -213,7 +240,7 @@ const WorkerDailyDetailsPanel = ({ workerId, date }: WorkerDailyDetailsPanelProp
     const fetchDetails = async () => {
       setLoading(true);
       
-      const [projRes, locRes, detailsRes, allEventsRes] = await Promise.all([
+      const [projRes, locRes, detailsRes, allEventsRes, sessionsRes] = await Promise.all([
         supabase.from('projects').select('*'),
         supabase.from('common_locations').select('*'),
         // Geofence transitions only (for timeline)
@@ -227,7 +254,16 @@ const WorkerDailyDetailsPanel = ({ workerId, date }: WorkerDailyDetailsPanelProp
           worker_id_param: workerId,
           report_date: moment(date).format('YYYY-MM-DD'),
           p_timezone: viewerTimeZone,
-        })
+        }),
+        // Work sessions that overlap with the selected day
+        // Include: sessions that started before/on this day AND (ended on/after this day OR are still active)
+        supabase
+          .from('work_sessions')
+          .select('*')
+          .eq('worker_id', workerId)
+          .lte('start_time', moment(date).endOf('day').toISOString())
+          .or(`end_time.gte.${moment(date).startOf('day').toISOString()},end_time.is.null`)
+          .order('start_time', { ascending: true })
       ]);
 
       if (projRes.data) setProjects(projRes.data);
@@ -237,7 +273,145 @@ const WorkerDailyDetailsPanel = ({ workerId, date }: WorkerDailyDetailsPanelProp
         console.error('Error fetching daily details:', detailsRes.error);
         setEvents([]);
       } else {
-        setEvents(detailsRes.data || []);
+        const geofenceEvents = detailsRes.data || [];
+        
+        // Get work sessions
+        const sessions = (!sessionsRes.error && sessionsRes.data) ? sessionsRes.data : [];
+        setWorkSessions(sessions);
+        
+        console.log('[DEBUG] Work sessions found:', sessions.length);
+        sessions.forEach((s: any, idx: number) => {
+          console.log(`[DEBUG] Session ${idx + 1}:`, {
+            id: s.id,
+            start_time: s.start_time,
+            end_time: s.end_time,
+            assignment_id: s.assignment_id,
+          });
+        });
+        console.log('[DEBUG] Geofence events found:', geofenceEvents.length);
+        geofenceEvents.forEach((e: any, idx: number) => {
+          console.log(`[DEBUG] Event ${idx + 1}:`, {
+            type: e.event_type,
+            location: e.ref_name,
+            timestamp: e.event_timestamp,
+          });
+        });
+        
+        // Create check-in and check-out events from work sessions
+        const workSessionEvents: DailyEvent[] = [];
+        
+        // Group events by ref_name to track enter/exit pairs
+        const eventsByLocation = new Map<string, { enters: DailyEvent[], exits: DailyEvent[] }>();
+        
+        geofenceEvents.forEach((event: DailyEvent) => {
+          if (!eventsByLocation.has(event.ref_name)) {
+            eventsByLocation.set(event.ref_name, { enters: [], exits: [] });
+          }
+          const group = eventsByLocation.get(event.ref_name)!;
+          if (event.event_type === 'enter_geofence') {
+            group.enters.push(event);
+          } else if (event.event_type === 'exit_geofence') {
+            group.exits.push(event);
+          }
+        });
+        
+        // For each work session, create check-in and check-out events
+        sessions.forEach((session: any) => {
+          // Add check-in event
+          workSessionEvents.push({
+            event_id: `checkin-${session.id}`,
+            event_timestamp: session.start_time,
+            event_type: 'checkin',
+            ref_name: '', // No location for generic check-in
+            ref_address: '',
+            latitude: 0,
+            longitude: 0,
+            work_session_id: session.id,
+          });
+          
+          // Add check-out event
+          if (session.end_time) {
+            // Find the LAST location the worker entered without exiting
+            let lastLocationName = '';
+            let lastEnterTime: moment.Moment | null = null;
+            
+            eventsByLocation.forEach((group, locationName) => {
+              // Check if any enter event for this location is within this session
+              // and doesn't have a matching exit
+              const sessionEnters = group.enters.filter((enter: DailyEvent) => {
+                const enterTime = moment(enter.event_timestamp);
+                return enterTime.isBetween(moment(session.start_time), moment(session.end_time), undefined, '[]');
+              });
+              
+              const sessionExits = group.exits.filter((exit: DailyEvent) => {
+                const exitTime = moment(exit.event_timestamp);
+                return exitTime.isBetween(moment(session.start_time), moment(session.end_time), undefined, '[]');
+              });
+              
+              // If more enters than exits, worker was still at this location
+              if (sessionEnters.length > sessionExits.length) {
+                // Find the LAST (most recent) unmatched enter for this location
+                const lastUnmatchedEnter = sessionEnters[sessionEnters.length - 1];
+                const lastUnmatchedEnterTime = moment(lastUnmatchedEnter.event_timestamp);
+                
+                // Keep track of the most recent enter across all locations
+                if (!lastEnterTime || lastUnmatchedEnterTime.isAfter(lastEnterTime)) {
+                  lastEnterTime = lastUnmatchedEnterTime;
+                  lastLocationName = locationName;
+                }
+              }
+            });
+            
+            workSessionEvents.push({
+              event_id: `checkout-${session.id}`,
+              event_timestamp: session.end_time,
+              event_type: lastLocationName ? 'checkout_at_location' : 'checkout',
+              ref_name: lastLocationName,
+              ref_address: '',
+              latitude: 0,
+              longitude: 0,
+              work_session_id: session.id,
+            });
+          }
+        });
+        
+        // Merge all events: geofence events + work session events, sort by timestamp
+        const allEvents = [...geofenceEvents, ...workSessionEvents].sort((a, b) => 
+          moment(a.event_timestamp).valueOf() - moment(b.event_timestamp).valueOf()
+        );
+        
+        // Deduplicate events - only remove truly consecutive duplicates
+        const deduplicatedEvents: DailyEvent[] = [];
+        let lastEvent: DailyEvent | null = null;
+        
+        allEvents.forEach((event) => {
+          // Check if this is a duplicate of the immediately previous event
+          // (same location, same type, happens right after)
+          if (lastEvent && 
+              lastEvent.ref_name === event.ref_name && 
+              lastEvent.event_type === event.event_type &&
+              (event.event_type === 'enter_geofence' || event.event_type === 'exit_geofence')) {
+            console.log(`[DEBUG] Skipping consecutive duplicate ${event.event_type} for ${event.ref_name} at ${event.event_timestamp}`);
+            return; // Skip this consecutive duplicate
+          }
+          
+          // Check for events at exact same timestamp (GPS glitch - multiple exits at once)
+          if (lastEvent && 
+              lastEvent.event_timestamp === event.event_timestamp &&
+              (event.event_type === 'enter_geofence' || event.event_type === 'exit_geofence')) {
+            console.log(`[DEBUG] Skipping same-timestamp duplicate ${event.event_type} for ${event.ref_name} at ${event.event_timestamp}`);
+            return; // Skip events at exact same time
+          }
+          
+          deduplicatedEvents.push(event);
+          lastEvent = event;
+        });
+        
+        console.log('[DEBUG] Total events after merge:', allEvents.length);
+        console.log('[DEBUG] Total events after deduplication:', deduplicatedEvents.length);
+        console.log('[DEBUG] Event types:', deduplicatedEvents.map(e => `${e.event_type}:${e.ref_name}`).join(', '));
+        
+        setEvents(deduplicatedEvents);
       }
 
       if (allEventsRes.error) {
@@ -316,16 +490,52 @@ const WorkerDailyDetailsPanel = ({ workerId, date }: WorkerDailyDetailsPanelProp
 
   const renderEvent = (event: DailyEvent) => {
     const isEnter = event.event_type === 'enter_geofence';
+    const isExit = event.event_type === 'exit_geofence';
+    const isCheckin = event.event_type === 'checkin';
+    const isCheckout = event.event_type === 'checkout';
+    const isCheckoutAtLocation = event.event_type === 'checkout_at_location';
+    
+    let iconName: any = 'enter-outline';
+    let iconColor = theme.colors.success;
+    let bgColor = theme.statusColors.successBackground;
+    let eventLabel = 'Entered';
+    let locationText = event.ref_name;
+    
+    if (isExit) {
+      iconName = 'exit-outline';
+      iconColor = theme.colors.danger;
+      bgColor = theme.statusColors.warningBackground;
+      eventLabel = 'Exited';
+    } else if (isCheckin) {
+      iconName = 'time';
+      iconColor = theme.colors.primary;
+      bgColor = theme.colors.primaryMuted;
+      eventLabel = 'Checked in';
+      locationText = '';
+    } else if (isCheckout) {
+      iconName = 'time-outline';
+      iconColor = theme.colors.primary;
+      bgColor = theme.colors.primaryMuted;
+      eventLabel = 'Checked out';
+      locationText = '';
+    } else if (isCheckoutAtLocation) {
+      iconName = 'time-outline';
+      iconColor = theme.colors.warning;
+      bgColor = '#FFF4E5';
+      eventLabel = 'Checked out at';
+      locationText = event.ref_name;
+    }
+    
     return (
       <View key={event.event_id} style={styles.tableRow}>
         <View style={styles.colIcon}>
-            <View style={[styles.eventBadge, {backgroundColor: isEnter ? theme.statusColors.successBackground : theme.statusColors.warningBackground}]}>
-                <Ionicons name={isEnter ? "enter-outline" : "exit-outline"} size={16} color={isEnter ? theme.colors.success : theme.colors.danger} />
+            <View style={[styles.eventBadge, {backgroundColor: bgColor}]}>
+                <Ionicons name={iconName} size={18} color={iconColor} />
             </View>
         </View>
         <View style={styles.colEventDesc}>
             <Text style={styles.eventText} fontType="medium" numberOfLines={1}>
-                {isEnter ? "Entered" : "Exited"} {event.ref_name}
+                {eventLabel}{locationText ? ` ${locationText}` : ''}
             </Text>
             <Text style={styles.eventSubtext} fontType="regular">
                 {new Intl.DateTimeFormat(undefined, {
@@ -460,8 +670,7 @@ const WorkerDailyDetailsPanel = ({ workerId, date }: WorkerDailyDetailsPanelProp
                     <Text style={[styles.tableHeaderText, styles.colEventDesc]} fontType="bold">Event Details</Text>
                 </View>
                 <ScrollView showsVerticalScrollIndicator={true} style={styles.timelineScroll}>
-                    {events.filter(e => e.event_type === 'enter_geofence' || e.event_type === 'exit_geofence')
-                            .slice().reverse().map(event => renderEvent(event))}
+                    {events.slice().reverse().map(event => renderEvent(event))}
                 </ScrollView>
             </View>
         </View>

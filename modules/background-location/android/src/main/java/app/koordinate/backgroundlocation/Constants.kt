@@ -30,7 +30,7 @@ enum class Confidence {
 }
 
 object Constants {
-    const val ACTIVE_TRACKING_INTERVAL_MS = 2 * 60 * 1000L   // 2 min — worker outside geofence, traveling
+    const val ACTIVE_TRACKING_INTERVAL_MS = 1 * 60 * 1000L   // 1 min — worker outside geofence, traveling (faster exit detection)
     const val PASSIVE_TRACKING_INTERVAL_MS = 5 * 60 * 1000L  // 5 min — worker inside geofence, on site
 
     const val SHARED_PREFS_NAME = "location_tracking_prefs"
