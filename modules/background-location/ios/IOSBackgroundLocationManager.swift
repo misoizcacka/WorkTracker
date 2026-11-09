@@ -133,6 +133,15 @@ final class IOSBackgroundLocationManager: NSObject, CLLocationManagerDelegate {
 
     IOSBackgroundLocationManager.isRunning = true
 
+    // FORCE-SWIPE DETECTION: Check if tracking was interrupted
+    let gapSeconds = stateStore.trackingGapSeconds
+    if gapSeconds > 600 {  // > 10 minutes
+      LocationFileLogger.shared.warning("Service", "⚠️ Tracking gap detected: \(gapSeconds)s since last update. Resuming from stored state after process kill.")
+      NSLog("IOSBackgroundLocationManager: Detected \(gapSeconds)s tracking gap - likely force-swiped")
+    } else if gapSeconds > 0 {
+      LocationFileLogger.shared.info("Service", "✓ Resuming tracking: \(gapSeconds)s gap (normal)")
+    }
+
     registerGeofences(assignments: stateStore.geofenceAssignments)
 
     let isInsideCurrent = currentAssignment()
@@ -145,6 +154,8 @@ final class IOSBackgroundLocationManager: NSObject, CLLocationManagerDelegate {
 
     scheduleBackgroundRefresh()
     flushPendingEvents()
+    
+    LocationFileLogger.shared.info("Service", "Location tracking resumed: \(stateStore.geofenceAssignments.count) geofences, mode: \(isInsideCurrent ? "PASSIVE" : "ACTIVE")")
   }
 
   func stop() {
