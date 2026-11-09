@@ -56,6 +56,7 @@ const PayrollReport = () => {
   
   const [reportData, setReportData] = useState<PayrollReportItem[]>([]);
   const [loading, setLoading] = useState(false);
+  const [exportMenuOpen, setExportMenuOpen] = useState(false);
 
   useEffect(() => {
     const fetchReportData = async () => {
@@ -86,8 +87,13 @@ const PayrollReport = () => {
         console.error('Error fetching payroll report:', error);
         setReportData([]);
       } else {
+        // Map the data to ensure consistent field names (custom range returns worker_full_name)
+        const normalizedData = (data || []).map((row: any) => ({
+          ...row,
+          worker_name: row.worker_name || row.worker_full_name,
+        }));
         setReportData(
-          (data || []).filter((row: PayrollReportItem) => visibleWorkerIds.has(row.worker_id))
+          normalizedData.filter((row: PayrollReportItem) => visibleWorkerIds.has(row.worker_id))
         );
       }
       setLoading(false);
@@ -622,56 +628,72 @@ const PayrollReport = () => {
           )}
 
           <View style={styles.exportActions}>
-            {showDATEVExport && (
-              <TouchableOpacity 
-                style={[
-                  styles.exportButton,
-                  styles.datevButton,
-                  reportData.length === 0 && styles.exportButtonDisabled,
-                ]}
-                onPress={handleExportDATEV}
-                disabled={reportData.length === 0}
-              >
-                <Ionicons 
-                  name="document-text-outline" 
-                  size={16} 
-                  color={reportData.length === 0 ? theme.colors.disabledText : theme.colors.primary} 
-                />
-                <Text 
-                  style={[
-                    styles.exportButtonText,
-                    styles.datevButtonText,
-                    reportData.length === 0 && styles.exportButtonTextDisabled
-                  ]} 
-                  fontType="medium"
-                >
-                  DATEV CSV
-                </Text>
-              </TouchableOpacity>
-            )}
             <TouchableOpacity 
               style={[
                 styles.exportButton,
                 reportData.length === 0 && styles.exportButtonDisabled,
               ]}
-              onPress={handleExportExcel}
+              onPress={() => setExportMenuOpen(!exportMenuOpen)}
               disabled={reportData.length === 0}
             >
               <Ionicons 
                 name="download-outline" 
                 size={16} 
-                color={reportData.length === 0 ? theme.colors.disabledText : theme.colors.success} 
+                color={reportData.length === 0 ? theme.colors.disabledText : theme.colors.primary} 
               />
               <Text 
                 style={[
                   styles.exportButtonText,
+                  styles.exportButtonPrimaryText,
                   reportData.length === 0 && styles.exportButtonTextDisabled
                 ]} 
                 fontType="medium"
               >
-                Excel
+                Export
               </Text>
+              <Ionicons 
+                name={exportMenuOpen ? "chevron-up" : "chevron-down"} 
+                size={16} 
+                color={reportData.length === 0 ? theme.colors.disabledText : theme.colors.primary} 
+              />
             </TouchableOpacity>
+            
+            {exportMenuOpen && reportData.length > 0 && (
+              <View style={styles.exportDropdown}>
+                <TouchableOpacity 
+                  style={styles.exportDropdownItem}
+                  onPress={() => {
+                    handleExportExcel();
+                    setExportMenuOpen(false);
+                  }}
+                >
+                  <Ionicons name="document-outline" size={18} color={theme.colors.success} />
+                  <View style={styles.exportDropdownTextContainer}>
+                    <Text style={styles.exportDropdownTitle} fontType="medium">Excel Report</Text>
+                    <Text style={styles.exportDropdownDesc} fontType="regular">Styled spreadsheet with summary</Text>
+                  </View>
+                </TouchableOpacity>
+                
+                {showDATEVExport && (
+                  <>
+                    <View style={styles.exportDropdownDivider} />
+                    <TouchableOpacity 
+                      style={styles.exportDropdownItem}
+                      onPress={() => {
+                        handleExportDATEV();
+                        setExportMenuOpen(false);
+                      }}
+                    >
+                      <Ionicons name="document-text-outline" size={18} color={theme.colors.primary} />
+                      <View style={styles.exportDropdownTextContainer}>
+                        <Text style={styles.exportDropdownTitle} fontType="medium">DATEV CSV</Text>
+                        <Text style={styles.exportDropdownDesc} fontType="regular">German payroll format</Text>
+                      </View>
+                    </TouchableOpacity>
+                  </>
+                )}
+              </View>
+            )}
           </View>
         </View>
 
@@ -897,6 +919,7 @@ const styles = StyleSheet.create({
   exportActions: {
     flexDirection: 'row',
     gap: theme.spacing(1),
+    position: 'relative',
   },
   exportButton: {
     flexDirection: 'row',
@@ -906,10 +929,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: theme.spacing(1.5),
     borderRadius: 6,
     borderWidth: 1,
-    borderColor: theme.colors.success + '40',
-    backgroundColor: theme.colors.success + '10',
-  },
-  datevButton: {
     borderColor: theme.colors.primary + '40',
     backgroundColor: theme.colors.primary + '10',
   },
@@ -922,11 +941,58 @@ const styles = StyleSheet.create({
     fontSize: theme.fontSizes.sm,
     color: theme.colors.success,
   },
-  datevButtonText: {
+  exportButtonPrimaryText: {
     color: theme.colors.primary,
   },
   exportButtonTextDisabled: {
     color: theme.colors.disabledText,
+  },
+  exportDropdown: {
+    position: 'absolute',
+    top: '100%',
+    right: 0,
+    marginTop: theme.spacing(0.5),
+    backgroundColor: theme.colors.cardBackground,
+    borderRadius: theme.radius.md,
+    borderWidth: 1,
+    borderColor: theme.colors.borderColor,
+    minWidth: 240,
+    ...Platform.select({
+      web: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.15,
+        shadowRadius: 12,
+      },
+      native: {
+        elevation: 8,
+      },
+    }),
+    zIndex: 1000,
+  },
+  exportDropdownItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing(1.5),
+    paddingVertical: theme.spacing(1.5),
+    paddingHorizontal: theme.spacing(2),
+  },
+  exportDropdownTextContainer: {
+    flex: 1,
+  },
+  exportDropdownTitle: {
+    fontSize: theme.fontSizes.sm,
+    color: theme.colors.headingText,
+    marginBottom: 2,
+  },
+  exportDropdownDesc: {
+    fontSize: theme.fontSizes.xs,
+    color: theme.colors.bodyText,
+  },
+  exportDropdownDivider: {
+    height: 1,
+    backgroundColor: theme.colors.borderColor,
+    marginHorizontal: theme.spacing(1),
   },
   statsRow: {
     flexDirection: 'row',
