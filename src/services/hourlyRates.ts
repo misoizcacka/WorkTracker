@@ -1,4 +1,56 @@
 import { supabase } from '../utils/supabase';
+import { HourlyRate } from '../types';
+
+/**
+ * Fetches the full rate history for a worker, newest first.
+ * Only callable by owners (enforced by RLS on the server).
+ */
+export async function fetchHourlyRateHistory(employeeId: string): Promise<HourlyRate[]> {
+  const { data, error } = await supabase
+    .from('employee_hourly_rates')
+    .select('*')
+    .eq('employee_id', employeeId)
+    .order('effective_from', { ascending: false });
+
+  if (error) {
+    console.error('fetchHourlyRateHistory error:', error);
+    throw error;
+  }
+  return (data ?? []) as HourlyRate[];
+}
+
+/**
+ * Inserts a new rate entry. The rate is effective from the provided timestamp.
+ * Append-only — existing entries are never modified.
+ */
+export async function insertHourlyRate(
+  employeeId: string,
+  companyId: string,
+  hourlyRate: number,
+  effectiveFrom: string // ISO timestamp
+): Promise<HourlyRate> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('Not authenticated');
+
+  const { data, error } = await supabase
+    .from('employee_hourly_rates')
+    .insert({
+      employee_id: employeeId,
+      company_id: companyId,
+      hourly_rate: hourlyRate,
+      effective_from: effectiveFrom,
+      created_by: user.id,
+    })
+    .select()
+    .single();
+
+  if (error) {
+    console.error('insertHourlyRate error:', error);
+    throw error;
+  }
+
+  return data as HourlyRate;
+}
 
 /**
  * Check if a worker has any hourly rate set
