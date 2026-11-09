@@ -845,6 +845,7 @@ const styles = StyleSheet.create({
     marginBottom: theme.spacing(3),
     flexWrap: 'wrap',
     gap: theme.spacing(2),
+    zIndex: 100,
   },
   modeToggle: {
     flexDirection: 'row',
@@ -920,6 +921,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: theme.spacing(1),
     position: 'relative',
+    zIndex: 101,
   },
   exportButton: {
     flexDirection: 'row',
@@ -968,7 +970,7 @@ const styles = StyleSheet.create({
         elevation: 8,
       },
     }),
-    zIndex: 1000,
+    zIndex: 102,
   },
   exportDropdownItem: {
     flexDirection: 'row',
