@@ -28,6 +28,7 @@ export default function ManagerAccount() {
     user,
     userCompanyName,
     userCompanyId,
+    userCompanyCountry,
     userSubscriptionPeriodEnd,
     userScheduledWorkerSeats,
     userScheduledChangeEffectiveAt,
@@ -237,6 +238,33 @@ export default function ManagerAccount() {
   const seatsUsed = employeesContext?.seatsUsed || 0;
   const seatLimit = employeesContext?.seatLimit || 0;
 
+  // Helper to get currency symbol from country code
+  const getCurrencySymbol = (countryCode: string | null): string => {
+    if (!countryCode) return '€';
+    const euroCountries = ['DE', 'AT', 'FR', 'ES', 'IT', 'NL', 'BE', 'PT', 'FI', 'IE', 'GR', 'LU', 'SI', 'SK', 'EE', 'LV', 'LT', 'CY', 'MT'];
+    const map: Record<string, string> = {
+      US: '$', CA: 'CA$', AU: 'A$', GB: '£', CH: 'CHF', SE: 'kr',
+      NO: 'kr', DK: 'kr', PL: 'zł', CZ: 'Kč', HU: 'Ft', RO: 'lei',
+      TR: '₺', JP: '¥', CN: '¥', KR: '₩', IN: '₹', BR: 'R$',
+      MX: '$', SG: 'S$', NZ: 'NZ$', ZA: 'R', AE: 'د.إ', SA: '﷼',
+    };
+    if (euroCountries.includes(countryCode.toUpperCase())) return '€';
+    return map[countryCode.toUpperCase()] ?? '€';
+  };
+
+  // Helper to get country flag emoji from country code
+  const getCountryFlag = (countryCode: string | null): string => {
+    if (!countryCode || countryCode.length !== 2) return '🌍';
+    const codePoints = countryCode
+      .toUpperCase()
+      .split('')
+      .map(char => 127397 + char.charCodeAt(0));
+    return String.fromCodePoint(...codePoints);
+  };
+
+  const currencySymbol = getCurrencySymbol(userCompanyCountry);
+  const countryFlag = getCountryFlag(userCompanyCountry);
+
   return (
     <AnimatedScreen>
       <ScrollView contentContainerStyle={styles.scrollContent}>
@@ -345,6 +373,26 @@ export default function ManagerAccount() {
                       placeholderTextColor={theme.colors.disabledText}
                     />
                   </View>
+                  
+                  {/* Country & Currency Info */}
+                  <View style={styles.companyInfoRow}>
+                    <View style={styles.companyInfoItem}>
+                      <Text style={styles.companyInfoLabel} fontType="regular">Country</Text>
+                      <View style={styles.companyInfoValue}>
+                        <Text style={styles.countryFlag}>{countryFlag}</Text>
+                        <Text style={styles.companyInfoText} fontType="medium">
+                          {userCompanyCountry || 'Not set'}
+                        </Text>
+                      </View>
+                    </View>
+                    <View style={styles.companyInfoItem}>
+                      <Text style={styles.companyInfoLabel} fontType="regular">Currency</Text>
+                      <Text style={[styles.companyInfoText, styles.currencyText]} fontType="bold">
+                        {currencySymbol}
+                      </Text>
+                    </View>
+                  </View>
+
                   <Button
                     title={t('manager.account.update') as string}
                     onPress={handleSaveCompanyChanges}
@@ -801,5 +849,39 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: theme.colors.primary,
     letterSpacing: 0.5,
+  },
+  companyInfoRow: {
+    flexDirection: 'row',
+    gap: theme.spacing(2),
+    marginBottom: theme.spacing(2),
+    backgroundColor: theme.colors.pageBackground,
+    padding: theme.spacing(2),
+    borderRadius: theme.radius.md,
+  },
+  companyInfoItem: {
+    flex: 1,
+  },
+  companyInfoLabel: {
+    fontSize: theme.fontSizes.xs,
+    color: theme.colors.bodyText,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: theme.spacing(0.5),
+  },
+  companyInfoValue: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing(1),
+  },
+  countryFlag: {
+    fontSize: 24,
+  },
+  companyInfoText: {
+    fontSize: theme.fontSizes.md,
+    color: theme.colors.headingText,
+  },
+  currencyText: {
+    fontSize: 20,
+    color: theme.colors.primary,
   },
 });

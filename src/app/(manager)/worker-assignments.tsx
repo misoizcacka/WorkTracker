@@ -25,6 +25,7 @@ import { useSession } from '~/context/AuthContext'; // NEW: For user session
 import Toast from 'react-native-toast-message'; // NEW: For toast messages
 import { generateKeyBetween } from '~/utils/fractionalIndexing'; // NEW: For fractional indexing
 import UserAvatar from '~/components/UserAvatar';
+import { batchCheckHourlyRates } from '~/services/hourlyRates'; // NEW: Check hourly rates
 
 // Helper component from old project-assignment.tsx
 const CrossPlatformScrollContainer = React.forwardRef((props: any, ref) => {
@@ -65,6 +66,7 @@ export default function ProjectAssignmentScreen() {
   const [searchTerm, setSearchTerm] = useState('');
   const [searchTermProject, setSearchTermProject] = useState('');
   const [searchTermLocation, setSearchTermLocation] = useState(''); // NEW: For common locations search
+  const [workerHourlyRates, setWorkerHourlyRates] = useState<Map<string, boolean>>(new Map()); // NEW: Track which workers have rates
 
   // NEW: State for AddAssignmentModal
   const [isAddModalVisible, setIsAddModalVisible] = useState(false);
@@ -137,52 +139,67 @@ export default function ProjectAssignmentScreen() {
     
     prevSelectedWorkersRef.current = selectedWorkers;
   }, [selectedWorkers, assignments, selectedDate, loadAssignmentsForDate]);
+
+  // NEW: Effect to load hourly rates for workers
+  useEffect(() => {
+    const loadHourlyRates = async () => {
+      const workerIds = employees
+        .filter(e => e.role === 'worker' && e.status === 'active')
+        .map(e => e.id);
+      
+      if (workerIds.length > 0) {
+        const rates = await batchCheckHourlyRates(workerIds);
+        setWorkerHourlyRates(rates);
+      }
+    };
+    
+    loadHourlyRates();
+  }, [employees]);
   
   // renderWorkerItem (from old project-assignment.tsx, uses Image)
   const renderWorkerItem = ({ item }: { item: Employee }) => {
     const isSelected = selectedWorkers.some(e => e.id === item.id);
-    // TODO: Implement proper hourly rate checking using employee_hourly_rates table
-    const hasHourlyWage = true; // Temporarily disabled - needs proper implementation
+    const hasHourlyRate = workerHourlyRates.get(item.id) ?? false;
 
     return (
       <TouchableOpacity 
         onPress={() => handleWorkerPress(item)} 
-        disabled={!hasHourlyWage}
+        disabled={!hasHourlyRate}
         style={[
           styles.workerItem, 
           isSelected && styles.selectedWorkerItem,
-          !hasHourlyWage && styles.disabledWorkerItem
+          !hasHourlyRate && styles.disabledWorkerItem
         ]}
       >
           <Ionicons
             name={isSelected ? "checkbox" : "square-outline"}
             size={20}
-            color={!hasHourlyWage ? '#9CA3AF' : isSelected ? theme.colors.primary : theme.colors.bodyText}
+            color={!hasHourlyRate ? '#9CA3AF' : isSelected ? theme.colors.primary : theme.colors.bodyText}
             style={styles.workerIcon}
           />
           <UserAvatar 
             avatarUrl={item.avatar_url} 
             size={40} 
-            style={[styles.avatar, !hasHourlyWage && styles.disabledAvatar]} 
+            style={[styles.avatar, !hasHourlyRate && styles.disabledAvatar]} 
           />
           <View style={styles.workerInfo}>
             <Text 
               style={[
                 styles.itemName, 
                 isSelected && styles.selectedWorkerText,
-                !hasHourlyWage && styles.disabledText
+                !hasHourlyRate && styles.disabledText
               ]} 
               fontType="medium"
             >
               {item.full_name}
             </Text>
-            {!hasHourlyWage && (
+            {!hasHourlyRate && (
               <Text style={styles.warningText} fontType="regular">
-                No hourly wage set
+                No hourly rate set
               </Text>
             )}
           </View>
-          {!hasHourlyWage && (
+          {!hasHourlyRate && (
             <Ionicons 
               name="warning" 
               size={20} 
@@ -190,7 +207,7 @@ export default function ProjectAssignmentScreen() {
               style={styles.warningIcon}
             />
           )}
-          {isSelected && hasHourlyWage && <Ionicons name="chevron-forward" size={16} color={theme.colors.primary} />}
+          {isSelected && hasHourlyRate && <Ionicons name="chevron-forward" size={16} color={theme.colors.primary} />}
       </TouchableOpacity>
     );
   };
