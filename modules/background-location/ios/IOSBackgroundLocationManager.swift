@@ -29,6 +29,7 @@ final class IOSBackgroundLocationManager: NSObject, CLLocationManagerDelegate {
   private let authenticator = DeviceAuthenticator()
 
   private var currentModeIsActive: Bool?
+  private var periodicTimer: Timer?  // Force location updates at regular intervals
   private var shouldTreatNextLocationAsReconcile = false
   private var backgroundTask: UIBackgroundTaskIdentifier = .invalid
   private var notificationId = "koord.work.session"
@@ -37,7 +38,8 @@ final class IOSBackgroundLocationManager: NSObject, CLLocationManagerDelegate {
     super.init()
     locationManager.delegate = self
     locationManager.allowsBackgroundLocationUpdates = true
-    locationManager.pausesLocationUpdatesAutomatically = true
+    // MUST be false for continuous updates (iOS 16.4+ requirement)
+    locationManager.pausesLocationUpdatesAutomatically = false
     locationManager.activityType = .other
 
     NotificationCenter.default.addObserver(
@@ -146,6 +148,8 @@ final class IOSBackgroundLocationManager: NSObject, CLLocationManagerDelegate {
 
     let isInsideCurrent = currentAssignment()
       .flatMap { stateStore.insideState(for: $0.id) } ?? true
+    
+    // Restart location updates with timer (critical for post-force-swipe recovery)
     startLocationUpdates(active: !isInsideCurrent)
 
     locationManager.startMonitoringSignificantLocationChanges()
@@ -160,6 +164,8 @@ final class IOSBackgroundLocationManager: NSObject, CLLocationManagerDelegate {
 
   func stop() {
     IOSBackgroundLocationManager.isRunning = false
+    periodicTimer?.invalidate()
+    periodicTimer = nil
     locationManager.stopUpdatingLocation()
     locationManager.stopMonitoringSignificantLocationChanges()
     for region in locationManager.monitoredRegions {
@@ -278,16 +284,75 @@ final class IOSBackgroundLocationManager: NSObject, CLLocationManagerDelegate {
   private func startLocationUpdates(active: Bool) {
     if currentModeIsActive == active { return }
     currentModeIsActive = active
+    
+    // Stop existing timer
+    periodicTimer?.invalidate()
+    periodicTimer = nil
+    
     locationManager.stopUpdatingLocation()
     // Match Android's accuracy settings: ACTIVE = HIGH_ACCURACY, PASSIVE = BALANCED_POWER
     locationManager.desiredAccuracy      = active ? kCLLocationAccuracyNearestTenMeters : kCLLocationAccuracyHundredMeters
-    locationManager.distanceFilter       = active ? 25 : 100  // Reduced from 250 for faster indoor exit detection
-    // Allow OS to pause updates only in passive mode — mirror Android BALANCED_POWER behavior
-    locationManager.pausesLocationUpdatesAutomatically = !active
+    // CRITICAL: distanceFilter must be kCLDistanceFilterNone for continuous updates after force-swipe (iOS 16.4+ requirement)
+    // We use time-based intervals instead of distance-based
+    locationManager.distanceFilter       = kCLDistanceFilterNone
+    // CRITICAL: Must stay false for continuous background tracking even after force-swipe
+    locationManager.pausesLocationUpdatesAutomatically = false
     locationManager.activityType         = active ? .fitness : .other
     locationManager.startUpdatingLocation()
+    
+    // Start periodic timer to force location requests (survives background, NOT force-swipe)
+    // Timer will be recreated by significant location changes or region monitoring after force-swipe
+    startPeriodicLocationTimer()
+    
     LocationFileLogger.shared.info("Service", "Mode switched to: \(active ? "ACTIVE (outside geofence)" : "PASSIVE (inside geofence)")")
     NSLog("IOSBackgroundLocationManager: location updates mode → \(active ? "ACTIVE" : "PASSIVE")")
+  }
+  
+  private func startPeriodicLocationTimer() {
+    // Determine interval based on current mode
+    let interval = determineCurrentInterval()
+    
+    // Create timer that fires periodically to request location
+    // This ensures we get updates even if startUpdatingLocation() is throttled by iOS
+    periodicTimer = Timer.scheduledTimer(withTimeInterval: interval, repeats: true) { [weak self] _ in
+      guard let self = self else { return }
+      
+      // Check if we need to adjust interval based on last location (indoor/outdoor detection)
+      let newInterval = self.determineCurrentInterval()
+      if abs(newInterval - interval) > 1 { // If interval changed by more than 1 second
+        self.startLocationUpdates(active: self.currentModeIsActive ?? false) // Restart with new interval
+        return
+      }
+      
+      // Force a location request
+      if CLLocationManager.locationServicesEnabled() {
+        self.locationManager.requestLocation()
+        NSLog("IOSBackgroundLocationManager: Periodic timer fired, requesting location")
+      }
+    }
+    
+    // Make timer work in background
+    if let timer = periodicTimer {
+      RunLoop.current.add(timer, forMode: .common)
+    }
+    
+    LocationFileLogger.shared.info("Service", "Periodic timer started with interval: \(interval)s")
+  }
+  
+  private func determineCurrentInterval() -> TimeInterval {
+    guard let lastLocation = stateStore.lastKnownLocation else {
+      // No last location, use default based on mode
+      return (currentModeIsActive ?? false) ? activeInterval : passiveOutdoorInterval
+    }
+    
+    if currentModeIsActive ?? false {
+      // Active mode = always 1 minute
+      return activeInterval
+    }
+    
+    // Passive mode: indoor vs outdoor detection
+    let isIndoor = lastLocation.horizontalAccuracy > 65 // WiFi-based = indoor
+    return isIndoor ? passiveIndoorInterval : passiveOutdoorInterval
   }
 
   // ─── Location processing ──────────────────────────────────────────────────
