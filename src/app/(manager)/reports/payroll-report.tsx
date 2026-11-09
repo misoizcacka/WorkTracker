@@ -45,6 +45,7 @@ const PayrollReport = () => {
   const { userCompanyName, userCompanyCountry } = useSession();
   const currency = getCurrencySymbol(userCompanyCountry);
   const visibleWorkerIds = useMemo(() => new Set(employees.filter(employee => employee.role === 'worker').map(employee => employee.id)), [employees]);
+  const showDATEVExport = userCompanyCountry === 'DE' || userCompanyCountry === 'AT';
   
   // Date range mode: 'month' or 'custom'
   const [dateMode, setDateMode] = useState<'month' | 'custom'>('month');
@@ -356,6 +357,105 @@ const PayrollReport = () => {
     }
   };
 
+  const handleExportDATEV = async () => {
+    if (reportData.length === 0) return;
+
+    // DATEV CSV Format Requirements:
+    // - Semicolon delimiter (;)
+    // - German decimal separator (comma)
+    // - German date format (DD.MM.YYYY)
+    // - Text fields in quotes
+    // - CR/LF line endings (\r\n)
+    
+    const periodStart = dateMode === 'month'
+      ? moment({ year: selectedYear, month: selectedMonth - 1 }).startOf('month')
+      : moment(startDate);
+    const periodEnd = dateMode === 'month'
+      ? moment({ year: selectedYear, month: selectedMonth - 1 }).endOf('month')
+      : moment(endDate);
+
+    // DATEV Column Headers (German)
+    const headers = [
+      'Personalnummer',       // Employee ID
+      'Name',                 // Employee Name
+      'Datum Von',            // Period Start Date
+      'Datum Bis',            // Period End Date
+      'Arbeitsstunden',       // Total Work Hours
+      'Pausenminuten',        // Break Minutes
+      'Korrekturminuten',     // Correction Minutes
+      'Abrechnungsstunden',   // Payable Hours
+      'Stundenlohn',          // Hourly Rate
+      'Gesamtbetrag'          // Total Pay
+    ];
+
+    // Helper function to format numbers German-style (comma as decimal separator)
+    const formatGermanNumber = (num: number | null): string => {
+      if (num === null) return '';
+      return num.toFixed(2).replace('.', ',');
+    };
+
+    // Helper function to format dates German-style (DD.MM.YYYY)
+    const formatGermanDate = (date: moment.Moment): string => {
+      return date.format('DD.MM.YYYY');
+    };
+
+    // Build CSV rows
+    const rows = reportData.map((item) => {
+      return [
+        `"${item.worker_id}"`,
+        `"${item.worker_name}"`,
+        `"${formatGermanDate(periodStart)}"`,
+        `"${formatGermanDate(periodEnd)}"`,
+        formatGermanNumber(item.total_work_hours),
+        item.total_break_minutes.toString(),
+        item.total_correction_minutes.toString(),
+        formatGermanNumber(item.payable_hours),
+        formatGermanNumber(item.effective_hourly_rate),
+        formatGermanNumber(item.total_pay)
+      ].join(';');
+    });
+
+    // Combine headers and data
+    const csvContent = [
+      headers.map(h => `"${h}"`).join(';'),
+      ...rows
+    ].join('\r\n');
+
+    // Create blob with BOM for proper Excel import
+    const BOM = '\uFEFF';
+    const blob = new Blob([BOM + csvContent], { type: 'text/csv;charset=utf-8;' });
+
+    // Generate filename
+    const fileName = `DATEV_Lohnabrechnung_${dateMode === 'month' 
+      ? moment({ year: selectedYear, month: selectedMonth - 1 }).format('YYYY_MM')
+      : `${moment(startDate).format('YYYY-MM-DD')}_bis_${moment(endDate).format('YYYY-MM-DD')}`}.csv`;
+
+    // Download file
+    if (Platform.OS === 'web') {
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = fileName;
+      link.click();
+      URL.revokeObjectURL(link.href);
+    } else {
+      // For mobile, use the same sharing logic as Excel export
+      const FileSystem = require('expo-file-system');
+      const Sharing = require('expo-sharing');
+      
+      const fileUri = `${FileSystem.documentDirectory}${fileName}`;
+      await FileSystem.writeAsStringAsync(fileUri, BOM + csvContent, {
+        encoding: FileSystem.EncodingType.UTF8
+      });
+      
+      if (await Sharing.isAvailableAsync()) {
+        await Sharing.shareAsync(fileUri, {
+          mimeType: 'text/csv',
+          dialogTitle: 'Export DATEV CSV'
+        });
+      }
+    }
+  };
+
   const handleExportExcel = async () => {
     if (reportData.length === 0) return;
 
@@ -522,6 +622,33 @@ const PayrollReport = () => {
           )}
 
           <View style={styles.exportActions}>
+            {showDATEVExport && (
+              <TouchableOpacity 
+                style={[
+                  styles.exportButton,
+                  styles.datevButton,
+                  reportData.length === 0 && styles.exportButtonDisabled,
+                ]}
+                onPress={handleExportDATEV}
+                disabled={reportData.length === 0}
+              >
+                <Ionicons 
+                  name="document-text-outline" 
+                  size={16} 
+                  color={reportData.length === 0 ? theme.colors.disabledText : theme.colors.primary} 
+                />
+                <Text 
+                  style={[
+                    styles.exportButtonText,
+                    styles.datevButtonText,
+                    reportData.length === 0 && styles.exportButtonTextDisabled
+                  ]} 
+                  fontType="medium"
+                >
+                  DATEV CSV
+                </Text>
+              </TouchableOpacity>
+            )}
             <TouchableOpacity 
               style={[
                 styles.exportButton,
@@ -782,6 +909,10 @@ const styles = StyleSheet.create({
     borderColor: theme.colors.success + '40',
     backgroundColor: theme.colors.success + '10',
   },
+  datevButton: {
+    borderColor: theme.colors.primary + '40',
+    backgroundColor: theme.colors.primary + '10',
+  },
   exportButtonDisabled: {
     borderColor: theme.colors.borderColor,
     backgroundColor: theme.colors.pageBackground,
@@ -790,6 +921,9 @@ const styles = StyleSheet.create({
   exportButtonText: {
     fontSize: theme.fontSizes.sm,
     color: theme.colors.success,
+  },
+  datevButtonText: {
+    color: theme.colors.primary,
   },
   exportButtonTextDisabled: {
     color: theme.colors.disabledText,
