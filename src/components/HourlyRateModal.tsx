@@ -11,6 +11,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import moment from 'moment';
 import Toast from 'react-native-toast-message';
+import { useTranslation } from 'react-i18next';
 import { Text } from './Themed';
 import { Card } from './Card';
 import { theme } from '../theme';
@@ -44,6 +45,7 @@ interface HourlyRateModalProps {
 const HourlyRateModal: React.FC<HourlyRateModalProps> = ({
   visible, onClose, employeeId, companyId, employeeName,
 }) => {
+  const { t } = useTranslation();
   const { userCompanyCountry } = useSession();
   const currency = getCurrencySymbol(userCompanyCountry);
 
@@ -70,11 +72,11 @@ const HourlyRateModal: React.FC<HourlyRateModalProps> = ({
       const data = await fetchHourlyRateHistory(employeeId);
       setHistory(data);
     } catch {
-      Toast.show({ type: 'error', text1: 'Error', text2: 'Could not load rate history.' });
+      Toast.show({ type: 'error', text1: t('manager.hourlyRate.error'), text2: t('manager.hourlyRate.couldNotLoadHistory') });
     } finally {
       setLoadingHistory(false);
     }
-  }, [employeeId]);
+  }, [employeeId, t]);
 
   useEffect(() => {
     if (visible) {
@@ -92,7 +94,7 @@ const HourlyRateModal: React.FC<HourlyRateModalProps> = ({
   const handleSave = async () => {
     const parsed = parseFloat(newRate.replace(',', '.'));
     if (isNaN(parsed) || parsed <= 0) {
-      Toast.show({ type: 'error', text1: 'Invalid Rate', text2: 'Please enter a positive number.' });
+      Toast.show({ type: 'error', text1: t('manager.hourlyRate.invalidRate'), text2: t('manager.hourlyRate.enterPositiveNumber') });
       return;
     }
 
@@ -100,7 +102,7 @@ const HourlyRateModal: React.FC<HourlyRateModalProps> = ({
     const chosenMonth = moment(effectiveFrom).startOf('month');
     const nextMonth = moment().add(1, 'month').startOf('month');
     if (chosenMonth.isBefore(nextMonth)) {
-      Toast.show({ type: 'error', text1: 'Invalid Month', text2: 'Rate changes can only start from next month onwards.' });
+      Toast.show({ type: 'error', text1: t('manager.hourlyRate.invalidMonth'), text2: t('manager.hourlyRate.onlyFromNextMonth') });
       return;
     }
 
@@ -112,14 +114,14 @@ const HourlyRateModal: React.FC<HourlyRateModalProps> = ({
       await insertHourlyRate(employeeId, companyId, parsed, effectiveFromUtc);
       Toast.show({
         type: 'success',
-        text1: 'Rate Saved',
-        text2: `${currency}${parsed.toFixed(2)}/h from ${chosenMonth.format('MMMM YYYY')}`,
+        text1: t('manager.hourlyRate.rateSaved'),
+        text2: `${currency}${parsed.toFixed(2)}/h ${t('manager.hourlyRate.from')} ${chosenMonth.format('MMMM YYYY')}`,
       });
       setNewRate('');
       setEffectiveFrom(nextMonthStart());
       await loadHistory();
     } catch (e: any) {
-      Toast.show({ type: 'error', text1: 'Save Failed', text2: e?.message ?? 'Please try again.' });
+      Toast.show({ type: 'error', text1: t('manager.hourlyRate.saveFailed'), text2: e?.message ?? t('manager.hourlyRate.tryAgain') });
     } finally {
       setSaving(false);
     }
@@ -133,7 +135,7 @@ const HourlyRateModal: React.FC<HourlyRateModalProps> = ({
             {/* Header */}
             <View style={styles.header}>
               <View>
-                <Text style={styles.title} fontType="bold">Hourly Rate</Text>
+                <Text style={styles.title} fontType="bold">{t('manager.hourlyRate.title')}</Text>
                 <Text style={styles.subtitle}>{employeeName}</Text>
               </View>
               <TouchableOpacity style={styles.closeButton} onPress={onClose}>
@@ -143,20 +145,20 @@ const HourlyRateModal: React.FC<HourlyRateModalProps> = ({
 
             {/* Current rate banner */}
             <View style={styles.currentRateRow}>
-              <Text style={styles.currentRateLabel}>Current Rate</Text>
+              <Text style={styles.currentRateLabel}>{t('manager.hourlyRate.currentRate')}</Text>
               <View style={currentRate ? styles.currentRateBadge : styles.currentRateEmpty}>
                 <Text style={currentRate ? styles.currentRateValue : styles.currentRateNone} fontType="bold">
-                  {currentRate ? `${currency}${currentRate.hourly_rate.toFixed(2)}/h` : 'Not set'}
+                  {currentRate ? `${currency}${currentRate.hourly_rate.toFixed(2)}/h` : t('manager.hourlyRate.notSet')}
                 </Text>
               </View>
             </View>
 
             {/* History */}
-            <Text style={styles.sectionLabel} fontType="bold">Rate History</Text>
+            <Text style={styles.sectionLabel} fontType="bold">{t('manager.hourlyRate.rateHistory')}</Text>
             {loadingHistory ? (
               <ActivityIndicator color={theme.colors.primary} style={{ marginVertical: 16 }} />
             ) : history.length === 0 ? (
-              <Text style={styles.emptyText}>No rates set yet.</Text>
+              <Text style={styles.emptyText}>{t('manager.hourlyRate.noRatesYet')}</Text>
             ) : (
               <ScrollView style={styles.historyScroll} showsVerticalScrollIndicator={false}>
                 {history.map((r) => (
@@ -167,8 +169,8 @@ const HourlyRateModal: React.FC<HourlyRateModalProps> = ({
                       </Text>
                       <Text style={styles.historyDate}>
                       {isFutureRate(r)
-                        ? `From ${moment(r.effective_from).format('MMMM YYYY')} (upcoming)`
-                        : `From ${moment(r.effective_from).format('MMMM YYYY')}`}
+                        ? `${t('manager.hourlyRate.from')} ${moment(r.effective_from).format('MMMM YYYY')} (${t('manager.hourlyRate.upcoming')})`
+                        : `${t('manager.hourlyRate.from')} ${moment(r.effective_from).format('MMMM YYYY')}`}
                     </Text>
                     </View>
                     <View style={[
@@ -178,7 +180,7 @@ const HourlyRateModal: React.FC<HourlyRateModalProps> = ({
                         : styles.badgePast,
                     ]}>
                       <Text style={styles.badgeText}>
-                        {isFutureRate(r) ? 'Upcoming' : isCurrentRate(r) ? 'Current' : 'Past'}
+                        {isFutureRate(r) ? t('manager.hourlyRate.upcoming') : isCurrentRate(r) ? t('manager.hourlyRate.current') : t('manager.hourlyRate.past')}
                       </Text>
                     </View>
                   </View>
@@ -189,7 +191,7 @@ const HourlyRateModal: React.FC<HourlyRateModalProps> = ({
             <View style={styles.divider} />
 
             {/* New rate form */}
-            <Text style={styles.sectionLabel} fontType="bold">Set New Rate</Text>
+            <Text style={styles.sectionLabel} fontType="bold">{t('manager.hourlyRate.setNewRate')}</Text>
             <View style={styles.formRow}>
               <View style={styles.rateInputWrapper}>
                 <Text style={styles.currencyPrefix}>{currency}</Text>
@@ -201,7 +203,7 @@ const HourlyRateModal: React.FC<HourlyRateModalProps> = ({
                   keyboardType="decimal-pad"
                   placeholderTextColor={theme.colors.disabledText}
                 />
-                <Text style={styles.rateSuffix}>/h</Text>
+                <Text style={styles.rateSuffix}>{t('manager.hourlyRate.perHour')}</Text>
               </View>
               <CrossPlatformDatePicker
                 date={effectiveFrom}
@@ -215,13 +217,13 @@ const HourlyRateModal: React.FC<HourlyRateModalProps> = ({
               />
             </View>
             <Text style={styles.hint}>
-              Rate changes take effect from the 1st of the chosen month. Earliest allowed is next month.
+              {t('manager.hourlyRate.rateChangeHint')}
             </Text>
 
             {/* Footer */}
             <View style={styles.footer}>
               <TouchableOpacity style={styles.cancelButton} onPress={onClose}>
-                <Text style={styles.cancelText} fontType="medium">Cancel</Text>
+                <Text style={styles.cancelText} fontType="medium">{t('manager.hourlyRate.cancel')}</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.saveButton, (saving || !newRate) && styles.saveButtonDisabled]}
@@ -230,7 +232,7 @@ const HourlyRateModal: React.FC<HourlyRateModalProps> = ({
               >
                 {saving
                   ? <ActivityIndicator size="small" color="white" />
-                  : <Text style={styles.saveButtonText} fontType="bold">Save Rate</Text>
+                  : <Text style={styles.saveButtonText} fontType="bold">{t('manager.hourlyRate.saveRate')}</Text>
                 }
               </TouchableOpacity>
             </View>
