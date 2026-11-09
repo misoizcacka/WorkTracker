@@ -245,9 +245,22 @@ class PeriodicLocationTrackingService : Service() {
         }
 
         // 2. PERIODIC TRACKING LOGIC
-        val interval = if (isTrackingActive) Constants.ACTIVE_TRACKING_INTERVAL_MS else Constants.PASSIVE_TRACKING_INTERVAL_MS
+        // Use faster intervals for indoor locations to improve exit detection
+        val isIndoor = quality?.source == LocationSource.WIFI_HIGH_CONFIDENCE || 
+                       quality?.source == LocationSource.WIFI_MEDIUM_CONFIDENCE
+        val interval = when {
+            isTrackingActive -> Constants.ACTIVE_TRACKING_INTERVAL_MS  // 1 min - outside geofence
+            isIndoor -> 2 * 60 * 1000L  // 2 min - inside but indoors (faster exit detection)
+            else -> Constants.PASSIVE_TRACKING_INTERVAL_MS  // 5 min - inside with GPS
+        }
+        
         if (currentTime - lastLocationSentTime < interval - 5000L) {
-            Log.d("PeriodicLocationTrackingService", "Skipping periodic update - event recently sent. Mode: ${if (isTrackingActive) "ACTIVE" else "PASSIVE"}")
+            val modeLabel = when {
+                isTrackingActive -> "ACTIVE"
+                isIndoor -> "PASSIVE (indoor)"
+                else -> "PASSIVE (outdoor)"
+            }
+            Log.d("PeriodicLocationTrackingService", "Skipping periodic update - event recently sent. Mode: $modeLabel")
             return
         }
 
@@ -411,7 +424,7 @@ class PeriodicLocationTrackingService : Service() {
                 .setCircularRegion(it.latitude, it.longitude, it.radius)
                 .setExpirationDuration(Geofence.NEVER_EXPIRE)
                 .setTransitionTypes(Geofence.GEOFENCE_TRANSITION_ENTER or Geofence.GEOFENCE_TRANSITION_EXIT)
-                .setNotificationResponsiveness(30000) // 30 seconds - more OS friendly than 0
+                .setNotificationResponsiveness(0) // Request fastest possible (Android will optimize for battery as needed)
                 .build()
         }
 
