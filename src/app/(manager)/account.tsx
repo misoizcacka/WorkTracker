@@ -374,24 +374,29 @@ export default function ManagerAccount() {
                     />
                   </View>
                   
-                  {/* Country & Currency Info */}
-                  <View style={styles.companyInfoRow}>
-                    <View style={styles.companyInfoItem}>
-                      <Text style={styles.companyInfoLabel} fontType="regular">Country</Text>
-                      <View style={styles.companyInfoValue}>
-                        <Text style={styles.countryFlag}>{countryFlag}</Text>
-                        <Text style={styles.companyInfoText} fontType="medium">
-                          {userCompanyCountry || 'Not set'}
-                        </Text>
+                  {/* Country & Currency Info - redesigned to match subscription stats */}
+                  {userCompanyCountry && (
+                    <View style={styles.companyStatsRow}>
+                      <View style={styles.companyStatBox}>
+                        <View style={styles.companyStatContent}>
+                          <Text style={styles.countryFlagLarge}>{countryFlag}</Text>
+                          <View style={styles.companyStatTextGroup}>
+                            <Text style={styles.companyStatValue} fontType="bold">{userCompanyCountry}</Text>
+                            <Text style={styles.companyStatLabel}>Country</Text>
+                          </View>
+                        </View>
+                      </View>
+                      <View style={[styles.companyStatBox, styles.companyStatDivider]}>
+                        <View style={styles.companyStatContent}>
+                          <Text style={styles.currencySymbolLarge} fontType="bold">{currencySymbol}</Text>
+                          <View style={styles.companyStatTextGroup}>
+                            <Text style={styles.companyStatValue} fontType="bold">{currencySymbol}</Text>
+                            <Text style={styles.companyStatLabel}>Currency</Text>
+                          </View>
+                        </View>
                       </View>
                     </View>
-                    <View style={styles.companyInfoItem}>
-                      <Text style={styles.companyInfoLabel} fontType="regular">Currency</Text>
-                      <Text style={[styles.companyInfoText, styles.currencyText]} fontType="bold">
-                        {currencySymbol}
-                      </Text>
-                    </View>
-                  </View>
+                  )}
 
                   <Button
                     title={t('manager.account.update') as string}
@@ -850,38 +855,47 @@ const styles = StyleSheet.create({
     color: theme.colors.primary,
     letterSpacing: 0.5,
   },
-  companyInfoRow: {
+  companyStatsRow: {
     flexDirection: 'row',
-    gap: theme.spacing(2),
-    marginBottom: theme.spacing(2),
     backgroundColor: theme.colors.pageBackground,
-    padding: theme.spacing(2),
     borderRadius: theme.radius.md,
+    padding: theme.spacing(2),
+    marginBottom: theme.spacing(2),
+    borderWidth: 1,
+    borderColor: theme.colors.borderColor,
   },
-  companyInfoItem: {
+  companyStatBox: {
     flex: 1,
   },
-  companyInfoLabel: {
+  companyStatDivider: {
+    borderLeftWidth: 1,
+    borderLeftColor: theme.colors.borderColor,
+    paddingLeft: theme.spacing(2),
+  },
+  companyStatContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing(1.5),
+  },
+  countryFlagLarge: {
+    fontSize: 32,
+  },
+  currencySymbolLarge: {
+    fontSize: 32,
+    color: theme.colors.primary,
+  },
+  companyStatTextGroup: {
+    flex: 1,
+  },
+  companyStatValue: {
+    fontSize: theme.fontSizes.lg,
+    color: theme.colors.headingText,
+  },
+  companyStatLabel: {
     fontSize: theme.fontSizes.xs,
     color: theme.colors.bodyText,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
-    marginBottom: theme.spacing(0.5),
-  },
-  companyInfoValue: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: theme.spacing(1),
-  },
-  countryFlag: {
-    fontSize: 24,
-  },
-  companyInfoText: {
-    fontSize: theme.fontSizes.md,
-    color: theme.colors.headingText,
-  },
-  currencyText: {
-    fontSize: 20,
-    color: theme.colors.primary,
+    marginTop: 2,
   },
 });
