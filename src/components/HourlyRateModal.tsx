@@ -42,7 +42,18 @@ const HourlyRateModal: React.FC<HourlyRateModalProps> = ({
     return d;
   };
 
-  // Effective from is always the 1st of a month — minimum is next month
+  // Effective from is always the 1st of a month
+  // If user has no rate yet, allow starting from current month
+  // If user has a rate, minimum is next month
+  const getMinimumDate = () => {
+    const hasExistingRate = history.length > 0;
+    if (hasExistingRate) {
+      return moment().add(1, 'month').startOf('month').toDate();
+    } else {
+      return moment().startOf('month').toDate();
+    }
+  };
+
   const nextMonthStart = () => {
     return moment().add(1, 'month').startOf('month').toDate();
   };
@@ -69,9 +80,17 @@ const HourlyRateModal: React.FC<HourlyRateModalProps> = ({
     if (visible) {
       loadHistory();
       setNewRate('');
+      // Will be updated after history loads
       setEffectiveFrom(nextMonthStart());
     }
   }, [visible, loadHistory]);
+
+  // Update effectiveFrom after history loads
+  useEffect(() => {
+    if (visible && !loadingHistory) {
+      setEffectiveFrom(getMinimumDate());
+    }
+  }, [visible, loadingHistory, history.length]);
 
   const now = new Date();
   const currentRate = history.find(r => new Date(r.effective_from) <= now) ?? null;
@@ -85,11 +104,16 @@ const HourlyRateModal: React.FC<HourlyRateModalProps> = ({
       return;
     }
 
-    // Enforce next month minimum — rate changes only take effect at the start of a pay period
+    // Enforce minimum date based on whether user has existing rate
     const chosenMonth = moment(effectiveFrom).startOf('month');
-    const nextMonth = moment().add(1, 'month').startOf('month');
-    if (chosenMonth.isBefore(nextMonth)) {
-      Toast.show({ type: 'error', text1: t('manager.hourlyRate.invalidMonth'), text2: t('manager.hourlyRate.onlyFromNextMonth') });
+    const minimumMonth = moment(getMinimumDate()).startOf('month');
+    
+    if (chosenMonth.isBefore(minimumMonth)) {
+      const hasExistingRate = history.length > 0;
+      const errorMessage = hasExistingRate 
+        ? t('manager.hourlyRate.onlyFromNextMonth')
+        : t('manager.hourlyRate.onlyFromCurrentMonth');
+      Toast.show({ type: 'error', text1: t('manager.hourlyRate.invalidMonth'), text2: errorMessage });
       return;
     }
 
@@ -105,8 +129,8 @@ const HourlyRateModal: React.FC<HourlyRateModalProps> = ({
         text2: `${currency}${parsed.toFixed(2)}/h ${t('manager.hourlyRate.from')} ${chosenMonth.format('MMMM YYYY')}`,
       });
       setNewRate('');
-      setEffectiveFrom(nextMonthStart());
       await loadHistory();
+      setEffectiveFrom(getMinimumDate());
     } catch (e: any) {
       Toast.show({ type: 'error', text1: t('manager.hourlyRate.saveFailed'), text2: e?.message ?? t('manager.hourlyRate.tryAgain') });
     } finally {
@@ -195,16 +219,18 @@ const HourlyRateModal: React.FC<HourlyRateModalProps> = ({
               <CrossPlatformDatePicker
                 date={effectiveFrom}
                 onDateChange={(date) => {
-                  // Clamp to next month minimum and always snap to 1st of month
+                  // Clamp to minimum and always snap to 1st of month
                   const chosen = moment(date).startOf('month');
-                  const min = moment().add(1, 'month').startOf('month');
+                  const min = moment(getMinimumDate()).startOf('month');
                   setEffectiveFrom((chosen.isBefore(min) ? min : chosen).toDate());
                 }}
                 mode="month"
               />
             </View>
             <Text style={styles.hint}>
-              {t('manager.hourlyRate.rateChangeHint')}
+              {history.length === 0 
+                ? t('manager.hourlyRate.initialRateHint') 
+                : t('manager.hourlyRate.rateChangeHint')}
             </Text>
 
             {/* Footer */}
