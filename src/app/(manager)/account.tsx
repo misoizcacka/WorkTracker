@@ -353,7 +353,9 @@ export default function ManagerAccount() {
                     <View style={styles.inputGroup}>
                       <Text style={styles.label} fontType="bold">Country</Text>
                       <View style={styles.countryDisplay}>
-                        <CountryFlag isoCode={userCompanyCountry} size={20} />
+                        <Text style={styles.countryFlag}>
+                          <CountryFlag isoCode={userCompanyCountry} size={20} />
+                        </Text>
                         <Text style={styles.countryText} fontType="medium">{userCompanyCountry}</Text>
                       </View>
                     </View>
@@ -827,6 +829,10 @@ const styles = StyleSheet.create({
     paddingVertical: theme.spacing(1.5),
     paddingHorizontal: theme.spacing(2),
     minHeight: 48,
+  },
+  countryFlag: {
+    width: 20,
+    height: 20,
   },
   countryText: {
     fontSize: theme.fontSizes.md,
