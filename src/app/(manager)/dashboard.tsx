@@ -12,20 +12,7 @@ import { Button } from '../../components/Button';
 import { EmployeesContext } from '../../context/EmployeesContext';
 import moment from 'moment';
 import { useTranslation } from 'react-i18next';
-
-function getCurrencySymbol(country: string | null): string {
-  if (!country) return '€';
-  const map: Record<string, string> = {
-    DE: '€', AT: '€', FR: '€', ES: '€', IT: '€', NL: '€', BE: '€',
-    PT: '€', FI: '€', IE: '€', GR: '€', LU: '€', SI: '€', SK: '€',
-    EE: '€', LV: '€', LT: '€', CY: '€', MT: '€',
-    US: '$', CA: 'CA$', AU: 'A$', GB: '£', CH: 'CHF', SE: 'kr',
-    NO: 'kr', DK: 'kr', PL: 'zł', CZ: 'Kč', HU: 'Ft', RO: 'lei',
-    TR: '₺', JP: '¥', CN: '¥', KR: '₩', IN: '₹', BR: 'R$',
-    MX: '$', SG: 'S$', NZ: 'NZ$', ZA: 'R',
-  };
-  return map[country.toUpperCase()] ?? '€';
-}
+import { getCurrencySymbol } from '../../utils/currency';
 
 interface DashboardStats {
   totalWorkers: number;

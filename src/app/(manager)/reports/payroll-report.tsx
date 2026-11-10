@@ -13,21 +13,7 @@ import { EmployeesContext, EmployeesContextType } from '../../../context/Employe
 import { useSession } from '../../../context/AuthContext';
 import SegmentedControl from '@react-native-segmented-control/segmented-control';
 import CrossPlatformDatePicker from '../../../components/CrossPlatformDatePicker';
-
-/** Maps ISO 3166-1 alpha-2 country codes to their currency symbol. */
-function getCurrencySymbol(country: string | null): string {
-  if (!country) return '€';
-  const map: Record<string, string> = {
-    DE: '€', AT: '€', FR: '€', ES: '€', IT: '€', NL: '€', BE: '€',
-    PT: '€', FI: '€', IE: '€', GR: '€', LU: '€', SI: '€', SK: '€',
-    EE: '€', LV: '€', LT: '€', CY: '€', MT: '€',
-    US: '$', CA: 'CA$', AU: 'A$', GB: '£', CH: 'CHF', SE: 'kr',
-    NO: 'kr', DK: 'kr', PL: 'zł', CZ: 'Kč', HU: 'Ft', RO: 'lei',
-    TR: '₺', JP: '¥', CN: '¥', KR: '₩', IN: '₹', BR: 'R$',
-    MX: '$', SG: 'S$', NZ: 'NZ$', ZA: 'R', AE: 'د.إ', SA: '﷼',
-  };
-  return map[country.toUpperCase()] ?? '€';
-}
+import { getCurrencySymbol } from '../../../utils/currency';
 
 interface PayrollReportItem {
   worker_id: string;
