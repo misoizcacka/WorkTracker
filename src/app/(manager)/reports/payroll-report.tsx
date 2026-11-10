@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useContext, useMemo } from 'react';
-import { View, StyleSheet, ScrollView, ActivityIndicator, TouchableOpacity, Platform, Modal } from 'react-native';
+import { View, StyleSheet, ScrollView, ActivityIndicator, TouchableOpacity, Platform } from 'react-native';
 import { Text } from '../../../components/Themed';
 import AnimatedScreen from '../../../components/AnimatedScreen';
 import { theme } from '../../../theme';
@@ -12,8 +12,7 @@ import { exportWorkbookToExcel } from '../../../utils/exportHelpers';
 import { EmployeesContext, EmployeesContextType } from '../../../context/EmployeesContext';
 import { useSession } from '../../../context/AuthContext';
 import SegmentedControl from '@react-native-segmented-control/segmented-control';
-import DateTimePicker from 'react-native-ui-datepicker';
-import dayjs from 'dayjs';
+import RNPickerSelect from 'react-native-picker-select';
 
 /** Maps ISO 3166-1 alpha-2 country codes to their currency symbol. */
 function getCurrencySymbol(country: string | null): string {
@@ -56,8 +55,6 @@ const PayrollReport = () => {
   const [selectedYear, setSelectedYear] = useState(moment().year());
   const [startDate, setStartDate] = useState(moment().startOf('month').toDate());
   const [endDate, setEndDate] = useState(moment().endOf('month').toDate());
-  const [showStartPicker, setShowStartPicker] = useState(false);
-  const [showEndPicker, setShowEndPicker] = useState(false);
   
   const [reportData, setReportData] = useState<PayrollReportItem[]>([]);
   const [loading, setLoading] = useState(false);
@@ -605,104 +602,106 @@ const PayrollReport = () => {
             </View>
           ) : (
             <View style={styles.unifiedSelector}>
-              <TouchableOpacity 
-                style={styles.dateButton}
-                onPress={() => setShowStartPicker(true)}
-              >
+              <View style={styles.datePickerGroup}>
                 <Text style={styles.dateButtonLabel}>FROM</Text>
-                <View style={styles.dateButtonValue}>
-                  <Ionicons name="calendar-outline" size={14} color={theme.colors.primary} />
-                  <Text style={styles.dateButtonText} fontType="medium">
-                    {moment(startDate).format('MMM D, YYYY')}
-                  </Text>
+                <View style={styles.datePickersRow}>
+                  <RNPickerSelect
+                    value={moment(startDate).month()}
+                    onValueChange={(month) => {
+                      if (month !== null) {
+                        const newDate = moment(startDate).month(month).toDate();
+                        setStartDate(newDate);
+                      }
+                    }}
+                    items={moment.months().map((m, i) => ({ label: m, value: i }))}
+                    style={pickerSelectStyles}
+                    placeholder={{}}
+                    Icon={() => <Ionicons name="chevron-down" size={16} color={theme.colors.primary} style={{ marginRight: 8 }} />}
+                  />
+                  <RNPickerSelect
+                    value={moment(startDate).date()}
+                    onValueChange={(day) => {
+                      if (day !== null) {
+                        const newDate = moment(startDate).date(day).toDate();
+                        setStartDate(newDate);
+                      }
+                    }}
+                    items={Array.from({ length: moment(startDate).daysInMonth() }, (_, i) => ({ label: String(i + 1), value: i + 1 }))}
+                    style={pickerSelectStyles}
+                    placeholder={{}}
+                    Icon={() => <Ionicons name="chevron-down" size={16} color={theme.colors.primary} style={{ marginRight: 8 }} />}
+                  />
+                  <RNPickerSelect
+                    value={moment(startDate).year()}
+                    onValueChange={(year) => {
+                      if (year !== null) {
+                        const newDate = moment(startDate).year(year).toDate();
+                        setStartDate(newDate);
+                      }
+                    }}
+                    items={Array.from({ length: 10 }, (_, i) => {
+                      const y = moment().year() - 5 + i;
+                      return { label: String(y), value: y };
+                    })}
+                    style={pickerSelectStyles}
+                    placeholder={{}}
+                    Icon={() => <Ionicons name="chevron-down" size={16} color={theme.colors.primary} style={{ marginRight: 8 }} />}
+                  />
                 </View>
-              </TouchableOpacity>
+              </View>
               
-              <Ionicons name="arrow-forward" size={14} color={theme.colors.disabledText} />
+              <Ionicons name="arrow-forward" size={14} color={theme.colors.disabledText} style={{ marginHorizontal: theme.spacing(1) }} />
               
-              <TouchableOpacity 
-                style={styles.dateButton}
-                onPress={() => setShowEndPicker(true)}
-              >
+              <View style={styles.datePickerGroup}>
                 <Text style={styles.dateButtonLabel}>TO</Text>
-                <View style={styles.dateButtonValue}>
-                  <Ionicons name="calendar-outline" size={14} color={theme.colors.primary} />
-                  <Text style={styles.dateButtonText} fontType="medium">
-                    {moment(endDate).format('MMM D, YYYY')}
-                  </Text>
+                <View style={styles.datePickersRow}>
+                  <RNPickerSelect
+                    value={moment(endDate).month()}
+                    onValueChange={(month) => {
+                      if (month !== null) {
+                        const newDate = moment(endDate).month(month).toDate();
+                        setEndDate(newDate);
+                      }
+                    }}
+                    items={moment.months().map((m, i) => ({ label: m, value: i }))}
+                    style={pickerSelectStyles}
+                    placeholder={{}}
+                    Icon={() => <Ionicons name="chevron-down" size={16} color={theme.colors.primary} style={{ marginRight: 8 }} />}
+                  />
+                  <RNPickerSelect
+                    value={moment(endDate).date()}
+                    onValueChange={(day) => {
+                      if (day !== null) {
+                        const newDate = moment(endDate).date(day).toDate();
+                        setEndDate(newDate);
+                      }
+                    }}
+                    items={Array.from({ length: moment(endDate).daysInMonth() }, (_, i) => ({ label: String(i + 1), value: i + 1 }))}
+                    style={pickerSelectStyles}
+                    placeholder={{}}
+                    Icon={() => <Ionicons name="chevron-down" size={16} color={theme.colors.primary} style={{ marginRight: 8 }} />}
+                  />
+                  <RNPickerSelect
+                    value={moment(endDate).year()}
+                    onValueChange={(year) => {
+                      if (year !== null) {
+                        const newDate = moment(endDate).year(year).toDate();
+                        setEndDate(newDate);
+                      }
+                    }}
+                    items={Array.from({ length: 10 }, (_, i) => {
+                      const y = moment().year() - 5 + i;
+                      return { label: String(y), value: y };
+                    })}
+                    style={pickerSelectStyles}
+                    placeholder={{}}
+                    Icon={() => <Ionicons name="chevron-down" size={16} color={theme.colors.primary} style={{ marginRight: 8 }} />}
+                  />
                 </View>
-              </TouchableOpacity>
+              </View>
             </View>
           )}
           
-          {/* Start Date Picker Modal */}
-          <Modal
-            visible={showStartPicker}
-            transparent={true}
-            animationType="fade"
-            onRequestClose={() => setShowStartPicker(false)}
-          >
-            <TouchableOpacity 
-              style={styles.modalOverlay}
-              activeOpacity={1}
-              onPress={() => setShowStartPicker(false)}
-            >
-              <View style={styles.modalContent} onStartShouldSetResponder={() => true}>
-                <View style={styles.modalHeader}>
-                  <Text style={styles.modalTitle} fontType="bold">Select Start Date</Text>
-                  <TouchableOpacity onPress={() => setShowStartPicker(false)}>
-                    <Ionicons name="close" size={24} color={theme.colors.iconColor} />
-                  </TouchableOpacity>
-                </View>
-                <DateTimePicker
-                  mode="single"
-                  date={dayjs(startDate).toDate()}
-                  onChange={(params) => {
-                    if (params.date) {
-                      setStartDate(dayjs(params.date).toDate());
-                      setShowStartPicker(false);
-                    }
-                  }}
-                  maxDate={dayjs(endDate).toDate()}
-                />
-              </View>
-            </TouchableOpacity>
-          </Modal>
-          
-          {/* End Date Picker Modal */}
-          <Modal
-            visible={showEndPicker}
-            transparent={true}
-            animationType="fade"
-            onRequestClose={() => setShowEndPicker(false)}
-          >
-            <TouchableOpacity 
-              style={styles.modalOverlay}
-              activeOpacity={1}
-              onPress={() => setShowEndPicker(false)}
-            >
-              <View style={styles.modalContent} onStartShouldSetResponder={() => true}>
-                <View style={styles.modalHeader}>
-                  <Text style={styles.modalTitle} fontType="bold">Select End Date</Text>
-                  <TouchableOpacity onPress={() => setShowEndPicker(false)}>
-                    <Ionicons name="close" size={24} color={theme.colors.iconColor} />
-                  </TouchableOpacity>
-                </View>
-                <DateTimePicker
-                  mode="single"
-                  date={dayjs(endDate).toDate()}
-                  onChange={(params) => {
-                    if (params.date) {
-                      setEndDate(dayjs(params.date).toDate());
-                      setShowEndPicker(false);
-                    }
-                  }}
-                  minDate={dayjs(startDate).toDate()}
-                />
-              </View>
-            </TouchableOpacity>
-          </Modal>
-
           {/* Right: Export Button */}
           <View style={styles.controlSection}>
             <TouchableOpacity 
@@ -1172,44 +1171,58 @@ const styles = StyleSheet.create({
     fontSize: theme.fontSizes.md,
     color: theme.colors.bodyText,
   },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: theme.spacing(2),
+  datePickerGroup: {
+    flexDirection: 'column',
+    gap: theme.spacing(0.5),
   },
-  modalContent: {
-    backgroundColor: theme.colors.cardBackground,
-    borderRadius: theme.radius.lg,
-    padding: theme.spacing(3),
-    width: '100%',
-    maxWidth: 400,
-    ...Platform.select({
-      web: {
-        boxShadow: '0 10px 40px rgba(0, 0, 0, 0.2)',
-      },
-      default: {
-        elevation: 8,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.3,
-        shadowRadius: 10,
-      },
-    }),
-  },
-  modalHeader: {
+  datePickersRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: theme.spacing(2),
-    paddingBottom: theme.spacing(2),
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.borderColor,
+    gap: theme.spacing(0.75),
   },
-  modalTitle: {
-    fontSize: theme.fontSizes.lg,
+});
+
+const pickerSelectStyles = StyleSheet.create({
+  inputIOS: {
+    fontSize: theme.fontSizes.sm,
+    paddingVertical: theme.spacing(0.75),
+    paddingHorizontal: theme.spacing(1.5),
+    paddingRight: theme.spacing(3.5),
+    borderWidth: 1,
+    borderColor: theme.colors.borderColor,
+    borderRadius: theme.radius.md,
     color: theme.colors.headingText,
+    backgroundColor: theme.colors.pageBackground,
+    minWidth: 90,
+  },
+  inputAndroid: {
+    fontSize: theme.fontSizes.sm,
+    paddingVertical: theme.spacing(0.75),
+    paddingHorizontal: theme.spacing(1.5),
+    paddingRight: theme.spacing(3.5),
+    borderWidth: 1,
+    borderColor: theme.colors.borderColor,
+    borderRadius: theme.radius.md,
+    color: theme.colors.headingText,
+    backgroundColor: theme.colors.pageBackground,
+    minWidth: 90,
+  },
+  inputWeb: {
+    fontSize: theme.fontSizes.sm,
+    paddingVertical: theme.spacing(0.75),
+    paddingHorizontal: theme.spacing(1.5),
+    paddingRight: theme.spacing(3.5),
+    borderWidth: 1,
+    borderColor: theme.colors.borderColor,
+    borderRadius: theme.radius.md,
+    color: theme.colors.headingText,
+    backgroundColor: theme.colors.pageBackground,
+    minWidth: 90,
+    fontFamily: theme.font.regular,
+  },
+  iconContainer: {
+    top: '50%',
+    right: 8,
+    transform: [{ translateY: -8 }],
   },
 });
 
