@@ -378,7 +378,6 @@ export default function ManagerAccount() {
                   {userCompanyCountry && (
                     <View style={styles.companyMetaRow}>
                       <View style={styles.companyMetaItem}>
-                        <Ionicons name="globe-outline" size={16} color={theme.colors.bodyText} />
                         <Text style={styles.companyMetaLabel} fontType="regular">Country:</Text>
                         <View style={styles.companyMetaValueContainer}>
                           <Text style={styles.countryFlag}>{countryFlag}</Text>
@@ -387,7 +386,6 @@ export default function ManagerAccount() {
                       </View>
                       <View style={styles.companyMetaDivider} />
                       <View style={styles.companyMetaItem}>
-                        <Ionicons name="cash-outline" size={16} color={theme.colors.bodyText} />
                         <Text style={styles.companyMetaLabel} fontType="regular">Currency:</Text>
                         <Text style={styles.companyMetaValue} fontType="bold">{currencySymbol}</Text>
                       </View>
