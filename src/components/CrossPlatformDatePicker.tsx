@@ -111,8 +111,8 @@ const CrossPlatformDatePicker: React.FC<CrossPlatformDatePickerProps> = ({ date,
     const CustomInput = React.forwardRef<HTMLButtonElement, { value?: string; onClick?: () => void }>(({ value, onClick }, ref) => (
       <TouchableOpacity style={styles.button} onPress={onClick}>
         <View style={styles.buttonContent}>
-          <Ionicons name="calendar-outline" size={theme.fontSizes.md} color={theme.colors.bodyText} />
-          <Text style={styles.buttonText} fontType="regular">{value || (mode === "month" ? 'Select Month' : 'Select Date')}</Text>
+          <Ionicons name="calendar-outline" size={16} color={theme.colors.primary} />
+          <Text style={styles.buttonText} fontType="medium">{value || (mode === "month" ? 'Select Month' : 'Select Date')}</Text>
         </View>
       </TouchableOpacity>
     ));
@@ -144,8 +144,8 @@ const CrossPlatformDatePicker: React.FC<CrossPlatformDatePickerProps> = ({ date,
     <View>
       <TouchableOpacity style={styles.button} onPress={showPicker}>
         <View style={styles.buttonContent}>
-          <Ionicons name="calendar-outline" size={theme.fontSizes.md} color={theme.colors.bodyText} />
-          <Text style={styles.buttonText} fontType="regular">{mode === "month" ? moment(date).format('MMMM YYYY') : moment(date).format('MMMM D, YYYY')}</Text>
+          <Ionicons name="calendar-outline" size={16} color={theme.colors.primary} />
+          <Text style={styles.buttonText} fontType="medium">{mode === "month" ? moment(date).format('MMMM YYYY') : moment(date).format('MMMM D, YYYY')}</Text>
         </View>
       </TouchableOpacity>
       <DateTimePickerModal
@@ -169,21 +169,33 @@ const CrossPlatformDatePicker: React.FC<CrossPlatformDatePickerProps> = ({ date,
 
 const styles = StyleSheet.create({
   button: {
-    backgroundColor: theme.colors.pageBackground,
-    paddingVertical: 8,
-    paddingHorizontal: 15,
-    borderRadius: theme.radius.sm,
+    backgroundColor: theme.colors.cardBackground,
+    paddingVertical: theme.spacing(1.25),
+    paddingHorizontal: theme.spacing(2),
+    borderRadius: theme.radius.md,
     borderWidth: 1,
     borderColor: theme.colors.borderColor,
+    minWidth: 160,
+    ...Platform.select({
+      web: {
+        cursor: 'pointer',
+        transition: 'all 0.2s ease',
+        ':hover': {
+          borderColor: theme.colors.primary,
+          backgroundColor: theme.colors.primaryMuted,
+        },
+      },
+    }),
   },
   buttonText: {
-    color: theme.colors.bodyText,
-    fontSize: theme.fontSizes.md,
+    color: theme.colors.headingText,
+    fontSize: theme.fontSizes.sm,
+    fontWeight: '500',
   },
   buttonContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: theme.spacing(1), // Space between icon and text
+    gap: theme.spacing(1),
   },
 });
 

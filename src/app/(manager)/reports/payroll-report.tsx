@@ -610,14 +610,16 @@ const PayrollReport = () => {
           ) : (
             <View style={styles.dateRangePicker}>
               <View style={styles.datePickerGroup}>
+                <Text style={styles.dateLabel} fontType="medium">FROM</Text>
                 <CrossPlatformDatePicker
                   date={startDate}
                   onDateChange={setStartDate}
                   mode="date"
                 />
               </View>
-              <Ionicons name="arrow-forward" size={16} color={theme.colors.bodyText} style={styles.dateArrow} />
+              <Ionicons name="arrow-forward" size={18} color={theme.colors.disabledText} style={styles.dateArrow} />
               <View style={styles.datePickerGroup}>
+                <Text style={styles.dateLabel} fontType="medium">TO</Text>
                 <CrossPlatformDatePicker
                   date={endDate}
                   onDateChange={setEndDate}
@@ -849,22 +851,36 @@ const styles = StyleSheet.create({
   },
   modeToggle: {
     flexDirection: 'row',
-    backgroundColor: theme.colors.pageBackground,
+    backgroundColor: theme.colors.background,
     borderRadius: theme.radius.lg,
-    padding: theme.spacing(0.5),
+    padding: 3,
     borderWidth: 1,
     borderColor: theme.colors.borderColor,
+    ...Platform.select({
+      web: {
+        boxShadow: `0 1px 3px rgba(0, 0, 0, 0.05)`,
+      },
+    }),
   },
   modeButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: theme.spacing(1),
-    paddingHorizontal: theme.spacing(2),
+    paddingVertical: theme.spacing(1.25),
+    paddingHorizontal: theme.spacing(2.5),
     borderRadius: theme.radius.md,
-    gap: theme.spacing(0.5),
+    gap: theme.spacing(1),
+    transition: 'all 0.2s ease',
   },
   modeButtonActive: {
     backgroundColor: theme.colors.primary,
+    ...Platform.select({
+      web: {
+        boxShadow: `0 2px 8px rgba(0, 0, 0, 0.12)`,
+      },
+      native: {
+        elevation: 2,
+      },
+    }),
   },
   modeButtonText: {
     fontSize: theme.fontSizes.sm,
@@ -872,30 +888,39 @@ const styles = StyleSheet.create({
   },
   modeButtonTextActive: {
     color: 'white',
+    fontWeight: '600',
   },
   dateRangePicker: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: theme.colors.pageBackground,
+    backgroundColor: theme.colors.background,
     borderRadius: theme.radius.lg,
-    paddingVertical: theme.spacing(0.5),
-    paddingHorizontal: theme.spacing(1),
+    paddingVertical: theme.spacing(1),
+    paddingHorizontal: theme.spacing(2),
     borderWidth: 1,
     borderColor: theme.colors.borderColor,
-    gap: theme.spacing(0.5),
+    gap: theme.spacing(2),
+    ...Platform.select({
+      web: {
+        boxShadow: `0 1px 3px rgba(0, 0, 0, 0.05)`,
+      },
+    }),
   },
   datePickerGroup: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: 'column',
+    alignItems: 'flex-start',
     gap: theme.spacing(0.5),
-    paddingHorizontal: theme.spacing(0.5),
   },
   dateLabel: {
     fontSize: theme.fontSizes.xs,
-    color: theme.colors.bodyText,
+    color: theme.colors.disabledText,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    fontWeight: '600',
   },
   dateArrow: {
-    paddingHorizontal: theme.spacing(0.5),
+    paddingHorizontal: theme.spacing(1),
+    marginTop: theme.spacing(2),
   },
   monthNavigator: {
     flexDirection: 'row',
