@@ -78,7 +78,7 @@ export const theme = {
   },
 
   iconSizes: {
-    flag: 12,
+    flag: 10,
   },
 
   shadow: {
