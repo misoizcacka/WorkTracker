@@ -12,6 +12,7 @@ import { exportWorkbookToExcel } from '../../../utils/exportHelpers';
 import { EmployeesContext, EmployeesContextType } from '../../../context/EmployeesContext';
 import { useSession } from '../../../context/AuthContext';
 import CrossPlatformDatePicker from '../../../components/CrossPlatformDatePicker';
+import SegmentedControl from '@react-native-segmented-control/segmented-control';
 
 /** Maps ISO 3166-1 alpha-2 country codes to their currency symbol. */
 function getCurrencySymbol(country: string | null): string {
@@ -49,6 +50,7 @@ const PayrollReport = () => {
   
   // Date range mode: 'month' or 'custom'
   const [dateMode, setDateMode] = useState<'month' | 'custom'>('month');
+  const [selectedSegmentIndex, setSelectedSegmentIndex] = useState(0);
   const [selectedMonth, setSelectedMonth] = useState(moment().month() + 1);
   const [selectedYear, setSelectedYear] = useState(moment().year());
   const [startDate, setStartDate] = useState(moment().startOf('month').toDate());
@@ -559,40 +561,19 @@ const PayrollReport = () => {
         {/* --- Top Toolbar: Mode Toggle, Navigator/Date Picker & Export --- */}
         <View style={styles.headerControls}>
           {/* Date Mode Toggle */}
-          <View style={styles.modeToggle}>
-            <TouchableOpacity
-              style={[styles.modeButton, dateMode === 'month' && styles.modeButtonActive]}
-              onPress={() => setDateMode('month')}
-            >
-              <Ionicons 
-                name="calendar-outline" 
-                size={16} 
-                color={dateMode === 'month' ? theme.colors.primary : theme.colors.disabledText} 
-              />
-              <Text 
-                style={[styles.modeButtonText, dateMode === 'month' && styles.modeButtonTextActive]} 
-                fontType={dateMode === 'month' ? 'bold' : 'regular'}
-              >
-                Monthly
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.modeButton, dateMode === 'custom' && styles.modeButtonActive]}
-              onPress={() => setDateMode('custom')}
-            >
-              <Ionicons 
-                name="calendar-number-outline" 
-                size={16} 
-                color={dateMode === 'custom' ? theme.colors.primary : theme.colors.disabledText} 
-              />
-              <Text 
-                style={[styles.modeButtonText, dateMode === 'custom' && styles.modeButtonTextActive]} 
-                fontType={dateMode === 'custom' ? 'bold' : 'regular'}
-              >
-                Custom Range
-              </Text>
-            </TouchableOpacity>
-          </View>
+          <SegmentedControl
+            values={['Monthly', 'Custom Range']}
+            selectedIndex={selectedSegmentIndex}
+            onChange={(event) => {
+              const index = event.nativeEvent.selectedSegmentIndex;
+              setSelectedSegmentIndex(index);
+              setDateMode(index === 0 ? 'month' : 'custom');
+            }}
+            style={styles.segmentedControl}
+            appearance="light"
+            fontStyle={{ fontSize: theme.fontSizes.sm, fontWeight: '500' }}
+            activeFontStyle={{ fontSize: theme.fontSizes.sm, fontWeight: '600' }}
+          />
 
           {/* Month Navigator or Custom Date Picker */}
           {dateMode === 'month' ? (
@@ -849,56 +830,9 @@ const styles = StyleSheet.create({
     gap: theme.spacing(2),
     zIndex: 100,
   },
-  modeToggle: {
-    flexDirection: 'row',
-    backgroundColor: theme.colors.pageBackground,
-    borderRadius: theme.radius.lg,
-    padding: 4,
-    borderWidth: 1,
-    borderColor: theme.colors.borderColor,
-    position: 'relative',
-  },
-  modeButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: theme.spacing(1.25),
-    paddingHorizontal: theme.spacing(3),
-    borderRadius: theme.radius.md,
-    gap: theme.spacing(1),
-    zIndex: 2,
-    ...Platform.select({
-      web: {
-        transition: 'all 0.15s ease',
-      },
-    }),
-  },
-  modeButtonActive: {
-    backgroundColor: 'white',
-    ...Platform.select({
-      web: {
-        boxShadow: `0 1px 3px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.08)`,
-      },
-      native: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.12,
-        shadowRadius: 3,
-        elevation: 3,
-      },
-    }),
-  },
-  modeButtonText: {
-    fontSize: theme.fontSizes.sm,
-    color: theme.colors.disabledText,
-    ...Platform.select({
-      web: {
-        transition: 'color 0.15s ease',
-      },
-    }),
-  },
-  modeButtonTextActive: {
-    color: theme.colors.headingText,
-    fontWeight: '600',
+  segmentedControl: {
+    width: 280,
+    height: 36,
   },
   dateRangePicker: {
     flexDirection: 'row',
