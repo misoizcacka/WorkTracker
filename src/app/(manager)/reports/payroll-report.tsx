@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useContext, useMemo } from 'react';
-import { View, StyleSheet, ScrollView, ActivityIndicator, TouchableOpacity, Platform } from 'react-native';
+import { View, StyleSheet, ScrollView, ActivityIndicator, TouchableOpacity, Platform, Modal } from 'react-native';
 import { Text } from '../../../components/Themed';
 import AnimatedScreen from '../../../components/AnimatedScreen';
 import { theme } from '../../../theme';
@@ -12,7 +12,8 @@ import { exportWorkbookToExcel } from '../../../utils/exportHelpers';
 import { EmployeesContext, EmployeesContextType } from '../../../context/EmployeesContext';
 import { useSession } from '../../../context/AuthContext';
 import SegmentedControl from '@react-native-segmented-control/segmented-control';
-import { DatePickerModal } from 'react-native-paper-dates';
+import DateTimePicker from 'react-native-ui-datepicker';
+import dayjs from 'dayjs';
 
 /** Maps ISO 3166-1 alpha-2 country codes to their currency symbol. */
 function getCurrencySymbol(country: string | null): string {
@@ -634,29 +635,73 @@ const PayrollReport = () => {
             </View>
           )}
           
-          <DatePickerModal
-            locale="en"
-            mode="single"
+          {/* Start Date Picker Modal */}
+          <Modal
             visible={showStartPicker}
-            onDismiss={() => setShowStartPicker(false)}
-            date={startDate}
-            onConfirm={(params) => {
-              setShowStartPicker(false);
-              if (params.date) setStartDate(params.date);
-            }}
-          />
+            transparent={true}
+            animationType="fade"
+            onRequestClose={() => setShowStartPicker(false)}
+          >
+            <TouchableOpacity 
+              style={styles.modalOverlay}
+              activeOpacity={1}
+              onPress={() => setShowStartPicker(false)}
+            >
+              <View style={styles.modalContent} onStartShouldSetResponder={() => true}>
+                <View style={styles.modalHeader}>
+                  <Text style={styles.modalTitle} fontType="semibold">Select Start Date</Text>
+                  <TouchableOpacity onPress={() => setShowStartPicker(false)}>
+                    <Ionicons name="close" size={24} color={theme.colors.iconColor} />
+                  </TouchableOpacity>
+                </View>
+                <DateTimePicker
+                  mode="single"
+                  date={dayjs(startDate).toDate()}
+                  onChange={(params) => {
+                    if (params.date) {
+                      setStartDate(dayjs(params.date).toDate());
+                      setShowStartPicker(false);
+                    }
+                  }}
+                  maxDate={dayjs(endDate).toDate()}
+                />
+              </View>
+            </TouchableOpacity>
+          </Modal>
           
-          <DatePickerModal
-            locale="en"
-            mode="single"
+          {/* End Date Picker Modal */}
+          <Modal
             visible={showEndPicker}
-            onDismiss={() => setShowEndPicker(false)}
-            date={endDate}
-            onConfirm={(params) => {
-              setShowEndPicker(false);
-              if (params.date) setEndDate(params.date);
-            }}
-          />
+            transparent={true}
+            animationType="fade"
+            onRequestClose={() => setShowEndPicker(false)}
+          >
+            <TouchableOpacity 
+              style={styles.modalOverlay}
+              activeOpacity={1}
+              onPress={() => setShowEndPicker(false)}
+            >
+              <View style={styles.modalContent} onStartShouldSetResponder={() => true}>
+                <View style={styles.modalHeader}>
+                  <Text style={styles.modalTitle} fontType="semibold">Select End Date</Text>
+                  <TouchableOpacity onPress={() => setShowEndPicker(false)}>
+                    <Ionicons name="close" size={24} color={theme.colors.iconColor} />
+                  </TouchableOpacity>
+                </View>
+                <DateTimePicker
+                  mode="single"
+                  date={dayjs(endDate).toDate()}
+                  onChange={(params) => {
+                    if (params.date) {
+                      setEndDate(dayjs(params.date).toDate());
+                      setShowEndPicker(false);
+                    }
+                  }}
+                  minDate={dayjs(startDate).toDate()}
+                />
+              </View>
+            </TouchableOpacity>
+          </Modal>
 
           {/* Right: Export Button */}
           <View style={styles.controlSection}>
@@ -1126,6 +1171,45 @@ const styles = StyleSheet.create({
     paddingVertical: theme.spacing(6),
     fontSize: theme.fontSizes.md,
     color: theme.colors.bodyText,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: theme.spacing(2),
+  },
+  modalContent: {
+    backgroundColor: theme.colors.cardBackground,
+    borderRadius: theme.radius.lg,
+    padding: theme.spacing(3),
+    width: '100%',
+    maxWidth: 400,
+    ...Platform.select({
+      web: {
+        boxShadow: '0 10px 40px rgba(0, 0, 0, 0.2)',
+      },
+      default: {
+        elevation: 8,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 10,
+      },
+    }),
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: theme.spacing(2),
+    paddingBottom: theme.spacing(2),
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.borderColor,
+  },
+  modalTitle: {
+    fontSize: theme.fontSizes.lg,
+    color: theme.colors.headingText,
   },
 });
 

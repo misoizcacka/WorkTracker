@@ -16,7 +16,6 @@ import i18n, { loadPersistedLanguage } from '../i18n';
 import { theme } from '../theme';
 
 import Toast, { BaseToast, ErrorToast, ToastConfig } from 'react-native-toast-message';
-import { PaperProvider } from 'react-native-paper';
 
 import { useFonts } from 'expo-font';
 import * as SplashScreen from 'expo-splash-screen';
@@ -267,17 +266,15 @@ export default function RootLayout() {
     <SafeAreaProvider>
       <SessionProvider>
         <I18nextProvider i18n={i18n} key={langKey}>
-          <PaperProvider>
-            <EmployeesProvider>
-              <ProjectsProvider>
-                <AssignmentsProvider>
-                  <InvitesProvider>
-                    <Main />
-                  </InvitesProvider>
-                </AssignmentsProvider>
-              </ProjectsProvider>
-            </EmployeesProvider>
-          </PaperProvider>
+          <EmployeesProvider>
+            <ProjectsProvider>
+              <AssignmentsProvider>
+                <InvitesProvider>
+                  <Main />
+                </InvitesProvider>
+              </AssignmentsProvider>
+            </ProjectsProvider>
+          </EmployeesProvider>
         </I18nextProvider>
       </SessionProvider>
       <Toast config={toastConfig} />
