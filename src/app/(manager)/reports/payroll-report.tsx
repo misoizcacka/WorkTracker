@@ -749,7 +749,7 @@ const PayrollReport = () => {
           </View>
           <View style={styles.statBox}>
             <Text style={[styles.statLabel, { color: theme.colors.success }]} fontType="bold">Total Payable</Text>
-            <Text style={[styles.statValue, { color: theme.colors.success, fontSize: theme.fontSizes['2xl'] }]} fontType="bold">
+            <Text style={[styles.statValue, { color: theme.colors.success, fontSize: 24 }]} fontType="bold">
               {currency}{totalPayableMoney.toFixed(2)}
             </Text>
           </View>
