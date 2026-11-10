@@ -374,26 +374,22 @@ export default function ManagerAccount() {
                     />
                   </View>
                   
-                  {/* Country & Currency Info - redesigned to match subscription stats */}
+                  {/* Country & Currency Info - clean and simple */}
                   {userCompanyCountry && (
-                    <View style={styles.companyStatsRow}>
-                      <View style={styles.companyStatBox}>
-                        <View style={styles.companyStatContent}>
-                          <Text style={styles.countryFlagLarge}>{countryFlag}</Text>
-                          <View style={styles.companyStatTextGroup}>
-                            <Text style={styles.companyStatValue} fontType="bold">{userCompanyCountry}</Text>
-                            <Text style={styles.companyStatLabel}>Country</Text>
-                          </View>
+                    <View style={styles.companyMetaRow}>
+                      <View style={styles.companyMetaItem}>
+                        <Ionicons name="globe-outline" size={16} color={theme.colors.bodyText} />
+                        <Text style={styles.companyMetaLabel} fontType="regular">Country:</Text>
+                        <View style={styles.companyMetaValueContainer}>
+                          <Text style={styles.countryFlag}>{countryFlag}</Text>
+                          <Text style={styles.companyMetaValue} fontType="medium">{userCompanyCountry}</Text>
                         </View>
                       </View>
-                      <View style={[styles.companyStatBox, styles.companyStatDivider]}>
-                        <View style={styles.companyStatContent}>
-                          <Text style={styles.currencySymbolLarge} fontType="bold">{currencySymbol}</Text>
-                          <View style={styles.companyStatTextGroup}>
-                            <Text style={styles.companyStatValue} fontType="bold">{currencySymbol}</Text>
-                            <Text style={styles.companyStatLabel}>Currency</Text>
-                          </View>
-                        </View>
+                      <View style={styles.companyMetaDivider} />
+                      <View style={styles.companyMetaItem}>
+                        <Ionicons name="cash-outline" size={16} color={theme.colors.bodyText} />
+                        <Text style={styles.companyMetaLabel} fontType="regular">Currency:</Text>
+                        <Text style={styles.companyMetaValue} fontType="bold">{currencySymbol}</Text>
                       </View>
                     </View>
                   )}
@@ -855,47 +851,42 @@ const styles = StyleSheet.create({
     color: theme.colors.primary,
     letterSpacing: 0.5,
   },
-  companyStatsRow: {
+  companyMetaRow: {
     flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: theme.colors.pageBackground,
     borderRadius: theme.radius.md,
     padding: theme.spacing(2),
     marginBottom: theme.spacing(2),
     borderWidth: 1,
     borderColor: theme.colors.borderColor,
+    gap: theme.spacing(2),
   },
-  companyStatBox: {
-    flex: 1,
-  },
-  companyStatDivider: {
-    borderLeftWidth: 1,
-    borderLeftColor: theme.colors.borderColor,
-    paddingLeft: theme.spacing(2),
-  },
-  companyStatContent: {
+  companyMetaItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: theme.spacing(1.5),
-  },
-  countryFlagLarge: {
-    fontSize: 32,
-  },
-  currencySymbolLarge: {
-    fontSize: 32,
-    color: theme.colors.primary,
-  },
-  companyStatTextGroup: {
+    gap: theme.spacing(1),
     flex: 1,
   },
-  companyStatValue: {
-    fontSize: theme.fontSizes.lg,
-    color: theme.colors.headingText,
+  companyMetaDivider: {
+    width: 1,
+    height: 24,
+    backgroundColor: theme.colors.borderColor,
   },
-  companyStatLabel: {
-    fontSize: theme.fontSizes.xs,
+  companyMetaLabel: {
+    fontSize: theme.fontSizes.sm,
     color: theme.colors.bodyText,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-    marginTop: 2,
+  },
+  companyMetaValueContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing(0.5),
+  },
+  countryFlag: {
+    fontSize: 18,
+  },
+  companyMetaValue: {
+    fontSize: theme.fontSizes.md,
+    color: theme.colors.headingText,
   },
 });
