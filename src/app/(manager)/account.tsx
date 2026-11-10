@@ -18,7 +18,6 @@ import { useRouter } from "expo-router";
 import { uploadAvatar, updateEmployeeProfile } from "../../services/profile";
 import { supabase } from "../../utils/supabase";
 import { LanguagePicker } from "../../components/LanguagePicker";
-import CountryFlag from 'react-native-country-flag';
 
 export default function ManagerAccount() {
   const { width } = useWindowDimensions();
@@ -239,6 +238,18 @@ export default function ManagerAccount() {
   const seatsUsed = employeesContext?.seatsUsed || 0;
   const seatLimit = employeesContext?.seatLimit || 0;
 
+  // Helper to get country flag emoji
+  const getCountryFlag = (countryCode: string | null): string => {
+    if (!countryCode || countryCode.length !== 2) return '';
+    const codePoints = countryCode
+      .toUpperCase()
+      .split('')
+      .map(char => 127397 + char.charCodeAt(0));
+    return String.fromCodePoint(...codePoints);
+  };
+
+  const countryFlag = getCountryFlag(userCompanyCountry);
+
   return (
     <AnimatedScreen>
       <ScrollView contentContainerStyle={styles.scrollContent}>
@@ -348,14 +359,12 @@ export default function ManagerAccount() {
                     />
                   </View>
                   
-                  {/* Country Info - matches language picker style */}
+                  {/* Country Info - simple with emoji flag */}
                   {userCompanyCountry && (
                     <View style={styles.inputGroup}>
                       <Text style={styles.label} fontType="bold">Country</Text>
                       <View style={styles.countryDisplay}>
-                        <Text style={styles.countryFlag}>
-                          <CountryFlag isoCode={userCompanyCountry} size={20} />
-                        </Text>
+                        <Text style={styles.countryFlag}>{countryFlag}</Text>
                         <Text style={styles.countryText} fontType="medium">{userCompanyCountry}</Text>
                       </View>
                     </View>
@@ -831,8 +840,7 @@ const styles = StyleSheet.create({
     minHeight: 48,
   },
   countryFlag: {
-    width: 20,
-    height: 20,
+    fontSize: 24,
   },
   countryText: {
     fontSize: theme.fontSizes.md,
