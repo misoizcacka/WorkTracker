@@ -18,6 +18,7 @@ import { useRouter } from "expo-router";
 import { uploadAvatar, updateEmployeeProfile } from "../../services/profile";
 import { supabase } from "../../utils/supabase";
 import { LanguagePicker } from "../../components/LanguagePicker";
+import CountryFlag from 'react-native-country-flag';
 
 export default function ManagerAccount() {
   const { width } = useWindowDimensions();
@@ -238,33 +239,6 @@ export default function ManagerAccount() {
   const seatsUsed = employeesContext?.seatsUsed || 0;
   const seatLimit = employeesContext?.seatLimit || 0;
 
-  // Helper to get currency symbol from country code
-  const getCurrencySymbol = (countryCode: string | null): string => {
-    if (!countryCode) return '€';
-    const euroCountries = ['DE', 'AT', 'FR', 'ES', 'IT', 'NL', 'BE', 'PT', 'FI', 'IE', 'GR', 'LU', 'SI', 'SK', 'EE', 'LV', 'LT', 'CY', 'MT'];
-    const map: Record<string, string> = {
-      US: '$', CA: 'CA$', AU: 'A$', GB: '£', CH: 'CHF', SE: 'kr',
-      NO: 'kr', DK: 'kr', PL: 'zł', CZ: 'Kč', HU: 'Ft', RO: 'lei',
-      TR: '₺', JP: '¥', CN: '¥', KR: '₩', IN: '₹', BR: 'R$',
-      MX: '$', SG: 'S$', NZ: 'NZ$', ZA: 'R', AE: 'د.إ', SA: '﷼',
-    };
-    if (euroCountries.includes(countryCode.toUpperCase())) return '€';
-    return map[countryCode.toUpperCase()] ?? '€';
-  };
-
-  // Helper to get country flag emoji from country code
-  const getCountryFlag = (countryCode: string | null): string => {
-    if (!countryCode || countryCode.length !== 2) return '🌍';
-    const codePoints = countryCode
-      .toUpperCase()
-      .split('')
-      .map(char => 127397 + char.charCodeAt(0));
-    return String.fromCodePoint(...codePoints);
-  };
-
-  const currencySymbol = getCurrencySymbol(userCompanyCountry);
-  const countryFlag = getCountryFlag(userCompanyCountry);
-
   return (
     <AnimatedScreen>
       <ScrollView contentContainerStyle={styles.scrollContent}>
@@ -374,21 +348,13 @@ export default function ManagerAccount() {
                     />
                   </View>
                   
-                  {/* Country & Currency Info - same style as input fields */}
+                  {/* Country Info - matches language picker style */}
                   {userCompanyCountry && (
-                    <View style={styles.companyMetaContainer}>
-                      <View style={styles.companyMetaField}>
-                        <Text style={styles.label} fontType="bold">Country</Text>
-                        <View style={styles.companyMetaBox}>
-                          <Text style={styles.countryFlag}>{countryFlag}</Text>
-                          <Text style={styles.companyMetaValue} fontType="medium">{userCompanyCountry}</Text>
-                        </View>
-                      </View>
-                      <View style={styles.companyMetaField}>
-                        <Text style={styles.label} fontType="bold">Currency</Text>
-                        <View style={styles.companyMetaBox}>
-                          <Text style={styles.companyMetaValue} fontType="bold">{currencySymbol}</Text>
-                        </View>
+                    <View style={styles.inputGroup}>
+                      <Text style={styles.label} fontType="bold">Country</Text>
+                      <View style={styles.countryDisplay}>
+                        <CountryFlag isoCode={userCompanyCountry} size={20} />
+                        <Text style={styles.countryText} fontType="medium">{userCompanyCountry}</Text>
                       </View>
                     </View>
                   )}
@@ -850,18 +816,10 @@ const styles = StyleSheet.create({
     color: theme.colors.primary,
     letterSpacing: 0.5,
   },
-  companyMetaContainer: {
-    flexDirection: 'row',
-    gap: theme.spacing(2),
-    marginBottom: theme.spacing(2),
-  },
-  companyMetaField: {
-    flex: 1,
-  },
-  companyMetaBox: {
+  countryDisplay: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: theme.spacing(1),
+    gap: theme.spacing(1.5),
     backgroundColor: theme.colors.pageBackground,
     borderWidth: 1,
     borderColor: theme.colors.borderColor,
@@ -870,10 +828,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: theme.spacing(2),
     minHeight: 48,
   },
-  countryFlag: {
-    fontSize: 20,
-  },
-  companyMetaValue: {
+  countryText: {
     fontSize: theme.fontSizes.md,
     color: theme.colors.headingText,
   },
