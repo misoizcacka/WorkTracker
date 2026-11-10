@@ -11,8 +11,8 @@ import * as XLSX from 'xlsx-js-style';
 import { exportWorkbookToExcel } from '../../../utils/exportHelpers';
 import { EmployeesContext, EmployeesContextType } from '../../../context/EmployeesContext';
 import { useSession } from '../../../context/AuthContext';
-import CrossPlatformDatePicker from '../../../components/CrossPlatformDatePicker';
 import SegmentedControl from '@react-native-segmented-control/segmented-control';
+import { DatePickerModal } from 'react-native-paper-dates';
 
 /** Maps ISO 3166-1 alpha-2 country codes to their currency symbol. */
 function getCurrencySymbol(country: string | null): string {
@@ -55,6 +55,8 @@ const PayrollReport = () => {
   const [selectedYear, setSelectedYear] = useState(moment().year());
   const [startDate, setStartDate] = useState(moment().startOf('month').toDate());
   const [endDate, setEndDate] = useState(moment().endOf('month').toDate());
+  const [showStartPicker, setShowStartPicker] = useState(false);
+  const [showEndPicker, setShowEndPicker] = useState(false);
   
   const [reportData, setReportData] = useState<PayrollReportItem[]>([]);
   const [loading, setLoading] = useState(false);
@@ -570,7 +572,7 @@ const PayrollReport = () => {
               setDateMode(index === 0 ? 'month' : 'custom');
             }}
             style={styles.segmentedControl}
-            backgroundColor={theme.colors.pageBackground}
+            backgroundColor={theme.colors.borderColor}
             tintColor={theme.colors.primary}
             fontStyle={{ 
               fontSize: theme.fontSizes.sm, 
@@ -602,17 +604,59 @@ const PayrollReport = () => {
             </View>
           ) : (
             <View style={styles.unifiedSelector}>
-              <View style={styles.dateInputWrapper}>
-                <Text style={styles.miniLabel}>FROM</Text>
-                <CrossPlatformDatePicker date={startDate} onDateChange={setStartDate} mode="date" />
-              </View>
+              <TouchableOpacity 
+                style={styles.dateButton}
+                onPress={() => setShowStartPicker(true)}
+              >
+                <Text style={styles.dateButtonLabel}>FROM</Text>
+                <View style={styles.dateButtonValue}>
+                  <Ionicons name="calendar-outline" size={14} color={theme.colors.primary} />
+                  <Text style={styles.dateButtonText} fontType="medium">
+                    {moment(startDate).format('MMM D, YYYY')}
+                  </Text>
+                </View>
+              </TouchableOpacity>
+              
               <Ionicons name="arrow-forward" size={14} color={theme.colors.disabledText} />
-              <View style={styles.dateInputWrapper}>
-                <Text style={styles.miniLabel}>TO</Text>
-                <CrossPlatformDatePicker date={endDate} onDateChange={setEndDate} mode="date" />
-              </View>
+              
+              <TouchableOpacity 
+                style={styles.dateButton}
+                onPress={() => setShowEndPicker(true)}
+              >
+                <Text style={styles.dateButtonLabel}>TO</Text>
+                <View style={styles.dateButtonValue}>
+                  <Ionicons name="calendar-outline" size={14} color={theme.colors.primary} />
+                  <Text style={styles.dateButtonText} fontType="medium">
+                    {moment(endDate).format('MMM D, YYYY')}
+                  </Text>
+                </View>
+              </TouchableOpacity>
             </View>
           )}
+          
+          <DatePickerModal
+            locale="en"
+            mode="single"
+            visible={showStartPicker}
+            onDismiss={() => setShowStartPicker(false)}
+            date={startDate}
+            onConfirm={(params) => {
+              setShowStartPicker(false);
+              if (params.date) setStartDate(params.date);
+            }}
+          />
+          
+          <DatePickerModal
+            locale="en"
+            mode="single"
+            visible={showEndPicker}
+            onDismiss={() => setShowEndPicker(false)}
+            date={endDate}
+            onConfirm={(params) => {
+              setShowEndPicker(false);
+              if (params.date) setEndDate(params.date);
+            }}
+          />
 
           {/* Right: Export Button */}
           <View style={styles.controlSection}>
@@ -872,6 +916,30 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   selectorText: {
+    fontSize: theme.fontSizes.sm,
+    color: theme.colors.headingText,
+  },
+  dateButton: {
+    flexDirection: 'column',
+    alignItems: 'flex-start',
+    gap: theme.spacing(0.5),
+  },
+  dateButtonLabel: {
+    fontSize: 10,
+    color: theme.colors.disabledText,
+    fontWeight: '600',
+    letterSpacing: 0.5,
+  },
+  dateButtonValue: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing(0.75),
+    paddingVertical: theme.spacing(0.5),
+    paddingHorizontal: theme.spacing(1),
+    backgroundColor: theme.colors.pageBackground,
+    borderRadius: theme.radius.sm,
+  },
+  dateButtonText: {
     fontSize: theme.fontSizes.sm,
     color: theme.colors.headingText,
   },
