@@ -56,6 +56,12 @@ const SubNavBar: React.FC<SubNavBarProps> = ({ items }) => {
   const router = useRouter();
   const pathname = usePathname();
 
+  const handlePress = (href: string, isActive: boolean) => {
+    // Don't navigate if already on this page
+    if (isActive) return;
+    router.push(href as any);
+  };
+
   return (
     <View style={styles.container}>
       <ScrollView
@@ -70,7 +76,7 @@ const SubNavBar: React.FC<SubNavBarProps> = ({ items }) => {
               key={item.href}
               item={item}
               isActive={isActive}
-              onPress={() => router.push(item.href as any)}
+              onPress={() => handlePress(item.href, isActive)}
             />
           );
         })}
