@@ -908,6 +908,8 @@ const styles = StyleSheet.create({
   controlSection: {
     flexDirection: 'row',
     alignItems: 'center',
+    position: 'relative',
+    zIndex: 101,
   },
   exportActions: {
     flexDirection: 'row',
