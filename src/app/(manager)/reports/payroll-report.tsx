@@ -579,7 +579,7 @@ const PayrollReport = () => {
             }}
             activeFontStyle={{ 
               fontSize: theme.fontSizes.sm, 
-              fontFamily: theme.font.bold,
+              fontFamily: theme.font.regular,
               color: 'white',
             }}
           />
@@ -847,9 +847,6 @@ const styles = StyleSheet.create({
   segmentedControl: {
     width: 280,
     height: 36,
-    borderWidth: 1,
-    borderColor: theme.colors.borderColor,
-    borderRadius: theme.radius.md,
   },
   unifiedSelector: {
     flexDirection: 'row',
