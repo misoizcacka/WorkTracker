@@ -566,8 +566,8 @@ const PayrollReport = () => {
             >
               <Ionicons 
                 name="calendar-outline" 
-                size={18} 
-                color={dateMode === 'month' ? 'white' : theme.colors.bodyText} 
+                size={16} 
+                color={dateMode === 'month' ? theme.colors.primary : theme.colors.disabledText} 
               />
               <Text 
                 style={[styles.modeButtonText, dateMode === 'month' && styles.modeButtonTextActive]} 
@@ -582,8 +582,8 @@ const PayrollReport = () => {
             >
               <Ionicons 
                 name="calendar-number-outline" 
-                size={18} 
-                color={dateMode === 'custom' ? 'white' : theme.colors.bodyText} 
+                size={16} 
+                color={dateMode === 'custom' ? theme.colors.primary : theme.colors.disabledText} 
               />
               <Text 
                 style={[styles.modeButtonText, dateMode === 'custom' && styles.modeButtonTextActive]} 
@@ -851,43 +851,53 @@ const styles = StyleSheet.create({
   },
   modeToggle: {
     flexDirection: 'row',
-    backgroundColor: theme.colors.background,
+    backgroundColor: theme.colors.pageBackground,
     borderRadius: theme.radius.lg,
-    padding: 3,
+    padding: 4,
     borderWidth: 1,
     borderColor: theme.colors.borderColor,
-    ...Platform.select({
-      web: {
-        boxShadow: `0 1px 3px rgba(0, 0, 0, 0.05)`,
-      },
-    }),
+    position: 'relative',
   },
   modeButton: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: theme.spacing(1.25),
-    paddingHorizontal: theme.spacing(2.5),
+    paddingHorizontal: theme.spacing(3),
     borderRadius: theme.radius.md,
     gap: theme.spacing(1),
-    transition: 'all 0.2s ease',
-  },
-  modeButtonActive: {
-    backgroundColor: theme.colors.primary,
+    zIndex: 2,
     ...Platform.select({
       web: {
-        boxShadow: `0 2px 8px rgba(0, 0, 0, 0.12)`,
+        transition: 'all 0.15s ease',
+      },
+    }),
+  },
+  modeButtonActive: {
+    backgroundColor: 'white',
+    ...Platform.select({
+      web: {
+        boxShadow: `0 1px 3px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.08)`,
       },
       native: {
-        elevation: 2,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.12,
+        shadowRadius: 3,
+        elevation: 3,
       },
     }),
   },
   modeButtonText: {
     fontSize: theme.fontSizes.sm,
-    color: theme.colors.bodyText,
+    color: theme.colors.disabledText,
+    ...Platform.select({
+      web: {
+        transition: 'color 0.15s ease',
+      },
+    }),
   },
   modeButtonTextActive: {
-    color: 'white',
+    color: theme.colors.headingText,
     fontWeight: '600',
   },
   dateRangePicker: {
