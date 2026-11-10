@@ -60,7 +60,7 @@ export function LanguageSelector() {
   return (
     <View style={styles.container}>
       <TouchableOpacity onPress={togglePopover} style={styles.button}>
-        <CountryFlag isoCode={currentLang.countryCode} size={24} style={styles.flag} />
+        <CountryFlag isoCode={currentLang.countryCode} size={theme.iconSizes.flag} style={styles.flag} />
         <Text style={styles.currentLangLabel}>{currentLang.label}</Text>
       </TouchableOpacity>
 
@@ -71,7 +71,7 @@ export function LanguageSelector() {
               key={lang.code}
               style={styles.langOption}
               onPress={() => handleLanguageChange(lang.code)}>
-              <CountryFlag isoCode={lang.countryCode} size={24} style={styles.langFlag} />
+              <CountryFlag isoCode={lang.countryCode} size={theme.iconSizes.flag} style={styles.langFlag} />
               <Text style={styles.langLabel}>{lang.label}</Text>
             </TouchableOpacity>
           ))}
@@ -97,9 +97,9 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   flag: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
+    width: theme.iconSizes.flag,
+    height: theme.iconSizes.flag,
+    borderRadius: theme.iconSizes.flag / 2,
     marginRight: 8,
   },
   currentLangLabel: {
@@ -130,9 +130,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
   },
   langFlag: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
+    width: theme.iconSizes.flag,
+    height: theme.iconSizes.flag,
+    borderRadius: theme.iconSizes.flag / 2,
     marginRight: 10,
   },
   langLabel: {

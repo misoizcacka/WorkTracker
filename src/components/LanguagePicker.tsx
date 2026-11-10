@@ -37,7 +37,7 @@ export function LanguagePicker({ variant = 'default' }: LanguagePickerProps) {
         onPress={() => setOpen(true)}
         activeOpacity={0.7}
       >
-        <Text style={styles.flag}><CountryFlag isoCode={FLAG_CODES[currentCode]} size={14} /></Text>
+        <Text style={styles.flag}><CountryFlag isoCode={FLAG_CODES[currentCode]} size={theme.iconSizes.flag} /></Text>
         <Text
           style={variant === 'row' ? styles.triggerRowLabel : styles.triggerLabel}
           fontType="regular"
@@ -72,7 +72,7 @@ export function LanguagePicker({ variant = 'default' }: LanguagePickerProps) {
                   activeOpacity={0.7}
                 >
                   <View style={styles.optionLeft}>
-                    <Text style={styles.flag}><CountryFlag isoCode={FLAG_CODES[lang.code as LanguageCode]} size={14} /></Text>
+                    <Text style={styles.flag}><CountryFlag isoCode={FLAG_CODES[lang.code as LanguageCode]} size={theme.iconSizes.flag} /></Text>
                     <Text
                       style={[styles.optionLabel, isActive && styles.optionLabelActive]}
                       fontType={isActive ? 'medium' : 'regular'}
@@ -114,7 +114,7 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: theme.colors.headingText,
   },
-  flag: { width: 14, height: 14 },
+  flag: { width: theme.iconSizes.flag, height: theme.iconSizes.flag },
   triggerLabel: {
     fontSize: 13,
     color: theme.colors.bodyText,

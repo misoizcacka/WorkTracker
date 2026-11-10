@@ -395,7 +395,7 @@ const styles = StyleSheet.create({
     borderBottomColor: theme.colors.borderColor,
     ...Platform.select({
       web: {
-        background: `radial-gradient(ellipse 80% 50% at 50% 0%, ${theme.colors.primaryMuted}CC 0%, ${theme.colors.pageBackground} 70%)`,
+        backgroundImage: `radial-gradient(ellipse 80% 50% at 50% 0%, ${theme.colors.primaryMuted}CC 0%, ${theme.colors.pageBackground} 70%)`,
       } as any,
     }),
   },

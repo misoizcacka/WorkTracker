@@ -12,6 +12,7 @@ import { Dropdown } from 'react-native-element-dropdown';
 import { countries } from '../../utils/countries';
 import { Text } from '../../components/Themed';
 import { useTranslation } from 'react-i18next';
+import CountryFlag from 'react-native-country-flag';
 
 const { width } = Dimensions.get('window');
 const isLargeScreen = width > 900;
@@ -58,7 +59,7 @@ export default function CompanySetup() {
             } else if (data) {
                 setCompanyName(data.name || '');
                 if (data.country) {
-                  const country = countries.find(c => c.name === data.country);
+                  const country = countries.find(c => c.code === data.country);
                   setSelectedCountry(country || null);
                 }
             }
@@ -93,7 +94,7 @@ export default function CompanySetup() {
     try {
       const { error: updateError } = await supabase
         .from('companies')
-        .update({ name: companyName.trim(), country: selectedCountry.name })
+        .update({ name: companyName.trim(), country: selectedCountry.code })
         .eq('id', userCompanyId);
 
       if (updateError) {
@@ -187,7 +188,11 @@ export default function CompanySetup() {
                   value={selectedCountry?.code}
                   onChange={item => setSelectedCountry(item)}
                   renderLeftIcon={() => (
-                    <Text style={{ marginRight: 10, fontSize: 18 }}>{selectedCountry?.emoji}</Text>
+                    selectedCountry ? (
+                      <Text style={styles.flag}>
+                        <CountryFlag isoCode={selectedCountry.code} size={theme.iconSizes.flag} />
+                      </Text>
+                    ) : null
                   )}
                   containerStyle={styles.dropdownContainer}
                   itemTextStyle={styles.dropdownItemText}
@@ -222,6 +227,11 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: theme.colors.pageBackground,
+  },
+  flag: {
+    width: theme.iconSizes.flag,
+    height: theme.iconSizes.flag,
+    marginRight: 10,
   },
   scrollContent: {
     flexGrow: 1,

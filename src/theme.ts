@@ -77,6 +77,10 @@ export const theme = {
     xl: 20,
   },
 
+  iconSizes: {
+    flag: 12,
+  },
+
   shadow: {
     soft: {
       shadowColor: "#000",
