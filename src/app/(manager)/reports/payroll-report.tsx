@@ -560,73 +560,61 @@ const PayrollReport = () => {
       <View style={styles.mainContentCard}>
         {/* --- Unified Control Bar --- */}
         <View style={styles.controlBar}>
-          {/* Segmented Control */}
-          <View style={styles.controlSection}>
-            <SegmentedControl
-              values={['Monthly', 'Custom Range']}
-              selectedIndex={selectedSegmentIndex}
-              onChange={(event) => {
-                const index = event.nativeEvent.selectedSegmentIndex;
-                setSelectedSegmentIndex(index);
-                setDateMode(index === 0 ? 'month' : 'custom');
-              }}
-              style={styles.segmentedControl}
-              backgroundColor={theme.colors.pageBackground}
-              tintColor={theme.colors.primary}
-              fontStyle={{ 
-                fontSize: theme.fontSizes.sm, 
-                fontFamily: theme.font.regular,
-                color: theme.colors.bodyText,
-              }}
-              activeFontStyle={{ 
-                fontSize: theme.fontSizes.sm, 
-                fontFamily: theme.font.bold,
-                color: 'white',
-              }}
-            />
-          </View>
+          {/* Left: Segmented Control */}
+          <SegmentedControl
+            values={['Monthly', 'Custom Range']}
+            selectedIndex={selectedSegmentIndex}
+            onChange={(event) => {
+              const index = event.nativeEvent.selectedSegmentIndex;
+              setSelectedSegmentIndex(index);
+              setDateMode(index === 0 ? 'month' : 'custom');
+            }}
+            style={styles.segmentedControl}
+            backgroundColor={theme.colors.pageBackground}
+            tintColor={theme.colors.primary}
+            fontStyle={{ 
+              fontSize: theme.fontSizes.sm, 
+              fontFamily: theme.font.regular,
+              color: theme.colors.bodyText,
+            }}
+            activeFontStyle={{ 
+              fontSize: theme.fontSizes.sm, 
+              fontFamily: theme.font.bold,
+              color: 'white',
+            }}
+          />
 
-          {/* Date Selector */}
-          <View style={styles.controlSection}>
-            {dateMode === 'month' ? (
-              <View style={styles.monthSelector}>
-                <TouchableOpacity style={styles.navButton} onPress={handlePrevMonth}>
-                  <Ionicons name="chevron-back" size={20} color={theme.colors.primary} />
-                </TouchableOpacity>
-                <View style={styles.monthDisplay}>
-                  <Ionicons name="calendar-outline" size={16} color={theme.colors.primary} style={{ marginRight: theme.spacing(1) }} />
-                  <Text style={styles.monthText} fontType="bold">
-                    {moment({ year: selectedYear, month: selectedMonth - 1 }).format('MMMM YYYY')}
-                  </Text>
-                </View>
-                <TouchableOpacity style={styles.navButton} onPress={handleNextMonth}>
-                  <Ionicons name="chevron-forward" size={20} color={theme.colors.primary} />
-                </TouchableOpacity>
+          {/* Center: Date Selector */}
+          {dateMode === 'month' ? (
+            <View style={styles.unifiedSelector}>
+              <TouchableOpacity onPress={handlePrevMonth} style={styles.arrowButton}>
+                <Ionicons name="chevron-back" size={18} color={theme.colors.primary} />
+              </TouchableOpacity>
+              <View style={styles.selectorContent}>
+                <Ionicons name="calendar" size={14} color={theme.colors.primary} />
+                <Text style={styles.selectorText} fontType="medium">
+                  {moment({ year: selectedYear, month: selectedMonth - 1 }).format('MMMM YYYY')}
+                </Text>
               </View>
-            ) : (
-              <View style={styles.customRangeSelector}>
-                <View style={styles.rangeDateGroup}>
-                  <Text style={styles.rangeLabel} fontType="medium">FROM</Text>
-                  <CrossPlatformDatePicker
-                    date={startDate}
-                    onDateChange={setStartDate}
-                    mode="date"
-                  />
-                </View>
-                <Ionicons name="arrow-forward" size={16} color={theme.colors.disabledText} style={styles.rangeArrow} />
-                <View style={styles.rangeDateGroup}>
-                  <Text style={styles.rangeLabel} fontType="medium">TO</Text>
-                  <CrossPlatformDatePicker
-                    date={endDate}
-                    onDateChange={setEndDate}
-                    mode="date"
-                  />
-                </View>
+              <TouchableOpacity onPress={handleNextMonth} style={styles.arrowButton}>
+                <Ionicons name="chevron-forward" size={18} color={theme.colors.primary} />
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <View style={styles.unifiedSelector}>
+              <View style={styles.dateInputWrapper}>
+                <Text style={styles.miniLabel}>FROM</Text>
+                <CrossPlatformDatePicker date={startDate} onDateChange={setStartDate} mode="date" />
               </View>
-            )}
-          </View>
+              <Ionicons name="arrow-forward" size={14} color={theme.colors.disabledText} />
+              <View style={styles.dateInputWrapper}>
+                <Text style={styles.miniLabel}>TO</Text>
+                <CrossPlatformDatePicker date={endDate} onDateChange={setEndDate} mode="date" />
+              </View>
+            </View>
+          )}
 
-          {/* Export Button */}
+          {/* Right: Export Button */}
           <View style={styles.controlSection}>
             <TouchableOpacity 
               style={[
@@ -856,64 +844,51 @@ const styles = StyleSheet.create({
     gap: theme.spacing(2),
     width: '100%',
   },
-  controlSection: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
   segmentedControl: {
     width: 280,
     height: 36,
   },
-  monthSelector: {
+  unifiedSelector: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: theme.colors.cardBackground,
-    borderRadius: theme.radius.lg,
+    borderRadius: theme.radius.md,
     paddingVertical: theme.spacing(1),
     paddingHorizontal: theme.spacing(2),
     borderWidth: 1,
     borderColor: theme.colors.borderColor,
-    gap: theme.spacing(2),
+    gap: theme.spacing(1.5),
+    minHeight: 44,
   },
-  monthDisplay: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: theme.spacing(2),
-  },
-  monthText: {
-    fontSize: theme.fontSizes.md,
-    color: theme.colors.headingText,
-    minWidth: 140,
-    textAlign: 'center',
-  },
-  navButton: {
+  arrowButton: {
     padding: theme.spacing(0.5),
   },
-  customRangeSelector: {
+  selectorContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: theme.colors.cardBackground,
-    borderRadius: theme.radius.lg,
-    paddingVertical: theme.spacing(1.5),
-    paddingHorizontal: theme.spacing(2),
-    borderWidth: 1,
-    borderColor: theme.colors.borderColor,
-    gap: theme.spacing(2),
+    gap: theme.spacing(1),
+    paddingHorizontal: theme.spacing(1),
+    minWidth: 160,
+    justifyContent: 'center',
   },
-  rangeDateGroup: {
-    flexDirection: 'column',
-    alignItems: 'flex-start',
-    gap: theme.spacing(0.5),
+  selectorText: {
+    fontSize: theme.fontSizes.sm,
+    color: theme.colors.headingText,
   },
-  rangeLabel: {
-    fontSize: theme.fontSizes.xs,
+  dateInputWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing(0.75),
+  },
+  miniLabel: {
+    fontSize: 10,
     color: theme.colors.disabledText,
-    textTransform: 'uppercase',
+    fontWeight: '600',
     letterSpacing: 0.5,
-    paddingLeft: theme.spacing(0.5),
   },
-  rangeArrow: {
-    marginTop: theme.spacing(2),
+  controlSection: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   exportActions: {
     flexDirection: 'row',
