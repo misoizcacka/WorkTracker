@@ -374,20 +374,21 @@ export default function ManagerAccount() {
                     />
                   </View>
                   
-                  {/* Country & Currency Info - clean and simple */}
+                  {/* Country & Currency Info - same style as input fields */}
                   {userCompanyCountry && (
-                    <View style={styles.companyMetaRow}>
-                      <View style={styles.companyMetaItem}>
-                        <Text style={styles.companyMetaLabel} fontType="regular">Country:</Text>
-                        <View style={styles.companyMetaValueContainer}>
+                    <View style={styles.companyMetaContainer}>
+                      <View style={styles.companyMetaField}>
+                        <Text style={styles.label} fontType="bold">Country</Text>
+                        <View style={styles.companyMetaBox}>
                           <Text style={styles.countryFlag}>{countryFlag}</Text>
                           <Text style={styles.companyMetaValue} fontType="medium">{userCompanyCountry}</Text>
                         </View>
                       </View>
-                      <View style={styles.companyMetaDivider} />
-                      <View style={styles.companyMetaItem}>
-                        <Text style={styles.companyMetaLabel} fontType="regular">Currency:</Text>
-                        <Text style={styles.companyMetaValue} fontType="bold">{currencySymbol}</Text>
+                      <View style={styles.companyMetaField}>
+                        <Text style={styles.label} fontType="bold">Currency</Text>
+                        <View style={styles.companyMetaBox}>
+                          <Text style={styles.companyMetaValue} fontType="bold">{currencySymbol}</Text>
+                        </View>
                       </View>
                     </View>
                   )}
@@ -849,39 +850,28 @@ const styles = StyleSheet.create({
     color: theme.colors.primary,
     letterSpacing: 0.5,
   },
-  companyMetaRow: {
+  companyMetaContainer: {
     flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: theme.colors.pageBackground,
-    borderRadius: theme.radius.md,
-    padding: theme.spacing(2),
-    marginBottom: theme.spacing(2),
-    borderWidth: 1,
-    borderColor: theme.colors.borderColor,
     gap: theme.spacing(2),
+    marginBottom: theme.spacing(2),
   },
-  companyMetaItem: {
+  companyMetaField: {
+    flex: 1,
+  },
+  companyMetaBox: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: theme.spacing(1),
-    flex: 1,
-  },
-  companyMetaDivider: {
-    width: 1,
-    height: 24,
-    backgroundColor: theme.colors.borderColor,
-  },
-  companyMetaLabel: {
-    fontSize: theme.fontSizes.sm,
-    color: theme.colors.bodyText,
-  },
-  companyMetaValueContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: theme.spacing(0.5),
+    backgroundColor: theme.colors.pageBackground,
+    borderWidth: 1,
+    borderColor: theme.colors.borderColor,
+    borderRadius: theme.radius.md,
+    paddingVertical: theme.spacing(1.5),
+    paddingHorizontal: theme.spacing(2),
+    minHeight: 48,
   },
   countryFlag: {
-    fontSize: 18,
+    fontSize: 20,
   },
   companyMetaValue: {
     fontSize: theme.fontSizes.md,
