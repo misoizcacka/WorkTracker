@@ -12,7 +12,7 @@ import { exportWorkbookToExcel } from '../../../utils/exportHelpers';
 import { EmployeesContext, EmployeesContextType } from '../../../context/EmployeesContext';
 import { useSession } from '../../../context/AuthContext';
 import SegmentedControl from '@react-native-segmented-control/segmented-control';
-import RNPickerSelect from 'react-native-picker-select';
+import DateTimePickerModal from 'react-native-modal-datetime-picker';
 
 /** Maps ISO 3166-1 alpha-2 country codes to their currency symbol. */
 function getCurrencySymbol(country: string | null): string {
@@ -55,6 +55,8 @@ const PayrollReport = () => {
   const [selectedYear, setSelectedYear] = useState(moment().year());
   const [startDate, setStartDate] = useState(moment().startOf('month').toDate());
   const [endDate, setEndDate] = useState(moment().endOf('month').toDate());
+  const [showStartPicker, setShowStartPicker] = useState(false);
+  const [showEndPicker, setShowEndPicker] = useState(false);
   
   const [reportData, setReportData] = useState<PayrollReportItem[]>([]);
   const [loading, setLoading] = useState(false);
@@ -602,105 +604,59 @@ const PayrollReport = () => {
             </View>
           ) : (
             <View style={styles.unifiedSelector}>
-              <View style={styles.datePickerGroup}>
+              <TouchableOpacity 
+                style={styles.dateButton}
+                onPress={() => setShowStartPicker(true)}
+              >
                 <Text style={styles.dateButtonLabel}>FROM</Text>
-                <View style={styles.datePickersRow}>
-                  <RNPickerSelect
-                    value={moment(startDate).month()}
-                    onValueChange={(month) => {
-                      if (month !== null) {
-                        const newDate = moment(startDate).month(month).toDate();
-                        setStartDate(newDate);
-                      }
-                    }}
-                    items={moment.months().map((m, i) => ({ label: m, value: i }))}
-                    style={pickerSelectStyles}
-                    placeholder={{}}
-                    Icon={() => <Ionicons name="chevron-down" size={16} color={theme.colors.primary} style={{ marginRight: 8 }} />}
-                  />
-                  <RNPickerSelect
-                    value={moment(startDate).date()}
-                    onValueChange={(day) => {
-                      if (day !== null) {
-                        const newDate = moment(startDate).date(day).toDate();
-                        setStartDate(newDate);
-                      }
-                    }}
-                    items={Array.from({ length: moment(startDate).daysInMonth() }, (_, i) => ({ label: String(i + 1), value: i + 1 }))}
-                    style={pickerSelectStyles}
-                    placeholder={{}}
-                    Icon={() => <Ionicons name="chevron-down" size={16} color={theme.colors.primary} style={{ marginRight: 8 }} />}
-                  />
-                  <RNPickerSelect
-                    value={moment(startDate).year()}
-                    onValueChange={(year) => {
-                      if (year !== null) {
-                        const newDate = moment(startDate).year(year).toDate();
-                        setStartDate(newDate);
-                      }
-                    }}
-                    items={Array.from({ length: 10 }, (_, i) => {
-                      const y = moment().year() - 5 + i;
-                      return { label: String(y), value: y };
-                    })}
-                    style={pickerSelectStyles}
-                    placeholder={{}}
-                    Icon={() => <Ionicons name="chevron-down" size={16} color={theme.colors.primary} style={{ marginRight: 8 }} />}
-                  />
+                <View style={styles.dateButtonValue}>
+                  <Ionicons name="calendar-outline" size={14} color={theme.colors.primary} />
+                  <Text style={styles.dateButtonText} fontType="medium">
+                    {moment(startDate).format('MMM D, YYYY')}
+                  </Text>
                 </View>
-              </View>
+              </TouchableOpacity>
               
-              <Ionicons name="arrow-forward" size={14} color={theme.colors.disabledText} style={{ marginHorizontal: theme.spacing(1) }} />
+              <Ionicons name="arrow-forward" size={14} color={theme.colors.disabledText} />
               
-              <View style={styles.datePickerGroup}>
+              <TouchableOpacity 
+                style={styles.dateButton}
+                onPress={() => setShowEndPicker(true)}
+              >
                 <Text style={styles.dateButtonLabel}>TO</Text>
-                <View style={styles.datePickersRow}>
-                  <RNPickerSelect
-                    value={moment(endDate).month()}
-                    onValueChange={(month) => {
-                      if (month !== null) {
-                        const newDate = moment(endDate).month(month).toDate();
-                        setEndDate(newDate);
-                      }
-                    }}
-                    items={moment.months().map((m, i) => ({ label: m, value: i }))}
-                    style={pickerSelectStyles}
-                    placeholder={{}}
-                    Icon={() => <Ionicons name="chevron-down" size={16} color={theme.colors.primary} style={{ marginRight: 8 }} />}
-                  />
-                  <RNPickerSelect
-                    value={moment(endDate).date()}
-                    onValueChange={(day) => {
-                      if (day !== null) {
-                        const newDate = moment(endDate).date(day).toDate();
-                        setEndDate(newDate);
-                      }
-                    }}
-                    items={Array.from({ length: moment(endDate).daysInMonth() }, (_, i) => ({ label: String(i + 1), value: i + 1 }))}
-                    style={pickerSelectStyles}
-                    placeholder={{}}
-                    Icon={() => <Ionicons name="chevron-down" size={16} color={theme.colors.primary} style={{ marginRight: 8 }} />}
-                  />
-                  <RNPickerSelect
-                    value={moment(endDate).year()}
-                    onValueChange={(year) => {
-                      if (year !== null) {
-                        const newDate = moment(endDate).year(year).toDate();
-                        setEndDate(newDate);
-                      }
-                    }}
-                    items={Array.from({ length: 10 }, (_, i) => {
-                      const y = moment().year() - 5 + i;
-                      return { label: String(y), value: y };
-                    })}
-                    style={pickerSelectStyles}
-                    placeholder={{}}
-                    Icon={() => <Ionicons name="chevron-down" size={16} color={theme.colors.primary} style={{ marginRight: 8 }} />}
-                  />
+                <View style={styles.dateButtonValue}>
+                  <Ionicons name="calendar-outline" size={14} color={theme.colors.primary} />
+                  <Text style={styles.dateButtonText} fontType="medium">
+                    {moment(endDate).format('MMM D, YYYY')}
+                  </Text>
                 </View>
-              </View>
+              </TouchableOpacity>
             </View>
           )}
+          
+          <DateTimePickerModal
+            isVisible={showStartPicker}
+            mode="date"
+            date={startDate}
+            onConfirm={(date) => {
+              setStartDate(date);
+              setShowStartPicker(false);
+            }}
+            onCancel={() => setShowStartPicker(false)}
+            maximumDate={endDate}
+          />
+          
+          <DateTimePickerModal
+            isVisible={showEndPicker}
+            mode="date"
+            date={endDate}
+            onConfirm={(date) => {
+              setEndDate(date);
+              setShowEndPicker(false);
+            }}
+            onCancel={() => setShowEndPicker(false)}
+            minimumDate={startDate}
+          />
           
           {/* Right: Export Button */}
           <View style={styles.controlSection}>
@@ -1170,59 +1126,6 @@ const styles = StyleSheet.create({
     paddingVertical: theme.spacing(6),
     fontSize: theme.fontSizes.md,
     color: theme.colors.bodyText,
-  },
-  datePickerGroup: {
-    flexDirection: 'column',
-    gap: theme.spacing(0.5),
-  },
-  datePickersRow: {
-    flexDirection: 'row',
-    gap: theme.spacing(0.75),
-  },
-});
-
-const pickerSelectStyles = StyleSheet.create({
-  inputIOS: {
-    fontSize: theme.fontSizes.sm,
-    paddingVertical: theme.spacing(0.75),
-    paddingHorizontal: theme.spacing(1.5),
-    paddingRight: theme.spacing(3.5),
-    borderWidth: 1,
-    borderColor: theme.colors.borderColor,
-    borderRadius: theme.radius.md,
-    color: theme.colors.headingText,
-    backgroundColor: theme.colors.pageBackground,
-    minWidth: 90,
-  },
-  inputAndroid: {
-    fontSize: theme.fontSizes.sm,
-    paddingVertical: theme.spacing(0.75),
-    paddingHorizontal: theme.spacing(1.5),
-    paddingRight: theme.spacing(3.5),
-    borderWidth: 1,
-    borderColor: theme.colors.borderColor,
-    borderRadius: theme.radius.md,
-    color: theme.colors.headingText,
-    backgroundColor: theme.colors.pageBackground,
-    minWidth: 90,
-  },
-  inputWeb: {
-    fontSize: theme.fontSizes.sm,
-    paddingVertical: theme.spacing(0.75),
-    paddingHorizontal: theme.spacing(1.5),
-    paddingRight: theme.spacing(3.5),
-    borderWidth: 1,
-    borderColor: theme.colors.borderColor,
-    borderRadius: theme.radius.md,
-    color: theme.colors.headingText,
-    backgroundColor: theme.colors.pageBackground,
-    minWidth: 90,
-    fontFamily: theme.font.regular,
-  },
-  iconContainer: {
-    top: '50%',
-    right: 8,
-    transform: [{ translateY: -8 }],
   },
 });
 
