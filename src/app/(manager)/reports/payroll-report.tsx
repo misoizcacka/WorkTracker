@@ -556,7 +556,7 @@ const PayrollReport = () => {
               setDateMode(index === 0 ? 'month' : 'custom');
             }}
             style={styles.segmentedControl}
-            backgroundColor={theme.colors.borderColor}
+            backgroundColor={theme.colors.accent}
             tintColor={theme.colors.primary}
             fontStyle={{ 
               fontSize: theme.fontSizes.sm, 
