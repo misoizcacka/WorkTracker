@@ -63,7 +63,7 @@
     "maplibre-gl": "^5.13.0",
     "moment": "^2.30.1",
     "react": "19.2.3",
-    "react-datepicker": "^8.9.0",
+    "react-datepicker": "^8.10.0",
     "react-dom": "19.2.3",
     "react-i18next": "^16.2.4",
     "react-map-gl": "^8.1.0",

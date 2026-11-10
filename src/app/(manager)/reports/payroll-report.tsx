@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useContext, useMemo } from 'react';
-import { View, StyleSheet, ScrollView, ActivityIndicator, TouchableOpacity, Platform } from 'react-native';
+import { View, StyleSheet, ScrollView, ActivityIndicator, TouchableOpacity, Platform, Modal } from 'react-native';
 import { Text } from '../../../components/Themed';
 import AnimatedScreen from '../../../components/AnimatedScreen';
 import { theme } from '../../../theme';
@@ -13,6 +13,8 @@ import { EmployeesContext, EmployeesContextType } from '../../../context/Employe
 import { useSession } from '../../../context/AuthContext';
 import SegmentedControl from '@react-native-segmented-control/segmented-control';
 import DateTimePickerModal from 'react-native-modal-datetime-picker';
+import DatePicker from 'react-datepicker';
+import 'react-datepicker/dist/react-datepicker.css';
 
 /** Maps ISO 3166-1 alpha-2 country codes to their currency symbol. */
 function getCurrencySymbol(country: string | null): string {
@@ -634,29 +636,101 @@ const PayrollReport = () => {
             </View>
           )}
           
-          <DateTimePickerModal
-            isVisible={showStartPicker}
-            mode="date"
-            date={startDate}
-            onConfirm={(date) => {
-              setStartDate(date);
-              setShowStartPicker(false);
-            }}
-            onCancel={() => setShowStartPicker(false)}
-            maximumDate={endDate}
-          />
-          
-          <DateTimePickerModal
-            isVisible={showEndPicker}
-            mode="date"
-            date={endDate}
-            onConfirm={(date) => {
-              setEndDate(date);
-              setShowEndPicker(false);
-            }}
-            onCancel={() => setShowEndPicker(false)}
-            minimumDate={startDate}
-          />
+          {Platform.OS === 'web' ? (
+            <>
+              <Modal
+                visible={showStartPicker}
+                transparent={true}
+                animationType="fade"
+                onRequestClose={() => setShowStartPicker(false)}
+              >
+                <TouchableOpacity 
+                  style={styles.modalOverlay}
+                  activeOpacity={1}
+                  onPress={() => setShowStartPicker(false)}
+                >
+                  <View style={styles.modalContent} onStartShouldSetResponder={() => true}>
+                    <View style={styles.modalHeader}>
+                      <Text style={styles.modalTitle} fontType="bold">Select Start Date</Text>
+                      <TouchableOpacity onPress={() => setShowStartPicker(false)}>
+                        <Ionicons name="close" size={24} color={theme.colors.iconColor} />
+                      </TouchableOpacity>
+                    </View>
+                    <DatePicker
+                      selected={startDate}
+                      onChange={(date) => {
+                        if (date) {
+                          setStartDate(date);
+                          setShowStartPicker(false);
+                        }
+                      }}
+                      maxDate={endDate}
+                      inline
+                    />
+                  </View>
+                </TouchableOpacity>
+              </Modal>
+              
+              <Modal
+                visible={showEndPicker}
+                transparent={true}
+                animationType="fade"
+                onRequestClose={() => setShowEndPicker(false)}
+              >
+                <TouchableOpacity 
+                  style={styles.modalOverlay}
+                  activeOpacity={1}
+                  onPress={() => setShowEndPicker(false)}
+                >
+                  <View style={styles.modalContent} onStartShouldSetResponder={() => true}>
+                    <View style={styles.modalHeader}>
+                      <Text style={styles.modalTitle} fontType="bold">Select End Date</Text>
+                      <TouchableOpacity onPress={() => setShowEndPicker(false)}>
+                        <Ionicons name="close" size={24} color={theme.colors.iconColor} />
+                      </TouchableOpacity>
+                    </View>
+                    <DatePicker
+                      selected={endDate}
+                      onChange={(date) => {
+                        if (date) {
+                          setEndDate(date);
+                          setShowEndPicker(false);
+                        }
+                      }}
+                      minDate={startDate}
+                      inline
+                    />
+                  </View>
+                </TouchableOpacity>
+              </Modal>
+            </>
+          ) : (
+            <>
+              <DateTimePickerModal
+                isVisible={showStartPicker}
+                mode="date"
+                date={startDate}
+                onConfirm={(date) => {
+                  setStartDate(date);
+                  setShowStartPicker(false);
+                }}
+                onCancel={() => setShowStartPicker(false)}
+                maximumDate={endDate}
+              />
+              
+              <DateTimePickerModal
+                isVisible={showEndPicker}
+                mode="date"
+                date={endDate}
+                onConfirm={(date) => {
+                  setEndDate(date);
+                  setShowEndPicker(false);
+                }}
+                onCancel={() => setShowEndPicker(false)}
+                minimumDate={startDate}
+              />
+            </>
+          )}
           
           {/* Right: Export Button */}
           <View style={styles.controlSection}>
@@ -1126,6 +1200,43 @@ const styles = StyleSheet.create({
     paddingVertical: theme.spacing(6),
     fontSize: theme.fontSizes.md,
     color: theme.colors.bodyText,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: theme.spacing(2),
+  },
+  modalContent: {
+    backgroundColor: theme.colors.cardBackground,
+    borderRadius: theme.radius.lg,
+    padding: theme.spacing(3),
+    ...Platform.select({
+      web: {
+        boxShadow: '0 10px 40px rgba(0, 0, 0, 0.2)',
+      },
+      default: {
+        elevation: 8,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 10,
+      },
+    }),
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: theme.spacing(2),
+    paddingBottom: theme.spacing(2),
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.borderColor,
+  },
+  modalTitle: {
+    fontSize: theme.fontSizes.lg,
+    color: theme.colors.headingText,
   },
 });
 
