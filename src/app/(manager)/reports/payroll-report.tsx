@@ -649,7 +649,7 @@ const PayrollReport = () => {
             >
               <View style={styles.modalContent} onStartShouldSetResponder={() => true}>
                 <View style={styles.modalHeader}>
-                  <Text style={styles.modalTitle} fontType="semibold">Select Start Date</Text>
+                  <Text style={styles.modalTitle} fontType="bold">Select Start Date</Text>
                   <TouchableOpacity onPress={() => setShowStartPicker(false)}>
                     <Ionicons name="close" size={24} color={theme.colors.iconColor} />
                   </TouchableOpacity>
@@ -683,7 +683,7 @@ const PayrollReport = () => {
             >
               <View style={styles.modalContent} onStartShouldSetResponder={() => true}>
                 <View style={styles.modalHeader}>
-                  <Text style={styles.modalTitle} fontType="semibold">Select End Date</Text>
+                  <Text style={styles.modalTitle} fontType="bold">Select End Date</Text>
                   <TouchableOpacity onPress={() => setShowEndPicker(false)}>
                     <Ionicons name="close" size={24} color={theme.colors.iconColor} />
                   </TouchableOpacity>
