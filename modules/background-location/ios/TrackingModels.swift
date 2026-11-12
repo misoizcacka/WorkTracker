@@ -1,5 +1,16 @@
 import Foundation
 
+/// Tracking modes for the location service.
+/// 
+/// PASSIVE: Worker confirmed inside geofence - balanced power, 5-min updates
+/// EXIT_PENDING: Possible exit detected - HIGH ACCURACY GPS, 30-sec updates to confirm
+/// ACTIVE: Worker confirmed outside geofence - high accuracy, 1-min updates
+enum TrackingMode: String, Codable {
+    case passive = "PASSIVE"
+    case exitPending = "EXIT_PENDING"
+    case active = "ACTIVE"
+}
+
 struct GeofenceAssignment: Codable {
   let id: String
   let latitude: Double

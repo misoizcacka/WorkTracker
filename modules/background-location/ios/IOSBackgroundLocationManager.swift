@@ -18,9 +18,11 @@ final class IOSBackgroundLocationManager: NSObject, CLLocationManagerDelegate {
 
   // ─── Tracking intervals (mirrors Android Constants) ──────────────────────
   // Active = worker travelling outside geofence  → frequent updates
+  // Exit Pending = verifying exit with GPS       → very frequent updates
   // Passive = worker on site inside geofence     → infrequent updates
   // Indoor passive = faster exit detection for WiFi-based locations
   private let activeInterval: TimeInterval  = 1 * 60   //  1 min (match Android)
+  private let exitPendingInterval: TimeInterval = 30   // 30 sec (EXIT_PENDING mode) 🔑
   private let passiveIndoorInterval: TimeInterval = 2 * 60   //  2 min (indoor - faster exit detection)
   private let passiveOutdoorInterval: TimeInterval = 5 * 60   //  5 min (outdoor - battery efficient)
 
@@ -28,7 +30,8 @@ final class IOSBackgroundLocationManager: NSObject, CLLocationManagerDelegate {
   private let stateStore = TrackingStateStore.shared
   private let authenticator = DeviceAuthenticator()
 
-  private var currentModeIsActive: Bool?
+  private var currentMode: TrackingMode = .passive
+  private var currentModeIsActive: Bool?  // Deprecated: use currentMode instead
   private var periodicTimer: Timer?  // Force location updates at regular intervals
   private var shouldTreatNextLocationAsReconcile = false
   private var backgroundTask: UIBackgroundTaskIdentifier = .invalid
@@ -191,7 +194,7 @@ final class IOSBackgroundLocationManager: NSObject, CLLocationManagerDelegate {
       .count
 
     let monitoredRegionCount = locationManager.monitoredRegions.count
-    let trackingMode = (currentModeIsActive ?? false) ? "ACTIVE" : "PASSIVE"
+    let trackingModeString = currentMode.rawValue
 
     let lastCoord = stateStore.lastKnownLocation
     let lastEventAt = stateStore.lastLocationEventAt
@@ -207,7 +210,7 @@ final class IOSBackgroundLocationManager: NSObject, CLLocationManagerDelegate {
       // We track whether a BGTask was submitted via the isRunning / stateStore state.
       // The BGTaskScheduler async API cannot be called synchronously from getDiagnostics.
       "workManagerState":            (IOSBackgroundLocationManager.isRunning && stateStore.workerId != nil) ? "SCHEDULED" : "NOT_SCHEDULED",
-      "trackingMode":                trackingMode,
+      "trackingMode":                trackingModeString,
       "geofenceCount":               geofenceCount,
       "monitoredRegionCount":        monitoredRegionCount,
       "lastLatitude":                lastCoord?.latitude ?? 0.0,
@@ -281,31 +284,66 @@ final class IOSBackgroundLocationManager: NSObject, CLLocationManagerDelegate {
 
   // ─── Location update mode ─────────────────────────────────────────────────
 
-  private func startLocationUpdates(active: Bool) {
-    if currentModeIsActive == active { return }
-    currentModeIsActive = active
+  /**
+   * Switch to a new tracking mode.
+   * 
+   * PASSIVE: Inside geofence - balanced power, 5-min updates
+   * EXIT_PENDING: Verifying exit - HIGH ACCURACY GPS, 30-sec updates 🔑
+   * ACTIVE: Outside geofence - high accuracy GPS, 1-min updates
+   */
+  private func switchToMode(_ newMode: TrackingMode) {
+    if currentMode == newMode { return }
+    
+    let oldMode = currentMode
+    currentMode = newMode
+    currentModeIsActive = (newMode == .active)  // For backwards compatibility
+    stateStore.trackingMode = newMode
     
     // Stop existing timer
     periodicTimer?.invalidate()
     periodicTimer = nil
     
     locationManager.stopUpdatingLocation()
-    // Match Android's accuracy settings: ACTIVE = HIGH_ACCURACY, PASSIVE = BALANCED_POWER
-    locationManager.desiredAccuracy      = active ? kCLLocationAccuracyNearestTenMeters : kCLLocationAccuracyHundredMeters
-    // CRITICAL: distanceFilter must be kCLDistanceFilterNone for continuous updates after force-swipe (iOS 16.4+ requirement)
-    // We use time-based intervals instead of distance-based
-    locationManager.distanceFilter       = kCLDistanceFilterNone
-    // CRITICAL: Must stay false for continuous background tracking even after force-swipe
+    
+    // Configure location manager based on mode
+    switch newMode {
+    case .passive:
+      // PASSIVE: Worker on-site, stationary
+      // Balanced power - WiFi/network OK, slow updates
+      locationManager.desiredAccuracy = kCLLocationAccuracyHundredMeters
+      locationManager.activityType = .other
+      
+    case .exitPending:
+      // EXIT_PENDING: Possible exit detected - FORCE GPS to verify 🔑
+      // High accuracy GPS forced, FAST updates (30 sec)
+      locationManager.desiredAccuracy = kCLLocationAccuracyBest  // FORCE GPS 🔑
+      locationManager.activityType = .fitness  // Prevents iOS throttling
+      
+    case .active:
+      // ACTIVE: Worker traveling between sites
+      // High accuracy GPS forced, regular updates (1 min)
+      locationManager.desiredAccuracy = kCLLocationAccuracyNearestTenMeters
+      locationManager.activityType = .fitness
+    }
+    
+    // CRITICAL: These must stay as configured for continuous background tracking
+    locationManager.distanceFilter = kCLDistanceFilterNone
     locationManager.pausesLocationUpdatesAutomatically = false
-    locationManager.activityType         = active ? .fitness : .other
     locationManager.startUpdatingLocation()
     
-    // Start periodic timer to force location requests (survives background, NOT force-swipe)
-    // Timer will be recreated by significant location changes or region monitoring after force-swipe
+    // Start periodic timer to force location requests
     startPeriodicLocationTimer()
     
-    LocationFileLogger.shared.info("Service", "Mode switched to: \(active ? "ACTIVE (outside geofence)" : "PASSIVE (inside geofence)")")
-    NSLog("IOSBackgroundLocationManager: location updates mode → \(active ? "ACTIVE" : "PASSIVE")")
+    LocationFileLogger.shared.info("Service", "Mode switched: \(oldMode.rawValue) → \(newMode.rawValue)")
+    NSLog("IOSBackgroundLocationManager: location updates mode → \(newMode.rawValue)")
+  }
+  
+  /**
+   * DEPRECATED: Use switchToMode() instead.
+   * Kept for backwards compatibility with old code paths.
+   */
+  private func startLocationUpdates(active: Bool) {
+    switchToMode(active ? .active : .passive)
   }
   
   private func startPeriodicLocationTimer() {
@@ -342,17 +380,28 @@ final class IOSBackgroundLocationManager: NSObject, CLLocationManagerDelegate {
   private func determineCurrentInterval() -> TimeInterval {
     guard let lastLocation = stateStore.lastKnownLocation else {
       // No last location, use default based on mode
-      return (currentModeIsActive ?? false) ? activeInterval : passiveOutdoorInterval
+      switch currentMode {
+      case .active:
+        return activeInterval
+      case .exitPending:
+        return exitPendingInterval
+      case .passive:
+        return passiveOutdoorInterval
+      }
     }
     
-    if currentModeIsActive ?? false {
-      // Active mode = always 1 minute
-      return activeInterval
+    switch currentMode {
+    case .active:
+      return activeInterval  // Always 1 minute
+    case .exitPending:
+      return exitPendingInterval  // Always 30 seconds 🔑
+    case .passive:
+      // Passive mode: indoor vs outdoor detection
+      // Note: We can't get the actual CLLocation here, so we use stored coordinate
+      // This is approximate but good enough for interval selection
+      let isIndoor = true  // Default to indoor (faster updates) for safety
+      return isIndoor ? passiveIndoorInterval : passiveOutdoorInterval
     }
-    
-    // Passive mode: indoor vs outdoor detection
-    let isIndoor = lastLocation.horizontalAccuracy > 65 // WiFi-based = indoor
-    return isIndoor ? passiveIndoorInterval : passiveOutdoorInterval
   }
 
   // ─── Location processing ──────────────────────────────────────────────────
@@ -390,84 +439,133 @@ final class IOSBackgroundLocationManager: NSObject, CLLocationManagerDelegate {
   private func processLocation(_ location: CLLocation, source: String) async {
     guard let workerId = stateStore.workerId,
           let companyId = stateStore.companyId,
-          let config = stateStore.supabaseConfig else { return }
+          let config = stateStore.supabaseConfig,
+          let currentAssignmentId = stateStore.assignmentId else { return }
 
-    // HYBRID GEOFENCE POLICY (mirrors Android's quality-aware transitions)
-    // - ENTER: Accept GPS OR high-quality WiFi (accuracy < 60m for 150m geofence)
-    // - EXIT: Accept GPS (accuracy < 50m) OR high-quality WiFi when clearly outside (>225m)
+    // ============ IMPROVED GEOFENCE POLICY WITH EXIT_PENDING STATE ============
+    // Mirrors Android's 3-state system: PASSIVE → EXIT_PENDING → ACTIVE
+    
     var transitionDetected = false
-    for assignment in stateStore.geofenceAssignments where assignment.status != "completed" {
-      let target = CLLocation(latitude: assignment.latitude, longitude: assignment.longitude)
-      let distance = location.distance(from: target)
-      let isInside = distance <= assignment.radius
-      let previous = stateStore.insideState(for: assignment.id)
-
-      if previous == nil || previous != isInside {
-        let isGPS = location.horizontalAccuracy <= 50  // Good GPS
-        let eventType = isInside ? "enter" : "exit"
+    var modeChangeNeeded = false
+    var newMode: TrackingMode? = nil
+    
+    // Find the current assignment
+    guard let currentAssignment = stateStore.geofenceAssignments.first(where: { $0.id == currentAssignmentId && $0.status != "completed" }) else {
+      return
+    }
+    
+    let target = CLLocation(latitude: currentAssignment.latitude, longitude: currentAssignment.longitude)
+    let distance = location.distance(from: target)
+    let isNowInside = distance <= currentAssignment.radius
+    let wasInside = stateStore.insideState(for: currentAssignment.id)
+    
+    NSLog("IOSBackgroundLocationManager: Fence \(currentAssignment.id.prefix(8)): Dist \(Int(distance))m -> \(isNowInside ? "INSIDE" : "OUTSIDE")")
+    
+    // Handle transitions
+    if wasInside == nil || wasInside != isNowInside {
+      let isGPS = location.horizontalAccuracy <= 50  // Good GPS
+      
+      if isNowInside {
+        // ============ ENTER LOGIC ============
+        // Accept GPS OR high-quality WiFi (accuracy < 60m for 150m geofence)
+        let isGoodWiFi = location.horizontalAccuracy < currentAssignment.radius * 0.4
+        let canEnter = isGPS || isGoodWiFi
         
-        // Quality check for transitions
-        var canTriggerTransition = false
-        if isInside {
-          // ENTER: Allow GPS or high-quality WiFi well inside geofence
-          let isGoodWiFi = location.horizontalAccuracy < assignment.radius * 0.4  // < 60m for 150m fence
-          canTriggerTransition = isGPS || isGoodWiFi
+        if canEnter {
+          // CONFIRMED ENTER - switch to PASSIVE immediately
+          NSLog("IOSBackgroundLocationManager: ✅ CONFIRMED ENTER for \(currentAssignment.id.prefix(8))")
+          stateStore.updateInsideState(for: currentAssignment.id, isInside: true)
+          stateStore.isExitPending = false
+          transitionDetected = true
+          modeChangeNeeded = true
+          newMode = .passive
+          
+          let icon = location.horizontalAccuracy <= 20 ? "🟢" : (location.horizontalAccuracy <= 50 ? "🟡" : "🔵")
+          LocationFileLogger.shared.info("Geofence", "\(icon) ENTER geofence \(currentAssignment.id.prefix(8)) (dist: \(Int(distance))m, accuracy: \(Int(location.horizontalAccuracy))m)")
+          
+          await emitEvent(
+            type: "enter_geofence",
+            assignmentId: currentAssignment.id,
+            workerId: workerId,
+            companyId: companyId,
+            latitude: location.coordinate.latitude,
+            longitude: location.coordinate.longitude,
+            notes: source == "reconcile" ? "Reconciled on app resume" : "Transition detected via \(source)",
+            config: config
+          )
         } else {
-          // EXIT: Accept GPS or high-quality WiFi when clearly outside
-          let isWellOutside = distance > assignment.radius * 1.5  // > 225m
-          let isGoodWiFi = location.horizontalAccuracy < 100 && isWellOutside
-          canTriggerTransition = isGPS || isGoodWiFi
+          // Entry quality insufficient - log and skip
+          let reason = "WiFi quality insufficient for entry (accuracy: \(Int(location.horizontalAccuracy))m)"
+          LocationFileLogger.shared.warning("Geofence", "⚠️ Geofence entry blocked: \(reason)")
+          NSLog("IOSBackgroundLocationManager: Skipping geofence entry: \(reason)")
         }
+      } else {
+        // ============ EXIT LOGIC WITH EXIT_PENDING STATE ============
         
-        if !canTriggerTransition {
-          let reason = isInside 
-            ? "WiFi quality insufficient for entry (accuracy: \(Int(location.horizontalAccuracy))m)"
-            : "GPS or high-quality WiFi required for exit (got accuracy: \(Int(location.horizontalAccuracy))m, dist: \(Int(distance))m)"
-          LocationFileLogger.shared.warning("Geofence", "⚠️ Geofence \(eventType) blocked: \(reason)")
-          NSLog("IOSBackgroundLocationManager: Skipping geofence \(eventType): \(reason)")
-          continue  // Skip this geofence, continue checking others
-        }
-        
-        transitionDetected = true
-        stateStore.updateInsideState(for: assignment.id, isInside: isInside)
-        let type = isInside ? "enter_geofence" : "exit_geofence"
-        
-        let icon = location.horizontalAccuracy <= 20 ? "🟢" : (location.horizontalAccuracy <= 50 ? "🟡" : "🔵")
-        let sourceLabel = location.horizontalAccuracy <= 50 ? "gps" : "wifi"
-        LocationFileLogger.shared.info("Geofence", "\(icon) \(isInside ? "ENTER" : "EXIT") geofence \(assignment.id.prefix(8)) (dist: \(Int(distance))m, source: \(sourceLabel), accuracy: \(Int(location.horizontalAccuracy))m)")
-        
-        await emitEvent(
-          type: type,
-          assignmentId: assignment.id,
-          workerId: workerId,
-          companyId: companyId,
-          latitude: location.coordinate.latitude,
-          longitude: location.coordinate.longitude,
-          notes: source == "reconcile" ? "Reconciled on app resume" : "Transition detected via \(source)",
-          config: config
-        )
-        if assignment.id == stateStore.assignmentId {
-          startLocationUpdates(active: !isInside)
+        if isGPS {
+          // CONFIRMED EXIT WITH GPS - switch to ACTIVE immediately
+          NSLog("IOSBackgroundLocationManager: ✅ CONFIRMED EXIT for \(currentAssignment.id.prefix(8)) with GPS")
+          stateStore.updateInsideState(for: currentAssignment.id, isInside: false)
+          stateStore.isExitPending = false
+          transitionDetected = true
+          modeChangeNeeded = true
+          newMode = .active
+          
+          let icon = location.horizontalAccuracy <= 20 ? "🟢" : "🟡"
+          LocationFileLogger.shared.info("Geofence", "\(icon) EXIT geofence \(currentAssignment.id.prefix(8)) (dist: \(Int(distance))m, accuracy: \(Int(location.horizontalAccuracy))m)")
+          
+          await emitEvent(
+            type: "exit_geofence",
+            assignmentId: currentAssignment.id,
+            workerId: workerId,
+            companyId: companyId,
+            latitude: location.coordinate.latitude,
+            longitude: location.coordinate.longitude,
+            notes: source == "reconcile" ? "Reconciled on app resume" : "Transition detected via \(source)",
+            config: config
+          )
+        } else if !stateStore.isExitPending {
+          // POSSIBLE EXIT DETECTED - switch to EXIT_PENDING to verify with GPS
+          NSLog("IOSBackgroundLocationManager: 🔍 POSSIBLE EXIT detected for \(currentAssignment.id.prefix(8)) - switching to EXIT_PENDING mode")
+          LocationFileLogger.shared.warning("Geofence", "🔍 Possible exit detected (accuracy: \(Int(location.horizontalAccuracy))m, dist: \(Int(distance))m) - activating high-accuracy GPS to verify")
+          stateStore.isExitPending = true
+          modeChangeNeeded = true
+          newMode = .exitPending
+        } else {
+          // Already in EXIT_PENDING mode, still no GPS confirmation
+          NSLog("IOSBackgroundLocationManager: ⏳ EXIT_PENDING: Waiting for GPS confirmation (got accuracy: \(Int(location.horizontalAccuracy))m)")
+          LocationFileLogger.shared.warning("Geofence", "⏳ EXIT_PENDING: Waiting for GPS (accuracy: \(Int(location.horizontalAccuracy))m, dist: \(Int(distance))m)")
         }
       }
+    } else if stateStore.isExitPending && isNowInside {
+      // FALSE ALARM - we thought we were exiting but GPS confirms we're still inside
+      NSLog("IOSBackgroundLocationManager: ❌ FALSE ALARM: GPS confirms still inside \(currentAssignment.id.prefix(8))")
+      LocationFileLogger.shared.info("Geofence", "❌ Exit false alarm - GPS confirms still inside (dist: \(Int(distance))m, accuracy: \(Int(location.horizontalAccuracy))m)")
+      stateStore.isExitPending = false
+      modeChangeNeeded = true
+      newMode = .passive
     }
-
+    
+    // Apply mode change if needed
+    if modeChangeNeeded, let newMode = newMode {
+      NSLog("IOSBackgroundLocationManager: 🔄 Mode change requested: \(currentMode.rawValue) → \(newMode.rawValue)")
+      switchToMode(newMode)
+    }
+    
     if transitionDetected {
       stateStore.lastLocationEventAt = Date()
     }
 
-    guard let currentAssignmentId = stateStore.assignmentId else { return }
-    
-    // HYBRID TRACKING INTERVALS (mirrors Android's indoor/outdoor detection)
-    // Use faster intervals for indoor locations (WiFi-based) to improve exit detection
-    let isIndoor = location.horizontalAccuracy > 65  // > 65m accuracy = WiFi positioning (indoors)
+    // ============ PERIODIC TRACKING LOGIC ============
     let interval: TimeInterval
-    if currentModeIsActive ?? false {
-      interval = activeInterval  // 1 min - outside geofence
-    } else if isIndoor {
-      interval = passiveIndoorInterval  // 2 min - inside + WiFi (faster exit detection)
-    } else {
-      interval = passiveOutdoorInterval  // 5 min - inside + GPS (battery efficient)
+    switch currentMode {
+    case .active:
+      interval = activeInterval  // 1 min
+    case .exitPending:
+      interval = exitPendingInterval  // 30 sec 🔑
+    case .passive:
+      let isIndoor = location.horizontalAccuracy > 65
+      interval = isIndoor ? passiveIndoorInterval : passiveOutdoorInterval
     }
     
     if let lastSent = stateStore.lastLocationEventAt,
@@ -475,8 +573,21 @@ final class IOSBackgroundLocationManager: NSObject, CLLocationManagerDelegate {
       return
     }
 
-    let trackingType = (currentModeIsActive ?? false) ? "active_tracking" : "passive_tracking"
-    let modeLabel = (currentModeIsActive ?? false) ? "active" : (isIndoor ? "passive_indoor" : "passive_outdoor")
+    // Send periodic update
+    let trackingType: String
+    let modeLabel: String
+    switch currentMode {
+    case .active:
+      trackingType = "active_tracking"
+      modeLabel = "active"
+    case .exitPending:
+      trackingType = "exit_pending_tracking"  // New event type 🔑
+      modeLabel = "exit_pending"
+    case .passive:
+      trackingType = "passive_tracking"
+      let isIndoor = location.horizontalAccuracy > 65
+      modeLabel = isIndoor ? "passive_indoor" : "passive_outdoor"
+    }
     
     await emitEvent(
       type: trackingType,

@@ -32,6 +32,10 @@ final class TrackingStateStore {
     /// Written every time a location update fires while the process is alive.
     /// On relaunch, if this is far in the past we know tracking was interrupted.
     static let lastProcessHeartbeatAt = "bg.lastProcessHeartbeatAt"
+    /// Current tracking mode (PASSIVE, EXIT_PENDING, or ACTIVE)
+    static let trackingMode = "bg.trackingMode"
+    /// Flag indicating if exit verification is in progress
+    static let isExitPending = "bg.isExitPending"
   }
 
   private init() {
@@ -144,6 +148,30 @@ final class TrackingStateStore {
     set { defaults.set(newValue, forKey: Keys.lastLocationEventAt) }
   }
 
+  // ─── Tracking mode ────────────────────────────────────────────────────────
+
+  var trackingMode: TrackingMode {
+    get {
+      guard let rawValue = defaults.string(forKey: Keys.trackingMode),
+            let mode = TrackingMode(rawValue: rawValue) else {
+        return .passive  // Default to PASSIVE
+      }
+      return mode
+    }
+    set { defaults.set(newValue.rawValue, forKey: Keys.trackingMode) }
+  }
+
+  var isExitPending: Bool {
+    get { defaults.bool(forKey: Keys.isExitPending) }
+    set { defaults.set(newValue, forKey: Keys.isExitPending) }
+  }
+
+  // ─── Session check ─────────────────────────────────────────────────────────
+
+  var isSessionActive: Bool {
+    workerId != nil && assignmentId != nil && companyId != nil
+  }
+
   // ─── Process heartbeat ────────────────────────────────────────────────────
   // Written on every location update tick while the process is alive.
   // On relaunch after a force-swipe, if this timestamp is old we can surface
@@ -175,6 +203,8 @@ final class TrackingStateStore {
       Keys.lastLongitude,
       Keys.lastLocationEventAt,
       Keys.lastProcessHeartbeatAt,
+      Keys.trackingMode,
+      Keys.isExitPending,
     ].forEach(defaults.removeObject(forKey:))
   }
 }
