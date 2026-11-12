@@ -98,29 +98,33 @@ export async function getCurrentHourlyRate(employeeId: string): Promise<number |
 }
 
 /**
- * Batch check multiple workers for hourly rates
- * Returns Map of employeeId -> hasRate
+ * Batch check multiple workers for CURRENT hourly rates (effective as of today)
+ * Returns Map of employeeId -> hasCurrentRate
  */
 export async function batchCheckHourlyRates(employeeIds: string[]): Promise<Map<string, boolean>> {
   if (employeeIds.length === 0) {
     return new Map();
   }
 
+  const now = new Date().toISOString();
+
   const { data, error } = await supabase
     .from('employee_hourly_rates')
     .select('employee_id')
-    .in('employee_id', employeeIds);
+    .in('employee_id', employeeIds)
+    .lte('effective_from', now); // Only rates that are already effective
 
   if (error) {
     console.error('Error batch checking hourly rates:', error);
     return new Map();
   }
 
-  const employeesWithRates = new Set(data.map(row => row.employee_id));
+  // Get unique employee IDs who have at least one rate effective today
+  const employeesWithCurrentRates = new Set(data.map(row => row.employee_id));
   const resultMap = new Map<string, boolean>();
   
   employeeIds.forEach(id => {
-    resultMap.set(id, employeesWithRates.has(id));
+    resultMap.set(id, employeesWithCurrentRates.has(id));
   });
 
   return resultMap;

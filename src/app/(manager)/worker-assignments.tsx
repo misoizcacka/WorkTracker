@@ -195,7 +195,7 @@ export default function ProjectAssignmentScreen() {
             </Text>
             {!hasHourlyRate && (
               <Text style={styles.warningText} fontType="regular">
-                No hourly rate set
+                {t('manager.assignments.noCurrentRate')}
               </Text>
             )}
           </View>

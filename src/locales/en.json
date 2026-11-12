@@ -456,7 +456,9 @@
       "searchLocations": "Search locations...",
       "selectWorker": "Please select a worker to view their schedule.",
       "projects": "Projects",
-      "locations": "Locations"
+      "locations": "Locations",
+      "noCurrentRate": "No current rate set",
+      "cannotAssignWithoutRate": "Set an hourly rate before assigning"
     },
     "corrections": {
       "title": "Corrections",
