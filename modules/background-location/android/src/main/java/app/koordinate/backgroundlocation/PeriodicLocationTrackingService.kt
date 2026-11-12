@@ -27,6 +27,19 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import java.util.UUID
 
+/**
+ * Tracking modes for the location service.
+ * 
+ * PASSIVE: Worker confirmed inside geofence - balanced power, 5-min updates
+ * EXIT_PENDING: Possible exit detected - HIGH ACCURACY, 30-sec updates to confirm with GPS
+ * ACTIVE: Worker confirmed outside geofence - high accuracy, 1-min updates
+ */
+enum class TrackingMode {
+    PASSIVE,        // Inside geofence - balanced power, slow updates
+    EXIT_PENDING,   // Verifying exit - HIGH ACCURACY, fast updates
+    ACTIVE          // Outside geofence - high accuracy, regular updates
+}
+
 class PeriodicLocationTrackingService : Service() {
 
     companion object {
@@ -45,7 +58,8 @@ class PeriodicLocationTrackingService : Service() {
     // Single SupabaseService instance — created once in onCreate so we reuse the
     // OkHttpClient connection pool and avoid spawning new threads on every callback.
     private var supabaseService: SupabaseService? = null
-    private var isTrackingActive = false
+    private var currentMode = TrackingMode.PASSIVE
+    private var isTrackingActive = false  // Deprecated: use currentMode instead
     private val serviceJob = SupervisorJob()
     private val serviceScope = CoroutineScope(
         Dispatchers.IO + serviceJob + CoroutineExceptionHandler { _, throwable ->
@@ -129,11 +143,16 @@ class PeriodicLocationTrackingService : Service() {
         }
         val svc = supabaseService ?: return  // no credentials yet — nothing to send
 
-        // 1. PRIORITIZE GEOFENCE CHECK (with hybrid GPS+WiFi quality detection)
+        // 1. PRIORITIZE GEOFENCE CHECK (with hybrid GPS+WiFi quality detection + EXIT_PENDING state)
         // Get location quality for hybrid geofence detection
         val quality = Constants.getLocationQuality(location)
         
+        val isExitPending = sharedPrefs.getBoolean(Constants.SHARED_PREFS_KEY_IS_EXIT_PENDING, false)
+        
         var transitionDetected = false
+        var modeChangeNeeded = false
+        var newMode: TrackingMode? = null
+        
         activeAssignments.forEach {
             val target = Location("target").apply { latitude = it.latitude; longitude = it.longitude }
             val dist = location.distanceTo(target)
@@ -145,6 +164,12 @@ class PeriodicLocationTrackingService : Service() {
             val hasPreviousState = sharedPrefs.contains(manualKey)
             val wasInside = sharedPrefs.getBoolean(manualKey, !isNowInside)
 
+            // Skip if this isn't the current assignment
+            if (it.id != currentAssignmentId) {
+                return@forEach
+            }
+
+            // Handle transitions
             if (isNowInside != wasInside || !hasPreviousState) {
                 val isRealTransition = hasPreviousState
                 val isInitialEntry = !hasPreviousState && isNowInside
@@ -161,83 +186,151 @@ class PeriodicLocationTrackingService : Service() {
                     return@forEach
                 }
                 
-                // HYBRID GEOFENCE POLICY:
-                // - ENTER: Accept GPS OR high-quality WiFi (trust >= 60, well inside geofence)
-                // - EXIT: Accept GPS medium quality (trust >= 60) OR high-quality WiFi when clearly outside (>225m from geofence)
                 val eventType = if (isNowInside) "enter_geofence" else "exit_geofence"
-                val canTriggerTransition: Boolean = if (quality == null) {
-                    false
-                } else if (isNowInside) {
-                    // ENTER: Allow GPS or high-quality WiFi
-                    val isGPS = quality.source == LocationSource.GPS_HIGH_QUALITY || 
-                                quality.source == LocationSource.GPS_MEDIUM_QUALITY
-                    val isGoodWiFi = quality.trustScore >= 60 && location.accuracy < it.radius * 0.4f
-                    isGPS || isGoodWiFi
-                } else {
-                    // EXIT: Accept GPS (medium quality or better) OR high-quality WiFi when clearly outside
-                    val isGPS = quality.source == LocationSource.GPS_HIGH_QUALITY || 
-                                quality.source == LocationSource.GPS_MEDIUM_QUALITY
-                    val isWellOutside = dist > it.radius * 1.5f  // 150m * 1.5 = 225m outside geofence center
-                    val isGoodWiFi = quality.trustScore >= 60 && isWellOutside
-                    isGPS || isGoodWiFi
-                }
                 
-                if (!canTriggerTransition) {
-                    val reason = if (quality == null) {
-                        "location quality too poor"
-                    } else if (isNowInside) {
-                        "WiFi quality insufficient for entry (trust: ${quality.trustScore}%, accuracy: ${location.accuracy.toInt()}m)"
+                // IMPROVED GEOFENCE POLICY WITH EXIT_PENDING STATE:
+                if (isNowInside) {
+                    // ============ ENTER LOGIC ============
+                    // Accept GPS OR high-quality WiFi (trust >= 60, well inside geofence)
+                    val canEnter = if (quality == null) {
+                        false
                     } else {
-                        "GPS or high-quality WiFi required for exit (got: ${quality.source.label}, trust: ${quality.trustScore}%, dist: ${dist.toInt()}m)"
+                        val isGPS = quality.source == LocationSource.GPS_HIGH_QUALITY || 
+                                    quality.source == LocationSource.GPS_MEDIUM_QUALITY
+                        val isGoodWiFi = quality.trustScore >= 60 && location.accuracy < it.radius * 0.4f
+                        isGPS || isGoodWiFi
                     }
-                    LocationFileLogger.w(
-                        this@PeriodicLocationTrackingService,
-                        "Geofence",
-                        "⚠️ Geofence $eventType blocked: $reason"
-                    )
-                    Log.w("PeriodicLocationTrackingService", "Skipping geofence transition: $reason")
-                    // DO NOT update state - keep trying until we get good quality
-                    // CRITICAL: Skip mode switch too! Don't let blocked exits trigger ACTIVE mode
-                    return@forEach
-                }
-                
-                Log.d("PeriodicLocationTrackingService", "MANUAL transition/initial state detected for ${it.id}: $status (source: ${quality?.source?.label})")
-                sharedPrefs.edit().putBoolean(manualKey, isNowInside).apply()
-                transitionDetected = true
-
-                if (workerId != null && companyId != null) {
-                    serviceScope.launch {
-                        BackgroundLocationManager.sendGeofenceTransitionEvent(
-                            applicationContext, it.id, eventType, workerId, companyId, location.latitude, location.longitude, svc
-                        )
+                    
+                    if (canEnter) {
+                        // CONFIRMED ENTER - switch to PASSIVE immediately
+                        Log.d("PeriodicLocationTrackingService", "✅ CONFIRMED ENTER for ${it.id.take(8)} (source: ${quality?.source?.label})")
+                        sharedPrefs.edit()
+                            .putBoolean(manualKey, true)
+                            .putBoolean(Constants.SHARED_PREFS_KEY_IS_INSIDE_GEOFENCE, true)
+                            .putBoolean(Constants.SHARED_PREFS_KEY_IS_EXIT_PENDING, false)
+                            .apply()
+                        transitionDetected = true
+                        modeChangeNeeded = true
+                        newMode = TrackingMode.PASSIVE
                         
-                        // Log geofence transition to file with quality metadata
-                        val qualityIcon = when(quality?.source) {
-                            LocationSource.GPS_HIGH_QUALITY -> "🟢"
-                            LocationSource.GPS_MEDIUM_QUALITY -> "🟡"
-                            LocationSource.WIFI_HIGH_CONFIDENCE -> "🔵"
-                            else -> "⚪"
+                        if (workerId != null && companyId != null) {
+                            serviceScope.launch {
+                                BackgroundLocationManager.sendGeofenceTransitionEvent(
+                                    applicationContext, it.id, eventType, workerId, companyId, location.latitude, location.longitude, svc
+                                )
+                                val qualityIcon = when(quality?.source) {
+                                    LocationSource.GPS_HIGH_QUALITY -> "🟢"
+                                    LocationSource.GPS_MEDIUM_QUALITY -> "🟡"
+                                    LocationSource.WIFI_HIGH_CONFIDENCE -> "🔵"
+                                    else -> "⚪"
+                                }
+                                LocationFileLogger.i(
+                                    this@PeriodicLocationTrackingService,
+                                    "Geofence",
+                                    "$qualityIcon ENTER geofence ${it.id.take(8)} " +
+                                    "(dist: ${dist.toInt()}m, source: ${quality?.source?.label}, trust: ${quality?.trustScore}%)"
+                                )
+                                sharedPrefs.edit().putLong(Constants.KEY_LAST_FUSED_EVENT_TIME, System.currentTimeMillis()).apply()
+                            }
                         }
-                        LocationFileLogger.i(
+                    } else {
+                        // Entry quality insufficient - log and skip
+                        val reason = if (quality == null) {
+                            "location quality too poor"
+                        } else {
+                            "WiFi quality insufficient for entry (trust: ${quality.trustScore}%, accuracy: ${location.accuracy.toInt()}m)"
+                        }
+                        LocationFileLogger.w(
                             this@PeriodicLocationTrackingService,
                             "Geofence",
-                            "$qualityIcon ${if (isNowInside) "ENTER" else "EXIT"} geofence ${it.id.take(8)} " +
-                            "(dist: ${dist.toInt()}m, source: ${quality?.source?.label}, trust: ${quality?.trustScore}%)"
+                            "⚠️ Geofence entry blocked: $reason"
                         )
-                        
-                        // Record timestamp so AlarmManager knows geofence events are working
+                        Log.w("PeriodicLocationTrackingService", "Skipping geofence entry: $reason")
+                    }
+                } else {
+                    // ============ EXIT LOGIC WITH EXIT_PENDING STATE ============
+                    
+                    // Check if we have GPS quality to CONFIRM exit
+                    val hasGPSQuality = quality != null && (
+                        quality.source == LocationSource.GPS_HIGH_QUALITY || 
+                        quality.source == LocationSource.GPS_MEDIUM_QUALITY
+                    )
+                    
+                    if (hasGPSQuality) {
+                        // CONFIRMED EXIT WITH GPS - switch to ACTIVE immediately
+                        Log.d("PeriodicLocationTrackingService", "✅ CONFIRMED EXIT for ${it.id.take(8)} with GPS (source: ${quality.source.label})")
                         sharedPrefs.edit()
-                            .putLong(Constants.KEY_LAST_FUSED_EVENT_TIME, System.currentTimeMillis())
+                            .putBoolean(manualKey, false)
+                            .putBoolean(Constants.SHARED_PREFS_KEY_IS_INSIDE_GEOFENCE, false)
+                            .putBoolean(Constants.SHARED_PREFS_KEY_IS_EXIT_PENDING, false)
                             .apply()
+                        transitionDetected = true
+                        modeChangeNeeded = true
+                        newMode = TrackingMode.ACTIVE
+                        
+                        if (workerId != null && companyId != null) {
+                            serviceScope.launch {
+                                BackgroundLocationManager.sendGeofenceTransitionEvent(
+                                    applicationContext, it.id, eventType, workerId, companyId, location.latitude, location.longitude, svc
+                                )
+                                val qualityIcon = when(quality.source) {
+                                    LocationSource.GPS_HIGH_QUALITY -> "🟢"
+                                    LocationSource.GPS_MEDIUM_QUALITY -> "🟡"
+                                    else -> "⚪"
+                                }
+                                LocationFileLogger.i(
+                                    this@PeriodicLocationTrackingService,
+                                    "Geofence",
+                                    "$qualityIcon EXIT geofence ${it.id.take(8)} " +
+                                    "(dist: ${dist.toInt()}m, source: ${quality.source.label}, trust: ${quality.trustScore}%)"
+                                )
+                                sharedPrefs.edit().putLong(Constants.KEY_LAST_FUSED_EVENT_TIME, System.currentTimeMillis()).apply()
+                            }
+                        }
+                    } else if (!isExitPending) {
+                        // POSSIBLE EXIT DETECTED - switch to EXIT_PENDING to verify with GPS
+                        // This happens when WiFi/network says we might be outside
+                        Log.d("PeriodicLocationTrackingService", "🔍 POSSIBLE EXIT detected for ${it.id.take(8)} - switching to EXIT_PENDING mode to verify with GPS")
+                        LocationFileLogger.w(
+                            this@PeriodicLocationTrackingService,
+                            "Geofence",
+                            "🔍 Possible exit detected (got: ${quality?.source?.label ?: "no signal"}, trust: ${quality?.trustScore ?: 0}%, dist: ${dist.toInt()}m) - activating high-accuracy GPS to verify"
+                        )
+                        sharedPrefs.edit()
+                            .putBoolean(Constants.SHARED_PREFS_KEY_IS_EXIT_PENDING, true)
+                            .apply()
+                        modeChangeNeeded = true
+                        newMode = TrackingMode.EXIT_PENDING
+                    } else {
+                        // Already in EXIT_PENDING mode, still no GPS confirmation
+                        Log.d("PeriodicLocationTrackingService", "⏳ EXIT_PENDING: Still waiting for GPS confirmation (got: ${quality?.source?.label ?: "no signal"})")
+                        LocationFileLogger.w(
+                            this@PeriodicLocationTrackingService,
+                            "Geofence",
+                            "⏳ EXIT_PENDING: Waiting for GPS (got: ${quality?.source?.label ?: "no signal"}, trust: ${quality?.trustScore ?: 0}%, dist: ${dist.toInt()}m)"
+                        )
                     }
                 }
-
-                if (it.id == currentAssignmentId) {
-                    Log.d("PeriodicLocationTrackingService", "🔄 Current assignment ${it.id.take(8)}: isNowInside=$isNowInside, switching mode to ${if (!isNowInside) "ACTIVE" else "PASSIVE"}")
-                    sharedPrefs.edit().putBoolean(Constants.SHARED_PREFS_KEY_IS_INSIDE_GEOFENCE, isNowInside).apply()
-                    startLocationUpdates(!isNowInside)
-                }
+            } else if (isExitPending && isNowInside) {
+                // FALSE ALARM - we thought we were exiting but GPS confirms we're still inside
+                Log.d("PeriodicLocationTrackingService", "❌ FALSE ALARM: GPS confirms still inside ${it.id.take(8)} - switching back to PASSIVE")
+                LocationFileLogger.i(
+                    this@PeriodicLocationTrackingService,
+                    "Geofence",
+                    "❌ Exit false alarm - GPS confirms still inside (dist: ${dist.toInt()}m, source: ${quality?.source?.label}, trust: ${quality?.trustScore}%)"
+                )
+                sharedPrefs.edit()
+                    .putBoolean(Constants.SHARED_PREFS_KEY_IS_EXIT_PENDING, false)
+                    .apply()
+                modeChangeNeeded = true
+                newMode = TrackingMode.PASSIVE
             }
+        }
+
+        // Apply mode change if needed
+        if (modeChangeNeeded && newMode != null) {
+            Log.d("PeriodicLocationTrackingService", "🔄 Mode change requested: $currentMode → $newMode")
+            switchToMode(newMode)
         }
 
         if (transitionDetected) {
@@ -245,27 +338,32 @@ class PeriodicLocationTrackingService : Service() {
         }
 
         // 2. PERIODIC TRACKING LOGIC
-        // Use faster intervals for indoor locations to improve exit detection
-        val isIndoor = quality?.source == LocationSource.WIFI_HIGH_CONFIDENCE || 
-                       quality?.source == LocationSource.WIFI_MEDIUM_CONFIDENCE
-        val interval = when {
-            isTrackingActive -> Constants.ACTIVE_TRACKING_INTERVAL_MS  // 1 min - outside geofence
-            isIndoor -> 2 * 60 * 1000L  // 2 min - inside but indoors (faster exit detection)
-            else -> Constants.PASSIVE_TRACKING_INTERVAL_MS  // 5 min - inside with GPS
+        val interval = when (currentMode) {
+            TrackingMode.ACTIVE -> Constants.ACTIVE_TRACKING_INTERVAL_MS  // 1 min
+            TrackingMode.EXIT_PENDING -> Constants.EXIT_PENDING_INTERVAL_MS  // 30 sec
+            TrackingMode.PASSIVE -> {
+                // Use faster intervals for indoor locations to improve exit detection
+                val isIndoor = quality?.source == LocationSource.WIFI_HIGH_CONFIDENCE || 
+                               quality?.source == LocationSource.WIFI_MEDIUM_CONFIDENCE
+                if (isIndoor) 2 * 60 * 1000L else Constants.PASSIVE_TRACKING_INTERVAL_MS
+            }
         }
         
         if (currentTime - lastLocationSentTime < interval - 5000L) {
-            val modeLabel = when {
-                isTrackingActive -> "ACTIVE"
-                isIndoor -> "PASSIVE (indoor)"
-                else -> "PASSIVE (outdoor)"
+            val modeLabel = when (currentMode) {
+                TrackingMode.ACTIVE -> "ACTIVE"
+                TrackingMode.EXIT_PENDING -> "EXIT_PENDING"
+                TrackingMode.PASSIVE -> {
+                    val isIndoor = quality?.source == LocationSource.WIFI_HIGH_CONFIDENCE || 
+                                   quality?.source == LocationSource.WIFI_MEDIUM_CONFIDENCE
+                    if (isIndoor) "PASSIVE (indoor)" else "PASSIVE (outdoor)"
+                }
             }
             Log.d("PeriodicLocationTrackingService", "Skipping periodic update - event recently sent. Mode: $modeLabel")
             return
         }
 
         // HYBRID LOCATION QUALITY: Use the quality already calculated above
-        // (quality was already computed for geofence checking)
         if (quality == null) {
             LocationFileLogger.w(
                 this,
@@ -293,7 +391,11 @@ class PeriodicLocationTrackingService : Service() {
             serviceScope.launch {
                 val eventId = UUID.randomUUID().toString()
                 val timestamp = System.currentTimeMillis()
-                val type = if (isTrackingActive) "active_tracking" else "passive_tracking"
+                val type = when (currentMode) {
+                    TrackingMode.ACTIVE -> "active_tracking"
+                    TrackingMode.EXIT_PENDING -> "exit_pending_tracking"
+                    TrackingMode.PASSIVE -> "passive_tracking"
+                }
                 
                 // Prepare notes with quality metadata
                 val notes = buildString {
@@ -520,62 +622,96 @@ class PeriodicLocationTrackingService : Service() {
         }
     }
 
-    private var currentModeIsActive: Boolean? = null
+    private var currentModeIsActive: Boolean? = null  // Deprecated: use currentMode instead
     private var lastGeofenceRegistrationTime: Long = 0L
 
-    private fun startLocationUpdates(active: Boolean) {
-        if (currentModeIsActive == active) {
-            Log.d("PeriodicLocationTrackingService", "Updates already in mode: ${if (active) "ACTIVE" else "PASSIVE"}. Skipping restart.")
+    /**
+     * Switch to a new tracking mode.
+     * 
+     * PASSIVE: Inside geofence - balanced power, 5-min updates
+     * EXIT_PENDING: Verifying exit - HIGH ACCURACY GPS, 30-sec updates
+     * ACTIVE: Outside geofence - high accuracy GPS, 1-min updates
+     */
+    private fun switchToMode(newMode: TrackingMode) {
+        if (currentMode == newMode) {
+            Log.d("PeriodicLocationTrackingService", "Already in $newMode mode. Skipping restart.")
             return
         }
         
-        currentModeIsActive = active
-        isTrackingActive = active
-        LocationFileLogger.i(this, "Service", "Mode switched to: ${if (active) "ACTIVE (outside geofence)" else "PASSIVE (inside geofence)"}")
+        val oldMode = currentMode
+        currentMode = newMode
+        isTrackingActive = (newMode == TrackingMode.ACTIVE)  // For backwards compatibility
+        currentModeIsActive = isTrackingActive  // For backwards compatibility
+        
+        LocationFileLogger.i(this, "Service", "Mode switched: $oldMode → $newMode")
+        Log.d("PeriodicLocationTrackingService", "🔄 Mode switch: $oldMode → $newMode")
+        
         fusedLocationClient.removeLocationUpdates(locationCallback)
         
-        val interval = if (active) {
-            Constants.ACTIVE_TRACKING_INTERVAL_MS
-        } else {
-            Constants.PASSIVE_TRACKING_INTERVAL_MS
-        }
-
-        // Active mode (worker outside geofence, traveling):
-        //   PRIORITY_HIGH_ACCURACY forces GPS satellites for reliable outdoor tracking.
-        //   This ensures we get real GPS (not cell tower triangulation) when traveling.
-        //   Battery cost is acceptable because travel periods are short (15-45 min).
-        //   setWaitForAccurateLocation(false) allows quick first fix, then improves.
-        //   setMaxWaitTime() batches updates for battery efficiency while maintaining data.
-        //   setMinUpdateDistanceMeters() prevents stationary spam.
-        //
-        // Passive mode (worker on site, stationary):
-        //   BALANCED_POWER is sufficient — we just need proof-of-presence, not
-        //   precise movement tracking. Network + WiFi scanning works great for stationary.
-        val priority = if (active) {
-            Priority.PRIORITY_HIGH_ACCURACY  // Force GPS for traveling workers
-        } else {
-            Priority.PRIORITY_BALANCED_POWER_ACCURACY  // WiFi/network OK when stationary
+        val (interval, priority, minUpdateInterval, maxUpdateDelay, minDistance) = when (newMode) {
+            TrackingMode.PASSIVE -> {
+                // PASSIVE: Worker on-site, stationary
+                // Balanced power - WiFi/network OK, slow updates
+                Tuple5(
+                    Constants.PASSIVE_TRACKING_INTERVAL_MS,
+                    Priority.PRIORITY_BALANCED_POWER_ACCURACY,
+                    Constants.PASSIVE_TRACKING_INTERVAL_MS,
+                    Constants.PASSIVE_TRACKING_INTERVAL_MS + 60_000L,
+                    0f  // No distance filter when stationary
+                )
+            }
+            TrackingMode.EXIT_PENDING -> {
+                // EXIT_PENDING: Possible exit detected - FORCE GPS to verify
+                // High accuracy GPS forced, FAST updates (30 sec)
+                Tuple5(
+                    Constants.EXIT_PENDING_INTERVAL_MS,
+                    Priority.PRIORITY_HIGH_ACCURACY,  // FORCE GPS
+                    Constants.EXIT_PENDING_INTERVAL_MS / 2,  // Allow faster updates
+                    Constants.EXIT_PENDING_INTERVAL_MS,  // No batching delay
+                    0f  // No distance filter - we need every update
+                )
+            }
+            TrackingMode.ACTIVE -> {
+                // ACTIVE: Worker traveling between sites
+                // High accuracy GPS forced, regular updates (1 min)
+                Tuple5(
+                    Constants.ACTIVE_TRACKING_INTERVAL_MS,
+                    Priority.PRIORITY_HIGH_ACCURACY,  // FORCE GPS
+                    Constants.ACTIVE_TRACKING_INTERVAL_MS / 2,  // Allow faster updates
+                    Constants.ACTIVE_TRACKING_INTERVAL_MS,  // No batching delay
+                    20f  // Only update when moved 20m (prevents stationary throttle)
+                )
+            }
         }
         
-        val request = if (active) {
-            LocationRequest.Builder(priority, interval)
-                .setMinUpdateIntervalMillis(interval / 2)  // Allow faster updates if available
-                .setMaxUpdateDelayMillis(interval)         // Never defer longer than our interval
-                .setWaitForAccurateLocation(false)         // Don't wait for perfect GPS lock (accept quick fix)
-                .setMinUpdateDistanceMeters(20f)           // Only update when moved 20m (prevents stationary throttle)
-                .build()
-        } else {
-            LocationRequest.Builder(priority, interval)
-                .setMinUpdateIntervalMillis(interval)      // Passive: stick to the interval
-                .setMaxUpdateDelayMillis(interval + 60_000L) // Allow batching — fine for on-site
-                .setWaitForAccurateLocation(false)         // Network accuracy is fine when stationary
-                .build()
+        val requestBuilder = LocationRequest.Builder(priority, interval)
+            .setMinUpdateIntervalMillis(minUpdateInterval)
+            .setMaxUpdateDelayMillis(maxUpdateDelay)
+            .setWaitForAccurateLocation(false)  // Don't wait for perfect GPS lock
+        
+        if (minDistance > 0f) {
+            requestBuilder.setMinUpdateDistanceMeters(minDistance)
         }
+        
+        val request = requestBuilder.build()
 
         try {
             fusedLocationClient.requestLocationUpdates(request, locationCallback, Looper.getMainLooper())
-            Log.d("PeriodicLocationTrackingService", "Updates Started: ${if (active) "ACTIVE" else "PASSIVE"}")
-        } catch (e: SecurityException) { Log.e("PeriodicLocationTrackingService", "Perm Error: $e") }
+            Log.d("PeriodicLocationTrackingService", "✅ Location updates started in $newMode mode (interval: ${interval/1000}s, priority: ${if (priority == Priority.PRIORITY_HIGH_ACCURACY) "HIGH_ACCURACY" else "BALANCED"})")
+        } catch (e: SecurityException) { 
+            Log.e("PeriodicLocationTrackingService", "Permission error starting location updates: $e") 
+        }
+    }
+    
+    // Helper data class for tuple returns
+    private data class Tuple5<A, B, C, D, E>(val first: A, val second: B, val third: C, val fourth: D, val fifth: E)
+
+    /**
+     * DEPRECATED: Use switchToMode() instead.
+     * Kept for backwards compatibility with old code paths.
+     */
+    private fun startLocationUpdates(active: Boolean) {
+        switchToMode(if (active) TrackingMode.ACTIVE else TrackingMode.PASSIVE)
     }
 
     private fun showForegroundNotification(appPackageName: String) {

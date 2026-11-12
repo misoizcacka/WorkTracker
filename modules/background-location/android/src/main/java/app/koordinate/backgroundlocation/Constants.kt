@@ -30,8 +30,9 @@ enum class Confidence {
 }
 
 object Constants {
-    const val ACTIVE_TRACKING_INTERVAL_MS = 1 * 60 * 1000L   // 1 min — worker outside geofence, traveling (faster exit detection)
+    const val ACTIVE_TRACKING_INTERVAL_MS = 1 * 60 * 1000L   // 1 min — worker outside geofence, traveling
     const val PASSIVE_TRACKING_INTERVAL_MS = 5 * 60 * 1000L  // 5 min — worker inside geofence, on site
+    const val EXIT_PENDING_INTERVAL_MS = 30 * 1000L          // 30 sec — verifying exit with high-accuracy GPS
 
     const val SHARED_PREFS_NAME = "location_tracking_prefs"
     const val KEY_WORKER_ID = "worker_id"
@@ -55,6 +56,7 @@ object Constants {
     const val SHARED_PREFS_KEY_GEOFENCE_ASSIGNMENTS = "geofence_assignments_json"
     const val SHARED_PREFS_KEY_ACTIVE_GEOFENCE_ID = "active_geofence_id" // ID of the geofence currently being monitored
     const val SHARED_PREFS_KEY_IS_INSIDE_GEOFENCE = "is_inside_geofence" // Boolean: true if worker is currently inside an assignment geofence
+    const val SHARED_PREFS_KEY_IS_EXIT_PENDING = "is_exit_pending" // Boolean: true if exit is being verified with high-accuracy GPS
 
     // Notification channel details (for foreground service and geofence alerts)
     const val NOTIFICATION_CHANNEL_ID = "workhourstracker_location_channel"
