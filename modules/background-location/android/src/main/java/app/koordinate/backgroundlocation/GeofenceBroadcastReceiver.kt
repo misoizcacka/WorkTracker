@@ -98,7 +98,33 @@ class GeofenceBroadcastReceiver : BroadcastReceiver() {
                                 "Geofence",
                                 "⚠️ Geofence $eventType blocked: quality check failed (got: $qualityInfo)"
                             )
-                            return@launch  // Don't send the event
+                            
+                            // CRITICAL FIX: For EXIT events, trigger EXIT_PENDING mode to verify with GPS
+                            // instead of just ignoring the exit signal
+                            if (transition == Geofence.GEOFENCE_TRANSITION_EXIT) {
+                                Log.d(TAG, "🔍 Poor quality exit signal - triggering EXIT_PENDING mode for GPS verification")
+                                LocationFileLogger.w(
+                                    context,
+                                    "Geofence",
+                                    "🔍 Possible exit detected (low quality signal) → activating EXIT_PENDING mode for GPS verification"
+                                )
+                                
+                                // Switch to EXIT_PENDING mode to force HIGH_ACCURACY GPS verification
+                                sharedPrefs.edit()
+                                    .putBoolean(Constants.SHARED_PREFS_KEY_IS_EXIT_PENDING, true)
+                                    .apply()
+                                
+                                val serviceIntent = Intent(context, PeriodicLocationTrackingService::class.java).apply {
+                                    action = "EXIT_PENDING"  // Signal the service to enter EXIT_PENDING mode
+                                }
+                                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                                    context.startForegroundService(serviceIntent)
+                                } else {
+                                    context.startService(serviceIntent)
+                                }
+                            }
+                            
+                            return@launch  // Don't send the event yet (wait for GPS confirmation)
                         }
                     }
                     

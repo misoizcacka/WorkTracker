@@ -27,7 +27,7 @@ export default function ReportsHub() {
       description: t('manager.reports.projectLaborDesc'),
       icon: 'briefcase-outline',
       path: 'project-labor-report',
-      comingSoon: true,
+      comingSoon: false,
     },
     {
       title: t('manager.reports.dailyDetailedTitle'),

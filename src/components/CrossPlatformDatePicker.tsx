@@ -14,8 +14,9 @@ interface CrossPlatformDatePickerProps {
   date: Date;
   onDateChange: (newDate: Date) => void;
   mode?: "date" | "month";
-  filterDate?: (date: Date) => boolean; // Function to filter/disable dates
-  maxDate?: Date; // Maximum selectable date (for native)
+  filterDate?: (date: Date) => boolean; // Function to filter/disable dates (web)
+  maxDate?: Date; // Maximum selectable date
+  minDate?: Date; // Minimum selectable date
 }
 
 const Portal = ({ children }: { children?: React.ReactNode }) => {
@@ -88,7 +89,7 @@ const datePickerStyles = `
   }
 `;
 
-const CrossPlatformDatePicker: React.FC<CrossPlatformDatePickerProps> = ({ date, onDateChange, mode = "date", filterDate, maxDate }) => {
+const CrossPlatformDatePicker: React.FC<CrossPlatformDatePickerProps> = ({ date, onDateChange, mode = "date", filterDate, maxDate, minDate }) => {
   const [isPickerVisible, setPickerVisible] = useState(false);
 
   const showPicker = () => {
@@ -134,6 +135,8 @@ const CrossPlatformDatePicker: React.FC<CrossPlatformDatePickerProps> = ({ date,
             popperPlacement="bottom-start"
             popperContainer={Portal}
             filterDate={filterDate}
+            minDate={minDate}
+            maxDate={maxDate}
           />
       </>
     );
@@ -161,6 +164,7 @@ const CrossPlatformDatePicker: React.FC<CrossPlatformDatePickerProps> = ({ date,
         }}
         onCancel={hidePicker}
         date={date}
+        minimumDate={minDate}
         maximumDate={maxDate}
       />
     </View>

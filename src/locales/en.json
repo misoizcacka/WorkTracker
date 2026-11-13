@@ -700,6 +700,7 @@
       "perHour": "/h",
       "initialRateHint": "Set the initial hourly rate. Can start from current month since no rate exists yet.",
       "rateChangeHint": "Rate changes take effect from the 1st of the chosen month. Earliest allowed is next month.",
+      "currentMonthMutableHint": "You can update the current month's rate or schedule future rates. Past rates are locked.",
       "cancel": "Cancel",
       "saveRate": "Save Rate",
       "error": "Error",
@@ -709,6 +710,7 @@
       "invalidMonth": "Invalid Month",
       "onlyFromCurrentMonth": "Rate must start from current month or later.",
       "onlyFromNextMonth": "Rate changes can only start from next month onwards.",
+      "cannotSetPastRates": "Cannot set rates for past months. You can update current month or set future rates.",
       "rateSaved": "Rate Saved",
       "saveFailed": "Save Failed",
       "tryAgain": "Please try again."

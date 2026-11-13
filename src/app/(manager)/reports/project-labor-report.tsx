@@ -10,17 +10,22 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { theme } from '../../../theme';
 import { EmployeesContext, EmployeesContextType } from '../../../context/EmployeesContext';
+import { useSession } from '~/context/AuthContext';
+import { getCurrencySymbol } from '../../../utils/currency';
 
 interface ReportRow {
   worker_id: string;
   worker_name: string;
   hours_on_project: number;
+  total_labor_cost: number | null; // null if worker has no rate set for the period
 }
 
 const ProjectLaborReport = () => {
   const router = useRouter();
   const { projects, isLoading: projectsLoading } = useProjects();
   const { employees } = useContext(EmployeesContext) as EmployeesContextType;
+  const { userCompanyCountry } = useSession();
+  const currency = getCurrencySymbol(userCompanyCountry);
   const visibleWorkerIds = useMemo(() => new Set(employees.filter(employee => employee.role === 'worker').map(employee => employee.id)), [employees]);
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [reportData, setReportData] = useState<ReportRow[]>([]);
@@ -58,6 +63,8 @@ const ProjectLaborReport = () => {
   }, [selectedProject, visibleWorkerIds]);
 
   const totalProjectHours = reportData.reduce((sum: number, row: ReportRow) => sum + row.hours_on_project, 0);
+  const totalProjectCost = reportData.reduce((sum: number, row: ReportRow) => sum + (row.total_labor_cost || 0), 0);
+  const hasAnyCost = reportData.some(row => row.total_labor_cost !== null && row.total_labor_cost > 0);
 
   const renderProjectItem = ({ item }: { item: Project }) => {
     const isSelected = selectedProject?.id === item.id;
@@ -88,7 +95,7 @@ const ProjectLaborReport = () => {
   return (
     <AnimatedScreen>
       <View style={styles.pageHeader}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+        <TouchableOpacity onPress={() => router.push('/reports')} style={styles.backButton}>
           <Ionicons name="arrow-back" size={24} color={theme.colors.headingText} />
         </TouchableOpacity>
         <View>
@@ -141,6 +148,16 @@ const ProjectLaborReport = () => {
                     <Text style={styles.statLabel} fontType="bold">Total Hours</Text>
                     <Text style={styles.statValue} fontType="bold">{totalProjectHours.toFixed(2)}h</Text>
                   </View>
+                  <View style={styles.statDivider} />
+                  <View style={styles.statBox}>
+                    <Text style={[styles.statLabel, { color: theme.colors.success }]} fontType="bold">Labor Cost</Text>
+                    <Text style={[styles.statValue, { color: theme.colors.success }]} fontType="bold">
+                      {hasAnyCost ? `${currency}${totalProjectCost.toFixed(2)}` : '—'}
+                    </Text>
+                    {!hasAnyCost && (
+                      <Text style={styles.statHint}>No rates set</Text>
+                    )}
+                  </View>
                 </View>
 
                 {/* --- Labor Table --- */}
@@ -148,6 +165,7 @@ const ProjectLaborReport = () => {
                   <View style={styles.tableHeader}>
                     <Text style={[styles.tableHeaderText, styles.colWorker]} fontType="bold">Worker Name</Text>
                     <Text style={[styles.tableHeaderText, styles.colHours]} fontType="bold">Hours Logged</Text>
+                    <Text style={[styles.tableHeaderText, styles.colCost]} fontType="bold">Labor Cost</Text>
                   </View>
 
                   {loading ? (
@@ -162,6 +180,17 @@ const ProjectLaborReport = () => {
                           <View style={styles.hoursBadge}>
                             <Text style={styles.hoursBadgeText} fontType="bold">{row.hours_on_project.toFixed(2)}</Text>
                           </View>
+                        </View>
+                        <View style={[styles.tableCell, styles.colCost]}>
+                          {row.total_labor_cost !== null ? (
+                            <Text style={[styles.tableCellText, { color: theme.colors.success }]} fontType="bold">
+                              {currency}{row.total_labor_cost.toFixed(2)}
+                            </Text>
+                          ) : (
+                            <Text style={[styles.tableCellText, { color: theme.colors.disabledText }]} fontType="regular">
+                              No rate
+                            </Text>
+                          )}
                         </View>
                       </View>
                     ))
@@ -232,6 +261,7 @@ const styles = StyleSheet.create({
     borderColor: theme.colors.borderColor,
     backgroundColor: theme.colors.background,
     padding: theme.spacing(2),
+    maxHeight: '100%', // Enable scrolling
   },
   panelTitle: {
     fontSize: theme.fontSizes.lg,
@@ -340,6 +370,12 @@ const styles = StyleSheet.create({
     fontSize: 24,
     color: theme.colors.primary,
   },
+  statHint: {
+    fontSize: theme.fontSizes.xs,
+    color: theme.colors.bodyText,
+    marginTop: theme.spacing(0.5),
+    fontStyle: 'italic',
+  },
   tableContainer: {
     flex: 1,
   },
@@ -379,6 +415,14 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'flex-end',
     textAlign: 'right',
+  },
+  colCost: {
+    flex: 1.5,
+    alignItems: 'flex-end',
+    textAlign: 'right',
+  },
+  tableCellText: {
+    fontSize: theme.fontSizes.md,
   },
   hoursBadge: {
     backgroundColor: theme.colors.primaryMuted,

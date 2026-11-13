@@ -534,7 +534,7 @@ const PayrollReport = () => {
   return (
     <AnimatedScreen>
       <View style={styles.pageHeader}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+        <TouchableOpacity onPress={() => router.push('/reports')} style={styles.backButton}>
           <Ionicons name="arrow-back" size={24} color={theme.colors.headingText} />
         </TouchableOpacity>
         <View>
@@ -838,6 +838,7 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     gap: theme.spacing(2),
     width: '100%',
+    zIndex: 100,
   },
   segmentedControl: {
     width: 280,
@@ -909,7 +910,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     position: 'relative',
-    zIndex: 101,
+    zIndex: 9999,
   },
   exportActions: {
     flexDirection: 'row',
@@ -964,7 +965,7 @@ const styles = StyleSheet.create({
         elevation: 8,
       },
     }),
-    zIndex: 102,
+    zIndex: 9999,
   },
   exportDropdownItem: {
     flexDirection: 'row',
@@ -998,6 +999,7 @@ const styles = StyleSheet.create({
     marginBottom: theme.spacing(3),
     borderWidth: 1,
     borderColor: theme.colors.borderColor,
+    zIndex: 1,
   },
   statBox: {
     flex: 1,

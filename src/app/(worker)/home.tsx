@@ -124,6 +124,30 @@ export default function Home() {
           Alert.alert(t('worker.home.backgroundLocationRequired'), t('worker.home.backgroundLocationMsg'), [{ text: t('worker.batteryOptimization.openSettings'), onPress: () => Linking.openSettings() }]);
         }
         await Notifications.requestPermissionsAsync();
+        
+        // Request Activity Recognition permission on Android 10+ (API 29+)
+        if (Platform.OS === 'android' && Platform.Version >= 29) {
+          try {
+            const { PermissionsAndroid } = require('react-native');
+            const activityPermission = await PermissionsAndroid.request(
+              'android.permission.ACTIVITY_RECOGNITION',
+              {
+                title: t('worker.activityRecognition.title', 'Physical Activity Permission'),
+                message: t('worker.activityRecognition.message', 'We use activity recognition to detect when you\'re driving between job sites. This helps ensure accurate location tracking even in areas with poor GPS signal.'),
+                buttonPositive: t('worker.activityRecognition.allow', 'Allow'),
+                buttonNegative: t('worker.activityRecognition.deny', 'Deny'),
+              }
+            );
+            if (activityPermission === PermissionsAndroid.RESULTS.GRANTED) {
+              console.log('Activity Recognition permission granted');
+            } else {
+              console.log('Activity Recognition permission denied - fallback layers will work');
+            }
+          } catch (err) {
+            console.warn('Activity Recognition permission error:', err);
+          }
+        }
+        
         // Show battery optimization prompt once on Android
         if (Platform.OS === 'android') {
           try {

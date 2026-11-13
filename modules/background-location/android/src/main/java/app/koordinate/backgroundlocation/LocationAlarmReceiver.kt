@@ -80,26 +80,25 @@ class LocationAlarmReceiver : BroadcastReceiver() {
         }
     }
     
-    private suspend fun getCurrentLocation(context: Context): Location? {
+    private suspend fun getCurrentLocation(context: Context, isForeground: Boolean = false): Location? {
         val fusedLocationClient: FusedLocationProviderClient = 
             LocationServices.getFusedLocationProviderClient(context)
         
-        // Check if worker is in ACTIVE mode (outside geofence, traveling)
-        val sharedPrefs = context.getSharedPreferences(Constants.SHARED_PREFS_NAME, Context.MODE_PRIVATE)
-        val isInside = sharedPrefs.getBoolean(Constants.SHARED_PREFS_KEY_IS_INSIDE_GEOFENCE, false)
+        // AlarmManager fallback ALWAYS uses HIGH_ACCURACY to bypass Doze mode throttling.
+        // This is the last-resort mechanism — if we don't force high accuracy here,
+        // Android will return null when in Doze mode and we'll have no location data at all.
+        // Battery impact is minimal since this only fires when primary tracking has failed.
+        val priority = Priority.PRIORITY_HIGH_ACCURACY
         
-        // Use HIGH_ACCURACY when traveling (ACTIVE mode) to force real GPS
-        // Use BALANCED when stationary (PASSIVE mode) to save battery
-        val priority = if (isInside) {
-            Priority.PRIORITY_BALANCED_POWER_ACCURACY  // Stationary: WiFi/network OK
-        } else {
-            Priority.PRIORITY_HIGH_ACCURACY  // Traveling: Force GPS
-        }
+        // OPTION 2: Reduce timeout when app is in foreground - fail fast, don't hang UI
+        // Background: 15 seconds (be persistent, GPS might be slow)
+        // Foreground: 5 seconds (fail fast, show last known location instead)
+        val timeout = if (isForeground) 5_000L else 15_000L
         
         return try {
-            // Use getCurrentLocation with a 10-second timeout
+            // Use getCurrentLocation with variable timeout
             // This forces a fresh location even in Doze mode
-            withTimeoutOrNull(10_000L) {
+            withTimeoutOrNull(timeout) {
                 fusedLocationClient.getCurrentLocation(
                     priority,
                     null

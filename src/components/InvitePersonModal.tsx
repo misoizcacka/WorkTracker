@@ -156,20 +156,27 @@ const InvitePersonModal: React.FC<InvitePersonModalProps> = ({ visible, onClose 
           {generatedLink ? (
             <>
               <Text style={styles.successText}>
-                Share this link or have the worker enter the code below inside the app.
+                Share this link with {fullName.trim() || 'the worker'} to join your team.
               </Text>
+              
               {generatedInvite?.invite_code ? (
                 <View style={styles.codeCard}>
                   <Text style={styles.codeLabel} fontType="bold">Invite Code</Text>
                   <Text style={styles.codeValue} fontType="bold">{generatedInvite.invite_code}</Text>
+                  <Text style={styles.codeHint}>Worker can enter this code in the app</Text>
                 </View>
               ) : null}
-              <TextInput
-                style={[styles.input, styles.linkInput]}
-                value={generatedLink}
-                editable={false}
-                multiline
-              />
+
+              <View style={styles.linkCard}>
+                <View style={styles.linkHeader}>
+                  <Ionicons name="link-outline" size={18} color={theme.colors.bodyText} />
+                  <Text style={styles.linkLabel} fontType="bold">Invite Link</Text>
+                </View>
+                <Text style={styles.linkValue} numberOfLines={2} ellipsizeMode="middle">
+                  {generatedLink}
+                </Text>
+              </View>
+
               <View style={styles.buttonContainer}>
                 <Button
                   onPress={handleShareLink}
@@ -337,6 +344,38 @@ const styles = StyleSheet.create({
     letterSpacing: 3,
     color: theme.colors.headingText,
   },
+  codeHint: {
+    fontSize: theme.fontSizes.xs,
+    color: theme.colors.bodyText,
+    marginTop: theme.spacing(0.5),
+    opacity: 0.7,
+  },
+  linkCard: {
+    width: '100%',
+    borderWidth: 1,
+    borderColor: theme.colors.borderColor,
+    borderRadius: theme.radius.lg,
+    padding: theme.spacing(2),
+    backgroundColor: theme.colors.pageBackground,
+    marginBottom: theme.spacing(2),
+  },
+  linkHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing(1),
+    marginBottom: theme.spacing(1),
+  },
+  linkLabel: {
+    fontSize: theme.fontSizes.xs,
+    color: theme.colors.bodyText,
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
+  },
+  linkValue: {
+    fontSize: theme.fontSizes.sm,
+    color: theme.colors.headingText,
+    lineHeight: 20,
+  },
   primaryButton: {
     width: '100%',
     minHeight: 52,
@@ -349,11 +388,6 @@ const styles = StyleSheet.create({
     color: theme.colors.danger,
     marginBottom: theme.spacing(2), // Changed from 10
     textAlign: 'center',
-  },
-  linkInput: {
-    minHeight: 90,
-    textAlignVertical: 'top',
-    paddingVertical: theme.spacing(2),
   },
   secondaryButton: {
     width: '100%',

@@ -349,6 +349,33 @@ class PeriodicLocationTrackingService : Service() {
             }
         }
         
+        // LAYER 2: Periodic Force-Check (Safety Net)
+        // Every 15 minutes in PASSIVE mode, force HIGH_ACCURACY GPS to verify still inside geofence
+        // This catches cases where Activity Recognition missed movement or device was in airplane mode
+        if (currentMode == TrackingMode.PASSIVE) {
+            val lastForceCheck = sharedPrefs.getLong(Constants.KEY_LAST_FORCE_CHECK_TIME, 0L)
+            val timeSinceForceCheck = currentTime - lastForceCheck
+            
+            // Only trigger if it's been at least 15 minutes AND we have a valid last timestamp
+            // (or this is the first check ever - initialize it)
+            if (lastForceCheck == 0L) {
+                // First time - just set timestamp, don't force-check yet
+                sharedPrefs.edit().putLong(Constants.KEY_LAST_FORCE_CHECK_TIME, currentTime).apply()
+                Log.d("PeriodicLocationTrackingService", "⏰ LAYER 2: Initialized force-check timestamp")
+            } else if (timeSinceForceCheck >= Constants.PERIODIC_FORCE_CHECK_INTERVAL_MS) {
+                Log.d("PeriodicLocationTrackingService", "⏰ LAYER 2: 15-min force-check triggered (${timeSinceForceCheck/1000}s since last)")
+                LocationFileLogger.i(
+                    this,
+                    "ForceCheck",
+                    "⏰ Periodic force-check: Requesting HIGH_ACCURACY GPS to verify geofence state"
+                )
+                
+                serviceScope.launch {
+                    performForceCheck()
+                }
+            }
+        }
+        
         if (currentTime - lastLocationSentTime < interval - 5000L) {
             val modeLabel = when (currentMode) {
                 TrackingMode.ACTIVE -> "ACTIVE"
@@ -468,6 +495,12 @@ class PeriodicLocationTrackingService : Service() {
         } else if (action == Constants.ACTION_STOP_ACTIVE_TRACKING) {
             startLocationUpdates(false)
             return START_STICKY
+        } else if (action == "EXIT_PENDING") {
+            // Triggered by GeofenceBroadcastReceiver when low-quality exit signal detected
+            // Switch to EXIT_PENDING mode (HIGH_ACCURACY, 30-sec intervals) to verify with GPS
+            Log.d("PeriodicLocationTrackingService", "🔍 EXIT_PENDING action received - switching to verification mode")
+            switchToMode(TrackingMode.EXIT_PENDING)
+            return START_STICKY
         }
 
         val geofenceJson = intent?.getStringExtra("geofence_data")
@@ -512,6 +545,10 @@ class PeriodicLocationTrackingService : Service() {
         // Start AlarmManager fallback — guaranteed location updates every 6 min even in Doze mode
         LocationAlarmScheduler.scheduleNextAlarm(this)
         Log.d("PeriodicLocationTrackingService", "AlarmManager fallback started (6-min intervals)")
+        
+        // LAYER 1: Start Activity Recognition — detects IN_VEHICLE/ON_BICYCLE for missed exits
+        startActivityRecognition()
+        
         LocationFileLogger.i(this, "Service", "Location tracking started: ${activeAssignments.size} geofences registered")
 
         // Clear old manual states when re-registering
@@ -548,10 +585,18 @@ class PeriodicLocationTrackingService : Service() {
                 Log.e("PeriodicLocationTrackingService", "Security error during geofence reg: ${e.message}")
             }
             
-            // CRITICAL FIX: Determine correct initial mode by checking actual location
-            // Don't just guess - this prevents stationary throttling when worker checks in while on-site
+            // OPTION 4: Use last known location for instant startup (never block the React Native bridge)
+            // This provides instant app responsiveness - fresh location will arrive within seconds anyway
+            // Using getLastLocation() instead of getCurrentLocation() prevents 10-15 second hangs when:
+            // - App reopens after force-swipe in a building/tunnel (poor GPS)
+            // - Device is in Doze mode
+            // - Multiple location requests queue up during initialization
+            // Tradeoff: Initial mode determination uses slightly stale location (typically <2 min old)
+            // but fresh location arrives within seconds and corrects mode if needed
             serviceScope.launch {
                 try {
+                    // Use getLastLocation (instant, never blocks) instead of getCurrentLocation (can hang 10-15s)
+                    // This means we might use a slightly stale location (1-2 min old) but app opens instantly
                     val currentLocation = fusedLocationClient.lastLocation.await()
                     
                     if (currentLocation != null) {
@@ -772,12 +817,146 @@ class PeriodicLocationTrackingService : Service() {
         }
     }
 
+    /**
+     * LAYER 1: Activity Recognition Registration
+     * Detects when worker is IN_VEHICLE or ON_BICYCLE to catch missed geofence exits
+     */
+    private fun startActivityRecognition() {
+        try {
+            val activityRecognitionClient = com.google.android.gms.location.ActivityRecognition.getClient(this)
+            
+            val intent = Intent(this, ActivityRecognitionReceiver::class.java)
+            val pendingIntent = PendingIntent.getBroadcast(
+                this,
+                Constants.ACTIVITY_RECOGNITION_PENDING_INTENT_REQUEST_CODE,
+                intent,
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_MUTABLE
+                } else {
+                    PendingIntent.FLAG_UPDATE_CURRENT
+                }
+            )
+            
+            activityRecognitionClient.requestActivityUpdates(
+                Constants.ACTIVITY_RECOGNITION_INTERVAL_MS,
+                pendingIntent
+            ).addOnSuccessListener {
+                Log.d("PeriodicLocationTrackingService", "✅ LAYER 1: Activity Recognition started (30-sec updates)")
+                LocationFileLogger.i(this, "Service", "Activity Recognition started: monitoring for vehicle/bicycle movement")
+            }.addOnFailureListener { e ->
+                Log.e("PeriodicLocationTrackingService", "❌ Activity Recognition failed to start: ${e.message}")
+                LocationFileLogger.e(this, "Service", "Activity Recognition failed: ${e.message}")
+            }
+        } catch (e: Exception) {
+            Log.e("PeriodicLocationTrackingService", "Activity Recognition error: ${e.message}")
+        }
+    }
+    
+    private fun stopActivityRecognition() {
+        try {
+            val activityRecognitionClient = com.google.android.gms.location.ActivityRecognition.getClient(this)
+            
+            val intent = Intent(this, ActivityRecognitionReceiver::class.java)
+            val pendingIntent = PendingIntent.getBroadcast(
+                this,
+                Constants.ACTIVITY_RECOGNITION_PENDING_INTENT_REQUEST_CODE,
+                intent,
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_MUTABLE
+                } else {
+                    PendingIntent.FLAG_UPDATE_CURRENT
+                }
+            )
+            
+            activityRecognitionClient.removeActivityUpdates(pendingIntent)
+            Log.d("PeriodicLocationTrackingService", "Activity Recognition stopped")
+        } catch (e: Exception) {
+            Log.e("PeriodicLocationTrackingService", "Error stopping Activity Recognition: ${e.message}")
+        }
+    }
+    
+    /**
+     * LAYER 2: Periodic Force-Check
+     * Every 15 minutes in PASSIVE mode, force HIGH_ACCURACY GPS to verify still inside geofence
+     */
+    private suspend fun performForceCheck() {
+        val fusedLocationClient = LocationServices.getFusedLocationProviderClient(applicationContext)
+        
+        try {
+            // Force HIGH_ACCURACY GPS request with 10-second timeout
+            val location = kotlinx.coroutines.withTimeoutOrNull(10_000L) {
+                fusedLocationClient.getCurrentLocation(
+                    Priority.PRIORITY_HIGH_ACCURACY,
+                    null
+                ).await()
+            }
+            
+            if (location == null) {
+                Log.w("PeriodicLocationTrackingService", "⚠️ Force-check: GPS timeout after 10s")
+                LocationFileLogger.w(this, "ForceCheck", "GPS timeout - no fresh location available")
+                return
+            }
+            
+            val quality = Constants.getLocationQuality(location)
+            if (quality == null || quality.trustScore < 60) {
+                Log.w("PeriodicLocationTrackingService", "⚠️ Force-check: Location quality too low (trust: ${quality?.trustScore}%)")
+                LocationFileLogger.w(this, "ForceCheck", "Location quality insufficient: trust ${quality?.trustScore}%")
+                return
+            }
+            
+            // Update timestamp
+            val sharedPrefs = getSharedPreferences(Constants.SHARED_PREFS_NAME, Context.MODE_PRIVATE)
+            sharedPrefs.edit()
+                .putLong(Constants.KEY_LAST_FORCE_CHECK_TIME, System.currentTimeMillis())
+                .apply()
+            
+            // Check if we're actually inside the geofence
+            val currentAssignmentId = sharedPrefs.getString(Constants.KEY_ASSIGNMENT_ID, null)
+            val isInsideGeofence = activeAssignments.any { assignment ->
+                if (assignment.id != currentAssignmentId) return@any false
+                
+                val geofenceLocation = Location("geofence").apply {
+                    latitude = assignment.latitude
+                    longitude = assignment.longitude
+                }
+                val distance = location.distanceTo(geofenceLocation)
+                distance <= assignment.radius
+            }
+            
+            if (!isInsideGeofence && currentMode == TrackingMode.PASSIVE) {
+                // FORCE-CHECK CAUGHT A MISSED EXIT!
+                Log.w("PeriodicLocationTrackingService", "🚨 LAYER 2: Force-check detected worker OUTSIDE geofence → switching to ACTIVE")
+                LocationFileLogger.w(
+                    this,
+                    "ForceCheck",
+                    "🚨 Missed exit detected! GPS confirms outside geofence (source: ${quality.source.label}, trust: ${quality.trustScore}%) → forcing ACTIVE mode"
+                )
+                
+                switchToMode(TrackingMode.ACTIVE)
+            } else {
+                Log.d("PeriodicLocationTrackingService", "✅ Force-check: Confirmed still inside geofence (source: ${quality.source.label})")
+                LocationFileLogger.i(
+                    this,
+                    "ForceCheck",
+                    "✅ Geofence state verified: still inside (source: ${quality.source.label}, trust: ${quality.trustScore}%)"
+                )
+            }
+            
+        } catch (e: SecurityException) {
+            Log.e("PeriodicLocationTrackingService", "Force-check: Permission error: ${e.message}")
+        } catch (e: Exception) {
+            Log.e("PeriodicLocationTrackingService", "Force-check: Error: ${e.message}")
+            LocationFileLogger.e(this, "ForceCheck", "Error: ${e.message}")
+        }
+    }
+
     override fun onDestroy() {
         super.onDestroy()
         isRunning.set(false)
         fusedLocationClient.removeLocationUpdates(locationCallback)
         BackgroundLocationManager.stopPeriodicUpdates(this)
         LocationAlarmScheduler.cancelAlarms(this)
+        stopActivityRecognition()
         serviceJob.cancel()
         Log.d("PeriodicLocationTrackingService", "Service destroyed.")
     }

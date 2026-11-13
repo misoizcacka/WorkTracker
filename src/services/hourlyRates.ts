@@ -20,10 +20,11 @@ export async function fetchHourlyRateHistory(employeeId: string): Promise<Hourly
 }
 
 /**
- * Inserts a new rate entry. The rate is effective from the provided timestamp.
- * Append-only — existing entries are never modified.
+ * Upserts a rate entry. If a rate exists for the same employee + effective_from,
+ * it will be updated. Otherwise a new rate is inserted.
+ * This allows updating the current month's rate while keeping past rates immutable.
  */
-export async function insertHourlyRate(
+export async function upsertHourlyRate(
   employeeId: string,
   companyId: string,
   hourlyRate: number,
@@ -34,22 +35,39 @@ export async function insertHourlyRate(
 
   const { data, error } = await supabase
     .from('employee_hourly_rates')
-    .insert({
+    .upsert({
       employee_id: employeeId,
       company_id: companyId,
       hourly_rate: hourlyRate,
       effective_from: effectiveFrom,
       created_by: user.id,
+    }, {
+      onConflict: 'employee_id,effective_from', // Unique constraint columns
+      ignoreDuplicates: false, // Update on conflict
     })
     .select()
     .single();
 
   if (error) {
-    console.error('insertHourlyRate error:', error);
+    console.error('upsertHourlyRate error:', error);
     throw error;
   }
 
   return data as HourlyRate;
+}
+
+/**
+ * @deprecated Use upsertHourlyRate instead
+ * Inserts a new rate entry. The rate is effective from the provided timestamp.
+ * Append-only — existing entries are never modified.
+ */
+export async function insertHourlyRate(
+  employeeId: string,
+  companyId: string,
+  hourlyRate: number,
+  effectiveFrom: string // ISO timestamp
+): Promise<HourlyRate> {
+  return upsertHourlyRate(employeeId, companyId, hourlyRate, effectiveFrom);
 }
 
 /**

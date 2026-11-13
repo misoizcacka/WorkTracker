@@ -33,6 +33,8 @@ object Constants {
     const val ACTIVE_TRACKING_INTERVAL_MS = 1 * 60 * 1000L   // 1 min — worker outside geofence, traveling
     const val PASSIVE_TRACKING_INTERVAL_MS = 5 * 60 * 1000L  // 5 min — worker inside geofence, on site
     const val EXIT_PENDING_INTERVAL_MS = 30 * 1000L          // 30 sec — verifying exit with high-accuracy GPS
+    const val PERIODIC_FORCE_CHECK_INTERVAL_MS = 15 * 60 * 1000L  // 15 min — force HIGH_ACCURACY check in PASSIVE mode
+    const val ACTIVITY_RECOGNITION_INTERVAL_MS = 30 * 1000L  // 30 sec — activity detection update interval
 
     const val SHARED_PREFS_NAME = "location_tracking_prefs"
     const val KEY_WORKER_ID = "worker_id"
@@ -45,6 +47,7 @@ object Constants {
     const val KEY_LAST_LOCATION_EVENT_TIME = "last_location_event_time" // DEPRECATED: Use KEY_LAST_FUSED_EVENT_TIME instead
     const val KEY_LAST_FUSED_EVENT_TIME = "last_fused_event_time" // Timestamp of last FusedLocationProvider event (for AlarmManager monitoring)
     const val KEY_LAST_ALARM_EVENT_TIME = "last_alarm_event_time" // Timestamp of last AlarmManager fallback event (for diagnostics)
+    const val KEY_LAST_FORCE_CHECK_TIME = "last_force_check_time" // Timestamp of last periodic force-check (for 15-min verification)
 
     // Geofencing constants
     const val GEOFENCE_RADIUS_METERS = 150f // From frontend ACCEPTABLE_DISTANCE
@@ -57,6 +60,10 @@ object Constants {
     const val SHARED_PREFS_KEY_ACTIVE_GEOFENCE_ID = "active_geofence_id" // ID of the geofence currently being monitored
     const val SHARED_PREFS_KEY_IS_INSIDE_GEOFENCE = "is_inside_geofence" // Boolean: true if worker is currently inside an assignment geofence
     const val SHARED_PREFS_KEY_IS_EXIT_PENDING = "is_exit_pending" // Boolean: true if exit is being verified with high-accuracy GPS
+    
+    // Activity Recognition constants
+    const val ACTIVITY_RECOGNITION_PENDING_INTENT_REQUEST_CODE = 1000
+    const val ACTIVITY_RECOGNITION_CONFIDENCE_THRESHOLD = 60 // Minimum confidence % to trust activity detection
 
     // Notification channel details (for foreground service and geofence alerts)
     const val NOTIFICATION_CHANNEL_ID = "workhourstracker_location_channel"
