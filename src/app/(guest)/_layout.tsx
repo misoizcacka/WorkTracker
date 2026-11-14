@@ -27,7 +27,7 @@ export default function GuestLayout() {
 
   return (
     <I18nextProvider i18n={i18n}>
-      <StatusBar style="dark" backgroundColor={theme.colors.pageBackground} />
+      <StatusBar style="dark" />
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Screen name="index" />
         <Stack.Screen name="pricing" />

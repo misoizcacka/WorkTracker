@@ -86,7 +86,7 @@ export default function TabsLayout() {
 
   return (
     <>
-      <StatusBar style="dark" backgroundColor={theme.colors.cardBackground} />
+      <StatusBar style="dark" />
       <ManagerProviders>
         {isLargeScreen ? (
           <View style={{ flex: 1, flexDirection: 'row', backgroundColor: theme.colors.pageBackground }}>

@@ -62,8 +62,8 @@ function ProtectedWorkerLayout() {
         name="home"
         options={{
           title: t('worker.tabs.home'),
-          tabBarIcon: ({ color, size }: { color: string; size: number }) => (
-            <Ionicons name="home-outline" color={color} size={size} />
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="home-outline" color={color as string} size={size} />
           ),
         }}
       />
@@ -71,8 +71,8 @@ function ProtectedWorkerLayout() {
         name="projects"
         options={{
           title: t('worker.tabs.projects'),
-          tabBarIcon: ({ color, size }: { color: string; size: number }) => (
-            <Ionicons name="briefcase-outline" color={color} size={size} />
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="briefcase-outline" color={color as string} size={size} />
           ),
         }}
       />
@@ -80,8 +80,8 @@ function ProtectedWorkerLayout() {
         name="dashboard"
         options={{
           title: t('worker.tabs.dashboard'),
-          tabBarIcon: ({ color, size }: { color: string; size: number }) => (
-            <Ionicons name="bar-chart-outline" color={color} size={size} />
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="bar-chart-outline" color={color as string} size={size} />
           ),
         }}
       />
@@ -89,8 +89,8 @@ function ProtectedWorkerLayout() {
         name="account"
         options={{
           title: t('worker.tabs.account'),
-          tabBarIcon: ({ color, size }: { color: string; size: number }) => (
-            <Ionicons name="person-outline" color={color} size={size} />
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="person-outline" color={color as string} size={size} />
           ),
         }}
       />

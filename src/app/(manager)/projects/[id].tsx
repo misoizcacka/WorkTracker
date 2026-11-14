@@ -159,13 +159,13 @@ export default function ProjectDetailsScreen() {
         {/* ── Hero Header ── */}
         <View style={styles.hero}>
           {hasPhoto ? (
-            <Image source={{ uri: project.photos[0] }} style={StyleSheet.absoluteFillObject} resizeMode="cover" />
+            <Image source={{ uri: project.photos[0] }} style={StyleSheet.absoluteFill} resizeMode="cover" />
           ) : (
-            <View style={[StyleSheet.absoluteFillObject, styles.heroFallback, { backgroundColor: project.color || theme.colors.primary }]}>
+            <View style={[StyleSheet.absoluteFill, styles.heroFallback, { backgroundColor: project.color || theme.colors.primary }]}>
               <Text style={styles.heroInitials} fontType="bold">{initials}</Text>
             </View>
           )}
-          <View style={[StyleSheet.absoluteFillObject, styles.heroScrim]} />
+          <View style={[StyleSheet.absoluteFill, styles.heroScrim]} />
 
           <TouchableOpacity onPress={() => router.back()} style={styles.heroBack}>
             <Ionicons name="arrow-back" size={22} color="white" />

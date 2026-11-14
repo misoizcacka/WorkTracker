@@ -13,13 +13,13 @@ const CustomStatusBar: React.FC<CustomStatusBarProps> = ({ backgroundColor, styl
     return (
       <View style={{ height: Constants.statusBarHeight, backgroundColor }}>
         <SafeAreaView>
-          <StatusBar translucent backgroundColor={backgroundColor} style={style} />
+          <StatusBar style={style} />
         </SafeAreaView>
       </View>
     );
   }
-  // On Android, the default StatusBar component with backgroundColor works well.
-  return <StatusBar style={style} backgroundColor={backgroundColor} />;
+  // On Android, the default StatusBar component works well
+  return <StatusBar style={style} />;
 };
 
 export default CustomStatusBar;

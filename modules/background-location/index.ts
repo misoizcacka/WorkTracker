@@ -80,26 +80,34 @@ export interface LogStats {
  * Export all logs as a string (current + old rotated logs)
  */
 export function exportLogs(): Promise<string> {
-    return BackgroundLocationModule.exportLogs();
+    return BackgroundLocationModule.exportLogs?.() ?? Promise.resolve('');
 }
 
 /**
  * Get recent logs (last N lines, default 100)
  */
 export function getRecentLogs(lines: number = 100): Promise<string> {
-    return BackgroundLocationModule.getRecentLogs(lines);
+    return BackgroundLocationModule.getRecentLogs?.(lines) ?? Promise.resolve('');
 }
 
 /**
  * Clear all logs
  */
 export function clearLogs(): Promise<void> {
-    return BackgroundLocationModule.clearLogs();
+    return BackgroundLocationModule.clearLogs?.() ?? Promise.resolve();
 }
 
 /**
  * Get log file statistics
  */
 export function getLogStats(): Promise<LogStats> {
-    return BackgroundLocationModule.getLogStats();
+    return BackgroundLocationModule.getLogStats?.() ?? Promise.resolve({
+        current_size_bytes: 0,
+        old_size_bytes: 0,
+        total_size_bytes: 0,
+        current_size_mb: '0',
+        total_size_mb: '0',
+        line_count: 0,
+        max_size_mb: '0'
+    });
 }

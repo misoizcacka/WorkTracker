@@ -227,7 +227,7 @@ export default function MapOverviewScreen() {
             style={styles.workerIcon}
           />
           <View style={styles.avatarContainer}>
-            <UserAvatar avatarUrl={item.avatar_url} size={40} style={[styles.avatar, isDisabled && styles.disabledAvatar]} />
+            <UserAvatar avatarUrl={item.avatar_url} size={40} style={isDisabled ? [styles.avatar, styles.disabledAvatar] : styles.avatar} />
             {/* Status indicator dot */}
             <View style={[styles.statusDot, { backgroundColor: workerStatus.color }]} />
           </View>

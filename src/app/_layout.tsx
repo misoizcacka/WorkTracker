@@ -372,7 +372,7 @@ export default function RootLayout() {
       const inManagerApp = segments[0] === '(manager)';
       const inWorkerApp = segments[0] === '(worker)';
       const inMobileOnly = segments[0] === 'mobile-only';
-      const onCompanySetup = inManagerApp && segments[1] === 'company-setup';
+      const onCompanySetup = inManagerApp && segments.length > 1 && segments[1] === 'company-setup';
       
       // Create a fingerprint of the current state to prevent unnecessary re-runs
       const stateFingerprint = `${segments.join('/')}_${userRole}_${user?.app_metadata?.subscription_status}_${isCompanyDetailsComplete}_${!!user}`;
@@ -391,7 +391,7 @@ export default function RootLayout() {
 
       // 1b. Logged in but email not verified → verify-email screen
       if (user && !user.email_confirmed_at) {
-        const inVerifyEmail = segments[0] === 'auth' && segments[1] === 'verify-email';
+        const inVerifyEmail = segments[0] === 'auth' && segments.length > 1 && segments[1] === 'verify-email';
         if (!inVerifyEmail) {
           router.replace({
             pathname: '/auth/verify-email',
@@ -443,7 +443,7 @@ export default function RootLayout() {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: theme.colors.pageBackground }} edges={['top']}>
-      <StatusBar style="dark" translucent backgroundColor="transparent" />
+      <StatusBar style="dark" />
       <Stack screenOptions={{
         headerShown: false,
       }}>

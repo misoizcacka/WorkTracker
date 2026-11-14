@@ -180,7 +180,7 @@ export default function ProjectAssignmentScreen() {
           <UserAvatar 
             avatarUrl={item.avatar_url} 
             size={40} 
-            style={[styles.avatar, !hasHourlyRate && styles.disabledAvatar]} 
+            style={!hasHourlyRate ? [styles.avatar, styles.disabledAvatar] : styles.avatar} 
           />
           <View style={styles.workerInfo}>
             <Text 

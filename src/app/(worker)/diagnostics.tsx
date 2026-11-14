@@ -59,7 +59,7 @@ export default function DiagnosticsScreen() {
         // Native: save and share
         const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
         const fileName = `location_logs_${timestamp}.txt`;
-        const fileUri = `${FileSystem.documentDirectory}${fileName}`;
+        const fileUri = FileSystem.cacheDirectory ? `${FileSystem.cacheDirectory}${fileName}` : fileName;
         
         // Write file (ignoring deprecation warning for now - still works)
         try {
@@ -202,7 +202,6 @@ export default function DiagnosticsScreen() {
         <Button
           title="Clear Logs"
           onPress={handleClear}
-          variant="outline"
           style={styles.actionButton}
         />
       </View>
@@ -247,9 +246,9 @@ const styles = StyleSheet.create({
   },
   header: {
     padding: 20,
-    backgroundColor: theme.colors.surface,
+    backgroundColor: theme.colors.cardBackground,
     borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
+    borderBottomColor: theme.colors.borderColor,
   },
   title: {
     fontSize: 24,
@@ -258,24 +257,24 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     fontSize: 14,
-    color: theme.colors.textSecondary,
+    color: theme.colors.bodyText,
   },
   statsCard: {
     margin: 16,
     padding: 16,
-    backgroundColor: theme.colors.surface,
+    backgroundColor: theme.colors.cardBackground,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: theme.colors.borderColor,
   },
   diagnosticsCard: {
     margin: 16,
     marginTop: 0,
     padding: 16,
-    backgroundColor: theme.colors.surface,
+    backgroundColor: theme.colors.cardBackground,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: theme.colors.borderColor,
   },
   statusRow: {
     flexDirection: 'row',
@@ -283,11 +282,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 8,
     borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border + '30',
+    borderBottomColor: theme.colors.borderColor + '30',
   },
   statusLabel: {
     fontSize: 14,
-    color: theme.colors.textSecondary,
+    color: theme.colors.bodyText,
     flex: 1,
   },
   statusValue: {
@@ -308,7 +307,7 @@ const styles = StyleSheet.create({
   },
   statsLabel: {
     fontSize: 14,
-    color: theme.colors.textSecondary,
+    color: theme.colors.bodyText,
   },
   statsValue: {
     fontSize: 14,
@@ -318,10 +317,10 @@ const styles = StyleSheet.create({
     margin: 16,
     marginTop: 0,
     padding: 16,
-    backgroundColor: theme.colors.surface,
+    backgroundColor: theme.colors.cardBackground,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: theme.colors.borderColor,
   },
   actionButton: {
     marginBottom: 12,
@@ -330,14 +329,14 @@ const styles = StyleSheet.create({
     margin: 16,
     marginTop: 0,
     padding: 16,
-    backgroundColor: theme.colors.surface,
+    backgroundColor: theme.colors.cardBackground,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: theme.colors.borderColor,
   },
   hint: {
     fontSize: 12,
-    color: theme.colors.textSecondary,
+    color: theme.colors.bodyText,
     fontStyle: 'italic',
     marginBottom: 12,
   },
@@ -370,7 +369,7 @@ const styles = StyleSheet.create({
   helpText: {
     fontSize: 13,
     lineHeight: 20,
-    color: theme.colors.text,
+    color: theme.colors.headingText,
   },
   helpBold: {
     fontWeight: '600',
