@@ -563,7 +563,7 @@ class PeriodicLocationTrackingService : Service() {
                 .setCircularRegion(it.latitude, it.longitude, it.radius)
                 .setExpirationDuration(Geofence.NEVER_EXPIRE)
                 .setTransitionTypes(Geofence.GEOFENCE_TRANSITION_ENTER or Geofence.GEOFENCE_TRANSITION_EXIT)
-                .setNotificationResponsiveness(0) // Request fastest possible (Android will optimize for battery as needed)
+                .setNotificationResponsiveness(30 * 1000) // 30 seconds - balance between speed and battery (Android docs recommend >=5min for battery, but we need faster exits)
                 .build()
         }
 
