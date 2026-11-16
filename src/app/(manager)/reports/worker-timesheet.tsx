@@ -407,34 +407,36 @@ const WorkerTimesheetReport = () => {
                       <Text style={styles.noSessionsText} fontType="medium">No sessions for this month</Text>
                     </View>
                   ) : (
-                    <>
-                      <View style={styles.sessionsTableHeader}>
-                        <View style={styles.sessionDateCell}>
-                          <Text style={styles.tableHeaderText} fontType="bold">Date</Text>
+                    <ScrollView horizontal showsHorizontalScrollIndicator={true}>
+                      <View style={styles.tableContainer}>
+                        <View style={styles.sessionsTableHeader}>
+                          <View style={styles.sessionDateCell}>
+                            <Text style={styles.tableHeaderText} fontType="bold">Date</Text>
+                          </View>
+                          <View style={styles.sessionTimeCell}>
+                            <Text style={styles.tableHeaderText} fontType="bold">Start</Text>
+                          </View>
+                          <View style={styles.sessionTimeCell}>
+                            <Text style={styles.tableHeaderText} fontType="bold">End</Text>
+                          </View>
+                          <View style={styles.sessionDurationCell}>
+                            <Text style={styles.tableHeaderText} fontType="bold">Duration</Text>
+                          </View>
+                          <View style={styles.sessionBreakCell}>
+                            <Text style={styles.tableHeaderText} fontType="bold">Break</Text>
+                          </View>
+                          <View style={styles.sessionCorrectionCell}>
+                            <Text style={styles.tableHeaderText} fontType="bold">Correction</Text>
+                          </View>
+                          <View style={styles.sessionActionsCell}>
+                            <Text style={styles.tableHeaderText} fontType="bold"></Text>
+                          </View>
                         </View>
-                        <View style={styles.sessionTimeCell}>
-                          <Text style={styles.tableHeaderText} fontType="bold">Start</Text>
-                        </View>
-                        <View style={styles.sessionTimeCell}>
-                          <Text style={styles.tableHeaderText} fontType="bold">End</Text>
-                        </View>
-                        <View style={styles.sessionDurationCell}>
-                          <Text style={styles.tableHeaderText} fontType="bold">Duration</Text>
-                        </View>
-                        <View style={styles.sessionBreakCell}>
-                          <Text style={styles.tableHeaderText} fontType="bold">Break</Text>
-                        </View>
-                        <View style={styles.sessionCorrectionCell}>
-                          <Text style={styles.tableHeaderText} fontType="bold">Correction</Text>
-                        </View>
-                        <View style={styles.sessionActionsCell}>
-                          <Text style={styles.tableHeaderText} fontType="bold"></Text>
-                        </View>
+                        <ScrollView style={styles.sessionsScrollView} contentContainerStyle={styles.sessionsContent}>
+                          {timesheetData.sessions.map(renderSessionRow)}
+                        </ScrollView>
                       </View>
-                      <ScrollView style={styles.sessionsScrollView} contentContainerStyle={styles.sessionsContent}>
-                        {timesheetData.sessions.map(renderSessionRow)}
-                      </ScrollView>
-                    </>
+                    </ScrollView>
                   )}
                 </Card>
               </>
@@ -632,6 +634,9 @@ const styles = StyleSheet.create({
     flex: 1,
     overflow: 'hidden',
   },
+  tableContainer: {
+    flex: 1,
+  },
   noSessionsContainer: {
     flex: 1,
     justifyContent: 'center',
@@ -649,6 +654,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: theme.colors.borderColor,
     paddingVertical: theme.spacing(2),
+    minWidth: 800, // Match the row minWidth
   },
   tableHeaderText: {
     fontSize: theme.fontSizes.xs,
@@ -669,11 +675,13 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: theme.colors.borderColor,
     paddingVertical: theme.spacing(2),
+    minWidth: 800, // Ensure minimum width for proper spacing
   },
   sessionDateCell: {
-    width: 80,
-    paddingHorizontal: theme.spacing(1),
-    alignItems: 'center',
+    flex: 1.5,
+    minWidth: 100,
+    paddingHorizontal: theme.spacing(2),
+    alignItems: 'flex-start',
   },
   sessionDateText: {
     fontSize: theme.fontSizes.sm,
@@ -685,8 +693,9 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   sessionTimeCell: {
-    width: 80,
-    paddingHorizontal: theme.spacing(1),
+    flex: 1,
+    minWidth: 80,
+    paddingHorizontal: theme.spacing(2),
     alignItems: 'center',
   },
   sessionTimeText: {
@@ -706,8 +715,9 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   sessionDurationCell: {
-    width: 80,
-    paddingHorizontal: theme.spacing(1),
+    flex: 1,
+    minWidth: 90,
+    paddingHorizontal: theme.spacing(2),
     alignItems: 'center',
   },
   sessionDurationText: {
@@ -715,8 +725,9 @@ const styles = StyleSheet.create({
     color: theme.colors.headingText,
   },
   sessionBreakCell: {
-    width: 70,
-    paddingHorizontal: theme.spacing(1),
+    flex: 1,
+    minWidth: 80,
+    paddingHorizontal: theme.spacing(2),
     alignItems: 'center',
   },
   sessionBreakText: {
@@ -724,16 +735,18 @@ const styles = StyleSheet.create({
     color: theme.colors.bodyText,
   },
   sessionCorrectionCell: {
-    width: 90,
-    paddingHorizontal: theme.spacing(1),
+    flex: 1.2,
+    minWidth: 100,
+    paddingHorizontal: theme.spacing(2),
     alignItems: 'center',
   },
   sessionCorrectionText: {
     fontSize: theme.fontSizes.sm,
   },
   sessionActionsCell: {
-    width: 50,
-    paddingHorizontal: theme.spacing(1),
+    flex: 0.6,
+    minWidth: 60,
+    paddingHorizontal: theme.spacing(2),
     alignItems: 'center',
   },
   sessionActionButton: {
