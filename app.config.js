@@ -16,9 +16,9 @@ module.exports = () => {
     userInterfaceStyle: 'light',
     newArchEnabled: true,
     splash: {
-      image: './assets/koordsplashscreen.png',
+      image: './assets/koordinateappicon.png',
       resizeMode: 'contain',
-      backgroundColor: '#e0e0e0',
+      backgroundColor: '#f3f2f2',
     },
     ios: {
       supportsTablet: true,
