@@ -34,7 +34,6 @@ object Constants {
     const val PASSIVE_TRACKING_INTERVAL_MS = 5 * 60 * 1000L  // 5 min — worker inside geofence, on site
     const val EXIT_PENDING_INTERVAL_MS = 30 * 1000L          // 30 sec — verifying exit with high-accuracy GPS
     const val PERIODIC_FORCE_CHECK_INTERVAL_MS = 5 * 60 * 1000L  // 5 min — CRITICAL: Wake device from Doze to check if worker left (was 15 min, too slow)
-    const val ACTIVITY_RECOGNITION_INTERVAL_MS = 30 * 1000L  // 30 sec — activity detection update interval
 
     const val SHARED_PREFS_NAME = "location_tracking_prefs"
     const val KEY_WORKER_ID = "worker_id"
@@ -60,10 +59,6 @@ object Constants {
     const val SHARED_PREFS_KEY_ACTIVE_GEOFENCE_ID = "active_geofence_id" // ID of the geofence currently being monitored
     const val SHARED_PREFS_KEY_IS_INSIDE_GEOFENCE = "is_inside_geofence" // Boolean: true if worker is currently inside an assignment geofence
     const val SHARED_PREFS_KEY_IS_EXIT_PENDING = "is_exit_pending" // Boolean: true if exit is being verified with high-accuracy GPS
-    
-    // Activity Recognition constants
-    const val ACTIVITY_RECOGNITION_PENDING_INTENT_REQUEST_CODE = 1000
-    const val ACTIVITY_RECOGNITION_CONFIDENCE_THRESHOLD = 60 // Minimum confidence % to trust activity detection
 
     // Notification channel details (for foreground service and geofence alerts)
     const val NOTIFICATION_CHANNEL_ID = "workhourstracker_location_channel"

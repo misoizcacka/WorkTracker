@@ -1,4 +1,4 @@
-package app.koordinate.backgroundlocation
+﻿package app.koordinate.backgroundlocation
 
 import android.Manifest
 import android.app.NotificationChannel
@@ -55,7 +55,7 @@ class PeriodicLocationTrackingService : Service() {
     private lateinit var fusedLocationClient: FusedLocationProviderClient
     private lateinit var geofencingClient: GeofencingClient
     private lateinit var locationCallback: LocationCallback
-    // Single SupabaseService instance — created once in onCreate so we reuse the
+    // Single SupabaseService instance â€” created once in onCreate so we reuse the
     // OkHttpClient connection pool and avoid spawning new threads on every callback.
     private var supabaseService: SupabaseService? = null
     private var currentMode = TrackingMode.PASSIVE
@@ -102,7 +102,7 @@ class PeriodicLocationTrackingService : Service() {
 
         // Build the single shared SupabaseService now that prefs are available.
         // If credentials are not stored yet (first cold start before JS calls start()),
-        // supabaseService stays null and handleLocationResult will skip sending — safe.
+        // supabaseService stays null and handleLocationResult will skip sending â€” safe.
         val sharedPrefs = getSharedPreferences(Constants.SHARED_PREFS_NAME, Context.MODE_PRIVATE)
         val supabaseUrl = sharedPrefs.getString(Constants.KEY_SUPABASE_URL, null)
         val supabaseKey = sharedPrefs.getString(Constants.KEY_SUPABASE_PUBLISHABLE_KEY, null)
@@ -141,7 +141,7 @@ class PeriodicLocationTrackingService : Service() {
         if (supabaseService == null && supabaseUrl != null && supabaseKey != null) {
             supabaseService = SupabaseService(applicationContext, supabaseUrl, supabaseKey, DeviceAuthenticator(applicationContext))
         }
-        val svc = supabaseService ?: return  // no credentials yet — nothing to send
+        val svc = supabaseService ?: return  // no credentials yet â€” nothing to send
 
         // 1. PRIORITIZE GEOFENCE CHECK (with hybrid GPS+WiFi quality detection + EXIT_PENDING state)
         // Get location quality for hybrid geofence detection
@@ -203,7 +203,7 @@ class PeriodicLocationTrackingService : Service() {
                     
                     if (canEnter) {
                         // CONFIRMED ENTER - switch to PASSIVE immediately
-                        Log.d("PeriodicLocationTrackingService", "✅ CONFIRMED ENTER for ${it.id.take(8)} (source: ${quality?.source?.label})")
+                        Log.d("PeriodicLocationTrackingService", "âœ… CONFIRMED ENTER for ${it.id.take(8)} (source: ${quality?.source?.label})")
                         sharedPrefs.edit()
                             .putBoolean(manualKey, true)
                             .putBoolean(Constants.SHARED_PREFS_KEY_IS_INSIDE_GEOFENCE, true)
@@ -219,10 +219,10 @@ class PeriodicLocationTrackingService : Service() {
                                     applicationContext, it.id, eventType, workerId, companyId, location.latitude, location.longitude, svc
                                 )
                                 val qualityIcon = when(quality?.source) {
-                                    LocationSource.GPS_HIGH_QUALITY -> "🟢"
-                                    LocationSource.GPS_MEDIUM_QUALITY -> "🟡"
-                                    LocationSource.WIFI_HIGH_CONFIDENCE -> "🔵"
-                                    else -> "⚪"
+                                    LocationSource.GPS_HIGH_QUALITY -> "ðŸŸ¢"
+                                    LocationSource.GPS_MEDIUM_QUALITY -> "ðŸŸ¡"
+                                    LocationSource.WIFI_HIGH_CONFIDENCE -> "ðŸ”µ"
+                                    else -> "âšª"
                                 }
                                 LocationFileLogger.i(
                                     this@PeriodicLocationTrackingService,
@@ -243,7 +243,7 @@ class PeriodicLocationTrackingService : Service() {
                         LocationFileLogger.w(
                             this@PeriodicLocationTrackingService,
                             "Geofence",
-                            "⚠️ Geofence entry blocked: $reason"
+                            "âš ï¸ Geofence entry blocked: $reason"
                         )
                         Log.w("PeriodicLocationTrackingService", "Skipping geofence entry: $reason")
                     }
@@ -258,7 +258,7 @@ class PeriodicLocationTrackingService : Service() {
                     
                     if (hasGPSQuality) {
                         // CONFIRMED EXIT WITH GPS - switch to ACTIVE immediately
-                        Log.d("PeriodicLocationTrackingService", "✅ CONFIRMED EXIT for ${it.id.take(8)} with GPS (source: ${quality.source.label})")
+                        Log.d("PeriodicLocationTrackingService", "âœ… CONFIRMED EXIT for ${it.id.take(8)} with GPS (source: ${quality.source.label})")
                         sharedPrefs.edit()
                             .putBoolean(manualKey, false)
                             .putBoolean(Constants.SHARED_PREFS_KEY_IS_INSIDE_GEOFENCE, false)
@@ -274,9 +274,9 @@ class PeriodicLocationTrackingService : Service() {
                                     applicationContext, it.id, eventType, workerId, companyId, location.latitude, location.longitude, svc
                                 )
                                 val qualityIcon = when(quality.source) {
-                                    LocationSource.GPS_HIGH_QUALITY -> "🟢"
-                                    LocationSource.GPS_MEDIUM_QUALITY -> "🟡"
-                                    else -> "⚪"
+                                    LocationSource.GPS_HIGH_QUALITY -> "ðŸŸ¢"
+                                    LocationSource.GPS_MEDIUM_QUALITY -> "ðŸŸ¡"
+                                    else -> "âšª"
                                 }
                                 LocationFileLogger.i(
                                     this@PeriodicLocationTrackingService,
@@ -290,11 +290,11 @@ class PeriodicLocationTrackingService : Service() {
                     } else if (!isExitPending) {
                         // POSSIBLE EXIT DETECTED - switch to EXIT_PENDING to verify with GPS
                         // This happens when WiFi/network says we might be outside
-                        Log.d("PeriodicLocationTrackingService", "🔍 POSSIBLE EXIT detected for ${it.id.take(8)} - switching to EXIT_PENDING mode to verify with GPS")
+                        Log.d("PeriodicLocationTrackingService", "ðŸ” POSSIBLE EXIT detected for ${it.id.take(8)} - switching to EXIT_PENDING mode to verify with GPS")
                         LocationFileLogger.w(
                             this@PeriodicLocationTrackingService,
                             "Geofence",
-                            "🔍 Possible exit detected (got: ${quality?.source?.label ?: "no signal"}, trust: ${quality?.trustScore ?: 0}%, dist: ${dist.toInt()}m) - activating high-accuracy GPS to verify"
+                            "ðŸ” Possible exit detected (got: ${quality?.source?.label ?: "no signal"}, trust: ${quality?.trustScore ?: 0}%, dist: ${dist.toInt()}m) - activating high-accuracy GPS to verify"
                         )
                         sharedPrefs.edit()
                             .putBoolean(Constants.SHARED_PREFS_KEY_IS_EXIT_PENDING, true)
@@ -303,21 +303,21 @@ class PeriodicLocationTrackingService : Service() {
                         newMode = TrackingMode.EXIT_PENDING
                     } else {
                         // Already in EXIT_PENDING mode, still no GPS confirmation
-                        Log.d("PeriodicLocationTrackingService", "⏳ EXIT_PENDING: Still waiting for GPS confirmation (got: ${quality?.source?.label ?: "no signal"})")
+                        Log.d("PeriodicLocationTrackingService", "â³ EXIT_PENDING: Still waiting for GPS confirmation (got: ${quality?.source?.label ?: "no signal"})")
                         LocationFileLogger.w(
                             this@PeriodicLocationTrackingService,
                             "Geofence",
-                            "⏳ EXIT_PENDING: Waiting for GPS (got: ${quality?.source?.label ?: "no signal"}, trust: ${quality?.trustScore ?: 0}%, dist: ${dist.toInt()}m)"
+                            "â³ EXIT_PENDING: Waiting for GPS (got: ${quality?.source?.label ?: "no signal"}, trust: ${quality?.trustScore ?: 0}%, dist: ${dist.toInt()}m)"
                         )
                     }
                 }
             } else if (isExitPending && isNowInside) {
                 // FALSE ALARM - we thought we were exiting but GPS confirms we're still inside
-                Log.d("PeriodicLocationTrackingService", "❌ FALSE ALARM: GPS confirms still inside ${it.id.take(8)} - switching back to PASSIVE")
+                Log.d("PeriodicLocationTrackingService", "âŒ FALSE ALARM: GPS confirms still inside ${it.id.take(8)} - switching back to PASSIVE")
                 LocationFileLogger.i(
                     this@PeriodicLocationTrackingService,
                     "Geofence",
-                    "❌ Exit false alarm - GPS confirms still inside (dist: ${dist.toInt()}m, source: ${quality?.source?.label}, trust: ${quality?.trustScore}%)"
+                    "âŒ Exit false alarm - GPS confirms still inside (dist: ${dist.toInt()}m, source: ${quality?.source?.label}, trust: ${quality?.trustScore}%)"
                 )
                 sharedPrefs.edit()
                     .putBoolean(Constants.SHARED_PREFS_KEY_IS_EXIT_PENDING, false)
@@ -329,7 +329,7 @@ class PeriodicLocationTrackingService : Service() {
 
         // Apply mode change if needed
         if (modeChangeNeeded && newMode != null) {
-            Log.d("PeriodicLocationTrackingService", "🔄 Mode change requested: $currentMode → $newMode")
+            Log.d("PeriodicLocationTrackingService", "ðŸ”„ Mode change requested: $currentMode â†’ $newMode")
             switchToMode(newMode)
         }
 
@@ -368,7 +368,7 @@ class PeriodicLocationTrackingService : Service() {
             LocationFileLogger.w(
                 this,
                 "LocationUpdate",
-                "⚠️ Location quality too poor (accuracy: ${location.accuracy.toInt()}m), rejecting."
+                "âš ï¸ Location quality too poor (accuracy: ${location.accuracy.toInt()}m), rejecting."
             )
             Log.w("PeriodicLocationTrackingService", "Rejecting location with insufficient quality")
             return
@@ -379,7 +379,7 @@ class PeriodicLocationTrackingService : Service() {
             LocationFileLogger.w(
                 this,
                 "LocationUpdate",
-                "⚠️ Location trust score too low (${quality.trustScore}%, source: ${quality.source.label}), rejecting."
+                "âš ï¸ Location trust score too low (${quality.trustScore}%, source: ${quality.source.label}), rejecting."
             )
             Log.w("PeriodicLocationTrackingService", "Rejecting location with trust score ${quality.trustScore}")
             return
@@ -403,7 +403,7 @@ class PeriodicLocationTrackingService : Service() {
                     append(" | Source: ${quality.source.label}")
                     append(" | Trust: ${quality.trustScore}%")
                     append(" | Confidence: ${quality.confidence}")
-                    if (quality.payrollVerified) append(" | ✅ Payroll verified")
+                    if (quality.payrollVerified) append(" | âœ… Payroll verified")
                 }
                 
                 svc.sendLocationEvent(
@@ -420,11 +420,11 @@ class PeriodicLocationTrackingService : Service() {
                 
                 // Log to file for diagnostics
                 val qualityIcon = when(quality.source) {
-                    LocationSource.GPS_HIGH_QUALITY -> "🟢"
-                    LocationSource.GPS_MEDIUM_QUALITY -> "🟡"
-                    LocationSource.WIFI_HIGH_CONFIDENCE -> "🔵"
-                    LocationSource.WIFI_MEDIUM_CONFIDENCE -> "⚪"
-                    else -> "⚫"
+                    LocationSource.GPS_HIGH_QUALITY -> "ðŸŸ¢"
+                    LocationSource.GPS_MEDIUM_QUALITY -> "ðŸŸ¡"
+                    LocationSource.WIFI_HIGH_CONFIDENCE -> "ðŸ”µ"
+                    LocationSource.WIFI_MEDIUM_CONFIDENCE -> "âšª"
+                    else -> "âš«"
                 }
                 
                 LocationFileLogger.i(
@@ -471,13 +471,13 @@ class PeriodicLocationTrackingService : Service() {
         } else if (action == "EXIT_PENDING") {
             // Triggered by GeofenceBroadcastReceiver when low-quality exit signal detected
             // Switch to EXIT_PENDING mode (HIGH_ACCURACY, 30-sec intervals) to verify with GPS
-            Log.d("PeriodicLocationTrackingService", "🔍 EXIT_PENDING action received - switching to verification mode")
+            Log.d("PeriodicLocationTrackingService", "ðŸ” EXIT_PENDING action received - switching to verification mode")
             switchToMode(TrackingMode.EXIT_PENDING)
             return START_STICKY
         } else if (action == "FORCE_CHECK_EXIT_DETECTED") {
             // Triggered by ForceCheckAlarmReceiver when alarm-based force-check detects exit during Doze
-            Log.d("PeriodicLocationTrackingService", "🚨 FORCE_CHECK_EXIT_DETECTED action received - switching to EXIT_PENDING mode")
-            LocationFileLogger.w(this, "Service", "🚨 Force-check alarm detected exit - switching to EXIT_PENDING")
+            Log.d("PeriodicLocationTrackingService", "ðŸš¨ FORCE_CHECK_EXIT_DETECTED action received - switching to EXIT_PENDING mode")
+            LocationFileLogger.w(this, "Service", "ðŸš¨ Force-check alarm detected exit - switching to EXIT_PENDING")
             switchToMode(TrackingMode.EXIT_PENDING)
             return START_STICKY
         }
@@ -485,7 +485,7 @@ class PeriodicLocationTrackingService : Service() {
         val geofenceJson = intent?.getStringExtra("geofence_data")
         if (geofenceJson != null) {
             // Credentials were just written to SharedPreferences by BackgroundLocationModule.start()
-            // — rebuild the SupabaseService so it picks up any updated url/key.
+            // â€” rebuild the SupabaseService so it picks up any updated url/key.
             val sp = getSharedPreferences(Constants.SHARED_PREFS_NAME, Context.MODE_PRIVATE)
             val url = sp.getString(Constants.KEY_SUPABASE_URL, null)
             val key = sp.getString(Constants.KEY_SUPABASE_PUBLISHABLE_KEY, null)
@@ -508,7 +508,7 @@ class PeriodicLocationTrackingService : Service() {
         // Debounce: ignore if we registered less than 3 seconds ago to prevent double-registration races
         val now = System.currentTimeMillis()
         if (now - lastGeofenceRegistrationTime < 3000L) {
-            Log.d("PeriodicLocationTrackingService", "registerGeofences debounced — called too soon after last registration.")
+            Log.d("PeriodicLocationTrackingService", "registerGeofences debounced â€” called too soon after last registration.")
             return
         }
         lastGeofenceRegistrationTime = now
@@ -518,15 +518,12 @@ class PeriodicLocationTrackingService : Service() {
         // Clear in-memory dedup cache so a fresh check-in always fires new events
         BackgroundLocationManager.clearCache()
 
-        // Start WorkManager fallback pings — ensures events are sent even when FusedLocation throttles delivery
+        // Start WorkManager fallback pings â€” ensures events are sent even when FusedLocation throttles delivery
         BackgroundLocationManager.startPeriodicUpdates(this)
         
-        // Start AlarmManager fallback — guaranteed location updates every 6 min even in Doze mode
+        // Start AlarmManager fallback â€” guaranteed location updates every 6 min even in Doze mode
         LocationAlarmScheduler.scheduleNextAlarm(this)
         Log.d("PeriodicLocationTrackingService", "AlarmManager fallback started (6-min intervals)")
-        
-        // LAYER 1: Start Activity Recognition — detects IN_VEHICLE/ON_BICYCLE for missed exits
-        startActivityRecognition()
         
         LocationFileLogger.i(this, "Service", "Location tracking started: ${activeAssignments.size} geofences registered")
 
@@ -667,20 +664,20 @@ class PeriodicLocationTrackingService : Service() {
         isTrackingActive = (newMode == TrackingMode.ACTIVE)  // For backwards compatibility
         currentModeIsActive = isTrackingActive  // For backwards compatibility
         
-        LocationFileLogger.i(this, "Service", "Mode switched: $oldMode → $newMode")
-        Log.d("PeriodicLocationTrackingService", "🔄 Mode switch: $oldMode → $newMode")
+        LocationFileLogger.i(this, "Service", "Mode switched: $oldMode â†’ $newMode")
+        Log.d("PeriodicLocationTrackingService", "ðŸ”„ Mode switch: $oldMode â†’ $newMode")
         
         // Manage force-check alarms based on mode
         when (newMode) {
             TrackingMode.PASSIVE -> {
                 // Schedule independent AlarmManager force-checks to wake device from Doze
                 ForceCheckAlarmScheduler.scheduleNextAlarm(applicationContext)
-                Log.d("PeriodicLocationTrackingService", "⏰ Scheduled force-check alarms for PASSIVE mode")
+                Log.d("PeriodicLocationTrackingService", "â° Scheduled force-check alarms for PASSIVE mode")
             }
             TrackingMode.EXIT_PENDING, TrackingMode.ACTIVE -> {
                 // Cancel force-check alarms - not needed when actively tracking
                 ForceCheckAlarmScheduler.cancelAlarm(applicationContext)
-                Log.d("PeriodicLocationTrackingService", "🛑 Cancelled force-check alarms - entering $newMode mode")
+                Log.d("PeriodicLocationTrackingService", "ðŸ›‘ Cancelled force-check alarms - entering $newMode mode")
             }
         }
         
@@ -735,7 +732,7 @@ class PeriodicLocationTrackingService : Service() {
 
         try {
             fusedLocationClient.requestLocationUpdates(request, locationCallback, Looper.getMainLooper())
-            Log.d("PeriodicLocationTrackingService", "✅ Location updates started in $newMode mode (interval: ${interval/1000}s, priority: ${if (priority == Priority.PRIORITY_HIGH_ACCURACY) "HIGH_ACCURACY" else "BALANCED"})")
+            Log.d("PeriodicLocationTrackingService", "âœ… Location updates started in $newMode mode (interval: ${interval/1000}s, priority: ${if (priority == Priority.PRIORITY_HIGH_ACCURACY) "HIGH_ACCURACY" else "BALANCED"})")
         } catch (e: SecurityException) { 
             Log.e("PeriodicLocationTrackingService", "Permission error starting location updates: $e") 
         }
@@ -754,7 +751,7 @@ class PeriodicLocationTrackingService : Service() {
 
     private fun showForegroundNotification(appPackageName: String) {
         // Class.forName can throw ClassNotFoundException on some Expo/EAS builds where
-        // MainActivity lives at a different path — fall back to a generic launch intent.
+        // MainActivity lives at a different path â€” fall back to a generic launch intent.
         val notificationIntent = try {
             Intent(applicationContext, Class.forName("$appPackageName.MainActivity")
                 .asSubclass(android.app.Activity::class.java))
@@ -769,7 +766,7 @@ class PeriodicLocationTrackingService : Service() {
         val locationName = getSharedPreferences(Constants.SHARED_PREFS_NAME, Context.MODE_PRIVATE)
             .getString(Constants.KEY_LOCATION_NAME, null)
 
-        val contentTitle = if (!locationName.isNullOrBlank()) "Working at $locationName" else "Koord — Work Session Active"
+        val contentTitle = if (!locationName.isNullOrBlank()) "Working at $locationName" else "Koord â€” Work Session Active"
         val contentText = "Location tracking is active."
         
         val notification = NotificationCompat.Builder(this, Constants.NOTIFICATION_CHANNEL_ID)
@@ -795,7 +792,7 @@ class PeriodicLocationTrackingService : Service() {
         val sharedPrefs = getSharedPreferences(Constants.SHARED_PREFS_NAME, Context.MODE_PRIVATE)
         val workerId = sharedPrefs.getString(Constants.KEY_WORKER_ID, null)
         if (workerId != null) {
-            Log.d("PeriodicLocationTrackingService", "App task removed with active session — scheduling restart.")
+            Log.d("PeriodicLocationTrackingService", "App task removed with active session â€” scheduling restart.")
             val restartIntent = Intent(applicationContext, PeriodicLocationTrackingService::class.java)
             val pendingIntent = android.app.PendingIntent.getService(
                 applicationContext, 1, restartIntent,
@@ -811,63 +808,6 @@ class PeriodicLocationTrackingService : Service() {
     }
 
     /**
-     * LAYER 1: Activity Recognition Registration
-     * Detects when worker is IN_VEHICLE or ON_BICYCLE to catch missed geofence exits
-     */
-    private fun startActivityRecognition() {
-        try {
-            val activityRecognitionClient = com.google.android.gms.location.ActivityRecognition.getClient(this)
-            
-            val intent = Intent(this, ActivityRecognitionReceiver::class.java)
-            val pendingIntent = PendingIntent.getBroadcast(
-                this,
-                Constants.ACTIVITY_RECOGNITION_PENDING_INTENT_REQUEST_CODE,
-                intent,
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_MUTABLE
-                } else {
-                    PendingIntent.FLAG_UPDATE_CURRENT
-                }
-            )
-            
-            activityRecognitionClient.requestActivityUpdates(
-                Constants.ACTIVITY_RECOGNITION_INTERVAL_MS,
-                pendingIntent
-            ).addOnSuccessListener {
-                Log.d("PeriodicLocationTrackingService", "✅ LAYER 1: Activity Recognition started (30-sec updates)")
-                LocationFileLogger.i(this, "Service", "Activity Recognition started: monitoring for vehicle/bicycle movement")
-            }.addOnFailureListener { e ->
-                Log.e("PeriodicLocationTrackingService", "❌ Activity Recognition failed to start: ${e.message}")
-                LocationFileLogger.e(this, "Service", "Activity Recognition failed: ${e.message}")
-            }
-        } catch (e: Exception) {
-            Log.e("PeriodicLocationTrackingService", "Activity Recognition error: ${e.message}")
-        }
-    }
-    
-    private fun stopActivityRecognition() {
-        try {
-            val activityRecognitionClient = com.google.android.gms.location.ActivityRecognition.getClient(this)
-            
-            val intent = Intent(this, ActivityRecognitionReceiver::class.java)
-            val pendingIntent = PendingIntent.getBroadcast(
-                this,
-                Constants.ACTIVITY_RECOGNITION_PENDING_INTENT_REQUEST_CODE,
-                intent,
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_MUTABLE
-                } else {
-                    PendingIntent.FLAG_UPDATE_CURRENT
-                }
-            )
-            
-            activityRecognitionClient.removeActivityUpdates(pendingIntent)
-            Log.d("PeriodicLocationTrackingService", "Activity Recognition stopped")
-        } catch (e: Exception) {
-            Log.e("PeriodicLocationTrackingService", "Error stopping Activity Recognition: ${e.message}")
-        }
-    }
-    
     override fun onDestroy() {
         super.onDestroy()
         isRunning.set(false)
@@ -875,7 +815,6 @@ class PeriodicLocationTrackingService : Service() {
         BackgroundLocationManager.stopPeriodicUpdates(this)
         LocationAlarmScheduler.cancelAlarms(this)
         ForceCheckAlarmScheduler.cancelAlarm(this)  // Cancel force-check alarms
-        stopActivityRecognition()
         serviceJob.cancel()
         Log.d("PeriodicLocationTrackingService", "Service destroyed.")
     }

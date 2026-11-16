@@ -125,60 +125,6 @@ export default function Home() {
         }
         await Notifications.requestPermissionsAsync();
         
-        // Request Activity Recognition permission on Android 10+ (API 29+)
-        // CRITICAL: Required for detecting when worker is driving/cycling between job sites
-        if (Platform.OS === 'android' && Platform.Version >= 29) {
-          try {
-            const { PermissionsAndroid } = require('react-native');
-            
-            // Check if permission already granted first
-            const hasPermission = await PermissionsAndroid.check('android.permission.ACTIVITY_RECOGNITION');
-            console.log('🚗 Activity Recognition permission check:', hasPermission);
-            
-            if (!hasPermission) {
-              console.log('📱 Requesting Activity Recognition permission from user...');
-              
-              const activityPermission = await PermissionsAndroid.request(
-                'android.permission.ACTIVITY_RECOGNITION',
-                {
-                  title: t('worker.activityRecognition.title', 'Physical Activity Permission'),
-                  message: t('worker.activityRecognition.message', 'We use activity recognition to detect when you\'re driving between job sites. This helps ensure accurate location tracking even in areas with poor GPS signal.'),
-                  buttonPositive: t('worker.activityRecognition.allow', 'Allow'),
-                  buttonNegative: t('worker.activityRecognition.deny', 'Deny'),
-                }
-              );
-              
-              console.log('🔐 Activity Recognition permission result:', activityPermission);
-              
-              if (activityPermission === PermissionsAndroid.RESULTS.GRANTED) {
-                console.log('✅ Activity Recognition permission granted');
-              } else if (activityPermission === PermissionsAndroid.RESULTS.DENIED) {
-                console.log('❌ Activity Recognition permission denied by user');
-                Alert.alert(
-                  'Activity Detection Disabled',
-                  'We won\'t be able to detect when you\'re driving between sites. Exit detection will rely on 5-minute GPS checks instead (may be slower).',
-                  [{ text: 'OK' }]
-                );
-              } else if (activityPermission === PermissionsAndroid.RESULTS.NEVER_ASK_AGAIN) {
-                console.log('🚫 Activity Recognition permission blocked permanently');
-                Alert.alert(
-                  'Activity Detection Blocked',
-                  'You\'ve blocked activity detection. To enable it, go to Settings > Apps > WorkHours Tracker > Permissions and enable Physical Activity.',
-                  [
-                    { text: 'Open Settings', onPress: () => Linking.openSettings() },
-                    { text: 'Cancel', style: 'cancel' }
-                  ]
-                );
-              }
-            } else {
-              console.log('✅ Activity Recognition permission already granted (checked)');
-            }
-          } catch (err) {
-            console.error('❌ Activity Recognition permission error:', err);
-            console.log('⚠️ Fallback: Force-check alarms will still detect exits every 5 minutes');
-          }
-        }
-        
         // Show battery optimization prompt once on Android
         if (Platform.OS === 'android') {
           try {
