@@ -57,7 +57,8 @@ const WorkerTimesheetReport = () => {
   
   const [selectedMonth, setSelectedMonth] = useState(initialMonth.month);
   const [selectedYear, setSelectedYear] = useState(initialMonth.year);
-  const [timesheetData, setTimesheetData] = useState<WorkerTimesheetData | null>(null);
+  const [allSessions, setAllSessions] = useState<WorkSession[]>([]);
+  const [hourlyRate, setHourlyRate] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -72,61 +73,104 @@ const WorkerTimesheetReport = () => {
     [workers, selectedWorkerId]
   );
 
+  // Fetch all sessions and hourly rate for the selected worker
   useEffect(() => {
     if (!selectedWorkerId) {
-      setTimesheetData(null);
+      setAllSessions([]);
+      setHourlyRate(null);
       return;
     }
 
-    const fetchTimesheetData = async () => {
+    const fetchData = async () => {
       setLoading(true);
       try {
-        const startOfMonth = moment().year(selectedYear).month(selectedMonth - 1).startOf('month').toISOString();
-        const endOfMonth = moment().year(selectedYear).month(selectedMonth - 1).endOf('month').toISOString();
+        // Fetch sessions for the entire year
+        const startOfYear = moment().year(selectedYear).startOf('year').toISOString();
+        const endOfYear = moment().year(selectedYear).endOf('year').toISOString();
 
-        // Fetch sessions
-        const { data: sessions, error: sessionsError } = await supabase
+        const sessionsPromise = supabase
           .from('work_sessions')
           .select('*')
           .eq('worker_id', selectedWorkerId)
-          .gte('start_time', startOfMonth)
-          .lte('start_time', endOfMonth)
+          .gte('start_time', startOfYear)
+          .lte('start_time', endOfYear)
           .order('start_time', { ascending: true });
 
-        if (sessionsError) throw sessionsError;
+        // Fetch the effective hourly rate for the selected month
+        const monthStart = moment().year(selectedYear).month(selectedMonth - 1).startOf('month').toISOString();
+        const ratePromise = supabase
+          .from('hourly_rates')
+          .select('hourly_rate')
+          .eq('employee_id', selectedWorkerId)
+          .lte('effective_from', monthStart)
+          .order('effective_from', { ascending: false })
+          .limit(1)
+          .maybeSingle();
 
-        // Fetch payroll summary for this worker
-        const { data: payrollData, error: payrollError } = await supabase.rpc('get_monthly_payroll_report', {
-          report_year: selectedYear,
-          report_month: selectedMonth,
-        });
+        const [sessionsResult, rateResult] = await Promise.all([sessionsPromise, ratePromise]);
 
-        if (payrollError) throw payrollError;
+        if (sessionsResult.error) throw sessionsResult.error;
+        setAllSessions(sessionsResult.data || []);
 
-        const workerPayroll = (payrollData || []).find((row: any) => row.worker_id === selectedWorkerId);
-
-        setTimesheetData({
-          worker_id: selectedWorkerId,
-          employee_number: selectedWorker?.employee_number || null,
-          worker_name: selectedWorker?.full_name || 'Worker',
-          sessions: sessions || [],
-          total_work_hours: workerPayroll?.total_work_hours || 0,
-          total_break_minutes: workerPayroll?.total_break_minutes || 0,
-          total_correction_minutes: workerPayroll?.total_correction_minutes || 0,
-          payable_hours: workerPayroll?.payable_hours || 0,
-          effective_hourly_rate: workerPayroll?.effective_hourly_rate || null,
-          total_pay: workerPayroll?.total_pay || null,
-        });
+        if (rateResult.error && rateResult.error.code !== 'PGRST116') {
+          console.error('Error fetching hourly rate:', rateResult.error);
+        }
+        setHourlyRate(rateResult.data?.hourly_rate || null);
       } catch (error) {
-        console.error('Error fetching timesheet data:', error);
-        setTimesheetData(null);
+        console.error('Error fetching data:', error);
+        setAllSessions([]);
+        setHourlyRate(null);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchTimesheetData();
-  }, [selectedWorkerId, selectedMonth, selectedYear, selectedWorker]);
+    fetchData();
+  }, [selectedWorkerId, selectedYear, selectedMonth]);
+
+  // Compute timesheet data for the selected month from cached sessions
+  const timesheetData = useMemo((): WorkerTimesheetData | null => {
+    if (!selectedWorkerId || !selectedWorker) return null;
+
+    const startOfMonth = moment().year(selectedYear).month(selectedMonth - 1).startOf('month');
+    const endOfMonth = moment().year(selectedYear).month(selectedMonth - 1).endOf('month');
+
+    // Filter sessions for the selected month
+    const monthSessions = allSessions.filter(session => {
+      const sessionDate = moment(session.start_time);
+      return sessionDate.isSameOrAfter(startOfMonth) && sessionDate.isSameOrBefore(endOfMonth);
+    });
+
+    // Calculate totals locally
+    let total_work_hours = 0;
+    let total_break_minutes = 0;
+    let total_correction_minutes = 0;
+
+    monthSessions.forEach(session => {
+      if (session.end_time) {
+        const durationMinutes = moment(session.end_time).diff(moment(session.start_time), 'minutes');
+        total_work_hours += durationMinutes / 60;
+        total_break_minutes += session.total_break_minutes || 0;
+        total_correction_minutes += session.correction_minutes || 0;
+      }
+    });
+
+    const payable_hours = total_work_hours - (total_break_minutes / 60) + (total_correction_minutes / 60);
+    const total_pay = hourlyRate ? payable_hours * hourlyRate : null;
+
+    return {
+      worker_id: selectedWorkerId,
+      employee_number: selectedWorker.employee_number || null,
+      worker_name: selectedWorker.full_name,
+      sessions: monthSessions,
+      total_work_hours,
+      total_break_minutes,
+      total_correction_minutes,
+      payable_hours,
+      effective_hourly_rate: hourlyRate,
+      total_pay,
+    };
+  }, [selectedWorkerId, selectedWorker, selectedMonth, selectedYear, allSessions, hourlyRate]);
 
   const handlePrevMonth = () => {
     const newDate = moment({ year: selectedYear, month: selectedMonth - 1 }).subtract(1, 'month');
