@@ -13,6 +13,7 @@ import { useSession } from '~/context/AuthContext';
 import moment from 'moment';
 import { getCurrencySymbol } from '../../../utils/currency';
 import UserAvatar from '../../../components/UserAvatar';
+import { SummaryStatsPanel, StatItem } from '../../../components/SummaryStatsPanel';
 
 interface WorkerTimesheetData {
   worker_id: string;
@@ -320,40 +321,38 @@ const WorkerTimesheetReport = () => {
                   </View>
 
                   {/* Summary Stats */}
-                  <View style={styles.summaryRow}>
-                    <View style={styles.summaryBox}>
-                      <Text style={styles.summaryValue} fontType="bold">{timesheetData.payable_hours.toFixed(1)}h</Text>
-                      <Text style={styles.summaryLabel}>Payable Hours</Text>
-                    </View>
-                    <View style={styles.summaryBox}>
-                      <Text style={styles.summaryValue} fontType="bold">{timesheetData.sessions.length}</Text>
-                      <Text style={styles.summaryLabel}>Sessions</Text>
-                    </View>
-                    <View style={styles.summaryBox}>
-                      <Text style={styles.summaryValue} fontType="bold">{timesheetData.total_break_minutes}m</Text>
-                      <Text style={styles.summaryLabel}>Total Breaks</Text>
-                    </View>
-                    <View style={styles.summaryBox}>
-                      <Text
-                        style={[
-                          styles.summaryValue,
-                          { color: timesheetData.total_correction_minutes >= 0 ? theme.colors.success : theme.colors.danger }
-                        ]}
-                        fontType="bold"
-                      >
-                        {timesheetData.total_correction_minutes >= 0 ? '+' : ''}{timesheetData.total_correction_minutes}m
-                      </Text>
-                      <Text style={styles.summaryLabel}>Corrections</Text>
-                    </View>
-                    {timesheetData.total_pay !== null && (
-                      <View style={styles.summaryBox}>
-                        <Text style={[styles.summaryValue, { color: theme.colors.success }]} fontType="bold">
-                          {currency}{timesheetData.total_pay.toFixed(2)}
-                        </Text>
-                        <Text style={styles.summaryLabel}>Total Pay</Text>
-                      </View>
-                    )}
-                  </View>
+                  <SummaryStatsPanel
+                    stats={[
+                      {
+                        label: 'Payable Hours',
+                        value: `${timesheetData.payable_hours.toFixed(1)}h`,
+                        highlight: true,
+                        labelColor: theme.colors.primary,
+                        valueColor: theme.colors.primary,
+                      },
+                      {
+                        label: 'Sessions',
+                        value: timesheetData.sessions.length.toString(),
+                      },
+                      {
+                        label: 'Total Breaks',
+                        value: `${timesheetData.total_break_minutes}m`,
+                      },
+                      {
+                        label: 'Corrections',
+                        value: `${timesheetData.total_correction_minutes >= 0 ? '+' : ''}${timesheetData.total_correction_minutes}m`,
+                        valueColor: timesheetData.total_correction_minutes >= 0 ? theme.colors.success : theme.colors.danger,
+                      },
+                      ...(timesheetData.total_pay !== null ? [{
+                        label: 'Total Pay',
+                        value: `${currency}${timesheetData.total_pay.toFixed(2)}`,
+                        highlight: true,
+                        labelColor: theme.colors.success,
+                        valueColor: theme.colors.success,
+                        valueFontSize: 24,
+                      }] : []),
+                    ]}
+                  />
                 </Card>
 
                 {/* Sessions Table */}
@@ -583,27 +582,6 @@ const styles = StyleSheet.create({
     color: theme.colors.headingText,
     marginHorizontal: theme.spacing(1.5),
     minWidth: 120,
-    textAlign: 'center',
-  },
-  summaryRow: {
-    flexDirection: 'row',
-    gap: theme.spacing(2),
-  },
-  summaryBox: {
-    flex: 1,
-    backgroundColor: theme.colors.pageBackground,
-    padding: theme.spacing(2),
-    borderRadius: theme.radius.md,
-    alignItems: 'center',
-  },
-  summaryValue: {
-    fontSize: theme.fontSizes.lg,
-    color: theme.colors.headingText,
-    marginBottom: theme.spacing(0.5),
-  },
-  summaryLabel: {
-    fontSize: theme.fontSizes.xs,
-    color: theme.colors.bodyText,
     textAlign: 'center',
   },
   sessionsCard: {
