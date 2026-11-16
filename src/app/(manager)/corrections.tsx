@@ -292,7 +292,7 @@ const CorrectionsPage = () => {
                                                             </TouchableOpacity>
                                                         ) : (
                                                             <TouchableOpacity onPress={() => openEditModal(session)} style={styles.actionButton}>
-                                                                <Ionicons name="pencil-outline" size={22} color={theme.colors.primary} />
+                                                                <Ionicons name="pencil-outline" size={16} color={theme.colors.iconColor} />
                                                             </TouchableOpacity>
                                                         )}
                                                     </View>
@@ -572,31 +572,54 @@ const styles = StyleSheet.create({
     tableHeaderRow: {
         flexDirection: 'row',
         backgroundColor: theme.colors.pageBackground,
-        borderBottomWidth: 1,
-        borderBottomColor: theme.colors.borderColor,
+        borderBottomWidth: 2,
+        borderBottomColor: theme.colors.primary,
+        paddingVertical: theme.spacing(1.5),
     },
     tableHeaderCell: {
-        padding: theme.spacing(2),
-        color: theme.colors.bodyText,
+        paddingHorizontal: theme.spacing(2),
+        color: theme.colors.headingText,
         textAlign: 'center',
         flex: 1,
         fontSize: theme.fontSizes.xs,
         textTransform: 'uppercase',
-        letterSpacing: 1,
+        letterSpacing: 0.8,
     },
-    tableHeaderCellActions: { width: 100, padding: theme.spacing(2) },
+    tableHeaderCellActions: { 
+        width: 100, 
+        paddingHorizontal: theme.spacing(2),
+    },
     tableRow: {
         flexDirection: 'row',
         alignItems: 'center',
         borderBottomWidth: 1,
         borderBottomColor: theme.colors.borderColor,
         backgroundColor: theme.colors.cardBackground,
-        paddingVertical: theme.spacing(1),
+        paddingVertical: theme.spacing(2),
+        minHeight: 72,
     },
-    tableCell: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-    tableCellTextMain: { color: theme.colors.headingText, fontSize: 15 },
-    tableCellTextSmall: { color: theme.colors.bodyText, fontSize: 13, marginTop: 2 },
-    tableCellActions: { width: 100, alignItems: 'center', justifyContent: 'center' },
+    tableCell: { 
+        flex: 1, 
+        alignItems: 'center', 
+        justifyContent: 'center',
+        paddingHorizontal: theme.spacing(1.5),
+    },
+    tableCellTextMain: { 
+        color: theme.colors.headingText, 
+        fontSize: 15,
+        marginBottom: 2,
+    },
+    tableCellTextSmall: { 
+        color: theme.colors.bodyText, 
+        fontSize: 13, 
+        marginTop: 2,
+    },
+    tableCellActions: { 
+        width: 100, 
+        alignItems: 'center', 
+        justifyContent: 'center',
+        paddingHorizontal: theme.spacing(2),
+    },
     sessionsListContent: { paddingBottom: theme.spacing(1) },
     activeBadge: {
         backgroundColor: theme.colors.success + '20',
@@ -610,15 +633,25 @@ const styles = StyleSheet.create({
         backgroundColor: theme.colors.danger,
         flexDirection: 'row',
         alignItems: 'center',
-        paddingHorizontal: 10,
+        paddingHorizontal: 12,
         paddingVertical: 6,
         borderRadius: theme.radius.md,
+        gap: 4,
     },
-    checkOutButtonText: { color: 'white', fontSize: 11, marginLeft: 4 },
+    checkOutButtonText: { 
+        color: 'white', 
+        fontSize: 12, 
+        letterSpacing: 0.5,
+    },
     actionButton: {
-        padding: 8,
-        borderRadius: 20,
+        width: 30,
+        height: 30,
+        borderRadius: 6,
+        borderWidth: 1,
+        borderColor: theme.colors.borderColor,
         backgroundColor: theme.colors.pageBackground,
+        justifyContent: 'center',
+        alignItems: 'center',
     },
     centeredView: {
         flex: 1,
