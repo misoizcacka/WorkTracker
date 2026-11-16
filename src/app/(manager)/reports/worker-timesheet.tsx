@@ -146,11 +146,10 @@ const WorkerTimesheetReport = () => {
         onPress={() => setSelectedWorkerId(item.id)}
         style={[styles.workerItem, isSelected && styles.selectedWorkerItem]}
       >
-        <Ionicons
-          name={isSelected ? "person" : "person-outline"}
-          size={20}
-          color={isSelected ? theme.colors.primary : theme.colors.bodyText}
-          style={styles.workerIcon}
+        <UserAvatar
+          avatarUrl={item.avatar_url}
+          size={36}
+          style={styles.workerItemAvatar}
         />
         <View style={styles.workerInfo}>
           <Text
@@ -294,7 +293,7 @@ const WorkerTimesheetReport = () => {
                   <View style={styles.workerHeaderRow}>
                     <View style={styles.workerHeaderLeft}>
                       <UserAvatar 
-                        avatarUrl={selectedWorker?.public_avatar_url || selectedWorker?.avatar_url} 
+                        avatarUrl={selectedWorker?.avatar_url} 
                         size={56} 
                         style={styles.workerAvatar}
                       />
@@ -507,7 +506,7 @@ const styles = StyleSheet.create({
     borderColor: theme.colors.primary,
     borderWidth: 1,
   },
-  workerIcon: {
+  workerItemAvatar: {
     marginRight: theme.spacing(1.5),
   },
   workerInfo: {
