@@ -187,8 +187,11 @@ const CorrectionsPage = () => {
     const SessionTableHeader = () => (
         <View style={styles.tableHeaderRow}>
             <Text style={styles.tableHeaderCell} fontType="bold">Date</Text>
-            <Text style={styles.tableHeaderCell} fontType="bold">Time</Text>
-            <Text style={styles.tableHeaderCell} fontType="bold">Break/Corr</Text>
+            <Text style={styles.tableHeaderCell} fontType="bold">Start Time</Text>
+            <Text style={styles.tableHeaderCell} fontType="bold">End Time</Text>
+            <Text style={styles.tableHeaderCell} fontType="bold">Duration</Text>
+            <Text style={styles.tableHeaderCell} fontType="bold">Break</Text>
+            <Text style={styles.tableHeaderCell} fontType="bold">Correction</Text>
             <Text style={styles.tableHeaderCellActions}></Text>
         </View>
     );
@@ -260,11 +263,16 @@ const CorrectionsPage = () => {
                                             return (
                                                 <View key={session.id} style={styles.tableRow}>
                                                     <View style={styles.tableCell}>
-                                                        <Text style={styles.tableCellTextMain} fontType="medium">{moment(session.start_time).format('MMM D, YYYY')}</Text>
+                                                        <Text style={styles.tableCellText} fontType="regular">{moment(session.start_time).format('MMM D')}</Text>
                                                     </View>
                                                     <View style={styles.tableCell}>
-                                                        <Text style={styles.tableCellTextSmall} fontType="regular">
-                                                            {moment(session.start_time).format('HH:mm')} - {session.end_time ? moment(session.end_time).format('HH:mm') : '...'}
+                                                        <Text style={styles.tableCellText} fontType="regular">
+                                                            {moment(session.start_time).format('HH:mm')}
+                                                        </Text>
+                                                    </View>
+                                                    <View style={styles.tableCell}>
+                                                        <Text style={styles.tableCellText} fontType="regular">
+                                                            {session.end_time ? moment(session.end_time).format('HH:mm') : '—'}
                                                         </Text>
                                                         {isActive && (
                                                             <View style={styles.activeBadge}>
@@ -273,9 +281,19 @@ const CorrectionsPage = () => {
                                                         )}
                                                     </View>
                                                     <View style={styles.tableCell}>
-                                                        <Text style={styles.tableCellTextSmall} fontType="regular">Break: {session.total_break_minutes}m</Text>
-                                                        <Text style={[styles.tableCellTextSmall, { color: session.correction_minutes >= 0 ? theme.colors.success : theme.colors.danger }]} fontType="medium">
-                                                            Corr: {session.correction_minutes >= 0 ? '+' : ''}{session.correction_minutes}m
+                                                        <Text style={styles.tableCellText} fontType="regular">
+                                                            {session.end_time 
+                                                                ? `${((moment(session.end_time).diff(moment(session.start_time), 'minutes') - session.total_break_minutes) / 60).toFixed(1)}h`
+                                                                : '—'
+                                                            }
+                                                        </Text>
+                                                    </View>
+                                                    <View style={styles.tableCell}>
+                                                        <Text style={styles.tableCellText} fontType="regular">{session.total_break_minutes}m</Text>
+                                                    </View>
+                                                    <View style={styles.tableCell}>
+                                                        <Text style={[styles.tableCellText, { color: session.correction_minutes >= 0 ? theme.colors.success : theme.colors.danger }]} fontType="medium">
+                                                            {session.correction_minutes >= 0 ? '+' : ''}{session.correction_minutes}m
                                                         </Text>
                                                     </View>
                                                     <View style={styles.tableCellActions}>
@@ -323,40 +341,22 @@ const CorrectionsPage = () => {
                             </View>
 
                             <View style={styles.sessionSummary}>
-                                <View style={styles.summaryItem}>
-                                    <Text style={styles.summaryLabel} fontType="medium">Original Time</Text>
-                                    <Text style={styles.summaryValue} fontType="bold">
-                                        {moment(editingSession?.start_time).format('HH:mm')} - {editingSession?.end_time ? moment(editingSession?.end_time).format('HH:mm') : 'Active'}
-                                    </Text>
+                                <View style={styles.summaryRow}>
+                                    <View style={styles.summaryItem}>
+                                        <Text style={styles.summaryLabel} fontType="medium">Date</Text>
+                                        <Text style={styles.summaryValue} fontType="bold">
+                                            {moment(editingSession?.start_time).format('MMM D, YYYY')}
+                                        </Text>
+                                    </View>
+                                    <View style={styles.summaryItem}>
+                                        <Text style={styles.summaryLabel} fontType="medium">Time</Text>
+                                        <Text style={styles.summaryValue} fontType="bold">
+                                            {moment(editingSession?.start_time).format('HH:mm')} - {editingSession?.end_time ? moment(editingSession?.end_time).format('HH:mm') : 'Active'}
+                                        </Text>
+                                    </View>
                                 </View>
                             </View>
                             
-                            <View style={styles.fieldRow}>
-                                <View style={styles.fieldContainer}>
-                                    <Text style={styles.label} fontType="bold">Start Time</Text>
-                                    <CrossPlatformDatePicker
-                                        date={editStartTime}
-                                        onDateChange={setEditStartTime}
-                                        mode="date"
-                                    />
-                                    <Text style={styles.fieldHint}>Date and time the session started.</Text>
-                                </View>
-                            </View>
-
-                            {editEndTime && (
-                              <View style={styles.fieldRow}>
-                                  <View style={styles.fieldContainer}>
-                                      <Text style={styles.label} fontType="bold">End Time</Text>
-                                      <CrossPlatformDatePicker
-                                          date={editEndTime}
-                                          onDateChange={(d) => setEditEndTime(d)}
-                                          mode="date"
-                                      />
-                                      <Text style={styles.fieldHint}>Date and time the session ended.</Text>
-                                  </View>
-                              </View>
-                            )}
-
                             <View style={styles.fieldRow}>
                                 <View style={styles.fieldContainer}>
                                     <Text style={styles.label} fontType="bold">Break Minutes</Text>
@@ -571,19 +571,19 @@ const styles = StyleSheet.create({
     noSessionsText: { fontSize: theme.fontSizes.md, color: theme.colors.bodyText, textAlign: 'center' },
     tableHeaderRow: {
         flexDirection: 'row',
-        backgroundColor: theme.colors.pageBackground,
-        borderBottomWidth: 2,
-        borderBottomColor: theme.colors.primary,
-        paddingVertical: theme.spacing(1.5),
+        backgroundColor: theme.colors.cardBackground,
+        borderBottomWidth: 1,
+        borderBottomColor: theme.colors.borderColor,
+        paddingVertical: theme.spacing(2),
     },
     tableHeaderCell: {
         paddingHorizontal: theme.spacing(2),
-        color: theme.colors.headingText,
+        color: theme.colors.bodyText,
         textAlign: 'center',
         flex: 1,
         fontSize: theme.fontSizes.xs,
         textTransform: 'uppercase',
-        letterSpacing: 0.8,
+        letterSpacing: 0.5,
     },
     tableHeaderCellActions: { 
         width: 100, 
@@ -596,23 +596,17 @@ const styles = StyleSheet.create({
         borderBottomColor: theme.colors.borderColor,
         backgroundColor: theme.colors.cardBackground,
         paddingVertical: theme.spacing(2),
-        minHeight: 72,
     },
     tableCell: { 
         flex: 1, 
         alignItems: 'center', 
         justifyContent: 'center',
-        paddingHorizontal: theme.spacing(1.5),
+        paddingHorizontal: theme.spacing(1),
     },
-    tableCellTextMain: { 
-        color: theme.colors.headingText, 
-        fontSize: 15,
-        marginBottom: 2,
-    },
-    tableCellTextSmall: { 
+    tableCellText: { 
         color: theme.colors.bodyText, 
-        fontSize: 13, 
-        marginTop: 2,
+        fontSize: theme.fontSizes.md,
+        textAlign: 'center',
     },
     tableCellActions: { 
         width: 100, 
@@ -681,8 +675,12 @@ const styles = StyleSheet.create({
         margin: theme.spacing(3),
         borderRadius: theme.radius.lg,
     },
+    summaryRow: {
+        flexDirection: 'row',
+        gap: theme.spacing(3),
+    },
     summaryItem: {
-        marginBottom: theme.spacing(1),
+        flex: 1,
     },
     summaryLabel: { fontSize: 12, color: theme.colors.bodyText, textTransform: 'uppercase' },
     summaryValue: { fontSize: 16, color: theme.colors.headingText, marginTop: 4 },
