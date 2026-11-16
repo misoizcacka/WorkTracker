@@ -3,6 +3,7 @@ export interface Employee {
   full_name: string;
   email: string;
   phone_number: string | null;
+  employee_number: string | null; // Human-readable employee ID for payroll (e.g., "1001", "E-0042")
   role: 'worker' | 'manager' | 'owner';
   status: 'pending' | 'active' | 'disabled';
   avatar_url: string | null;

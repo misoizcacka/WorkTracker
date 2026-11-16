@@ -26,6 +26,7 @@ const EditPersonModal: React.FC<EditPersonModalProps> = ({ visible, onClose, emp
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
+  const [employeeNumber, setEmployeeNumber] = useState('');
   const [reportingTo, setReportingTo] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
@@ -41,6 +42,7 @@ const EditPersonModal: React.FC<EditPersonModalProps> = ({ visible, onClose, emp
       setFullName(employee.full_name);
       setEmail(employee.email || '');
       setPhone(employee.phone_number || '');
+      setEmployeeNumber(employee.employee_number || '');
       setReportingTo(employee.reporting_to);
       setAvatarUrl(employee.avatar_url);
     }
@@ -120,6 +122,7 @@ const EditPersonModal: React.FC<EditPersonModalProps> = ({ visible, onClose, emp
         // Don't touch placeholder internal emails — pass the original through unchanged
         email: isPlaceholderEmail ? employee.email : email.trim().toLowerCase(),
         phone_number: phone.trim() || null,
+        employee_number: employeeNumber.trim() || null,
         reporting_to: reportingTo,
         avatar_url: avatarUrl,
       });
@@ -219,6 +222,18 @@ const EditPersonModal: React.FC<EditPersonModalProps> = ({ visible, onClose, emp
                     keyboardType="phone-pad"
                     placeholderTextColor={theme.colors.disabledText}
                   />
+                </View>
+
+                <View style={styles.inputGroup}>
+                  <Text style={styles.label} fontType="bold">Employee Number (Optional)</Text>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="e.g., 1001, E-0042"
+                    value={employeeNumber}
+                    onChangeText={setEmployeeNumber}
+                    placeholderTextColor={theme.colors.disabledText}
+                  />
+                  <Text style={styles.fieldHint}>Used for payroll exports (DATEV Personalnummer)</Text>
                 </View>
 
                 {employee?.role === 'worker' && (
