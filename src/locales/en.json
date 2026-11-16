@@ -533,6 +533,8 @@
       "projectLaborDesc": "Analyze labor costs and hours for each project.",
       "dailyDetailedTitle": "Daily Detailed Report",
       "dailyDetailedDesc": "Get a detailed, chronological breakdown of each worker's day.",
+      "workerTimesheetTitle": "Worker Timesheet",
+      "workerTimesheetDesc": "View detailed monthly timesheet for individual workers.",
       "employeeHoursPageTitle": "Employee Hours Report",
       "employeeHoursPageSubtitle": "View and analyze employee work hours for a selected period.",
       "payrollPageTitle": "Payroll Summary",

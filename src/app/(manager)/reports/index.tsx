@@ -36,6 +36,13 @@ export default function ReportsHub() {
       path: 'daily-detailed-report',
       comingSoon: false,
     },
+    {
+      title: t('manager.reports.workerTimesheetTitle'),
+      description: t('manager.reports.workerTimesheetDesc'),
+      icon: 'person-outline',
+      path: 'worker-timesheet',
+      comingSoon: false,
+    },
   ];
 
   const handlePress = (path: string) => {

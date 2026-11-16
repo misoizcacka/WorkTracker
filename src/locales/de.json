@@ -586,6 +586,8 @@
       "projectLaborDesc": "Arbeitskosten und Stunden pro Projekt analysieren.",
       "dailyDetailedTitle": "Tagesdetailbericht",
       "dailyDetailedDesc": "Detaillierte Eincheck- und Standortdaten fuer einen bestimmten Tag.",
+      "workerTimesheetTitle": "Mitarbeiter-Zeiterfassung",
+      "workerTimesheetDesc": "Detaillierte monatliche Zeiterfassung für einzelne Mitarbeiter anzeigen.",
       "employeeHoursPageTitle": "Mitarbeiterstundenbericht",
       "employeeHoursPageSubtitle": "Arbeitsstunden der Mitarbeiter fuer einen ausgewaehlten Zeitraum anzeigen.",
       "payrollPageTitle": "Gehaltsabrechnung",

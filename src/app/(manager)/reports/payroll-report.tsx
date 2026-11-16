@@ -726,6 +726,7 @@ const PayrollReport = () => {
                 <Text style={[styles.tableHeaderText, styles.colPayable]} fontType="bold">Payable Hours</Text>
                 <Text style={[styles.tableHeaderText, styles.colNumeric]} fontType="bold">Hourly Rate</Text>
                 <Text style={[styles.tableHeaderText, styles.colNumeric]} fontType="bold">Total Pay</Text>
+                <Text style={[styles.tableHeaderText, styles.colAction]} fontType="bold">Details</Text>
                 </View>
                 {loading ? (
                 <ActivityIndicator size="large" color={theme.colors.primary} style={{ marginVertical: theme.spacing(4) }} />
@@ -773,6 +774,22 @@ const PayrollReport = () => {
                               </>
                             );
                         })()}
+                        <View style={[styles.tableCell, styles.colAction]}>
+                            <TouchableOpacity
+                              style={styles.actionButton}
+                              onPress={() => {
+                                const startOfPeriod = dateMode === 'month' 
+                                  ? moment({ year: selectedYear, month: selectedMonth - 1 }).startOf('month')
+                                  : moment(startDate);
+                                const endOfPeriod = dateMode === 'month'
+                                  ? moment({ year: selectedYear, month: selectedMonth - 1 }).endOf('month')
+                                  : moment(endDate);
+                                router.push(`/reports/worker-timesheet?workerId=${item.worker_id}&month=${startOfPeriod.format('YYYY-MM')}`);
+                              }}
+                            >
+                              <Ionicons name="eye-outline" size={16} color={theme.colors.primary} />
+                            </TouchableOpacity>
+                        </View>
                     </View>                    ))}
                 </ScrollView>
                 )}
@@ -1069,6 +1086,21 @@ const styles = StyleSheet.create({
   colPayable: {
     flex: 2,
     alignItems: 'center',
+  },
+  colAction: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  actionButton: {
+    width: 30,
+    height: 30,
+    borderRadius: theme.radius.sm,
+    borderWidth: 1,
+    borderColor: theme.colors.borderColor,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: theme.colors.cardBackground,
   },
   payableBadge: {
     backgroundColor: theme.colors.primaryMuted,
