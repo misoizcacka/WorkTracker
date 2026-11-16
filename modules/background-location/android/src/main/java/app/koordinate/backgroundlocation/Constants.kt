@@ -33,7 +33,7 @@ object Constants {
     const val ACTIVE_TRACKING_INTERVAL_MS = 1 * 60 * 1000L   // 1 min — worker outside geofence, traveling
     const val PASSIVE_TRACKING_INTERVAL_MS = 5 * 60 * 1000L  // 5 min — worker inside geofence, on site
     const val EXIT_PENDING_INTERVAL_MS = 30 * 1000L          // 30 sec — verifying exit with high-accuracy GPS
-    const val PERIODIC_FORCE_CHECK_INTERVAL_MS = 15 * 60 * 1000L  // 15 min — force HIGH_ACCURACY check in PASSIVE mode
+    const val PERIODIC_FORCE_CHECK_INTERVAL_MS = 5 * 60 * 1000L  // 5 min — CRITICAL: Wake device from Doze to check if worker left (was 15 min, too slow)
     const val ACTIVITY_RECOGNITION_INTERVAL_MS = 30 * 1000L  // 30 sec — activity detection update interval
 
     const val SHARED_PREFS_NAME = "location_tracking_prefs"
