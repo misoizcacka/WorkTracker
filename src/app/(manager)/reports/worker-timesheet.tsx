@@ -294,7 +294,7 @@ const WorkerTimesheetReport = () => {
                   <View style={styles.workerHeaderRow}>
                     <View style={styles.workerHeaderLeft}>
                       <UserAvatar 
-                        avatarUrl={selectedWorker?.avatar_url} 
+                        avatarUrl={selectedWorker?.public_avatar_url || selectedWorker?.avatar_url} 
                         size={56} 
                         style={styles.workerAvatar}
                       />
