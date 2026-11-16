@@ -28,6 +28,7 @@ type PendingInviteRow = {
   id: string;
   full_name: string;
   phone_number: null;
+  employee_number: null;
   status: 'pending';
   role: 'worker' | 'manager';
   company_id: string;
@@ -63,7 +64,7 @@ export default function ManagerEmployees() {
 
   const fixedColumnWidths = {
     avatar: 60,
-    phone: 120,
+    employeeNumber: 120,
     status: 100,
     role: 100,
     joined: 150, // Increased from 120
@@ -99,6 +100,7 @@ export default function ManagerEmployees() {
       id: invite.id, // Use invite.id for unique key
       full_name: invite.full_name,
       phone_number: null, // Invites don't have phone_number yet
+      employee_number: null, // Invites don't have employee_number yet
       status: 'pending' as const,
       role: invite.role,
       company_id: invite.company_id,
@@ -237,7 +239,7 @@ export default function ManagerEmployees() {
           <UserAvatar avatarUrl={item.avatar_url} size={40} />
         </View>
         <Text style={[styles.tableCellText, { flex: 1, minWidth: flexibleColumnMinLengths.name }]} numberOfLines={1} ellipsizeMode="tail">{item.full_name}</Text>
-        <Text style={[styles.tableCellText, { width: fixedColumnWidths.phone }]} numberOfLines={1} ellipsizeMode="tail">{item.phone_number || 'N/A'}</Text>
+        <Text style={[styles.tableCellText, { width: fixedColumnWidths.employeeNumber }]} numberOfLines={1} ellipsizeMode="tail">{(item as Employee).employee_number || 'N/A'}</Text>
         <View style={[styles.tableCell, { width: fixedColumnWidths.status }]}>
           <View style={[styles.statusBadge, { backgroundColor: statusStyle.color }]}>
             <Text style={styles.statusText} fontType="regular">{statusStyle.text}</Text>
@@ -320,7 +322,7 @@ export default function ManagerEmployees() {
     <View style={styles.tableHeaderRow}>
       <View style={[styles.tableHeaderSpacer, { width: fixedColumnWidths.avatar }]} />
       <Text style={[styles.tableHeaderCell, { flex: 1, minWidth: flexibleColumnMinLengths.name }]} fontType="bold">{t('manager.employees.colName')}</Text>
-      <Text style={[styles.tableHeaderCell, { width: fixedColumnWidths.phone }]} fontType="bold">{t('manager.employees.colPhone')}</Text>
+      <Text style={[styles.tableHeaderCell, { width: fixedColumnWidths.employeeNumber }]} fontType="bold">Employee #</Text>
       <Text style={[styles.tableHeaderCell, { width: fixedColumnWidths.status }]} fontType="bold">{t('manager.employees.colStatus')}</Text>
       <Text style={[styles.tableHeaderCell, { width: fixedColumnWidths.role }]} fontType="bold">{t('manager.employees.colRole')}</Text>
       <Text style={[styles.tableHeaderCell, { width: fixedColumnWidths.joined }]} fontType="bold">{t('manager.employees.colJoined')}</Text>
