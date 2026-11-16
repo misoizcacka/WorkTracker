@@ -119,7 +119,7 @@ const EditPersonModal: React.FC<EditPersonModalProps> = ({ visible, onClose, emp
       await onSave({
         ...employee,
         full_name: fullName.trim(),
-        // Don't touch placeholder internal emails — pass the original through unchanged
+        // Don't touch placeholder internal emails - pass the original through unchanged
         email: isPlaceholderEmail ? employee.email : email.trim().toLowerCase(),
         phone_number: phone.trim() || null,
         employee_number: employeeNumber.trim() || null,
