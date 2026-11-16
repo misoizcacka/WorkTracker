@@ -193,6 +193,9 @@ export default function ProjectAssignmentScreen() {
             >
               {item.full_name}
             </Text>
+            {item.employee_number && (
+              <Text style={styles.itemSubtext} fontType="regular">#{item.employee_number}</Text>
+            )}
             {!hasHourlyRate && (
               <Text style={styles.warningText} fontType="regular">
                 {t('manager.assignments.noCurrentRate')}
@@ -695,6 +698,11 @@ const styles = StyleSheet.create({
   },
   itemName: {
     color: theme.colors.headingText,
+  },
+  itemSubtext: {
+    fontSize: theme.fontSizes.xs,
+    color: theme.colors.bodyText,
+    marginTop: 2,
   },
   selectedWorkerText: {
     color: theme.colors.primary,

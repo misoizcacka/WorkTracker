@@ -178,6 +178,9 @@ const CorrectionsPage = () => {
                     <UserAvatar avatarUrl={item.avatar_url} size={40} style={styles.avatar} />
                     <View style={styles.itemInfo}>
                         <Text style={[styles.itemName, isSelected && styles.selectedWorkerText]} fontType="medium">{item.full_name}</Text>
+                        {item.employee_number && (
+                          <Text style={styles.itemSubtext} fontType="regular">#{item.employee_number}</Text>
+                        )}
                     </View>
                     {isSelected && <Ionicons name="chevron-forward" size={16} color={theme.colors.primary} />}
             </TouchableOpacity>
@@ -578,6 +581,7 @@ const styles = StyleSheet.create({
     avatar: { width: 40, height: 40, borderRadius: 20, marginRight: theme.spacing(1.5) },
     itemInfo: { flex: 1 },
     itemName: { color: theme.colors.headingText },
+    itemSubtext: { fontSize: theme.fontSizes.xs, color: theme.colors.bodyText, marginTop: 2 },
     selectedWorkerText: {
         color: theme.colors.primary,
     },

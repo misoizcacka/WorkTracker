@@ -244,6 +244,11 @@ export default function MapOverviewScreen() {
             >
               {item.full_name}
             </Text>
+            {item.employee_number && (
+              <Text style={[styles.itemSubtext, isDisabled && styles.disabledText]} fontType="regular">
+                #{item.employee_number}
+              </Text>
+            )}
             <Text 
               style={[styles.workerStatusText, isDisabled && styles.disabledText]} 
               fontType="regular"
@@ -547,6 +552,11 @@ const styles = StyleSheet.create({
   workerItemName: {
     fontSize: theme.fontSizes.md,
     color: theme.colors.headingText,
+  },
+  itemSubtext: {
+    fontSize: theme.fontSizes.xs,
+    color: theme.colors.bodyText,
+    marginTop: 2,
   },
   workerStatusText: {
     fontSize: theme.fontSizes.xs,
