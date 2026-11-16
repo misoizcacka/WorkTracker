@@ -12,6 +12,7 @@ import { EmployeesContext, EmployeesContextType } from '../../../context/Employe
 import { useSession } from '~/context/AuthContext';
 import moment from 'moment';
 import { getCurrencySymbol } from '../../../utils/currency';
+import UserAvatar from '../../../components/UserAvatar';
 
 interface WorkerTimesheetData {
   worker_id: string;
@@ -292,12 +293,19 @@ const WorkerTimesheetReport = () => {
                 <Card style={styles.workerInfoCard}>
                   <View style={styles.workerHeaderRow}>
                     <View style={styles.workerHeaderLeft}>
-                      <Text style={styles.workerHeaderName} fontType="bold">{timesheetData.worker_name}</Text>
-                      {timesheetData.employee_number && (
-                        <Text style={styles.workerHeaderSubtext} fontType="regular">
-                          Employee #{timesheetData.employee_number}
-                        </Text>
-                      )}
+                      <UserAvatar 
+                        avatarUrl={selectedWorker?.avatar_url} 
+                        size={56} 
+                        style={styles.workerAvatar}
+                      />
+                      <View style={styles.workerHeaderTextContainer}>
+                        <Text style={styles.workerHeaderName} fontType="bold">{timesheetData.worker_name}</Text>
+                        {timesheetData.employee_number && (
+                          <Text style={styles.workerHeaderSubtext} fontType="regular">
+                            Employee #{timesheetData.employee_number}
+                          </Text>
+                        )}
+                      </View>
                     </View>
                     <View style={styles.monthNavigator}>
                       <TouchableOpacity style={styles.monthNavButton} onPress={handlePrevMonth}>
@@ -537,7 +545,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: theme.spacing(3),
   },
-  workerHeaderLeft: {},
+  workerHeaderLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing(2),
+  },
+  workerAvatar: {
+    borderWidth: 2,
+    borderColor: theme.colors.borderColor,
+  },
+  workerHeaderTextContainer: {
+    flex: 1,
+  },
   workerHeaderName: {
     fontSize: theme.fontSizes.lg,
     color: theme.colors.headingText,
