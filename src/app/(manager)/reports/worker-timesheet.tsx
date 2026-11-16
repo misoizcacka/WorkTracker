@@ -99,7 +99,7 @@ const WorkerTimesheetReport = () => {
         // Fetch the effective hourly rate for the selected month
         const monthStart = moment().year(selectedYear).month(selectedMonth - 1).startOf('month').toISOString();
         const ratePromise = supabase
-          .from('hourly_rates')
+          .from('employee_hourly_rates')
           .select('hourly_rate')
           .eq('employee_id', selectedWorkerId)
           .lte('effective_from', monthStart)
