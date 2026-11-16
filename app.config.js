@@ -16,7 +16,7 @@ module.exports = () => {
     userInterfaceStyle: 'light',
     newArchEnabled: true,
     splash: {
-      image: './assets/koordinateappicon.png',
+      image: './assets/koordinatelogo.png',
       resizeMode: 'contain',
       backgroundColor: '#f3f2f2',
     },
