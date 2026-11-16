@@ -807,7 +807,6 @@ class PeriodicLocationTrackingService : Service() {
         }
     }
 
-    /**
     override fun onDestroy() {
         super.onDestroy()
         isRunning.set(false)
