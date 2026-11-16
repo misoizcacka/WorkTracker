@@ -287,14 +287,21 @@ const LocationReplayMapOnlyPanel = ({ workerId, date }: LocationReplayMapOnlyPan
   const eventLabel = useMemo(() => {
     if (!inferredLocation) return null;
     
-    if (inferredLocation.event_type === 'active_tracking') return 'Active tracking';
-    if (inferredLocation.event_type === 'passive_tracking') return 'Passive tracking';
-    
     const name = inferredLocation.ref_name;
-    if (!name) return null; // Don't show label if no location name
     
-    if (inferredLocation.event_type === 'enter_geofence') return `Entered ${name}`;
-    if (inferredLocation.event_type === 'exit_geofence') return `Left ${name}`;
+    if (inferredLocation.event_type === 'enter_geofence') {
+      return name ? `Entered ${name}` : null;
+    }
+    if (inferredLocation.event_type === 'exit_geofence') {
+      return name ? `Left ${name}` : null;
+    }
+    if (inferredLocation.event_type === 'passive_tracking') {
+      // Show location name if we have it, otherwise show "Stationary"
+      return name ? `At ${name}` : 'Stationary';
+    }
+    if (inferredLocation.event_type === 'active_tracking') {
+      return 'In transit';
+    }
     
     return null;
   }, [inferredLocation]);
