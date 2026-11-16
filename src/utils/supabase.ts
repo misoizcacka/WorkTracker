@@ -17,7 +17,7 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     // can't be acquired immediately on init. Known bug: github.com/supabase/supabase-js/issues/1517
     // Workaround: bypass the LockManager on web with a simple pass-through function.
     ...(Platform.OS === 'web' && {
-      lock: async (_name: string, _acquireTimeout: number, fn: () => Promise<unknown>) => fn(),
+      lock: async <R,>(_name: string, _acquireTimeout: number, fn: () => Promise<R>): Promise<R> => fn(),
     }),
   },
 });

@@ -258,8 +258,10 @@ const DailyWorkerMapWeb: React.FC<DailyWorkerMapProps & {
       <View style={styles.legend}>
         <View 
           style={styles.legendHeader}
-          onMouseEnter={() => setLegendExpanded(true)}
-          onMouseLeave={() => setLegendExpanded(false)}
+          {...({
+            onMouseEnter: () => setLegendExpanded(true),
+            onMouseLeave: () => setLegendExpanded(false),
+          } as any)}
         >
           <Ionicons name="information-circle" size={20} color={theme.colors.primary} />
           <Text style={styles.legendTitle} fontType="regular">Legend</Text>
@@ -370,8 +372,10 @@ const DailyWorkerMapWeb: React.FC<DailyWorkerMapProps & {
                 styles.suitcaseMarker,
                 hoveredSiteId === `${site.id}-${idx}` && styles.suitcaseMarkerHover
               ]}
-              onMouseEnter={() => setHoveredSiteId(`${site.id}-${idx}`)}
-              onMouseLeave={() => setHoveredSiteId(null)}
+              {...({
+                onMouseEnter: () => setHoveredSiteId(`${site.id}-${idx}`),
+                onMouseLeave: () => setHoveredSiteId(null),
+              } as any)}
             >
               <Ionicons name="briefcase" size={18} color="white" />
             </View>
@@ -484,6 +488,7 @@ const styles = StyleSheet.create({
     top: 16,
     left: 16,
     backgroundColor: 'rgba(255, 255, 255, 0.75)', // More transparent (75% instead of 85%)
+    // @ts-ignore - web-only style
     backdropFilter: 'blur(8px)',
     borderRadius: theme.radius.md,
     zIndex: 10,
@@ -491,7 +496,9 @@ const styles = StyleSheet.create({
     maxWidth: 240,
     borderWidth: 1,
     borderColor: 'rgba(0, 0, 0, 0.1)',
+    // @ts-ignore - web-only style
     boxShadow: '0 2px 12px rgba(0,0,0,0.15)',
+    // @ts-ignore - web-only style
     cursor: 'pointer',
   },
   legendHeader: {

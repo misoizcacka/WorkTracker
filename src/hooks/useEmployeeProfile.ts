@@ -10,6 +10,7 @@ export interface EmployeeProfile {
   full_name: string;
   email: string;
   phone_number: string | null;
+  employee_number: string | null;
   role: 'owner' | 'manager' | 'worker';
   status: 'pending' | 'active' | 'disabled';
   avatar_url: string | null; // The raw path from storage

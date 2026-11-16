@@ -151,6 +151,7 @@ export default function ManagerAccount() {
             full_name: trimmedName,
             email: trimmedEmail,
             phone_number: trimmedPhone || null,
+            employee_number: profile.employee_number || null,
           });
         } else {
           await updateEmployeeProfile(user.id, { full_name: trimmedName, phone_number: trimmedPhone || null });

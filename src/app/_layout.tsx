@@ -284,7 +284,7 @@ export default function RootLayout() {
 
   function Main() {
     const { user, isLoading, userCompanyId, isCompanyIdLoading, userRole, isCompanyDetailsComplete, refreshUser } = useSession()!;
-    const segments = useSegments();
+    const segments = useSegments() as string[];
     const router = useRouter();
     const [isCreatingCompany, setIsCreatingCompany] = useState(false);
 
