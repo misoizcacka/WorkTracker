@@ -19,6 +19,11 @@
             android:exported="false" />
         
         <receiver
+            android:name="app.koordinate.backgroundlocation.ForceCheckAlarmReceiver"
+            android:enabled="true"
+            android:exported="false" />
+        
+        <receiver
             android:name="app.koordinate.backgroundlocation.ActivityRecognitionReceiver"
             android:enabled="true"
             android:exported="false" />

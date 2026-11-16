@@ -349,33 +349,6 @@ class PeriodicLocationTrackingService : Service() {
             }
         }
         
-        // LAYER 2: Periodic Force-Check (Safety Net)
-        // Every 15 minutes in PASSIVE mode, force HIGH_ACCURACY GPS to verify still inside geofence
-        // This catches cases where Activity Recognition missed movement or device was in airplane mode
-        if (currentMode == TrackingMode.PASSIVE) {
-            val lastForceCheck = sharedPrefs.getLong(Constants.KEY_LAST_FORCE_CHECK_TIME, 0L)
-            val timeSinceForceCheck = currentTime - lastForceCheck
-            
-            // Only trigger if it's been at least 15 minutes AND we have a valid last timestamp
-            // (or this is the first check ever - initialize it)
-            if (lastForceCheck == 0L) {
-                // First time - just set timestamp, don't force-check yet
-                sharedPrefs.edit().putLong(Constants.KEY_LAST_FORCE_CHECK_TIME, currentTime).apply()
-                Log.d("PeriodicLocationTrackingService", "⏰ LAYER 2: Initialized force-check timestamp")
-            } else if (timeSinceForceCheck >= Constants.PERIODIC_FORCE_CHECK_INTERVAL_MS) {
-                Log.d("PeriodicLocationTrackingService", "⏰ LAYER 2: 15-min force-check triggered (${timeSinceForceCheck/1000}s since last)")
-                LocationFileLogger.i(
-                    this,
-                    "ForceCheck",
-                    "⏰ Periodic force-check: Requesting HIGH_ACCURACY GPS to verify geofence state"
-                )
-                
-                serviceScope.launch {
-                    performForceCheck()
-                }
-            }
-        }
-        
         if (currentTime - lastLocationSentTime < interval - 5000L) {
             val modeLabel = when (currentMode) {
                 TrackingMode.ACTIVE -> "ACTIVE"
@@ -499,6 +472,12 @@ class PeriodicLocationTrackingService : Service() {
             // Triggered by GeofenceBroadcastReceiver when low-quality exit signal detected
             // Switch to EXIT_PENDING mode (HIGH_ACCURACY, 30-sec intervals) to verify with GPS
             Log.d("PeriodicLocationTrackingService", "🔍 EXIT_PENDING action received - switching to verification mode")
+            switchToMode(TrackingMode.EXIT_PENDING)
+            return START_STICKY
+        } else if (action == "FORCE_CHECK_EXIT_DETECTED") {
+            // Triggered by ForceCheckAlarmReceiver when alarm-based force-check detects exit during Doze
+            Log.d("PeriodicLocationTrackingService", "🚨 FORCE_CHECK_EXIT_DETECTED action received - switching to EXIT_PENDING mode")
+            LocationFileLogger.w(this, "Service", "🚨 Force-check alarm detected exit - switching to EXIT_PENDING")
             switchToMode(TrackingMode.EXIT_PENDING)
             return START_STICKY
         }
@@ -691,6 +670,20 @@ class PeriodicLocationTrackingService : Service() {
         LocationFileLogger.i(this, "Service", "Mode switched: $oldMode → $newMode")
         Log.d("PeriodicLocationTrackingService", "🔄 Mode switch: $oldMode → $newMode")
         
+        // Manage force-check alarms based on mode
+        when (newMode) {
+            TrackingMode.PASSIVE -> {
+                // Schedule independent AlarmManager force-checks to wake device from Doze
+                ForceCheckAlarmScheduler.scheduleNextAlarm(applicationContext)
+                Log.d("PeriodicLocationTrackingService", "⏰ Scheduled force-check alarms for PASSIVE mode")
+            }
+            TrackingMode.EXIT_PENDING, TrackingMode.ACTIVE -> {
+                // Cancel force-check alarms - not needed when actively tracking
+                ForceCheckAlarmScheduler.cancelAlarm(applicationContext)
+                Log.d("PeriodicLocationTrackingService", "🛑 Cancelled force-check alarms - entering $newMode mode")
+            }
+        }
+        
         fusedLocationClient.removeLocationUpdates(locationCallback)
         
         val (interval, priority, minUpdateInterval, maxUpdateDelay, minDistance) = when (newMode) {
@@ -875,87 +868,13 @@ class PeriodicLocationTrackingService : Service() {
         }
     }
     
-    /**
-     * LAYER 2: Periodic Force-Check
-     * Every 15 minutes in PASSIVE mode, force HIGH_ACCURACY GPS to verify still inside geofence
-     */
-    private suspend fun performForceCheck() {
-        val fusedLocationClient = LocationServices.getFusedLocationProviderClient(applicationContext)
-        
-        try {
-            // Force HIGH_ACCURACY GPS request with 10-second timeout
-            val location = kotlinx.coroutines.withTimeoutOrNull(10_000L) {
-                fusedLocationClient.getCurrentLocation(
-                    Priority.PRIORITY_HIGH_ACCURACY,
-                    null
-                ).await()
-            }
-            
-            if (location == null) {
-                Log.w("PeriodicLocationTrackingService", "⚠️ Force-check: GPS timeout after 10s")
-                LocationFileLogger.w(this, "ForceCheck", "GPS timeout - no fresh location available")
-                return
-            }
-            
-            val quality = Constants.getLocationQuality(location)
-            if (quality == null || quality.trustScore < 60) {
-                Log.w("PeriodicLocationTrackingService", "⚠️ Force-check: Location quality too low (trust: ${quality?.trustScore}%)")
-                LocationFileLogger.w(this, "ForceCheck", "Location quality insufficient: trust ${quality?.trustScore}%")
-                return
-            }
-            
-            // Update timestamp
-            val sharedPrefs = getSharedPreferences(Constants.SHARED_PREFS_NAME, Context.MODE_PRIVATE)
-            sharedPrefs.edit()
-                .putLong(Constants.KEY_LAST_FORCE_CHECK_TIME, System.currentTimeMillis())
-                .apply()
-            
-            // Check if we're actually inside the geofence
-            val currentAssignmentId = sharedPrefs.getString(Constants.KEY_ASSIGNMENT_ID, null)
-            val isInsideGeofence = activeAssignments.any { assignment ->
-                if (assignment.id != currentAssignmentId) return@any false
-                
-                val geofenceLocation = Location("geofence").apply {
-                    latitude = assignment.latitude
-                    longitude = assignment.longitude
-                }
-                val distance = location.distanceTo(geofenceLocation)
-                distance <= assignment.radius
-            }
-            
-            if (!isInsideGeofence && currentMode == TrackingMode.PASSIVE) {
-                // FORCE-CHECK CAUGHT A MISSED EXIT!
-                Log.w("PeriodicLocationTrackingService", "🚨 LAYER 2: Force-check detected worker OUTSIDE geofence → switching to ACTIVE")
-                LocationFileLogger.w(
-                    this,
-                    "ForceCheck",
-                    "🚨 Missed exit detected! GPS confirms outside geofence (source: ${quality.source.label}, trust: ${quality.trustScore}%) → forcing ACTIVE mode"
-                )
-                
-                switchToMode(TrackingMode.ACTIVE)
-            } else {
-                Log.d("PeriodicLocationTrackingService", "✅ Force-check: Confirmed still inside geofence (source: ${quality.source.label})")
-                LocationFileLogger.i(
-                    this,
-                    "ForceCheck",
-                    "✅ Geofence state verified: still inside (source: ${quality.source.label}, trust: ${quality.trustScore}%)"
-                )
-            }
-            
-        } catch (e: SecurityException) {
-            Log.e("PeriodicLocationTrackingService", "Force-check: Permission error: ${e.message}")
-        } catch (e: Exception) {
-            Log.e("PeriodicLocationTrackingService", "Force-check: Error: ${e.message}")
-            LocationFileLogger.e(this, "ForceCheck", "Error: ${e.message}")
-        }
-    }
-
     override fun onDestroy() {
         super.onDestroy()
         isRunning.set(false)
         fusedLocationClient.removeLocationUpdates(locationCallback)
         BackgroundLocationManager.stopPeriodicUpdates(this)
         LocationAlarmScheduler.cancelAlarms(this)
+        ForceCheckAlarmScheduler.cancelAlarm(this)  // Cancel force-check alarms
         stopActivityRecognition()
         serviceJob.cancel()
         Log.d("PeriodicLocationTrackingService", "Service destroyed.")
