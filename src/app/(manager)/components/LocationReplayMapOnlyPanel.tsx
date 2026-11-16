@@ -285,26 +285,45 @@ const LocationReplayMapOnlyPanel = ({ workerId, date }: LocationReplayMapOnlyPan
   }, [events, inferredLocation]);
 
   const eventLabel = useMemo(() => {
-    if (!inferredLocation) return null;
+    if (!inferredLocation || !events.length) return null;
     
-    const name = inferredLocation.ref_name;
-    
+    // If current event is a geofence transition, show it immediately
     if (inferredLocation.event_type === 'enter_geofence') {
-      return name ? `Entered ${name}` : null;
+      return inferredLocation.ref_name ? `Entered ${inferredLocation.ref_name}` : null;
     }
     if (inferredLocation.event_type === 'exit_geofence') {
-      return name ? `Left ${name}` : null;
+      return inferredLocation.ref_name ? `Left ${inferredLocation.ref_name}` : null;
     }
-    if (inferredLocation.event_type === 'passive_tracking') {
-      // Show location name if we have it, otherwise show "Stationary"
-      return name ? `At ${name}` : 'Stationary';
+    
+    // For tracking events, look back to find the last geofence event before this time
+    const currentTime = moment(inferredLocation.event_timestamp).valueOf();
+    let lastGeofenceEvent: DailyEvent | null = null;
+    
+    for (let i = events.length - 1; i >= 0; i--) {
+      const event = events[i];
+      const eventTime = moment(event.event_timestamp).valueOf();
+      
+      if (eventTime > currentTime) continue;
+      
+      if (event.event_type === 'enter_geofence' || event.event_type === 'exit_geofence') {
+        lastGeofenceEvent = event;
+        break;
+      }
     }
-    if (inferredLocation.event_type === 'active_tracking') {
+    
+    if (!lastGeofenceEvent) {
+      // No geofence event before this time, assume in transit
       return 'In transit';
     }
     
-    return null;
-  }, [inferredLocation]);
+    // If last geofence was enter, we're at that location
+    if (lastGeofenceEvent.event_type === 'enter_geofence') {
+      return lastGeofenceEvent.ref_name ? `At ${lastGeofenceEvent.ref_name}` : 'At location';
+    }
+    
+    // If last geofence was exit, we're in transit
+    return 'In transit';
+  }, [inferredLocation, events]);
 
   if (!workerId || !date) {
     return (
