@@ -41,8 +41,20 @@ const WorkerTimesheetReport = () => {
   const [selectedWorkerId, setSelectedWorkerId] = useState<string | null>(
     typeof params.workerId === 'string' ? params.workerId : null
   );
-  const [selectedMonth, setSelectedMonth] = useState(moment().month() + 1);
-  const [selectedYear, setSelectedYear] = useState(moment().year());
+  
+  // Parse month from URL params (format: YYYY-MM)
+  const initialMonth = useMemo(() => {
+    if (typeof params.month === 'string') {
+      const parsed = moment(params.month, 'YYYY-MM');
+      if (parsed.isValid()) {
+        return { month: parsed.month() + 1, year: parsed.year() };
+      }
+    }
+    return { month: moment().month() + 1, year: moment().year() };
+  }, [params.month]);
+  
+  const [selectedMonth, setSelectedMonth] = useState(initialMonth.month);
+  const [selectedYear, setSelectedYear] = useState(initialMonth.year);
   const [timesheetData, setTimesheetData] = useState<WorkerTimesheetData | null>(null);
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
