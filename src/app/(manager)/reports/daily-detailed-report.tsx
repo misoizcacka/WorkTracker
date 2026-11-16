@@ -12,9 +12,11 @@ import CrossPlatformDatePicker from '../../../components/CrossPlatformDatePicker
 import { useSession } from '~/context/AuthContext';
 import WorkerDailyDetailsPanel from '../components/WorkerDailyDetailsPanel';
 import { supabase } from '~/utils/supabase';
+import { useTranslation } from 'react-i18next';
 
 const DailyDetailedReport = () => {
     const router = useRouter();
+    const { t } = useTranslation();
     const { user } = useSession();
     const { employees } = useContext(EmployeesContext) as EmployeesContextType;
 
