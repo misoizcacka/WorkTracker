@@ -17,6 +17,7 @@ import { getCurrencySymbol } from '../../../utils/currency';
 
 interface PayrollReportItem {
   worker_id: string;
+  employee_number: string | null;  // Human-readable employee number (e.g., "1001", "E-0042")
   worker_name: string;
   total_work_hours: number;
   total_break_minutes: number;
@@ -395,8 +396,11 @@ const PayrollReport = () => {
 
     // Build CSV rows
     const rows = reportData.map((item) => {
+      // Use employee_number if available, fallback to worker_id if not set
+      const personalnummer = item.employee_number || item.worker_id;
+      
       return [
-        `"${item.worker_id}"`,
+        `"${personalnummer}"`,
         `"${item.worker_name}"`,
         `"${formatGermanDate(periodStart)}"`,
         `"${formatGermanDate(periodEnd)}"`,
