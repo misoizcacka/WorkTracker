@@ -374,14 +374,60 @@ const CorrectionsPage = () => {
                             <View style={styles.fieldRow}>
                                 <View style={styles.fieldContainer}>
                                     <Text style={styles.label} fontType="bold">Correction Minutes</Text>
-                                    <ThemedInput
-                                        style={styles.modalInput}
-                                        value={editCorrection}
-                                        onChangeText={setEditCorrection}
-                                        keyboardType="numbers-and-punctuation"
-                                        placeholder="e.g. 15 or -15"
-                                    />
-                                    <Text style={styles.fieldHint}>Add (+) or subtract (-) time for payroll.</Text>
+                                    <View style={styles.stepperContainer}>
+                                        <TouchableOpacity 
+                                            style={styles.stepperButton}
+                                            onPress={() => setEditCorrection((parseInt(editCorrection) || 0) - 5).toString())}
+                                        >
+                                            <Ionicons name="remove" size={20} color={theme.colors.primary} />
+                                        </TouchableOpacity>
+                                        <ThemedInput
+                                            style={styles.stepperInput}
+                                            value={editCorrection}
+                                            onChangeText={setEditCorrection}
+                                            keyboardType="numbers-and-punctuation"
+                                            placeholder="0"
+                                        />
+                                        <TouchableOpacity 
+                                            style={styles.stepperButton}
+                                            onPress={() => setEditCorrection(((parseInt(editCorrection) || 0) + 5).toString())}
+                                        >
+                                            <Ionicons name="add" size={20} color={theme.colors.primary} />
+                                        </TouchableOpacity>
+                                    </View>
+                                    <View style={styles.presetButtons}>
+                                        <TouchableOpacity 
+                                            style={styles.presetButton}
+                                            onPress={() => setEditCorrection('-15')}
+                                        >
+                                            <Text style={styles.presetButtonText} fontType="medium">-15</Text>
+                                        </TouchableOpacity>
+                                        <TouchableOpacity 
+                                            style={styles.presetButton}
+                                            onPress={() => setEditCorrection('-5')}
+                                        >
+                                            <Text style={styles.presetButtonText} fontType="medium">-5</Text>
+                                        </TouchableOpacity>
+                                        <TouchableOpacity 
+                                            style={[styles.presetButton, styles.presetButtonZero]}
+                                            onPress={() => setEditCorrection('0')}
+                                        >
+                                            <Text style={[styles.presetButtonText, styles.presetButtonZeroText]} fontType="medium">0</Text>
+                                        </TouchableOpacity>
+                                        <TouchableOpacity 
+                                            style={styles.presetButton}
+                                            onPress={() => setEditCorrection('5')}
+                                        >
+                                            <Text style={styles.presetButtonText} fontType="medium">+5</Text>
+                                        </TouchableOpacity>
+                                        <TouchableOpacity 
+                                            style={styles.presetButton}
+                                            onPress={() => setEditCorrection('15')}
+                                        >
+                                            <Text style={styles.presetButtonText} fontType="medium">+15</Text>
+                                        </TouchableOpacity>
+                                    </View>
+                                    <Text style={styles.fieldHint}>Add (+) or subtract (-) time. Use buttons or type manually.</Text>
                                 </View>
                             </View>
 
@@ -688,6 +734,57 @@ const styles = StyleSheet.create({
     fieldContainer: { width: '100%' },
     label: { fontSize: 14, color: theme.colors.bodyText, marginBottom: 8 },
     modalInput: { height: 50, backgroundColor: theme.colors.pageBackground, borderRadius: theme.radius.md },
+    stepperContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: theme.spacing(2),
+        marginBottom: theme.spacing(2),
+    },
+    stepperButton: {
+        width: 44,
+        height: 50,
+        backgroundColor: theme.colors.pageBackground,
+        borderRadius: theme.radius.md,
+        borderWidth: 1,
+        borderColor: theme.colors.borderColor,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    stepperInput: {
+        flex: 1,
+        height: 50,
+        backgroundColor: theme.colors.pageBackground,
+        borderRadius: theme.radius.md,
+        textAlign: 'center',
+        fontSize: 18,
+        fontWeight: '600',
+    },
+    presetButtons: {
+        flexDirection: 'row',
+        gap: theme.spacing(1),
+        marginBottom: theme.spacing(1),
+    },
+    presetButton: {
+        flex: 1,
+        height: 36,
+        backgroundColor: theme.colors.pageBackground,
+        borderRadius: theme.radius.md,
+        borderWidth: 1,
+        borderColor: theme.colors.borderColor,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    presetButtonZero: {
+        backgroundColor: theme.colors.primary + '10',
+        borderColor: theme.colors.primary,
+    },
+    presetButtonText: {
+        fontSize: 13,
+        color: theme.colors.bodyText,
+    },
+    presetButtonZeroText: {
+        color: theme.colors.primary,
+    },
     fieldHint: { fontSize: 12, color: theme.colors.disabledText, marginTop: 6 },
     modalFooter: {
         padding: theme.spacing(3),
