@@ -377,7 +377,7 @@ const CorrectionsPage = () => {
                                     <View style={styles.stepperContainer}>
                                         <TouchableOpacity 
                                             style={styles.stepperButton}
-                                            onPress={() => setEditCorrection((parseInt(editCorrection) || 0) - 5).toString())}
+                                            onPress={() => setEditCorrection(((parseInt(editCorrection) || 0) - 5).toString())}
                                         >
                                             <Ionicons name="remove" size={20} color={theme.colors.primary} />
                                         </TouchableOpacity>
