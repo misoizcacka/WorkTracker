@@ -1,4 +1,4 @@
-﻿package app.koordinate.backgroundlocation
+package app.koordinate.backgroundlocation
 
 import android.Manifest
 import android.app.NotificationChannel

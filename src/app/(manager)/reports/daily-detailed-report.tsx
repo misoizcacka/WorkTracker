@@ -105,7 +105,7 @@ const DailyDetailedReport = () => {
                         {item.full_name}
                     </Text>
                     {!hasActivity && (
-                        <Text style={styles.noDataText} fontType="regular">No activity</Text>
+                        <Text style={styles.noDataText} fontType="regular">{t('manager.reports.noActivityDate')}</Text>
                     )}
                 </View>
                 {isSelected && <Ionicons name="chevron-forward" size={16} color={theme.colors.primary} />}
@@ -120,8 +120,8 @@ const DailyDetailedReport = () => {
                     <Ionicons name="arrow-back" size={24} color={theme.colors.headingText} />
                 </TouchableOpacity>
                 <View>
-                    <Text style={styles.pageTitle} fontType="bold">Daily Detailed Report</Text>
-                    <Text style={styles.pageSubtitle}>View a detailed, chronological breakdown of each worker's day.</Text>
+                    <Text style={styles.pageTitle} fontType="bold">{t('manager.reports.dailyDetailedPageTitle')}</Text>
+                    <Text style={styles.pageSubtitle}>{t('manager.reports.dailyDetailedPageSubtitle')}</Text>
                 </View>
             </View>
 
@@ -129,7 +129,7 @@ const DailyDetailedReport = () => {
                 <View style={styles.mainLayout}>
                     {/* --- Left Panel: Worker & Date Selection --- */}
                     <View style={styles.leftPanel}>
-                        <Text style={styles.panelTitle} fontType="bold">Select Date</Text>
+                        <Text style={styles.panelTitle} fontType="bold">{t('manager.reports.selectDate')}</Text>
                         <View style={styles.datePickerContainer}>
                             <CrossPlatformDatePicker
                                 date={selectedDate}
@@ -139,12 +139,12 @@ const DailyDetailedReport = () => {
                             />
                         </View>
 
-                        <Text style={[styles.panelTitle, { marginTop: theme.spacing(3) }]} fontType="bold">Select Worker</Text>
+                        <Text style={[styles.panelTitle, { marginTop: theme.spacing(3) }]} fontType="bold">{t('manager.reports.selectWorker')}</Text>
                         <View style={styles.searchContainer}>
                             <Ionicons name="search-outline" size={18} color={theme.colors.bodyText} style={styles.searchIcon} />
                             <TextInput
                                 style={styles.searchInput}
-                                placeholder="Search workers..."
+                                placeholder={t('manager.reports.searchWorkers')}
                                 value={searchTerm}
                                 onChangeText={setSearchTerm}
                                 placeholderTextColor={theme.colors.bodyText}
@@ -167,7 +167,7 @@ const DailyDetailedReport = () => {
                         ) : (
                             <View style={styles.emptyState}>
                                 <Ionicons name="analytics-outline" size={64} color={theme.colors.borderColor} />
-                                <Text style={styles.emptyStateText} fontType="regular">Select a worker and date from the left panel to view their detailed daily activity.</Text>
+                                <Text style={styles.emptyStateText} fontType="regular">{t('manager.reports.selectWorkerAndDate')}</Text>
                             </View>
                         )}
                     </View>
@@ -184,9 +184,17 @@ const styles = StyleSheet.create({
         backgroundColor: theme.colors.background,
         flexDirection: 'row',
         alignItems: 'center',
+        gap: theme.spacing(2),
     },
     backButton: {
-        marginRight: theme.spacing(2),
+        width: 40,
+        height: 40,
+        justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor: theme.colors.cardBackground,
+        borderRadius: theme.radius.md,
+        borderWidth: 1,
+        borderColor: theme.colors.borderColor,
     },
     pageTitle: {
         fontSize: theme.fontSizes.xl,

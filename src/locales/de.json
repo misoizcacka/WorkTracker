@@ -363,6 +363,25 @@
       "message": "Für eine genaue Arbeitszeiterfassung deaktivieren Sie bitte die Akkuoptimierung für diese App. Tippen Sie auf 'Einstellungen öffnen', suchen Sie diese App und wählen Sie 'Nicht eingeschränkt' oder 'Nicht optimieren'.",
       "openSettings": "Einstellungen öffnen",
       "later": "Später"
+    },
+    "permissions": {
+      "setupRequired": "Einrichtung erforderlich",
+      "setupSubtitle": "Wir benötigen einige Berechtigungen, um Ihre Arbeitszeiten genau zu erfassen",
+      "locationForeground": "Standortberechtigung (Bei Verwendung)",
+      "locationForegroundDesc": "Erforderlich, um Ihren Standort während der Arbeit zu verfolgen",
+      "locationBackground": "Standortberechtigung (Immer)",
+      "locationBackgroundDesc": "Erforderlich, um den Standort zu verfolgen, wenn die App geschlossen ist",
+      "notifications": "Benachrichtigungsberechtigung",
+      "notificationsDesc": "Erforderlich, um aktive Sitzungsbenachrichtigungen anzuzeigen",
+      "batteryOptimization": "Batterieoptimierung deaktiviert",
+      "batteryOptimizationDesc": "Erforderlich für zuverlässige Standortverfolgung",
+      "grant": "Erteilen",
+      "allSet": "Alles fertig!",
+      "allSetDesc": "Alle Berechtigungen wurden erteilt. Sie können jetzt einchecken.",
+      "whyNeeded": "Warum werden diese benötigt?",
+      "whyNeededDesc": "Standortberechtigungen und Batterieoptimierungseinstellungen stellen sicher, dass wir Ihre Arbeitszeiten genau erfassen können, auch wenn Ihr Telefon ausgeschaltet ist oder die App im Hintergrund läuft.",
+      "continueCheckIn": "Weiter zum Einchecken",
+      "refreshStatus": "Status aktualisieren"
     }
   },
   "subscriptionSetup": {
@@ -654,7 +673,13 @@
       "excelReportDesc": "Formatierte Tabelle mit Zusammenfassung",
       "datevCsv": "DATEV CSV",
       "datevCsvDesc": "Deutsches Lohnformat",
-      "export": "Exportieren"
+      "export": "Exportieren",
+      "monthly": "Monatlich",
+      "customRange": "Benutzerdefinierter Zeitraum",
+      "totalBreak": "Gesamte Pausenzeit",
+      "noRate": "Kein Satz",
+      "noAddress": "Keine Adresse",
+      "searchProjects": "Projekte suchen..."
     },
     "locationReplay": {
       "title": "Standortwiedergabe",

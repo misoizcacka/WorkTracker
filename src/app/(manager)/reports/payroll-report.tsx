@@ -14,6 +14,7 @@ import { useSession } from '../../../context/AuthContext';
 import SegmentedControl from '@react-native-segmented-control/segmented-control';
 import CrossPlatformDatePicker from '../../../components/CrossPlatformDatePicker';
 import { getCurrencySymbol } from '../../../utils/currency';
+import { useTranslation } from 'react-i18next';
 
 interface PayrollReportItem {
   worker_id: string;
@@ -29,6 +30,7 @@ interface PayrollReportItem {
 
 const PayrollReport = () => {
   const router = useRouter();
+  const { t } = useTranslation();
   const { employees } = useContext(EmployeesContext) as EmployeesContextType;
   const { userCompanyName, userCompanyCountry } = useSession();
   const currency = getCurrencySymbol(userCompanyCountry);
@@ -542,8 +544,8 @@ const PayrollReport = () => {
           <Ionicons name="arrow-back" size={24} color={theme.colors.headingText} />
         </TouchableOpacity>
         <View>
-          <Text style={styles.pageTitle} fontType="bold">Payroll Summary</Text>
-          <Text style={styles.pageSubtitle}>Review and export payable hours for the month.</Text>
+          <Text style={styles.pageTitle} fontType="bold">{t('manager.reports.payrollPageTitle')}</Text>
+          <Text style={styles.pageSubtitle}>{t('manager.reports.payrollPageSubtitle')}</Text>
         </View>
       </View>
 
@@ -552,7 +554,7 @@ const PayrollReport = () => {
         <View style={styles.controlBar}>
           {/* Left: Segmented Control */}
           <SegmentedControl
-            values={['Monthly', 'Custom Range']}
+            values={[t('manager.reports.monthly'), t('manager.reports.customRange')]}
             selectedIndex={selectedSegmentIndex}
             onChange={(event) => {
               const index = event.nativeEvent.selectedSegmentIndex;
@@ -593,7 +595,7 @@ const PayrollReport = () => {
           ) : (
             <View style={styles.unifiedSelector}>
               <View style={styles.datePickerWrapper}>
-                <Text style={styles.dateButtonLabel}>FROM</Text>
+                <Text style={styles.dateButtonLabel}>{t('manager.reports.from')}</Text>
                 <CrossPlatformDatePicker
                   date={startDate}
                   onDateChange={(date) => setStartDate(date)}
@@ -604,7 +606,7 @@ const PayrollReport = () => {
               <Ionicons name="arrow-forward" size={14} color={theme.colors.disabledText} style={{ marginHorizontal: theme.spacing(1) }} />
               
               <View style={styles.datePickerWrapper}>
-                <Text style={styles.dateButtonLabel}>TO</Text>
+                <Text style={styles.dateButtonLabel}>{t('manager.reports.to')}</Text>
                 <CrossPlatformDatePicker
                   date={endDate}
                   onDateChange={(date) => setEndDate(date)}
@@ -636,7 +638,7 @@ const PayrollReport = () => {
                 ]} 
                 fontType="medium"
               >
-                Export
+                {t('manager.reports.export')}
               </Text>
               <Ionicons 
                 name={exportMenuOpen ? "chevron-up" : "chevron-down"} 
@@ -656,8 +658,8 @@ const PayrollReport = () => {
                 >
                   <Ionicons name="document-outline" size={18} color={theme.colors.success} />
                   <View style={styles.exportDropdownTextContainer}>
-                    <Text style={styles.exportDropdownTitle} fontType="medium">Excel Report</Text>
-                    <Text style={styles.exportDropdownDesc} fontType="regular">Styled spreadsheet with summary</Text>
+                    <Text style={styles.exportDropdownTitle} fontType="medium">{t('manager.reports.excelReport')}</Text>
+                    <Text style={styles.exportDropdownDesc} fontType="regular">{t('manager.reports.excelReportDesc')}</Text>
                   </View>
                 </TouchableOpacity>
                 
@@ -673,8 +675,8 @@ const PayrollReport = () => {
                     >
                       <Ionicons name="document-text-outline" size={18} color={theme.colors.primary} />
                       <View style={styles.exportDropdownTextContainer}>
-                        <Text style={styles.exportDropdownTitle} fontType="medium">DATEV CSV</Text>
-                        <Text style={styles.exportDropdownDesc} fontType="regular">German payroll format</Text>
+                        <Text style={styles.exportDropdownTitle} fontType="medium">{t('manager.reports.datevCsv')}</Text>
+                        <Text style={styles.exportDropdownDesc} fontType="regular">{t('manager.reports.datevCsvDesc')}</Text>
                       </View>
                     </TouchableOpacity>
                   </>
@@ -687,23 +689,23 @@ const PayrollReport = () => {
         {/* --- High-Level Stats (Summary on Top) --- */}
         <View style={styles.statsRow}>
           <View style={styles.statBox}>
-            <Text style={styles.statLabel} fontType="regular">Total Work Hours</Text>
+            <Text style={styles.statLabel} fontType="regular">{t('manager.reports.totalWorkHours')}</Text>
             <Text style={styles.statValue} fontType="bold">{totalWorkHours.toFixed(2)}h</Text>
           </View>
           <View style={[styles.statBox, styles.statDivider]}>
-            <Text style={styles.statLabel} fontType="regular">Total Break Time</Text>
+            <Text style={styles.statLabel} fontType="regular">{t('manager.reports.totalBreak')}</Text>
             <Text style={styles.statValue} fontType="bold">{totalBreakMinutes}m</Text>
           </View>
           <View style={[styles.statBox, styles.statDivider]}>
-            <Text style={styles.statLabel} fontType="regular">Total Correction</Text>
+            <Text style={styles.statLabel} fontType="regular">{t('manager.reports.totalCorrection')}</Text>
             <Text style={styles.statValue} fontType="bold">{totalCorrectionMinutes}m</Text>
           </View>
           <View style={[styles.statBox, styles.statDivider]}>
-            <Text style={[styles.statLabel, { color: theme.colors.primary }]} fontType="bold">Payable Hours</Text>
+            <Text style={[styles.statLabel, { color: theme.colors.primary }]} fontType="bold">{t('manager.reports.payableHours')}</Text>
             <Text style={[styles.statValue, { color: theme.colors.primary }]} fontType="bold">{totalPayableHours.toFixed(2)}h</Text>
           </View>
           <View style={styles.statBox}>
-            <Text style={[styles.statLabel, { color: theme.colors.success }]} fontType="bold">Total Payable</Text>
+            <Text style={[styles.statLabel, { color: theme.colors.success }]} fontType="bold">{t('manager.reports.totalPayable')}</Text>
             <Text style={[styles.statValue, { color: theme.colors.success, fontSize: 24 }]} fontType="bold">
               {currency}{totalPayableMoney.toFixed(2)}
             </Text>
@@ -719,19 +721,19 @@ const PayrollReport = () => {
             >
             <View style={{ minWidth: tableMinWidth, flex: 1 }}>
                 <View style={styles.tableHeader}>
-                <Text style={[styles.tableHeaderText, styles.colEmployee]} fontType="bold">Employee Name</Text>
-                <Text style={[styles.tableHeaderText, styles.colNumeric]} fontType="bold">Total Work Hours</Text>
-                <Text style={[styles.tableHeaderText, styles.colNumeric]} fontType="bold">Break (min)</Text>
-                <Text style={[styles.tableHeaderText, styles.colNumeric]} fontType="bold">Correction (min)</Text>
-                <Text style={[styles.tableHeaderText, styles.colPayable]} fontType="bold">Payable Hours</Text>
-                <Text style={[styles.tableHeaderText, styles.colNumeric]} fontType="bold">Hourly Rate</Text>
-                <Text style={[styles.tableHeaderText, styles.colNumeric]} fontType="bold">Total Pay</Text>
-                <Text style={[styles.tableHeaderText, styles.colAction]} fontType="bold">Details</Text>
+                <Text style={[styles.tableHeaderText, styles.colEmployee]} fontType="bold">{t('manager.reports.employeeName')}</Text>
+                <Text style={[styles.tableHeaderText, styles.colNumeric]} fontType="bold">{t('manager.reports.totalWorkHours')}</Text>
+                <Text style={[styles.tableHeaderText, styles.colNumeric]} fontType="bold">{t('manager.reports.break')}</Text>
+                <Text style={[styles.tableHeaderText, styles.colNumeric]} fontType="bold">{t('manager.reports.correction')}</Text>
+                <Text style={[styles.tableHeaderText, styles.colPayable]} fontType="bold">{t('manager.reports.payableHours')}</Text>
+                <Text style={[styles.tableHeaderText, styles.colNumeric]} fontType="bold">{t('manager.reports.hourlyRate')}</Text>
+                <Text style={[styles.tableHeaderText, styles.colNumeric]} fontType="bold">{t('manager.reports.totalPay')}</Text>
+                <Text style={[styles.tableHeaderText, styles.colAction]} fontType="bold">{t('manager.reports.details')}</Text>
                 </View>
                 {loading ? (
                 <ActivityIndicator size="large" color={theme.colors.primary} style={{ marginVertical: theme.spacing(4) }} />
                 ) : reportData.length === 0 ? (
-                <Text style={styles.noDataText} fontType="regular">No data available for the selected period.</Text>
+                <Text style={styles.noDataText} fontType="regular">{t('manager.reports.noLaborData')}</Text>
                 ) : (
                 <ScrollView 
                     style={{ flex: 1 }}
@@ -808,9 +810,17 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.background,
     flexDirection: 'row',
     alignItems: 'center',
+    gap: theme.spacing(2),
   },
   backButton: {
-    marginRight: theme.spacing(2),
+    width: 40,
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: theme.colors.cardBackground,
+    borderRadius: theme.radius.md,
+    borderWidth: 1,
+    borderColor: theme.colors.borderColor,
   },
   pageTitle: {
     fontSize: theme.fontSizes.xl,

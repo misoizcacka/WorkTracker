@@ -36,8 +36,8 @@ module.exports = () => {
     },
     android: {
       adaptiveIcon: {
-        foregroundImage: './assets/koordinateappicon.png',
-        backgroundColor: '#000000',
+        foregroundImage: './assets/koordinatelogo.png',
+        backgroundColor: '#f3f2f2',
       },
       softwareKeyboardLayoutMode: 'pan',
       predictiveBackGestureEnabled: false,

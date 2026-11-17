@@ -3,7 +3,7 @@ import { StyleSheet, Alert, ScrollView, ActivityIndicator, Linking, TouchableOpa
 import { Ionicons } from '@expo/vector-icons';
 import * as Location from "expo-location";
 import * as Notifications from "expo-notifications";
-import * as BackgroundLocation from 'background-location';
+import * as BackgroundLocation from '../../../modules/background-location';
 import { getDistance } from "geolib";
 import { Button } from "../../components/Button";
 import { Card } from "../../components/Card";
@@ -26,6 +26,8 @@ import { fetchAssignmentsForWorkers } from '~/services/workerAssignments';
 import { useTranslation } from 'react-i18next';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useEmployeeProfile } from '~/hooks/useEmployeeProfile';
+import BatteryOptimizationPrompt from '../../components/BatteryOptimizationPrompt';
+import CheckInRequirementsModal from '../../components/CheckInRequirementsModal';
 
 const BATTERY_OPT_SHOWN_KEY = 'battery_opt_shown';
 
@@ -58,6 +60,7 @@ export default function Home() {
   const [lastOnSiteAssignmentId, setLastOnSiteAssignmentId] = useState<string | null>(null);
   const [isBreakModalVisible, setIsBreakModalVisible] = useState(false);
   const [isLoadingCheckoutLocation, setIsLoadingCheckoutLocation] = useState(false);
+  const [showRequirementsModal, setShowRequirementsModal] = useState(false);
   // Stores the GPS location captured when user taps "Check Out", used after break modal confirms
   const pendingCheckoutLocationRef = React.useRef<{ latitude: number; longitude: number } | null>(null);
   // iOS only: seconds since last native location tick â€” >600 means process was force-swiped
@@ -358,7 +361,13 @@ export default function Home() {
     return t('worker.home.distanceFrom', { distance: formattedDistance, name: projectLocationName });
   }, [relevantAssignment, locationReady, targetProjectLocation, isNearby, distance, projectLocationName, t]);
 
-  useEffect(() => { fetchHomeData(); }, [fetchHomeData]);
+  useEffect(() => { 
+    // Load both projects and assignments on mount to avoid race condition
+    Promise.all([
+      loadInitialProjects(),
+      fetchHomeData()
+    ]);
+  }, [fetchHomeData, loadInitialProjects]);
 
   // Ensure the session token is always fresh when the screen loads â€” skip when offline
   useEffect(() => {
@@ -401,6 +410,7 @@ export default function Home() {
     return () => clearInterval(timer);
   }, [checkedIn, sessionStartTime]);
 
+  // Fetch worker location once and update every 10 seconds (independent of project selection)
   useEffect(() => {
     let intervalId: any;
     let isMounted = true;
@@ -419,16 +429,10 @@ export default function Home() {
         if (isMounted) {
           setWorkerMapLocation({ latitude, longitude });
           if (!locationReady) setLocationReady(true);
-          if (targetProjectLocation) {
-            setDistance(getDistance({ latitude, longitude }, { latitude: targetProjectLocation.lat, longitude: targetProjectLocation.lon }));
-          } else {
-            setDistance(null);
-          }
         }
       } catch (error) {
         if (isMounted) {
           setLocationReady(false);
-          setDistance(null);
         }
       }
     };
@@ -438,7 +442,19 @@ export default function Home() {
       intervalId = setInterval(fetchAndSetLocation, 10000);
     }
     return () => { isMounted = false; if (intervalId) clearInterval(intervalId); };
-  }, [locationPermission, targetProjectLocation]);
+  }, [locationPermission]); // Removed targetProjectLocation dependency
+
+  // Calculate distance whenever worker location OR target project changes
+  useEffect(() => {
+    if (workerMapLocation && targetProjectLocation) {
+      setDistance(getDistance(
+        { latitude: workerMapLocation.latitude, longitude: workerMapLocation.longitude },
+        { latitude: targetProjectLocation.lat, longitude: targetProjectLocation.lon }
+      ));
+    } else {
+      setDistance(null);
+    }
+  }, [workerMapLocation, targetProjectLocation]);
 
   const startedSessionIdRef = useRef<string | null>(null);
 
@@ -471,16 +487,48 @@ export default function Home() {
       deviceToken,
       deviceSecret,
       JSON.stringify(backgroundGeofenceAssignments)
-    ).catch((error) => {
-      console.error('Failed to refresh background geofence assignments:', error);
-      startedSessionIdRef.current = null; // Allow retry on failure
-    });
+    )
+      .then(() => {
+        console.log('Background location tracking started successfully');
+        // Show notification to user that tracking resumed (helpful after reinstall)
+        Toast.show({
+          type: 'info',
+          text1: t('worker.home.trackingResumed', { defaultValue: 'Location tracking active' }),
+          text2: t('worker.home.trackingResumedDesc', { defaultValue: 'Your work hours are being tracked' }),
+          visibilityTime: 3000,
+        });
+      })
+      .catch((error) => {
+        console.error('Failed to start background location tracking:', error);
+        startedSessionIdRef.current = null; // Allow retry on failure
+        Alert.alert(
+          t('worker.home.trackingError', { defaultValue: 'Tracking Error' }),
+          t('worker.home.trackingErrorMsg', { defaultValue: 'Location tracking failed to start. Please check out and check in again.' })
+        );
+      });
   }, [activeWorkSession?.id, backgroundGeofenceAssignments, checkedIn, deviceSecret, deviceToken, user?.id, userCompanyId]);
 
   const handleCheckIn = async () => {
     if (checkedIn || !relevantAssignment || !targetProjectLocation) return;
 
-    // 9-D: Lock the button immediately before any async work to prevent double-tap races.
+    // STEP 1: Check all permissions BEFORE allowing check-in
+    if (Platform.OS === 'android') {
+      try {
+        const foreground = await Location.getForegroundPermissionsAsync();
+        const background = await Location.getBackgroundPermissionsAsync();
+        const batteryOptDisabled = BackgroundLocation.isBatteryOptimizationDisabled();
+        
+        if (!foreground.granted || !background.granted || !batteryOptDisabled) {
+          // Block check-in and show requirements modal
+          setShowRequirementsModal(true);
+          return; // Stop here - don't proceed with check-in
+        }
+      } catch (error) {
+        console.error('Error checking permissions:', error);
+      }
+    }
+
+    // STEP 2: Lock the button immediately before any async work to prevent double-tap races.
     setIsProcessingCheckInOut(true);
     setPendingAction('checking_in');
 
@@ -737,14 +785,14 @@ export default function Home() {
 
         <View style={styles.homeContent}>
 
-          {!isDataLoading && relevantAssignment ? (
-            <View style={styles.projectCard}>
+          {relevantAssignment ? (
+            <View style={[styles.projectCard, isDataLoading && { opacity: 0.6 }]}>
               <Text style={styles.projectCardLabel} fontType="medium">
                 {stableCheckedIn ? t('worker.home.currentlyWorkingAt') : t('worker.home.nextAssignment')}
               </Text>
               <TouchableOpacity
-                onPress={() => !isSelectionLocked && setIsAssignmentSelectionModalVisible(true)}
-                disabled={isSelectionLocked}
+                onPress={() => !isSelectionLocked && !isDataLoading && setIsAssignmentSelectionModalVisible(true)}
+                disabled={isSelectionLocked || isDataLoading}
                 style={styles.projectNameRow}
               >
                 <Text style={styles.projectName} fontType="bold" numberOfLines={1}>{projectLocationName}</Text>
@@ -756,7 +804,7 @@ export default function Home() {
                     {(relevantAssignment as any).project?.address || (relevantAssignment as any).location?.name || ''}
                   </Text>
                   {targetProjectLocation && (
-                    <TouchableOpacity onPress={handleNavigate} style={styles.navigateBtn}>
+                    <TouchableOpacity onPress={handleNavigate} style={styles.navigateBtn} disabled={isDataLoading}>
                       <Ionicons name="navigate-outline" size={13} color={theme.colors.primary} />
                       <Text style={styles.navigateBtnText} fontType="bold">{t('worker.home.navigate')}</Text>
                     </TouchableOpacity>
@@ -774,7 +822,11 @@ export default function Home() {
               <Ionicons name="calendar-outline" size={20} color={theme.colors.disabledText} />
               <Text style={styles.emptyProjectText} fontType="medium">{t('worker.home.noAssignmentsToday')}</Text>
             </View>
-          ) : null}
+          ) : (
+            <View style={styles.projectCard}>
+              <ActivityIndicator size="small" color={theme.colors.primary} />
+            </View>
+          )}
 
           <View style={styles.circleSection}>
             <View style={[styles.circleOuter, stableCheckedIn ? styles.circleOuterCheckedIn : circleButtonActive ? styles.circleOuterReady : styles.circleOuterFar]}>
@@ -857,6 +909,17 @@ export default function Home() {
         onConfirm={handleBreakConfirm}
         onCancel={handleBreakCancel}
         isLoading={isProcessingCheckInOut || isLoadingCheckoutLocation}
+      />
+
+      {/* Check-In Requirements Modal */}
+      <CheckInRequirementsModal
+        visible={showRequirementsModal}
+        onDismiss={() => setShowRequirementsModal(false)}
+        onAllRequirementsMet={() => {
+          setShowRequirementsModal(false);
+          // Automatically proceed with check-in now that requirements are met
+          handleCheckIn();
+        }}
       />
     </AnimatedScreen>
   );

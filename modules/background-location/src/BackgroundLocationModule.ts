@@ -17,6 +17,13 @@ interface BackgroundLocationModule {
   requestAlwaysAuthorization: () => Promise<void>;
   getAuthorizationStatus: () => Promise<string>;
   getDiagnostics: () => Promise<LocationDiagnostics>;
+  exportLogs?: () => Promise<string>;
+  getRecentLogs?: (lines: number) => Promise<string>;
+  clearLogs?: () => Promise<void>;
+  getLogStats?: () => Promise<any>;
+  isBatteryOptimizationDisabled?: () => boolean;
+  getDeviceManufacturer?: () => string;
+  openBatteryOptimizationSettings?: () => Promise<boolean>;
 }
 
 export interface LocationDiagnostics {

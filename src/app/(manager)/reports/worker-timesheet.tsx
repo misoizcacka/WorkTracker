@@ -14,6 +14,7 @@ import moment from 'moment';
 import { getCurrencySymbol } from '../../../utils/currency';
 import UserAvatar from '../../../components/UserAvatar';
 import { SummaryStatsPanel, StatItem } from '../../../components/SummaryStatsPanel';
+import { useTranslation } from 'react-i18next';
 
 interface WorkerTimesheetData {
   worker_id: string;
@@ -31,6 +32,7 @@ interface WorkerTimesheetData {
 const WorkerTimesheetReport = () => {
   const router = useRouter();
   const params = useLocalSearchParams();
+  const { t } = useTranslation();
   const { employees } = useContext(EmployeesContext) as EmployeesContextType;
   const { userCompanyCountry } = useSession();
   const currency = getCurrencySymbol(userCompanyCountry);
@@ -242,7 +244,7 @@ const WorkerTimesheetReport = () => {
           </Text>
           {isActive && (
             <View style={styles.activeBadge}>
-              <Text style={styles.activeBadgeText} fontType="bold">ACTIVE</Text>
+              <Text style={styles.activeBadgeText} fontType="bold">{t('manager.reports.active')}</Text>
             </View>
           )}
         </View>
@@ -289,8 +291,8 @@ const WorkerTimesheetReport = () => {
           <Ionicons name="arrow-back" size={24} color={theme.colors.headingText} />
         </TouchableOpacity>
         <View>
-          <Text style={styles.pageTitle} fontType="bold">Worker Timesheet</Text>
-          <Text style={styles.pageSubtitle}>View detailed work sessions and hours for any worker.</Text>
+          <Text style={styles.pageTitle} fontType="bold">{t('manager.reports.workerTimesheetPageTitle')}</Text>
+          <Text style={styles.pageSubtitle}>{t('manager.reports.workerTimesheetPageSubtitle')}</Text>
         </View>
       </View>
 
@@ -298,12 +300,12 @@ const WorkerTimesheetReport = () => {
         <View style={styles.mainLayout}>
           {/* Left Panel: Worker Selection */}
           <View style={styles.leftPanel}>
-            <Text style={styles.panelTitle} fontType="bold">Select Worker</Text>
+            <Text style={styles.panelTitle} fontType="bold">{t('manager.reports.selectWorker')}</Text>
             <View style={styles.searchContainer}>
               <Ionicons name="search-outline" size={18} color={theme.colors.bodyText} style={styles.searchIcon} />
               <TextInput
                 style={styles.searchInput}
-                placeholder="Search workers..."
+                placeholder={t('manager.reports.searchWorkers')}
                 value={searchTerm}
                 onChangeText={setSearchTerm}
                 placeholderTextColor={theme.colors.bodyText}
@@ -324,12 +326,12 @@ const WorkerTimesheetReport = () => {
             {!selectedWorkerId ? (
               <Card style={styles.emptyStateCard}>
                 <Ionicons name="people-outline" size={64} color={theme.colors.borderColor} />
-                <Text style={styles.emptyStateText} fontType="medium">Select a worker to view timesheet</Text>
+                <Text style={styles.emptyStateText} fontType="medium">{t('manager.reports.selectWorkerToView')}</Text>
               </Card>
             ) : loading ? (
               <Card style={styles.emptyStateCard}>
                 <ActivityIndicator size="large" color={theme.colors.primary} />
-                <Text style={styles.emptyStateText} fontType="medium">Loading timesheet...</Text>
+                <Text style={styles.emptyStateText} fontType="medium">{t('manager.reports.loadingTimesheet')}</Text>
               </Card>
             ) : timesheetData ? (
               <>
@@ -368,27 +370,27 @@ const WorkerTimesheetReport = () => {
                   <SummaryStatsPanel
                     stats={[
                       {
-                        label: 'Payable Hours',
+                        label: t('manager.reports.payableHours'),
                         value: `${timesheetData.payable_hours.toFixed(1)}h`,
                         highlight: true,
                         labelColor: theme.colors.primary,
                         valueColor: theme.colors.primary,
                       },
                       {
-                        label: 'Sessions',
+                        label: t('manager.reports.workerName').replace(' Name', 's'),
                         value: timesheetData.sessions.length.toString(),
                       },
                       {
-                        label: 'Total Breaks',
+                        label: t('manager.reports.break'),
                         value: `${timesheetData.total_break_minutes}m`,
                       },
                       {
-                        label: 'Corrections',
+                        label: t('manager.reports.correction'),
                         value: `${timesheetData.total_correction_minutes >= 0 ? '+' : ''}${timesheetData.total_correction_minutes}m`,
                         valueColor: timesheetData.total_correction_minutes >= 0 ? theme.colors.success : theme.colors.danger,
                       },
                       ...(timesheetData.total_pay !== null ? [{
-                        label: 'Total Pay',
+                        label: t('manager.reports.totalPay'),
                         value: `${currency}${timesheetData.total_pay.toFixed(2)}`,
                         highlight: true,
                         labelColor: theme.colors.success,
@@ -404,28 +406,28 @@ const WorkerTimesheetReport = () => {
                   {timesheetData.sessions.length === 0 ? (
                     <View style={styles.noSessionsContainer}>
                       <Ionicons name="calendar-outline" size={48} color={theme.colors.borderColor} />
-                      <Text style={styles.noSessionsText} fontType="medium">No sessions for this month</Text>
+                      <Text style={styles.noSessionsText} fontType="medium">{t('manager.reports.noSessionsMonth')}</Text>
                     </View>
                   ) : (
                     <>
                       <View style={styles.sessionsTableHeader}>
                         <View style={styles.sessionDateCell}>
-                          <Text style={styles.tableHeaderText} fontType="bold">Date</Text>
+                          <Text style={styles.tableHeaderText} fontType="bold">{t('manager.reports.date')}</Text>
                         </View>
                         <View style={styles.sessionTimeCell}>
-                          <Text style={styles.tableHeaderText} fontType="bold">Start</Text>
+                          <Text style={styles.tableHeaderText} fontType="bold">{t('manager.reports.start')}</Text>
                         </View>
                         <View style={styles.sessionTimeCell}>
-                          <Text style={styles.tableHeaderText} fontType="bold">End</Text>
+                          <Text style={styles.tableHeaderText} fontType="bold">{t('manager.reports.end')}</Text>
                         </View>
                         <View style={styles.sessionDurationCell}>
-                          <Text style={styles.tableHeaderText} fontType="bold">Duration</Text>
+                          <Text style={styles.tableHeaderText} fontType="bold">{t('manager.reports.duration')}</Text>
                         </View>
                         <View style={styles.sessionBreakCell}>
-                          <Text style={styles.tableHeaderText} fontType="bold">Break</Text>
+                          <Text style={styles.tableHeaderText} fontType="bold">{t('manager.reports.break')}</Text>
                         </View>
                         <View style={styles.sessionCorrectionCell}>
-                          <Text style={styles.tableHeaderText} fontType="bold">Correction</Text>
+                          <Text style={styles.tableHeaderText} fontType="bold">{t('manager.reports.correction')}</Text>
                         </View>
                         <View style={styles.sessionActionsCell}>
                           <Text style={styles.tableHeaderText} fontType="bold"></Text>

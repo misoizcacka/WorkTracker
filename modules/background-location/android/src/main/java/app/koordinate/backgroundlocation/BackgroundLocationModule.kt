@@ -18,6 +18,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
+import android.os.PowerManager
+import android.net.Uri
+import android.provider.Settings
 
 // Re-adding the missing data classes
 data class GeofenceAssignment(
@@ -279,6 +282,56 @@ class BackgroundLocationModule : Module() {
                 promise.resolve(stats)
             } catch (e: Exception) {
                 promise.reject("STATS_ERROR", "Failed to get log stats: ${e.message}", e)
+            }
+        }
+        
+        // === Battery Optimization Functions ===
+        
+        Function("isBatteryOptimizationDisabled") {
+            val context = appContext.reactContext?.applicationContext ?: return@Function false
+            
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                val powerManager = context.getSystemService(Context.POWER_SERVICE) as PowerManager
+                return@Function powerManager.isIgnoringBatteryOptimizations(context.packageName)
+            }
+            // Pre-Marshmallow doesn't have battery optimization
+            return@Function true
+        }
+        
+        Function("getDeviceManufacturer") {
+            return@Function Build.MANUFACTURER
+        }
+        
+        AsyncFunction("openBatteryOptimizationSettings") { promise: Promise ->
+            val context = appContext.reactContext?.applicationContext ?: run {
+                promise.reject("APP_CONTEXT_ERROR", "Context is null.", null)
+                return@AsyncFunction
+            }
+            
+            try {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                    // Try to open the battery optimization settings directly
+                    val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
+                        data = Uri.parse("package:${context.packageName}")
+                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    }
+                    context.startActivity(intent)
+                    promise.resolve(true)
+                } else {
+                    promise.resolve(false)
+                }
+            } catch (e: Exception) {
+                // Fallback: open app settings if direct intent fails
+                try {
+                    val fallbackIntent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                        data = Uri.parse("package:${context.packageName}")
+                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    }
+                    context.startActivity(fallbackIntent)
+                    promise.resolve(true)
+                } catch (fallbackError: Exception) {
+                    promise.reject("SETTINGS_ERROR", "Failed to open settings: ${fallbackError.message}", fallbackError)
+                }
             }
         }
     }

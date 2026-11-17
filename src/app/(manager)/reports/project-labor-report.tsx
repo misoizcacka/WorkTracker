@@ -12,6 +12,7 @@ import { theme } from '../../../theme';
 import { EmployeesContext, EmployeesContextType } from '../../../context/EmployeesContext';
 import { useSession } from '~/context/AuthContext';
 import { getCurrencySymbol } from '../../../utils/currency';
+import { useTranslation } from 'react-i18next';
 
 interface ReportRow {
   worker_id: string;
@@ -22,6 +23,7 @@ interface ReportRow {
 
 const ProjectLaborReport = () => {
   const router = useRouter();
+  const { t } = useTranslation();
   const { projects, isLoading: projectsLoading } = useProjects();
   const { employees } = useContext(EmployeesContext) as EmployeesContextType;
   const { userCompanyCountry } = useSession();
@@ -84,7 +86,7 @@ const ProjectLaborReport = () => {
             {item.name}
           </Text>
           <Text style={styles.projectSubtext} fontType="regular" numberOfLines={1}>
-            {item.address || 'No address'}
+            {item.address || t('manager.reports.noAddress')}
           </Text>
         </View>
         {isSelected && <Ionicons name="chevron-forward" size={16} color={theme.colors.primary} />}
@@ -99,8 +101,8 @@ const ProjectLaborReport = () => {
           <Ionicons name="arrow-back" size={24} color={theme.colors.headingText} />
         </TouchableOpacity>
         <View>
-          <Text style={styles.pageTitle} fontType="bold">Project Labor Report</Text>
-          <Text style={styles.pageSubtitle}>Analyze labor hours spent on specific projects.</Text>
+          <Text style={styles.pageTitle} fontType="bold">{t('manager.reports.projectLaborPageTitle')}</Text>
+          <Text style={styles.pageSubtitle}>{t('manager.reports.projectLaborPageSubtitle')}</Text>
         </View>
       </View>
 
@@ -108,12 +110,12 @@ const ProjectLaborReport = () => {
         <View style={styles.mainLayout}>
           {/* --- Left Panel: Project List --- */}
           <View style={styles.leftPanel}>
-            <Text style={styles.panelTitle} fontType="bold">Projects</Text>
+            <Text style={styles.panelTitle} fontType="bold">{t('manager.reports.projects')}</Text>
             <View style={styles.searchContainer}>
               <Ionicons name="search-outline" size={18} color={theme.colors.bodyText} style={styles.searchIcon} />
               <TextInput
                 style={styles.searchInput}
-                placeholder="Search projects..."
+                placeholder={t('manager.reports.searchProjects')}
                 value={searchTerm}
                 onChangeText={setSearchTerm}
                 placeholderTextColor={theme.colors.bodyText}
@@ -145,17 +147,17 @@ const ProjectLaborReport = () => {
                   </View>
                   <View style={styles.statDivider} />
                   <View style={styles.statBox}>
-                    <Text style={styles.statLabel} fontType="bold">Total Hours</Text>
+                    <Text style={styles.statLabel} fontType="bold">{t('manager.reports.totalHours')}</Text>
                     <Text style={styles.statValue} fontType="bold">{totalProjectHours.toFixed(2)}h</Text>
                   </View>
                   <View style={styles.statDivider} />
                   <View style={styles.statBox}>
-                    <Text style={[styles.statLabel, { color: theme.colors.success }]} fontType="bold">Labor Cost</Text>
+                    <Text style={[styles.statLabel, { color: theme.colors.success }]} fontType="bold">{t('manager.reports.laborCost')}</Text>
                     <Text style={[styles.statValue, { color: theme.colors.success }]} fontType="bold">
                       {hasAnyCost ? `${currency}${totalProjectCost.toFixed(2)}` : '—'}
                     </Text>
                     {!hasAnyCost && (
-                      <Text style={styles.statHint}>No rates set</Text>
+                      <Text style={styles.statHint}>{t('manager.reports.noRatesSet')}</Text>
                     )}
                   </View>
                 </View>
@@ -163,15 +165,15 @@ const ProjectLaborReport = () => {
                 {/* --- Labor Table --- */}
                 <View style={styles.tableContainer}>
                   <View style={styles.tableHeader}>
-                    <Text style={[styles.tableHeaderText, styles.colWorker]} fontType="bold">Worker Name</Text>
-                    <Text style={[styles.tableHeaderText, styles.colHours]} fontType="bold">Hours Logged</Text>
-                    <Text style={[styles.tableHeaderText, styles.colCost]} fontType="bold">Labor Cost</Text>
+                    <Text style={[styles.tableHeaderText, styles.colWorker]} fontType="bold">{t('manager.reports.workerName')}</Text>
+                    <Text style={[styles.tableHeaderText, styles.colHours]} fontType="bold">{t('manager.reports.hoursLogged')}</Text>
+                    <Text style={[styles.tableHeaderText, styles.colCost]} fontType="bold">{t('manager.reports.laborCost')}</Text>
                   </View>
 
                   {loading ? (
                     <ActivityIndicator size="large" color={theme.colors.primary} style={{ marginVertical: theme.spacing(4) }} />
                   ) : reportData.length === 0 ? (
-                    <Text style={styles.noDataText} fontType="regular">No labor data found for this project.</Text>
+                    <Text style={styles.noDataText} fontType="regular">{t('manager.reports.noLaborData')}</Text>
                   ) : (
                     reportData.map((row) => (
                       <View key={row.worker_id} style={styles.tableRow}>
@@ -188,7 +190,7 @@ const ProjectLaborReport = () => {
                             </Text>
                           ) : (
                             <Text style={[styles.tableCellText, { color: theme.colors.disabledText }]} fontType="regular">
-                              No rate
+                              {t('manager.reports.noRate')}
                             </Text>
                           )}
                         </View>
@@ -200,7 +202,7 @@ const ProjectLaborReport = () => {
             ) : (
               <View style={styles.emptyState}>
                 <Ionicons name="briefcase-outline" size={64} color={theme.colors.borderColor} />
-                <Text style={styles.emptyStateText} fontType="regular">Select a project from the list to view labor details.</Text>
+                <Text style={styles.emptyStateText} fontType="regular">{t('manager.reports.selectProject')}</Text>
               </View>
             )}
           </View>
@@ -217,9 +219,17 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.background,
     flexDirection: 'row',
     alignItems: 'center',
+    gap: theme.spacing(2),
   },
   backButton: {
-    marginRight: theme.spacing(2),
+    width: 40,
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: theme.colors.cardBackground,
+    borderRadius: theme.radius.md,
+    borderWidth: 1,
+    borderColor: theme.colors.borderColor,
   },
   pageTitle: {
     fontSize: theme.fontSizes.xl,

@@ -363,6 +363,25 @@
       "message": "For accurate work hour tracking, please disable battery optimization for this app. Tap 'Open Settings', find this app, and select 'Unrestricted' or 'Don't optimize'.",
       "openSettings": "Open Settings",
       "later": "Later"
+    },
+    "permissions": {
+      "setupRequired": "Setup Required",
+      "setupSubtitle": "We need a few permissions to track your work hours accurately",
+      "locationForeground": "Location Permission (While Using)",
+      "locationForegroundDesc": "Required to track your location during work",
+      "locationBackground": "Location Permission (Always)",
+      "locationBackgroundDesc": "Required to track location when app is closed",
+      "notifications": "Notification Permission",
+      "notificationsDesc": "Required to show active session notification",
+      "batteryOptimization": "Battery Optimization Disabled",
+      "batteryOptimizationDesc": "Required for reliable location tracking",
+      "grant": "Grant",
+      "allSet": "All Set!",
+      "allSetDesc": "All permissions are granted. You can now check in.",
+      "whyNeeded": "Why are these needed?",
+      "whyNeededDesc": "Location permissions and battery optimization settings ensure we can accurately track your work hours, even when your phone screen is off or the app is in the background.",
+      "continueCheckIn": "Continue to Check In",
+      "refreshStatus": "Refresh Status"
     }
   },
   "subscriptionSetup": {
@@ -601,7 +620,13 @@
       "excelReportDesc": "Styled spreadsheet with summary",
       "datevCsv": "DATEV CSV",
       "datevCsvDesc": "German payroll format",
-      "export": "Export"
+      "export": "Export",
+      "monthly": "Monthly",
+      "customRange": "Custom Range",
+      "totalBreak": "Total Break Time",
+      "noRate": "No rate",
+      "noAddress": "No address",
+      "searchProjects": "Search projects..."
     },
     "locationReplay": {
       "title": "Location Replay",

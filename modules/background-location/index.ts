@@ -111,3 +111,28 @@ export function getLogStats(): Promise<LogStats> {
         max_size_mb: '0'
     });
 }
+
+// === Battery Optimization Functions ===
+
+/**
+ * Check if battery optimization is disabled for this app
+ * Returns true if disabled (good for tracking) or if device doesn't support battery optimization
+ */
+export function isBatteryOptimizationDisabled(): boolean {
+    return BackgroundLocationModule.isBatteryOptimizationDisabled?.() ?? true;
+}
+
+/**
+ * Get device manufacturer (e.g., 'samsung', 'xiaomi', 'Google')
+ */
+export function getDeviceManufacturer(): string {
+    return BackgroundLocationModule.getDeviceManufacturer?.() ?? 'unknown';
+}
+
+/**
+ * Open battery optimization settings for this app
+ * Returns true if settings were opened, false if not supported
+ */
+export function openBatteryOptimizationSettings(): Promise<boolean> {
+    return BackgroundLocationModule.openBatteryOptimizationSettings?.() ?? Promise.resolve(false);
+}

@@ -273,46 +273,79 @@ export function SessionProvider(props: React.PropsWithChildren<{}>) {
   }, []);
 
   useEffect(() => {
-    setIsLoading(true);
-    supabase.auth.getSession().then(async ({ data: { session: initialSession } }) => {
-      if (initialSession) {
-        setSession(initialSession);
-        setUser(initialSession.user);
-        setIsLoading(false);
-        fetchUserDetailsAndCompany(initialSession.user);
-        return;
-      }
+    let mounted = true;
+    
+    const initializeAuth = async () => {
+      setIsLoading(true);
+      
+      try {
+        // Add timeout to getSession to prevent infinite hang
+        const sessionResult = await withTimeout(
+          supabase.auth.getSession(),
+          NETWORK_TIMEOUT_MS
+        );
+        
+        if (!mounted) return;
+        
+        const { data: { session: initialSession } } = sessionResult;
+        
+        if (initialSession) {
+          setSession(initialSession);
+          setUser(initialSession.user);
+          setIsLoading(false);
+          fetchUserDetailsAndCompany(initialSession.user);
+          return;
+        }
 
-      // No active session — try silent re-auth from stored worker credentials
-      // before giving up and showing the login screen.
-      if (Platform.OS !== 'web') {
-        try {
-          const stored = await SecureStore.getItemAsync('worker_auth_credentials');
-          if (stored) {
-            const { email, password } = JSON.parse(stored);
-            const { data: reAuthData, error: reAuthError } = await supabase.auth.signInWithPassword({ email, password });
-            if (!reAuthError && reAuthData.session) {
-              // onAuthStateChange will fire and call fetchUserDetailsAndCompany
-              setIsLoading(false);
-              return;
-            } else {
-              // Credentials are stale — clear them so we don't loop
-              console.warn('AuthContext: silent re-auth failed, clearing stored credentials:', reAuthError?.message);
-              await SecureStore.deleteItemAsync('worker_auth_credentials');
+        // No active session — try silent re-auth from stored worker credentials
+        if (Platform.OS !== 'web') {
+          try {
+            const stored = await SecureStore.getItemAsync('worker_auth_credentials');
+            if (stored) {
+              const { email, password } = JSON.parse(stored);
+              const { data: reAuthData, error: reAuthError } = await withTimeout(
+                supabase.auth.signInWithPassword({ email, password }),
+                NETWORK_TIMEOUT_MS
+              );
+              
+              if (!reAuthError && reAuthData.session && mounted) {
+                // onAuthStateChange will fire and call fetchUserDetailsAndCompany
+                setIsLoading(false);
+                return;
+              } else {
+                // Credentials are stale — clear them so we don't loop
+                console.warn('AuthContext: silent re-auth failed, clearing stored credentials:', reAuthError?.message);
+                await SecureStore.deleteItemAsync('worker_auth_credentials');
+              }
             }
+          } catch (e) {
+            console.warn('AuthContext: error during silent re-auth:', e);
           }
-        } catch (e) {
-          console.warn('AuthContext: error during silent re-auth:', e);
+        }
+
+        if (mounted) {
+          setSession(null);
+          setUser(null);
+          setIsLoading(false);
+          fetchUserDetailsAndCompany(null);
+        }
+      } catch (error) {
+        // CRITICAL: If anything fails (timeout, network error), ALWAYS set isLoading to false
+        console.error('AuthContext: initialization error, forcing isLoading = false:', error);
+        if (mounted) {
+          setSession(null);
+          setUser(null);
+          setIsLoading(false);
+          setIsCompanyIdLoading(false);
         }
       }
+    };
 
-      setSession(null);
-      setUser(null);
-      setIsLoading(false);
-      fetchUserDetailsAndCompany(null);
-    });
+    initializeAuth();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, newSession) => {
+      if (!mounted) return;
+      
       setSession(newSession);
       setUser(newSession?.user ?? null);
       setIsLoading(false);
@@ -373,6 +406,7 @@ export function SessionProvider(props: React.PropsWithChildren<{}>) {
     });
 
     return () => {
+      mounted = false;
       subscription?.unsubscribe();
     };
   }, [fetchUserDetailsAndCompany]);
