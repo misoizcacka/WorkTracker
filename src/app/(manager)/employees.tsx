@@ -339,6 +339,45 @@ export default function ManagerEmployees() {
         { label: t('manager.navigation.corrections'), href: '/(manager)/corrections' },
       ]} />
       <AnimatedScreen>
+      {/* Worker App Download Banner */}
+      <View style={styles.downloadBanner}>
+        <View style={styles.downloadBannerContent}>
+          <Ionicons name="phone-portrait-outline" size={24} color={theme.colors.primary} />
+          <View style={styles.downloadBannerText}>
+            <Text style={styles.downloadBannerTitle} fontType="bold">
+              {t('manager.employees.workerAppBanner', { defaultValue: 'Your Workers Need the Koordinate Mobile App' })}
+            </Text>
+            <Text style={styles.downloadBannerSubtitle} fontType="regular">
+              {t('manager.employees.shareDownloadLink', { defaultValue: 'Share this link with your workers' })}: <Text fontType="bold">koordinate.app/download</Text>
+            </Text>
+          </View>
+          <TouchableOpacity
+            style={styles.copyLinkButton}
+            onPress={async () => {
+              const appDomain = process.env.EXPO_PUBLIC_APP_DOMAIN || 'koordinate.app';
+              const downloadUrl = `https://${appDomain}/download`;
+              
+              if (Platform.OS === 'web') {
+                await navigator.clipboard.writeText(downloadUrl);
+              } else {
+                await Share.share({ message: downloadUrl });
+              }
+              
+              Toast.show({
+                type: 'success',
+                text1: t('common.copied', { defaultValue: 'Copied!' }),
+                text2: t('manager.employees.linkCopied', { defaultValue: 'Download link copied to clipboard' }),
+              });
+            }}
+          >
+            <Ionicons name="copy-outline" size={18} color="white" />
+            <Text style={styles.copyLinkButtonText} fontType="medium">
+              {t('manager.employees.copyLink', { defaultValue: 'Copy Link' })}
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+
       <View style={styles.pageHeader}>
         <Text style={styles.pageTitle} fontType="bold">{t('manager.employees.title')}</Text>
         <Text style={styles.pageSubtitle}>{t('manager.employees.subtitle')}</Text>
@@ -481,6 +520,49 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: theme.colors.pageBackground,
     padding: theme.spacing(2),
+  },
+  downloadBanner: {
+    backgroundColor: theme.colors.primaryMuted,
+    borderRadius: theme.radius.lg,
+    padding: theme.spacing(2.5),
+    marginTop: theme.spacing(2),
+    marginHorizontal: theme.spacing(2),
+    marginBottom: theme.spacing(3),
+    borderWidth: 1,
+    borderColor: theme.colors.primary + '20',
+  },
+  downloadBannerContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing(2),
+    flexWrap: 'wrap',
+  },
+  downloadBannerText: {
+    flex: 1,
+    minWidth: 200,
+  },
+  downloadBannerTitle: {
+    fontSize: theme.fontSizes.md,
+    color: theme.colors.headingText,
+    marginBottom: theme.spacing(0.5),
+  },
+  downloadBannerSubtitle: {
+    fontSize: theme.fontSizes.sm,
+    color: theme.colors.bodyText,
+    lineHeight: 20,
+  },
+  copyLinkButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: theme.colors.primary,
+    paddingHorizontal: theme.spacing(2),
+    paddingVertical: theme.spacing(1.25),
+    borderRadius: theme.radius.md,
+    gap: theme.spacing(0.75),
+  },
+  copyLinkButtonText: {
+    color: 'white',
+    fontSize: theme.fontSizes.sm,
   },
   pageHeader: {
     paddingVertical: theme.spacing(4),

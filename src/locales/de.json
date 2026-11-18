@@ -679,7 +679,9 @@
       "totalBreak": "Gesamte Pausenzeit",
       "noRate": "Kein Satz",
       "noAddress": "Keine Adresse",
-      "searchProjects": "Projekte suchen..."
+      "searchProjects": "Projekte suchen...",
+      "noProjectsFound": "Keine Projekte gefunden",
+      "noProjects": "Noch keine Projekte"
     },
     "locationReplay": {
       "title": "Standortwiedergabe",

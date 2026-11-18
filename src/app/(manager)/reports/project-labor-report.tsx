@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useContext } from 'react';
+import React, { useState, useEffect, useMemo, useContext, useCallback } from 'react';
 import { View, ScrollView, TouchableOpacity, ActivityIndicator, StyleSheet, Platform, TextInput, FlatList } from 'react-native';
 import { Text } from '../../../components/Themed';
 import AnimatedScreen from '../../../components/AnimatedScreen';
@@ -24,21 +24,67 @@ interface ReportRow {
 const ProjectLaborReport = () => {
   const router = useRouter();
   const { t } = useTranslation();
-  const { projects, isLoading: projectsLoading } = useProjects();
+  const { loadProjectsPage } = useProjects();
   const { employees } = useContext(EmployeesContext) as EmployeesContextType;
   const { userCompanyCountry } = useSession();
   const currency = getCurrencySymbol(userCompanyCountry);
   const visibleWorkerIds = useMemo(() => new Set(employees.filter(employee => employee.role === 'worker').map(employee => employee.id)), [employees]);
+  
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [reportData, setReportData] = useState<ReportRow[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  
+  // Infinite scroll state
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [page, setPage] = useState(0);
+  const [hasMore, setHasMore] = useState(true);
+  const [loadingProjects, setLoadingProjects] = useState(false);
 
-  const filteredProjects = useMemo(() => {
-    return projects.filter(project =>
-      project.name.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-  }, [projects, searchTerm]);
+  // Load projects with search + pagination
+  const loadMore = useCallback(async (resetList: boolean = false) => {
+    if (loadingProjects || (!hasMore && !resetList)) return;
+    
+    setLoadingProjects(true);
+    const currentPage = resetList ? 0 : page;
+    
+    const { data, hasMore: more, error } = await loadProjectsPage(currentPage, 20, searchTerm);
+    
+    if (error) {
+      console.error('Failed to load projects:', error);
+      setLoadingProjects(false);
+      return;
+    }
+    
+    if (resetList) {
+      setProjects(data);
+      setPage(1);
+    } else {
+      // Deduplicate: only add projects that aren't already in the list
+      setProjects(prev => {
+        const existingIds = new Set(prev.map(p => p.id));
+        const newProjects = data.filter(p => !existingIds.has(p.id));
+        return [...prev, ...newProjects];
+      });
+      setPage(currentPage + 1);
+    }
+    
+    setHasMore(more);
+    setLoadingProjects(false);
+  }, [loadProjectsPage, page, hasMore, searchTerm, loadingProjects]);
+
+  // Reset pagination when search term changes
+  useEffect(() => {
+    setProjects([]);
+    setPage(0);
+    setHasMore(true);
+    loadMore(true);
+  }, [searchTerm]);
+
+  // Initial load
+  useEffect(() => {
+    loadMore(true);
+  }, []);
 
   useEffect(() => {
     if (!selectedProject) {
@@ -122,15 +168,32 @@ const ProjectLaborReport = () => {
               />
             </View>
             
-            {projectsLoading ? (
+            {loadingProjects && page === 0 ? (
               <ActivityIndicator size="small" color={theme.colors.primary} style={styles.loader} />
             ) : (
               <FlatList
-                data={filteredProjects}
+                data={projects}
                 renderItem={renderProjectItem}
                 keyExtractor={item => item.id}
                 contentContainerStyle={styles.projectListContent}
                 showsVerticalScrollIndicator={false}
+                onEndReached={() => loadMore(false)}
+                onEndReachedThreshold={0.5}
+                ListFooterComponent={
+                  loadingProjects && page > 0 ? (
+                    <ActivityIndicator size="small" color={theme.colors.primary} style={{ marginVertical: 16 }} />
+                  ) : null
+                }
+                ListEmptyComponent={
+                  !loadingProjects ? (
+                    <View style={{ padding: 20, alignItems: 'center' }}>
+                      <Ionicons name="search-outline" size={32} color={theme.colors.bodyText} />
+                      <Text style={{ marginTop: 8, color: theme.colors.bodyText }} fontType="regular">
+                        {searchTerm ? t('manager.reports.noProjectsFound') : t('manager.reports.noProjects')}
+                      </Text>
+                    </View>
+                  ) : null
+                }
               />
             )}
           </View>

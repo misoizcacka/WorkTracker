@@ -626,7 +626,9 @@
       "totalBreak": "Total Break Time",
       "noRate": "No rate",
       "noAddress": "No address",
-      "searchProjects": "Search projects..."
+      "searchProjects": "Search projects...",
+      "noProjectsFound": "No projects found",
+      "noProjects": "No projects yet"
     },
     "locationReplay": {
       "title": "Location Replay",

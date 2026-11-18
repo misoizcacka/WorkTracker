@@ -4,7 +4,8 @@ import { View, Text } from '~/components/Themed';
 import { Button } from '~/components/Button';
 import * as BackgroundLocation from 'background-location';
 import * as Sharing from 'expo-sharing';
-import * as FileSystem from 'expo-file-system';
+import { Paths } from 'expo-file-system';
+import { writeAsStringAsync } from 'expo-file-system/legacy';
 import { useTranslation } from 'react-i18next';
 import { theme } from '~/theme';
 
@@ -59,11 +60,13 @@ export default function DiagnosticsScreen() {
         // Native: save and share
         const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
         const fileName = `location_logs_${timestamp}.txt`;
-        const fileUri = FileSystem.cacheDirectory ? `${FileSystem.cacheDirectory}${fileName}` : fileName;
+        
+        const cacheDir = Paths.cache;
+        const fileUri = `${cacheDir.uri}${fileName}`;
         
         // Write file (ignoring deprecation warning for now - still works)
         try {
-          await FileSystem.writeAsStringAsync(fileUri, allLogs);
+          await writeAsStringAsync(fileUri, allLogs);
         } catch (writeError) {
           // If write fails, just share the text directly
           console.warn('File write failed, sharing text directly:', writeError);

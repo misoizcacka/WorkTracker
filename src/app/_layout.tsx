@@ -230,7 +230,6 @@ export default function RootLayout() {
           Asset.loadAsync([
             require('../../assets/koordinatelogo.png'),
             require('../../assets/koordinateappicon.png'),
-            require('../../assets/koordsplashscreen.png'),
           ]),
           Ionicons.loadFont(),
         ]);
@@ -372,6 +371,7 @@ export default function RootLayout() {
       const inManagerApp = segments[0] === '(manager)';
       const inWorkerApp = segments[0] === '(worker)';
       const inMobileOnly = segments[0] === 'mobile-only';
+      const onDownloadPage = segments[0] === 'download';
       const onCompanySetup = inManagerApp && segments.length > 1 && segments[1] === 'company-setup';
       
       // Create a fingerprint of the current state to prevent unnecessary re-runs
@@ -380,6 +380,11 @@ export default function RootLayout() {
         return;
       }
       lastRouteCheckRef.current = stateFingerprint;
+
+      // Allow public access to download page
+      if (onDownloadPage) {
+        return;
+      }
 
       // 1. Not logged in → guest
       if (!user) {
@@ -447,6 +452,7 @@ export default function RootLayout() {
       <Stack screenOptions={{
         headerShown: false,
       }}>
+        <Stack.Screen name="download" options={{ headerShown: false }} />
         <Stack.Screen name="(guest)" options={{ headerShown: false }} />
         <Stack.Screen name="auth" options={{ headerShown: false }} />
         <Stack.Screen name="join" options={{ headerShown: false }} />

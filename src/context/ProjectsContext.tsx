@@ -72,6 +72,7 @@ export interface ProjectMessage {
 export interface ProjectsContextType {
   projects: Project[];
   loadInitialProjects: () => Promise<void>;
+  loadProjectsPage: (page: number, pageSize: number, searchQuery?: string) => Promise<{ data: Project[]; hasMore: boolean; error: any }>;
   createProject: (projectData: Omit<Project, 'id' | 'lastModified' | 'photos'> & { photos: string[] }) => Promise<Project | undefined>;
   updateProject: (projectId: string, projectData: Omit<Project, 'id' | 'lastModified' | 'photos'> & { photos: string[] }) => Promise<Project | undefined>;
   getProjectMessages: (projectId: string, limit: number, beforeTimestamp?: string) => Promise<{ messages: ProjectMessage[]; hasMore: boolean; }>;
@@ -162,6 +163,43 @@ export function ProjectsProvider({ children }: { children: React.ReactNode }) {
       }
     } finally {
       setIsLoading(false);
+    }
+  }, []);
+
+  // Load projects with pagination and search support
+  const loadProjectsPage = useCallback(async (page: number, pageSize: number, searchQuery?: string) => {
+    const from = page * pageSize;
+    const to = from + pageSize - 1;
+
+    try {
+      let query = supabase
+        .from('projects')
+        .select(`*, project_photos ( url )`, { count: 'exact' })
+        .order('created_at', { ascending: false });
+
+      // Add search filter if provided
+      if (searchQuery && searchQuery.trim().length > 0) {
+        query = query.ilike('name', `%${searchQuery.trim()}%`);
+      }
+
+      const { data, error: fetchError, count } = await query.range(from, to);
+
+      if (fetchError) throw new Error(`Failed to fetch projects: ${fetchError.message}`);
+
+      const mappedProjects: Project[] = (data || []).map(mapProjectRecord);
+      
+      return {
+        data: mappedProjects,
+        hasMore: count ? count > to + 1 : false,
+        error: null,
+      };
+    } catch (e: any) {
+      console.error('ProjectsContext: loadProjectsPage error:', e);
+      return {
+        data: [],
+        hasMore: false,
+        error: e.message,
+      };
     }
   }, []);
 
@@ -317,7 +355,7 @@ export function ProjectsProvider({ children }: { children: React.ReactNode }) {
   }, [loadInitialProjects]);
 
   return (
-    <ProjectsContext.Provider value={{ projects, loadInitialProjects, createProject, updateProject, getProjectMessages, sendTextMessage, sendImageMessage, isLoading, error }}>
+    <ProjectsContext.Provider value={{ projects, loadInitialProjects, loadProjectsPage, createProject, updateProject, getProjectMessages, sendTextMessage, sendImageMessage, isLoading, error }}>
       {children}
     </ProjectsContext.Provider>
   );
