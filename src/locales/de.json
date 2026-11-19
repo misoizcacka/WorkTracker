@@ -808,6 +808,7 @@
       "planOverview": "Planubersicht",
       "activeWorkers": "Aktive Mitarbeiter",
       "currentSeats": "Aktuelle Plaetze",
+      "billingPeriodEnds": "Aktueller Abrechnungszeitraum endet am {{date}}",
       "adjustCapacity": "Kapazitaet anpassen",
       "adjustDesc": "Plaetze sofort hinzufuegen. Downgrades werden fuer den naechsten Abrechnungszeitraum geplant.",
       "seats": "PLAETZE",

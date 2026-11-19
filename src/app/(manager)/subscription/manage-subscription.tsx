@@ -154,7 +154,7 @@ export default function ManageSubscriptionScreen() {
             </View>
             {userSubscriptionPeriodEnd && (
               <Text style={styles.periodNote}>
-                Current billing period ends {moment(userSubscriptionPeriodEnd).format('MMMM D, YYYY')}
+                {t('manager.subscription.billingPeriodEnds', { date: moment(userSubscriptionPeriodEnd).format('MMMM D, YYYY') })}
               </Text>
             )}
           </Card>

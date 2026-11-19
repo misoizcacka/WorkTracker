@@ -777,6 +777,7 @@
       "planOverview": "Plan Overview",
       "activeWorkers": "Active Workers",
       "currentSeats": "Current Seats",
+      "billingPeriodEnds": "Current billing period ends {{date}}",
       "adjustCapacity": "Adjust Capacity",
       "adjustDesc": "Add seats immediately with prorated billing. Downgrades are scheduled for the next billing cycle, so you keep your current paid seats until renewal.",
       "seats": "SEATS",

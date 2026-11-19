@@ -1,12 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { View, StyleSheet, Platform, Linking, Image, TouchableOpacity as RNTouchableOpacity, Pressable } from 'react-native';
+import { View, StyleSheet, Platform, Linking, Image } from 'react-native';
 import { Text } from '~/components/Themed';
 import { theme } from '~/theme';
 import { Ionicons } from '@expo/vector-icons';
-import { Button } from '~/components/Button';
-
-// Use Pressable on web, TouchableOpacity on native
-const TouchableOpacity = Platform.OS === 'web' ? Pressable : RNTouchableOpacity;
+import { StoreBadge } from 'react-native-store-badges';
 
 const PLAY_STORE_URL = process.env.EXPO_PUBLIC_PLAY_STORE_URL || 'https://play.google.com/store/apps/details?id=app.koordinate';
 const APP_STORE_URL = process.env.EXPO_PUBLIC_APP_STORE_URL || 'https://apps.apple.com/app/id0000000000';
@@ -63,10 +60,10 @@ export default function DownloadPage() {
           <Text style={styles.subtitle} fontType="regular">
             Download Koordinate for iPhone
           </Text>
-          <Button
-            title="Open App Store"
-            onPress={() => handleDownload('ios')}
-            style={styles.button}
+          <StoreBadge
+            platform="ios"
+            href={APP_STORE_URL}
+            height={60}
           />
         </View>
       </View>
@@ -84,10 +81,10 @@ export default function DownloadPage() {
           <Text style={styles.subtitle} fontType="regular">
             Download Koordinate for Android
           </Text>
-          <Button
-            title="Open Play Store"
-            onPress={() => handleDownload('android')}
-            style={styles.button}
+          <StoreBadge
+            platform="android"
+            href={PLAY_STORE_URL}
+            height={60}
           />
         </View>
       </View>
@@ -134,25 +131,17 @@ export default function DownloadPage() {
             </Text>
             
             <View style={styles.storeButtons}>
-              <TouchableOpacity
-                style={styles.storeButtonTouchable}
-                onPress={() => handleDownload('ios')}
-              >
-                <Ionicons name="logo-apple" size={24} color="white" />
-                <Text style={styles.storeButtonText} fontType="bold">
-                  Download on App Store
-                </Text>
-              </TouchableOpacity>
+              <StoreBadge
+                platform="ios"
+                href={APP_STORE_URL}
+                height={60}
+              />
               
-              <TouchableOpacity
-                style={styles.storeButtonTouchable}
-                onPress={() => handleDownload('android')}
-              >
-                <Ionicons name="logo-google-playstore" size={24} color="white" />
-                <Text style={styles.storeButtonText} fontType="bold">
-                  Get it on Google Play
-                </Text>
-              </TouchableOpacity>
+              <StoreBadge
+                platform="android"
+                href={PLAY_STORE_URL}
+                height={60}
+              />
             </View>
 
             <View style={styles.urlBox}>
@@ -258,22 +247,15 @@ const styles = StyleSheet.create({
     width: '100%',
     gap: theme.spacing(2),
     alignItems: 'center',
+    marginBottom: theme.spacing(2),
   },
-  storeButtonTouchable: {
-    flexDirection: 'row',
+  badgeWrapper: {
     alignItems: 'center',
     justifyContent: 'center',
-    gap: theme.spacing(1),
-    backgroundColor: theme.colors.primary,
-    paddingVertical: theme.spacing(1.5),
-    paddingHorizontal: theme.spacing(2),
-    borderRadius: theme.radius.md,
-    width: '100%',
-    maxWidth: 300,
+    marginVertical: theme.spacing(1),
   },
-  storeButtonText: {
-    color: 'white',
-    fontSize: theme.fontSizes.md,
+  badge: {
+    // Both badges will maintain their aspect ratio
   },
   urlBox: {
     marginTop: theme.spacing(3),
