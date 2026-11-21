@@ -15,11 +15,6 @@ module.exports = () => {
     icon: './assets/koordinateappicon.png',
     userInterfaceStyle: 'light',
     newArchEnabled: true,
-    splash: {
-      image: './assets/koordinatelogo.png',
-      resizeMode: 'contain',
-      backgroundColor: '#f3f2f2',
-    },
     ios: {
       supportsTablet: true,
       infoPlist: {
@@ -36,7 +31,7 @@ module.exports = () => {
     },
     android: {
       adaptiveIcon: {
-        foregroundImage: './assets/koordinatelogo.png',
+        foregroundImage: './assets/koordinateappicon.png',
         backgroundColor: '#f3f2f2',
       },
       softwareKeyboardLayoutMode: 'pan',
@@ -74,7 +69,14 @@ module.exports = () => {
       'expo-localization',
       'expo-secure-store',
       'expo-sharing',
-      'expo-splash-screen',
+      [
+        'expo-splash-screen',
+        {
+          backgroundColor: '#f3f2f2',
+          image: './assets/koordinatelogo.png',
+          imageWidth: 400
+        }
+      ],
       'expo-sqlite',
       'expo-status-bar',
       ['react-native-maps', { androidGoogleMapsApiKey: googleMapsKey || 'AIzaSyDE81zzchDXalQuGapH-E8tBBjnN9fT304' }],
