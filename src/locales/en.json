@@ -786,7 +786,7 @@
       "pricingTitle": "New Monthly Total",
       "nextRenewalTitle": "Next Renewal Total",
       "baseFee": "Base Platform Fee",
-      "workerSeats": "Worker Seats ({{count}} Ã— €{{price}})",
+      "workerSeats": "Worker Seats ({{count}} × €{{price}})",
       "total": "Total",
       "difference": "Difference:",
       "confirmChanges": "Confirm Changes",

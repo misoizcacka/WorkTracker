@@ -809,7 +809,7 @@ final class IOSBackgroundLocationManager: NSObject, CLLocationManagerDelegate {
   private func showForegroundNotification(locationName: String?) {
     let content = UNMutableNotificationContent()
     let name = locationName?.trimmingCharacters(in: .whitespaces)
-    content.title = (name?.isEmpty == false) ? "Working at \(name!)" : "Koord — Work Session Active"
+    content.title = (name?.isEmpty == false) ? "Working at \(name!)" : "Koordinate - Work Session Active"
     content.body  = "Location tracking is active."
     content.sound = .none
 

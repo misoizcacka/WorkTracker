@@ -817,7 +817,7 @@
       "pricingTitle": "Neuer Monatsbetrag",
       "nextRenewalTitle": "Naechster Verlaengerungsbetrag",
       "baseFee": "Grundgebuehr",
-      "workerSeats": "Mitarbeiterplaetze ({{count}} Ã— €{{price}})",
+      "workerSeats": "Mitarbeiterplaetze ({{count}} × €{{price}})",
       "total": "Gesamt",
       "difference": "Unterschied:",
       "confirmChanges": "Aenderungen bestaetigen",

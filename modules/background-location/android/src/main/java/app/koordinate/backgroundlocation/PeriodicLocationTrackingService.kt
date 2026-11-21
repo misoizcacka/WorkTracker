@@ -1,4 +1,4 @@
-package app.koordinate.backgroundlocation
+﻿package app.koordinate.backgroundlocation
 
 import android.Manifest
 import android.app.NotificationChannel
@@ -312,18 +312,34 @@ class PeriodicLocationTrackingService : Service() {
                     }
                 }
             } else if (isExitPending && isNowInside) {
-                // FALSE ALARM - we thought we were exiting but GPS confirms we're still inside
-                Log.d("PeriodicLocationTrackingService", "âŒ FALSE ALARM: GPS confirms still inside ${it.id.take(8)} - switching back to PASSIVE")
-                LocationFileLogger.i(
-                    this@PeriodicLocationTrackingService,
-                    "Geofence",
-                    "âŒ Exit false alarm - GPS confirms still inside (dist: ${dist.toInt()}m, source: ${quality?.source?.label}, trust: ${quality?.trustScore}%)"
-                )
-                sharedPrefs.edit()
-                    .putBoolean(Constants.SHARED_PREFS_KEY_IS_EXIT_PENDING, false)
-                    .apply()
-                modeChangeNeeded = true
-                newMode = TrackingMode.PASSIVE
+                // Only accept HIGH-QUALITY GPS to cancel EXIT_PENDING
+                val hasHighQualityGPS = quality != null && (
+                    quality.source == LocationSource.GPS_HIGH_QUALITY || 
+                    quality.source == LocationSource.GPS_MEDIUM_QUALITY
+                ) && quality.trustScore >= 75
+                
+                if (hasHighQualityGPS) {
+                    // FALSE ALARM - HIGH-QUALITY GPS confirms we're still inside
+                    Log.d("PeriodicLocationTrackingService", "❌ FALSE ALARM: GPS confirms still inside ${it.id.take(8)} - switching back to PASSIVE")
+                    LocationFileLogger.i(
+                        this@PeriodicLocationTrackingService,
+                        "Geofence",
+                        "❌ Exit false alarm - GPS confirms still inside (dist: ${dist.toInt()}m, source: ${quality.source.label}, trust: ${quality.trustScore}%)"
+                    )
+                    sharedPrefs.edit()
+                        .putBoolean(Constants.SHARED_PREFS_KEY_IS_EXIT_PENDING, false)
+                        .apply()
+                    modeChangeNeeded = true
+                    newMode = TrackingMode.PASSIVE
+                } else {
+                    // Low quality signal says "inside" but not trustworthy - keep waiting for GPS
+                    Log.d("PeriodicLocationTrackingService", "⏳ EXIT_PENDING: Low quality signal suggests inside, but waiting for GPS confirmation")
+                    LocationFileLogger.w(
+                        this@PeriodicLocationTrackingService,
+                        "Geofence",
+                        "⏳ EXIT_PENDING: Ignoring low-quality signal (source: ${quality?.source?.label}, trust: ${quality?.trustScore}%) - waiting for GPS"
+                    )
+                }
             }
         }
 
