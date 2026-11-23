@@ -53,10 +53,10 @@ export default function ManageSubscriptionScreen() {
     } else {
       Toast.show({
         type: 'error',
-        text1: 'Cannot Decrease',
+        text1: t('manager.subscription.cannotDecrease'),
         text2: pendingInvites > 0 
-          ? `${seatsUsed} seats in use: ${activeWorkers} active + ${pendingInvites} pending.`
-          : `${seatsUsed} seats in use. Deactivate workers first.`,
+          ? t('manager.subscription.cannotDecreaseWithPending', { used: seatsUsed, active: activeWorkers, pending: pendingInvites })
+          : t('manager.subscription.cannotDecreaseNoPending', { used: seatsUsed }),
         autoHide: true,
         visibilityTime: 5000,
       });
@@ -154,7 +154,7 @@ export default function ManageSubscriptionScreen() {
                 <Text style={styles.statLabel}>{t('manager.subscription.seatsInUse')}</Text>
                 {pendingInvites > 0 && (
                   <Text style={styles.statHint}>
-                    {activeWorkers} active + {pendingInvites} pending
+                    {t('manager.subscription.activePlusPending', { active: activeWorkers, pending: pendingInvites })}
                   </Text>
                 )}
               </View>
