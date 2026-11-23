@@ -73,7 +73,9 @@ const toastConfig: ToastConfig = {
           fontFamily: theme.font['regular'],
           color: '#047857',
           letterSpacing: -0.1,
+          lineHeight: 20,
         }}
+        text2NumberOfLines={3}
       />
       {/* iOS-style glossy shine */}
       <View style={{
@@ -129,7 +131,9 @@ const toastConfig: ToastConfig = {
           fontFamily: theme.font['regular'],
           color: '#991b1b',
           letterSpacing: -0.1,
+          lineHeight: 20,
         }}
+        text2NumberOfLines={3}
       />
       {/* iOS-style glossy shine */}
       <View style={{
@@ -184,7 +188,9 @@ const toastConfig: ToastConfig = {
           fontSize: 14,
           fontFamily: theme.font['regular'],
           color: '#1e40af',
+          lineHeight: 20,
         }}
+        text2NumberOfLines={3}
       />
       {/* iOS-style glossy shine */}
       <View style={{

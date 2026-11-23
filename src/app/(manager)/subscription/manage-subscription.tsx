@@ -51,13 +51,13 @@ export default function ManageSubscriptionScreen() {
     if (newSlotCount > seatsUsed) {
       setNewSlotCount(prev => prev - 1);
     } else {
-      const breakdown = pendingInvites > 0 
-        ? `${activeWorkers} active + ${pendingInvites} pending = ${seatsUsed} total`
-        : `${activeWorkers} active`;
       Toast.show({
         type: 'error',
-        text1: 'Action Not Allowed',
-        text2: `You cannot have fewer seats than seats in use (${breakdown}).`,
+        text1: 'Cannot Decrease',
+        text2: pendingInvites > 0 
+          ? `${seatsUsed} seats in use: ${activeWorkers} active + ${pendingInvites} pending.`
+          : `${seatsUsed} seats in use. Deactivate workers first.`,
+        visibleTime: 5000,
       });
     }
   };
