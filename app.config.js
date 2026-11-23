@@ -69,14 +69,6 @@ module.exports = () => {
       'expo-localization',
       'expo-secure-store',
       'expo-sharing',
-      [
-        'expo-splash-screen',
-        {
-          backgroundColor: '#f3f2f2',
-          image: './assets/koordinatelogo.png',
-          imageWidth: 400
-        }
-      ],
       'expo-sqlite',
       'expo-status-bar',
       ['react-native-maps', { androidGoogleMapsApiKey: googleMapsKey || 'AIzaSyDE81zzchDXalQuGapH-E8tBBjnN9fT304' }],

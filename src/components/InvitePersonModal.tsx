@@ -120,11 +120,21 @@ const InvitePersonModal: React.FC<InvitePersonModalProps> = ({ visible, onClose 
       });
     } catch (e: any) {
       console.error('InvitePersonModal: failed to create invite', e);
-      setError('We could not generate the invite link. Please try again.');
+      
+      // Parse error response for seat limit errors
+      let errorMessage = 'We could not generate the invite link. Please try again.';
+      let toastMessage = 'We could not generate the invite link. Please try again.';
+      
+      if (e?.message) {
+        errorMessage = e.message;
+        toastMessage = e.message;
+      }
+      
+      setError(errorMessage);
       Toast.show({
         type: 'error',
         text1: 'Invite Failed',
-        text2: 'We could not generate the invite link. Please try again.'
+        text2: toastMessage.length > 100 ? toastMessage.substring(0, 97) + '...' : toastMessage
       });
     } finally {
       setLoading(false);

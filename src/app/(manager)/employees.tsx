@@ -378,6 +378,25 @@ export default function ManagerEmployees() {
         </View>
       </View>
 
+      {/* Scheduled Downgrade Warning Banner */}
+      {employeesContext.scheduledSeatLimit !== null && 
+       employeesContext.scheduledSeatLimit < seatLimit && (
+        <View style={styles.warningBanner}>
+          <View style={styles.warningBannerContent}>
+            <Ionicons name="warning-outline" size={24} color={theme.colors.warning} />
+            <View style={styles.warningBannerText}>
+              <Text style={styles.warningBannerTitle} fontType="bold">
+                Scheduled Downgrade: {seatLimit} → {employeesContext.scheduledSeatLimit} seats
+              </Text>
+              <Text style={styles.warningBannerSubtitle} fontType="regular">
+                Your plan will downgrade on {employeesContext.scheduledSeatEffectiveAt ? moment(employeesContext.scheduledSeatEffectiveAt).format('MMM D, YYYY') : 'next renewal'}. 
+                You cannot activate more than {employeesContext.scheduledSeatLimit} workers until you cancel the downgrade.
+              </Text>
+            </View>
+          </View>
+        </View>
+      )}
+
       <View style={styles.pageHeader}>
         <Text style={styles.pageTitle} fontType="bold">{t('manager.employees.title')}</Text>
         <Text style={styles.pageSubtitle}>{t('manager.employees.subtitle')}</Text>
@@ -563,6 +582,33 @@ const styles = StyleSheet.create({
   copyLinkButtonText: {
     color: 'white',
     fontSize: theme.fontSizes.sm,
+  },
+  warningBanner: {
+    marginHorizontal: theme.spacing(2),
+    marginBottom: theme.spacing(2),
+    padding: theme.spacing(2),
+    backgroundColor: theme.colors.warning + '15',
+    borderRadius: theme.radius.lg,
+    borderWidth: 1,
+    borderColor: theme.colors.warning + '40',
+  },
+  warningBannerContent: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: theme.spacing(2),
+  },
+  warningBannerText: {
+    flex: 1,
+  },
+  warningBannerTitle: {
+    fontSize: theme.fontSizes.md,
+    color: theme.colors.headingText,
+    marginBottom: theme.spacing(0.5),
+  },
+  warningBannerSubtitle: {
+    fontSize: theme.fontSizes.sm,
+    color: theme.colors.bodyText,
+    lineHeight: 20,
   },
   pageHeader: {
     paddingVertical: theme.spacing(4),
