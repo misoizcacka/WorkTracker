@@ -42,9 +42,9 @@ export default function Impressum() {
 
         {/* Tax */}
         <View style={styles.section}>
-          <Text style={styles.label} fontType="bold">Tax Information</Text>
+          <Text style={styles.label} fontType="bold">VAT ID</Text>
           <Text style={styles.value} fontType="regular">
-            VAT applies to our services in accordance with §§ 1 ff. UStG.
+            VAT identification number pursuant to §27a UStG: DE465727071
           </Text>
         </View>
 
