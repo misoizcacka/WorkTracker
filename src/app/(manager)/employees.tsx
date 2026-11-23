@@ -468,7 +468,7 @@ export default function ManagerEmployees() {
                       <Ionicons 
                         name={seatUtilization >= 100 ? "alert-circle" : "warning"} 
                         size={18} 
-                        color={seatUtilization >= 100 ? theme.colors.danger : "#f59e0b"} 
+                        color={seatUtilization >= 100 ? theme.colors.danger : theme.colors.warning} 
                         style={styles.statWarningIcon} 
                       />
                     )}
@@ -477,27 +477,35 @@ export default function ManagerEmployees() {
                 </TouchableOpacity>
                 
                 {showSeatWarning && seatWarningExpanded && (
-                  <View style={[
-                    styles.seatWarningDropdown,
-                    seatUtilization >= 100 ? styles.seatWarningDropdownCritical : styles.seatWarningDropdownWarning
-                  ]}>
-                    <View style={styles.seatWarningContent}>
-                      <Text style={styles.seatWarningTitle} fontType="bold">
-                        {seatUtilization >= 100 
-                          ? t('manager.employees.seatLimitReached') 
-                          : t('manager.employees.seatLimitNearlyReached')}
-                      </Text>
-                      <Text style={styles.seatWarningMessage}>
-                        {seatUtilization >= 100
-                          ? t('manager.employees.seatLimitReachedMessage', { used: seatsUsed, limit: effectiveSeatLimit })
-                          : t('manager.employees.seatLimitWarningMessage', { used: seatsUsed, limit: effectiveSeatLimit, percent: Math.round(seatUtilization) })}
-                      </Text>
+                  <View style={styles.seatWarningDropdown}>
+                    <View style={styles.seatWarningItem}>
+                      <Ionicons
+                        name={seatUtilization >= 100 ? "alert-circle-outline" : "warning-outline"}
+                        size={18}
+                        color={seatUtilization >= 100 ? theme.colors.danger : theme.colors.warning}
+                      />
+                      <View style={styles.seatWarningTextContainer}>
+                        <Text style={styles.seatWarningTitle} fontType="medium">
+                          {seatUtilization >= 100
+                            ? t('manager.employees.seatLimitReached')
+                            : t('manager.employees.seatLimitNearlyReached')}
+                        </Text>
+                        <Text style={styles.seatWarningMessage} fontType="regular">
+                          {seatUtilization >= 100
+                            ? t('manager.employees.seatLimitReachedMessage', { used: seatsUsed, limit: effectiveSeatLimit })
+                            : t('manager.employees.seatLimitWarningMessage', { used: seatsUsed, limit: effectiveSeatLimit, percent: Math.round(seatUtilization) })}
+                        </Text>
+                      </View>
                     </View>
-                    <TouchableOpacity 
+                    <View style={styles.seatWarningDivider} />
+                    <TouchableOpacity
                       style={styles.seatWarningButton}
-                      onPress={() => router.push('/(manager)/account')}
+                      onPress={() => {
+                        setSeatWarningExpanded(false);
+                        router.push('/(manager)/account');
+                      }}
                     >
-                      <Text style={styles.seatWarningButtonText} fontType="bold">
+                      <Text style={styles.seatWarningButtonText} fontType="medium">
                         {t('manager.employees.upgradeSeats')}
                       </Text>
                     </TouchableOpacity>
@@ -793,11 +801,13 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: '100%',
     right: 0,
-    marginTop: theme.spacing(1),
-    minWidth: 320,
-    maxWidth: 400,
-    borderRadius: theme.radius.lg,
-    padding: theme.spacing(2),
+    marginTop: theme.spacing(0.5),
+    backgroundColor: theme.colors.cardBackground,
+    borderRadius: theme.radius.md,
+    borderWidth: 1,
+    borderColor: theme.colors.borderColor,
+    minWidth: 300,
+    maxWidth: 380,
     ...Platform.select({
       web: {
         shadowColor: '#000',
@@ -806,49 +816,49 @@ const styles = StyleSheet.create({
         shadowRadius: 12,
       },
       native: {
-        elevation: 10, // Higher elevation for Android
+        elevation: 8,
       },
     }),
-    zIndex: 9999, // Very high z-index to ensure it appears above everything
+    zIndex: 9999,
   },
-  seatWarningDropdownWarning: {
-    backgroundColor: 'rgba(26, 26, 28, 0.92)',
-    borderWidth: 1,
-    borderColor: 'rgba(245, 158, 11, 0.3)',
+  seatWarningItem: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: theme.spacing(1.5),
+    paddingVertical: theme.spacing(1.5),
+    paddingHorizontal: theme.spacing(2),
   },
-  seatWarningDropdownCritical: {
-    backgroundColor: 'rgba(26, 26, 28, 0.92)',
-    borderWidth: 1,
-    borderColor: 'rgba(239, 68, 68, 0.3)',
-  },
-  seatWarningContent: {
-    marginBottom: theme.spacing(1.5),
+  seatWarningTextContainer: {
+    flex: 1,
   },
   seatWarningTitle: {
-    fontSize: theme.fontSizes.md,
-    color: '#ffffff',
-    marginBottom: theme.spacing(0.5),
+    fontSize: theme.fontSizes.sm,
+    color: theme.colors.headingText,
+    marginBottom: 2,
   },
   seatWarningMessage: {
-    fontSize: theme.fontSizes.sm,
-    color: 'rgba(255, 255, 255, 0.85)',
-    lineHeight: 20,
+    fontSize: theme.fontSizes.xs,
+    color: theme.colors.bodyText,
+    lineHeight: 18,
+  },
+  seatWarningDivider: {
+    height: 1,
+    backgroundColor: theme.colors.borderColor,
   },
   seatWarningButton: {
-    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.15)',
-    paddingHorizontal: theme.spacing(2),
-    paddingVertical: theme.spacing(1.25),
-    borderRadius: theme.radius.md,
-    gap: theme.spacing(0.5),
+    margin: theme.spacing(1.5),
+    paddingVertical: theme.spacing(0.75),
+    paddingHorizontal: theme.spacing(1.5),
+    borderRadius: 6,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
+    borderColor: theme.colors.primary + '40',
+    backgroundColor: theme.colors.primary + '10',
   },
   seatWarningButtonText: {
-    color: '#ffffff',
     fontSize: theme.fontSizes.sm,
+    color: theme.colors.primary,
   },
   createButton: {
     backgroundColor: theme.colors.primary,
