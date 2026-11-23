@@ -47,7 +47,7 @@ export default function ManagerEmployees() {
   const employeesContext = useContext(EmployeesContext);
   const invitesContext = useContext(InvitesContext);
   const { user, userRole } = useSession();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('All');
@@ -87,7 +87,7 @@ export default function ManagerEmployees() {
     return <Text>Loading...</Text>; // Consider a proper loading component
   }
 
-  const { employees, seatsUsed, seatLimit, updateEmployee, deleteEmployee, enableEmployee, getEmployeeById } = employeesContext;
+  const { employees, seatsUsed, seatLimit, effectiveSeatLimit, updateEmployee, deleteEmployee, enableEmployee, getEmployeeById } = employeesContext;
   const { invites, deleteInvite, createInvite, getInviteLink } = invitesContext;
   const isOwner = userRole === 'owner';
 
@@ -186,7 +186,7 @@ export default function ManagerEmployees() {
 
   const managerCount = isOwner ? employees.filter(e => e.role === 'manager').length : 0;
   const visibleWorkerCount = employees.filter(e => e.role === 'worker').length;
-  const seatUtilization = seatLimit > 0 ? (seatsUsed / seatLimit) * 100 : 0;
+  const seatUtilization = effectiveSeatLimit > 0 ? (seatsUsed / effectiveSeatLimit) * 100 : 0;
   const showSeatWarning = isOwner && seatUtilization >= 80;
   const [seatWarningExpanded, setSeatWarningExpanded] = useState(false);
 
@@ -201,11 +201,11 @@ export default function ManagerEmployees() {
 
   const handleInvite = () => {
     // Check seat limit for owners
-    if (isOwner && seatsUsed >= seatLimit) {
+    if (isOwner && seatsUsed >= effectiveSeatLimit) {
       Toast.show({
         type: 'error',
         text1: t('manager.employees.seatLimitReached'),
-        text2: t('manager.employees.seatLimitInviteToast', { limit: seatLimit }),
+        text2: t('manager.employees.seatLimitInviteToast', { limit: effectiveSeatLimit }),
         autoHide: true,
         visibilityTime: 5000,
         onPress: () => {
@@ -306,7 +306,7 @@ export default function ManagerEmployees() {
                 handleCancelPending(item);
               } else if ((item as Employee).status === 'disabled') {
                 // Enable disabled employee (check seats first)
-                if ((item as Employee).role === 'worker' && seatsUsed >= seatLimit) {
+                if ((item as Employee).role === 'worker' && seatsUsed >= effectiveSeatLimit) {
                   Toast.show({ type: 'error', text1: t('manager.employees.seatLimitReached'), text2: t('manager.employees.seatLimitEnableToast') });
                   return;
                 }
@@ -320,9 +320,9 @@ export default function ManagerEmployees() {
             style={[
               styles.actionButton, 
               (item as Employee).status === 'disabled' ? styles.actionButtonSuccess : styles.actionButtonDanger,
-              (item as Employee).status === 'disabled' && (item as Employee).role === 'worker' && seatsUsed >= seatLimit && { opacity: 0.35 }
+              (item as Employee).status === 'disabled' && (item as Employee).role === 'worker' && seatsUsed >= effectiveSeatLimit && { opacity: 0.35 }
             ]}
-            disabled={(isPendingInvite && isCancellingInvite === item.id) || ((item as Employee).status === 'disabled' && (item as Employee).role === 'worker' && seatsUsed >= seatLimit)}
+            disabled={(isPendingInvite && isCancellingInvite === item.id) || ((item as Employee).status === 'disabled' && (item as Employee).role === 'worker' && seatsUsed >= effectiveSeatLimit)}
           >
             {isPendingInvite && isCancellingInvite === item.id ? (
               <ActivityIndicator size="small" color={theme.colors.danger} />
@@ -407,11 +407,17 @@ export default function ManagerEmployees() {
             <Ionicons name="warning-outline" size={24} color={theme.colors.warning} />
             <View style={styles.warningBannerText}>
               <Text style={styles.warningBannerTitle} fontType="bold">
-                Scheduled Downgrade: {seatLimit} → {employeesContext.scheduledSeatLimit} seats
+                {t('manager.employees.scheduledDowngradeTitle', { current: seatLimit, scheduled: employeesContext.scheduledSeatLimit })}
               </Text>
               <Text style={styles.warningBannerSubtitle} fontType="regular">
-                Your plan will downgrade on {employeesContext.scheduledSeatEffectiveAt ? moment(employeesContext.scheduledSeatEffectiveAt).format('MMM D, YYYY') : 'next renewal'}. 
-                You cannot activate more than {employeesContext.scheduledSeatLimit} workers until you cancel the downgrade.
+                {t('manager.employees.scheduledDowngradeMessage', {
+                  when: employeesContext.scheduledSeatEffectiveAt
+                    ? t('manager.employees.scheduledDowngradeOnDate', {
+                        date: new Date(employeesContext.scheduledSeatEffectiveAt).toLocaleDateString(i18n.language, { year: 'numeric', month: 'short', day: 'numeric' }),
+                      })
+                    : t('manager.employees.scheduledDowngradeAtRenewal'),
+                  limit: employeesContext.scheduledSeatLimit,
+                })}
               </Text>
             </View>
           </View>
@@ -457,7 +463,7 @@ export default function ManagerEmployees() {
                   disabled={!showSeatWarning}
                 >
                   <View style={styles.statValueContainer}>
-                    <Text style={styles.statValue} fontType="bold">{seatsUsed}/{seatLimit}</Text>
+                    <Text style={styles.statValue} fontType="bold">{seatsUsed}/{effectiveSeatLimit}</Text>
                     {showSeatWarning && (
                       <Ionicons 
                         name={seatUtilization >= 100 ? "alert-circle" : "warning"} 
@@ -483,8 +489,8 @@ export default function ManagerEmployees() {
                       </Text>
                       <Text style={styles.seatWarningMessage}>
                         {seatUtilization >= 100
-                          ? t('manager.employees.seatLimitReachedMessage', { used: seatsUsed, limit: seatLimit })
-                          : t('manager.employees.seatLimitWarningMessage', { used: seatsUsed, limit: seatLimit, percent: Math.round(seatUtilization) })}
+                          ? t('manager.employees.seatLimitReachedMessage', { used: seatsUsed, limit: effectiveSeatLimit })
+                          : t('manager.employees.seatLimitWarningMessage', { used: seatsUsed, limit: effectiveSeatLimit, percent: Math.round(seatUtilization) })}
                       </Text>
                     </View>
                     <TouchableOpacity 
@@ -513,9 +519,9 @@ export default function ManagerEmployees() {
             <Button 
               title={t('manager.employees.invite')} 
               onPress={handleInvite} 
-              style={[styles.createButton, (isOwner && seatsUsed >= seatLimit) && styles.createButtonDisabled]} 
+              style={[styles.createButton, (isOwner && seatsUsed >= effectiveSeatLimit) && styles.createButtonDisabled]} 
               textStyle={styles.createButtonText}
-              disabled={isOwner && seatsUsed >= seatLimit}
+              disabled={isOwner && seatsUsed >= effectiveSeatLimit}
             />
           </View>
         </View>

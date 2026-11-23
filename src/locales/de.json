@@ -516,6 +516,10 @@
       "upgradeSeats": "Plätze upgraden",
       "seatLimitInviteToast": "Alle {{limit}} Plätze belegt. Upgrade im Konto.",
       "seatLimitEnableToast": "Mitarbeiter kann nicht aktiviert werden: Alle Plätze sind belegt.",
+      "scheduledDowngradeTitle": "Geplantes Downgrade: {{current}} → {{scheduled}} Plätze",
+      "scheduledDowngradeMessage": "Ihr Plan wird {{when}} herabgestuft. Bis Sie das Downgrade stornieren, können Sie nicht mehr als {{limit}} Mitarbeiter aktivieren oder einladen.",
+      "scheduledDowngradeOnDate": "am {{date}}",
+      "scheduledDowngradeAtRenewal": "zur nächsten Verlängerung",
       "shareLink": "Link teilen",
       "done": "Fertig"
     },

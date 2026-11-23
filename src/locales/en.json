@@ -471,7 +471,11 @@
       "seatLimitWarningMessage": "{{percent}}% of seats in use ({{used}}/{{limit}}). Consider upgrading soon.",
       "upgradeSeats": "Upgrade Seats",
       "seatLimitInviteToast": "All {{limit}} seats in use. Upgrade in Account.",
-      "seatLimitEnableToast": "Cannot enable worker: all seats are in use."
+      "seatLimitEnableToast": "Cannot enable worker: all seats are in use.",
+      "scheduledDowngradeTitle": "Scheduled Downgrade: {{current}} → {{scheduled}} seats",
+      "scheduledDowngradeMessage": "Your plan will downgrade {{when}}. You cannot activate or invite more than {{limit}} workers until you cancel the downgrade.",
+      "scheduledDowngradeOnDate": "on {{date}}",
+      "scheduledDowngradeAtRenewal": "at the next renewal"
     },
     "assignments": {
       "title": "Assignments",

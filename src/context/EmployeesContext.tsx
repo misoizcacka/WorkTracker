@@ -11,6 +11,7 @@ export interface EmployeesContextType {
   scheduledSeatLimit: number | null;
   scheduledSeatEffectiveAt: string | null;
   pendingWorkerInvites: number;
+  effectiveSeatLimit: number;
   updateEmployee: (employee: Employee) => Promise<void>;
   deleteEmployee: (employeeId: string) => Promise<void>;
   enableEmployee: (employeeId: string) => Promise<void>;
@@ -225,6 +226,12 @@ export function EmployeesProvider({ children }: { children: React.ReactNode }) {
     return activeWorkers + pendingWorkerInvites;
   }, [employees, pendingWorkerInvites]);
 
+  // When a lower seat count is scheduled, that lower limit is what we enforce
+  // (matches the create-worker-invite edge function).
+  const effectiveSeatLimit = useMemo(() => (
+    scheduledSeatLimit !== null && scheduledSeatLimit < seatLimit ? scheduledSeatLimit : seatLimit
+  ), [seatLimit, scheduledSeatLimit]);
+
   const getEmployeeById = useCallback((employeeId: string) => {
     // Ensure that the employee belongs to the current company
     return employees.find(employee => employee.id === employeeId && employee.company_id === userCompanyId);
@@ -324,10 +331,9 @@ export function EmployeesProvider({ children }: { children: React.ReactNode }) {
       throw new Error("You do not have permission to enable this employee.");
     }
     
-    // Check seat limit for workers
+    // Check seat limit for workers (active + pending invites vs. effective limit)
     if (existingEmployee?.role === 'worker') {
-      const activeWorkers = employees.filter(e => e.role === 'worker' && e.status === 'active').length;
-      if (activeWorkers >= seatLimit) {
+      if (seatsUsed >= effectiveSeatLimit) {
         throw new Error("Cannot enable worker: seat limit reached.");
       }
     }
@@ -350,7 +356,7 @@ export function EmployeesProvider({ children }: { children: React.ReactNode }) {
         employee.id === employeeId ? { ...employee, status: 'active' as const } : employee
       )
     );
-  }, [user?.id, userCompanyId, userRole, employees, seatLimit]);
+  }, [user?.id, userCompanyId, userRole, employees, seatsUsed, effectiveSeatLimit]);
 
   const refreshPendingInvites = useCallback(async () => {
     if (!userCompanyId) return;
@@ -380,6 +386,7 @@ export function EmployeesProvider({ children }: { children: React.ReactNode }) {
     scheduledSeatLimit,
     scheduledSeatEffectiveAt,
     pendingWorkerInvites,
+    effectiveSeatLimit,
     updateEmployee,
     deleteEmployee,
     enableEmployee,
@@ -387,7 +394,7 @@ export function EmployeesProvider({ children }: { children: React.ReactNode }) {
     refreshPendingInvites,
     loading,
     userCompanyId, // New: Add userCompanyId to the context value
-  }), [employees, seatLimit, seatsUsed, scheduledSeatLimit, scheduledSeatEffectiveAt, pendingWorkerInvites, updateEmployee, deleteEmployee, enableEmployee, getEmployeeById, refreshPendingInvites, loading, userCompanyId]); // Add userCompanyId to dependencies
+  }), [employees, seatLimit, seatsUsed, scheduledSeatLimit, scheduledSeatEffectiveAt, pendingWorkerInvites, effectiveSeatLimit, updateEmployee, deleteEmployee, enableEmployee, getEmployeeById, refreshPendingInvites, loading, userCompanyId]); // Add userCompanyId to dependencies
 
   return (
     <EmployeesContext.Provider value={value}>
