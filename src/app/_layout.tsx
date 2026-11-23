@@ -4,6 +4,7 @@ import React, { useEffect, useState, useCallback, useRef } from 'react'; // Adde
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { SessionProvider, useSession } from '../context/AuthContext';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
+import { KeyboardProvider } from 'react-native-keyboard-controller';
 import { EmployeesProvider } from '../context/EmployeesContext';
 import { ProjectsProvider } from '../context/ProjectsContext';
 import { AssignmentsProvider } from '../context/AssignmentsContext';
@@ -293,20 +294,22 @@ export default function RootLayout() {
 
   return (
     <SafeAreaProvider>
-      <SessionProvider>
-        <I18nextProvider i18n={i18n} key={langKey}>
-          <EmployeesProvider>
-            <ProjectsProvider>
-              <AssignmentsProvider>
-                <InvitesProvider>
-                  <Main />
-                </InvitesProvider>
-              </AssignmentsProvider>
-            </ProjectsProvider>
-          </EmployeesProvider>
-        </I18nextProvider>
-      </SessionProvider>
-      <Toast config={toastConfig} />
+      <KeyboardProvider>
+        <SessionProvider>
+          <I18nextProvider i18n={i18n} key={langKey}>
+            <EmployeesProvider>
+              <ProjectsProvider>
+                <AssignmentsProvider>
+                  <InvitesProvider>
+                    <Main />
+                  </InvitesProvider>
+                </AssignmentsProvider>
+              </ProjectsProvider>
+            </EmployeesProvider>
+          </I18nextProvider>
+        </SessionProvider>
+        <Toast config={toastConfig} />
+      </KeyboardProvider>
     </SafeAreaProvider>
   );
 }
