@@ -14,7 +14,7 @@ export default function Impressum() {
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.inner}>
         <Text style={styles.pageTitle} fontType="bold">Legal Notice</Text>
-        <Text style={styles.subtitle} fontType="regular">Impressum – Information pursuant to §5 TMG (Telemedia Act) and §55 RStV</Text>
+        <Text style={styles.subtitle} fontType="regular">Impressum – Information pursuant to §5 DDG (Digitale-Dienste-Gesetz)</Text>
 
         {/* Provider */}
         <View style={styles.section}>
@@ -48,18 +48,17 @@ export default function Impressum() {
           </Text>
         </View>
 
-        {/* Data protection officer */}
+        {/* Responsible for content */}
         <View style={styles.section}>
-          <Text style={styles.label} fontType="bold">Responsible for Content (§55 Abs. 2 RStV)</Text>
+          <Text style={styles.label} fontType="bold">Responsible for Content (§18 Abs. 2 MStV)</Text>
           <Text style={styles.value} fontType="regular">Milos Bugaric</Text>
           <Text style={styles.value} fontType="regular">Scharnweberstrasse 23, 12459 Berlin, Germany</Text>
         </View>
 
-        {/* Dispute resolution */}
+        {/* Dispute resolution (the EU ODR platform was discontinued on 20 July 2025) */}
         <View style={styles.section}>
-          <Text style={styles.label} fontType="bold">EU Online Dispute Resolution</Text>
+          <Text style={styles.label} fontType="bold">Consumer Dispute Resolution</Text>
           <Text style={styles.body} fontType="regular">
-            The European Commission provides an Online Dispute Resolution (ODR) platform: https://ec.europa.eu/consumers/odr{'\n\n'}
             We are not obliged to participate in dispute resolution proceedings before a consumer arbitration board and do not voluntarily do so.
           </Text>
         </View>
@@ -68,7 +67,7 @@ export default function Impressum() {
         <View style={styles.section}>
           <Text style={styles.label} fontType="bold">Disclaimer</Text>
           <Text style={styles.body} fontType="regular">
-            The contents of this website have been prepared with the utmost care. However, we cannot guarantee the accuracy, completeness, or timeliness of the information provided. As a service provider, we are responsible for our own content on these pages in accordance with §7 Abs. 1 TMG. However, according to §§8–10 TMG, we are not obliged to monitor transmitted or stored third-party information or to investigate circumstances that indicate illegal activity.
+            The contents of this website have been prepared with the utmost care. However, we cannot guarantee the accuracy, completeness, or timeliness of the information provided. As a service provider, we are responsible for our own content on these pages in accordance with the general laws. We are not obliged to monitor transmitted or stored third-party information or to investigate circumstances that indicate illegal activity (Art. 8 of Regulation (EU) 2022/2065, Digital Services Act).
           </Text>
         </View>
 
