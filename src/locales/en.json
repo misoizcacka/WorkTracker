@@ -469,7 +469,9 @@
       "seatLimitNearlyReached": "Approaching Seat Limit",
       "seatLimitReachedMessage": "All {{limit}} seats in use ({{used}}/{{limit}}). Upgrade to invite more workers.",
       "seatLimitWarningMessage": "{{percent}}% of seats in use ({{used}}/{{limit}}). Consider upgrading soon.",
-      "upgradeSeats": "Upgrade Seats"
+      "upgradeSeats": "Upgrade Seats",
+      "seatLimitInviteToast": "All {{limit}} seats in use. Upgrade in Account.",
+      "seatLimitEnableToast": "Cannot enable worker: all seats are in use."
     },
     "assignments": {
       "title": "Assignments",

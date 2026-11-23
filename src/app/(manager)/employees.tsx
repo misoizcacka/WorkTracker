@@ -204,8 +204,8 @@ export default function ManagerEmployees() {
     if (isOwner && seatsUsed >= seatLimit) {
       Toast.show({
         type: 'error',
-        text1: 'Seat Limit Reached',
-        text2: `All ${seatLimit} seats in use. Upgrade in Account.`,
+        text1: t('manager.employees.seatLimitReached'),
+        text2: t('manager.employees.seatLimitInviteToast', { limit: seatLimit }),
         autoHide: true,
         visibilityTime: 5000,
         onPress: () => {
@@ -307,7 +307,7 @@ export default function ManagerEmployees() {
               } else if ((item as Employee).status === 'disabled') {
                 // Enable disabled employee (check seats first)
                 if ((item as Employee).role === 'worker' && seatsUsed >= seatLimit) {
-                  Toast.show({ type: 'error', text1: 'Seat Limit Reached', text2: 'Cannot enable worker: all seats are in use.' });
+                  Toast.show({ type: 'error', text1: t('manager.employees.seatLimitReached'), text2: t('manager.employees.seatLimitEnableToast') });
                   return;
                 }
                 enableEmployee((item as Employee).id).catch(err => {
@@ -494,7 +494,6 @@ export default function ManagerEmployees() {
                       <Text style={styles.seatWarningButtonText} fontType="bold">
                         {t('manager.employees.upgradeSeats')}
                       </Text>
-                      <Ionicons name="arrow-forward" size={14} color="#ffffff" />
                     </TouchableOpacity>
                   </View>
                 )}
