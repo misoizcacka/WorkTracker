@@ -15,6 +15,7 @@ export interface EmployeesContextType {
   deleteEmployee: (employeeId: string) => Promise<void>;
   enableEmployee: (employeeId: string) => Promise<void>;
   getEmployeeById: (employeeId: string) => Employee | undefined;
+  refreshPendingInvites: () => Promise<void>;
   loading: boolean;
   userCompanyId: string | null;
 }
@@ -190,8 +191,8 @@ export function EmployeesProvider({ children }: { children: React.ReactNode }) {
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'invites', filter: `company_id=eq.${userCompanyId}` },
-        async () => {
-          console.log('Invites changed - refreshing pending count');
+        async (payload) => {
+          console.log('🔔 Invites table changed - event:', payload.eventType, 'refreshing pending count');
           // Refresh pending invites count
           const { count, error } = await supabase
             .from('invites')
@@ -203,7 +204,10 @@ export function EmployeesProvider({ children }: { children: React.ReactNode }) {
             .is('employee_id', null);
           
           if (!error) {
+            console.log('✅ Updated pending invites count:', count);
             setPendingWorkerInvites(count ?? 0);
+          } else {
+            console.error('❌ Error fetching pending invites count:', error);
           }
         }
       )
@@ -348,6 +352,27 @@ export function EmployeesProvider({ children }: { children: React.ReactNode }) {
     );
   }, [user?.id, userCompanyId, userRole, employees, seatLimit]);
 
+  const refreshPendingInvites = useCallback(async () => {
+    if (!userCompanyId) return;
+    
+    console.log('🔄 Manually refreshing pending invites count...');
+    const { count, error } = await supabase
+      .from('invites')
+      .select('id', { count: 'exact', head: true })
+      .eq('company_id', userCompanyId)
+      .eq('role', 'worker')
+      .eq('status', 'pending')
+      .eq('used', false)
+      .is('employee_id', null);
+    
+    if (!error) {
+      console.log('✅ Refreshed pending invites count:', count);
+      setPendingWorkerInvites(count ?? 0);
+    } else {
+      console.error('❌ Error refreshing pending invites count:', error);
+    }
+  }, [userCompanyId]);
+
   const value = useMemo(() => ({
     employees,
     seatLimit,
@@ -359,9 +384,10 @@ export function EmployeesProvider({ children }: { children: React.ReactNode }) {
     deleteEmployee,
     enableEmployee,
     getEmployeeById,
+    refreshPendingInvites,
     loading,
     userCompanyId, // New: Add userCompanyId to the context value
-  }), [employees, seatLimit, seatsUsed, scheduledSeatLimit, scheduledSeatEffectiveAt, pendingWorkerInvites, updateEmployee, deleteEmployee, enableEmployee, getEmployeeById, loading, userCompanyId]); // Add userCompanyId to dependencies
+  }), [employees, seatLimit, seatsUsed, scheduledSeatLimit, scheduledSeatEffectiveAt, pendingWorkerInvites, updateEmployee, deleteEmployee, enableEmployee, getEmployeeById, refreshPendingInvites, loading, userCompanyId]); // Add userCompanyId to dependencies
 
   return (
     <EmployeesContext.Provider value={value}>

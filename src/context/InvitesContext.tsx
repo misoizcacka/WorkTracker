@@ -1,7 +1,8 @@
-import React, { createContext, useState, useCallback, useMemo, useEffect } from 'react';
+import React, { createContext, useState, useCallback, useMemo, useEffect, useContext } from 'react';
 import { supabase } from '../utils/supabase';
 import { Invite } from '../types';
 import { buildInviteLink } from '../utils/invites';
+import { EmployeesContext } from './EmployeesContext';
 
 interface InvitesContextType {
   invites: Invite[];
@@ -20,6 +21,7 @@ export const InvitesContext = createContext<InvitesContextType | null>(null);
 export function InvitesProvider({ children }: { children: React.ReactNode }) {
   const [invites, setInvites] = useState<Invite[]>([]);
   const [userCompanyId, setUserCompanyId] = useState<string | null>(null); // New state for company ID
+  const employeesContext = useContext(EmployeesContext);
 
   const refreshInvites = useCallback(async () => {
     if (!userCompanyId) return;
@@ -147,10 +149,16 @@ export function InvitesProvider({ children }: { children: React.ReactNode }) {
           ? prevInvites
           : [...prevInvites, newInvite]
       ));
+      
+      // Manually refresh pending invites count in EmployeesContext
+      if (inviteData.role === 'worker') {
+        employeesContext?.refreshPendingInvites?.();
+      }
+      
       return { invite: newInvite, inviteLink };
     }
     return undefined;
-  }, [userCompanyId]);
+  }, [userCompanyId, employeesContext]);
 
   const updateInvite = useCallback(async (updatedInvite: Invite): Promise<Invite> => { // NEW: updateInvite function
     if (!userCompanyId) throw new Error("Company ID not available.");
@@ -219,6 +227,10 @@ export function InvitesProvider({ children }: { children: React.ReactNode }) {
 
   const deleteInvite = useCallback(async (inviteId: string) => {
     if (!userCompanyId) throw new Error("Company ID not available.");
+    
+    // Find the invite to check if it's a worker invite
+    const inviteToDelete = invites.find(inv => inv.id === inviteId);
+    
     const { error } = await supabase
       .from('invites')
       .delete()
@@ -231,7 +243,12 @@ export function InvitesProvider({ children }: { children: React.ReactNode }) {
     }
 
     setInvites(prevInvites => prevInvites.filter(invite => invite.id !== inviteId));
-  }, [userCompanyId]);
+    
+    // Manually refresh pending invites count if it was a worker invite
+    if (inviteToDelete?.role === 'worker') {
+      employeesContext?.refreshPendingInvites?.();
+    }
+  }, [userCompanyId, invites, employeesContext]);
 
   const value = useMemo(() => ({
     invites,

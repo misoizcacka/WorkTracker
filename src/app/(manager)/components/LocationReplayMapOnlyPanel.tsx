@@ -180,11 +180,18 @@ const LocationReplayMapOnlyPanel = ({ workerId, date }: LocationReplayMapOnlyPan
         minTime = moment(date).startOf('day').valueOf();
     }
 
+    // For maxTime: if worker hasn't checked out yet and date is today, use current time
+    const isToday = moment(date).isSame(moment(), 'day');
+    
     if (dailySummary.last_session_end_time_or_eod) {
         maxTime = moment(dailySummary.last_session_end_time_or_eod).valueOf();
     } else if (events.length > 0) {
         maxTime = moment(events[events.length - 1].event_timestamp).valueOf();
+    } else if (isToday) {
+        // Worker hasn't checked in yet today - use current time instead of EOD
+        maxTime = moment().valueOf();
     } else {
+        // Historical date with no data - use end of day
         maxTime = moment(date).endOf('day').valueOf();
     }
 
