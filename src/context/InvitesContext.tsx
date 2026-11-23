@@ -152,6 +152,7 @@ export function InvitesProvider({ children }: { children: React.ReactNode }) {
       
       // Manually refresh pending invites count in EmployeesContext
       if (inviteData.role === 'worker') {
+        console.log('🔄 Triggering pending invites refresh after create...');
         employeesContext?.refreshPendingInvites?.();
       }
       
@@ -230,6 +231,7 @@ export function InvitesProvider({ children }: { children: React.ReactNode }) {
     
     // Find the invite to check if it's a worker invite
     const inviteToDelete = invites.find(inv => inv.id === inviteId);
+    console.log('🗑️ Deleting invite:', inviteId, 'Role:', inviteToDelete?.role);
     
     const { error } = await supabase
       .from('invites')
@@ -246,7 +248,10 @@ export function InvitesProvider({ children }: { children: React.ReactNode }) {
     
     // Manually refresh pending invites count if it was a worker invite
     if (inviteToDelete?.role === 'worker') {
+      console.log('🔄 Triggering pending invites refresh after delete...');
       employeesContext?.refreshPendingInvites?.();
+    } else {
+      console.log('⏭️ Skipping refresh - not a worker invite');
     }
   }, [userCompanyId, invites, employeesContext]);
 
