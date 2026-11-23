@@ -509,6 +509,12 @@
       "accessLinkDesc": "Teilen Sie diesen Link oder den Einladungscode mit {{name}}, damit sie sich erneut anmelden koennen.",
       "inviteCode": "Einladungscode",
       "copyLink": "Link kopieren",
+      "seatLimitReached": "Platzlimit erreicht",
+      "seatLimitNearlyReached": "Platzlimit fast erreicht",
+      "seatLimitReachedMessage": "Alle {{limit}} Plaetze belegt ({{used}}/{{limit}}). Upgraden Sie, um mehr Mitarbeiter einzuladen.",
+      "seatLimitWarningMessage": "{{percent}}% der Plaetze belegt ({{used}}/{{limit}}). Erwaegen Sie bald ein Upgrade.",
+      "upgradeSeats": "Plaetze upgraden"
+    },
       "shareLink": "Link teilen",
       "done": "Fertig"
     },

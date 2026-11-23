@@ -464,7 +464,12 @@
       "inviteCode": "Invite Code",
       "copyLink": "Copy Link",
       "shareLink": "Share Link",
-      "done": "Done"
+      "done": "Done",
+      "seatLimitReached": "Seat Limit Reached",
+      "seatLimitNearlyReached": "Approaching Seat Limit",
+      "seatLimitReachedMessage": "All {{limit}} seats in use ({{used}}/{{limit}}). Upgrade to invite more workers.",
+      "seatLimitWarningMessage": "{{percent}}% of seats in use ({{used}}/{{limit}}). Consider upgrading soon.",
+      "upgradeSeats": "Upgrade Seats"
     },
     "assignments": {
       "title": "Assignments",

@@ -184,6 +184,8 @@ export default function ManagerEmployees() {
 
   const managerCount = isOwner ? employees.filter(e => e.role === 'manager').length : 0;
   const visibleWorkerCount = employees.filter(e => e.role === 'worker').length;
+  const seatUtilization = seatLimit > 0 ? (seatsUsed / seatLimit) * 100 : 0;
+  const showSeatWarning = isOwner && seatUtilization >= 80;
 
   const getStatusStyle = (status: Employee['status']) => { // Changed type to Employee['status']
     switch (status) {
@@ -194,7 +196,22 @@ export default function ManagerEmployees() {
     }
   };
 
-  const handleInvite = () => setInviteModalVisible(true);
+  const handleInvite = () => {
+    // Check seat limit for owners
+    if (isOwner && seatsUsed >= seatLimit) {
+      Toast.show({
+        type: 'error',
+        text1: 'Seat Limit Reached',
+        text2: `All ${seatLimit} seats in use. Upgrade in Account.`,
+        visibleTime: 5000,
+        onPress: () => {
+          router.push('/(manager)/account');
+        },
+      });
+      return;
+    }
+    setInviteModalVisible(true);
+  };
   const handleEdit = (employee: Employee) => { // Only active employees can be edited
     setSelectedEmployee(employee);
     setEditModalVisible(true);
@@ -451,6 +468,40 @@ export default function ManagerEmployees() {
           </View>
         </View>
 
+        {showSeatWarning && (
+          <View style={[
+            styles.warningBanner,
+            seatUtilization >= 100 ? styles.warningBannerCritical : styles.warningBannerWarning
+          ]}>
+            <Ionicons 
+              name={seatUtilization >= 100 ? "alert-circle" : "warning"} 
+              size={20} 
+              color={seatUtilization >= 100 ? theme.colors.danger : "#f59e0b"} 
+            />
+            <View style={styles.warningBannerContent}>
+              <Text style={styles.warningBannerTitle} fontType="bold">
+                {seatUtilization >= 100 
+                  ? t('manager.employees.seatLimitReached') 
+                  : t('manager.employees.seatLimitNearlyReached')}
+              </Text>
+              <Text style={styles.warningBannerSubtitle}>
+                {seatUtilization >= 100
+                  ? t('manager.employees.seatLimitReachedMessage', { used: seatsUsed, limit: seatLimit })
+                  : t('manager.employees.seatLimitWarningMessage', { used: seatsUsed, limit: seatLimit, percent: Math.round(seatUtilization) })}
+              </Text>
+            </View>
+            <TouchableOpacity 
+              style={styles.warningBannerButton}
+              onPress={() => router.push('/(manager)/account')}
+            >
+              <Text style={styles.warningBannerButtonText} fontType="bold">
+                {t('manager.employees.upgradeSeats')}
+              </Text>
+              <Ionicons name="arrow-forward" size={16} color={theme.colors.primary} />
+            </TouchableOpacity>
+          </View>
+        )}
+
 
         <ScrollView horizontal showsHorizontalScrollIndicator={true} contentContainerStyle={{ flexGrow: 1, minWidth: minTableContentWidth }}>
           <View style={{ flexGrow: 1 }}>
@@ -609,6 +660,37 @@ const styles = StyleSheet.create({
     fontSize: theme.fontSizes.sm,
     color: theme.colors.bodyText,
     lineHeight: 20,
+  },
+  warningBannerWarning: {
+    backgroundColor: '#fef3c7',
+    borderWidth: 1,
+    borderColor: '#f59e0b',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing(2),
+  },
+  warningBannerCritical: {
+    backgroundColor: theme.colors.danger + '15',
+    borderWidth: 1,
+    borderColor: theme.colors.danger,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing(2),
+  },
+  warningBannerButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: theme.colors.cardBackground,
+    paddingHorizontal: theme.spacing(2),
+    paddingVertical: theme.spacing(1.25),
+    borderRadius: theme.radius.md,
+    gap: theme.spacing(0.5),
+    borderWidth: 1,
+    borderColor: theme.colors.borderColor,
+  },
+  warningBannerButtonText: {
+    color: theme.colors.primary,
+    fontSize: theme.fontSizes.sm,
   },
   pageHeader: {
     paddingVertical: theme.spacing(4),
