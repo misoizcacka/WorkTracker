@@ -1,4 +1,4 @@
-import 'react-native-get-random-values';
+﻿import 'react-native-get-random-values';
 import 'react-native-gesture-handler';
 import React, { useEffect, useState, useCallback, useRef } from 'react'; // Added useState, useCallback, useRef
 import { Stack, useRouter, useSegments } from 'expo-router';
@@ -8,7 +8,7 @@ import { EmployeesProvider } from '../context/EmployeesContext';
 import { ProjectsProvider } from '../context/ProjectsContext';
 import { AssignmentsProvider } from '../context/AssignmentsContext';
 import { InvitesProvider } from '../context/InvitesContext';
-import { Platform, View } from 'react-native';
+import { Platform, View, Text } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 
 import { I18nextProvider } from 'react-i18next';
@@ -36,177 +36,201 @@ SplashScreen.preventAutoHideAsync();
 const toastConfig: ToastConfig = {
   success: (props) => (
     <View style={{ paddingHorizontal: 16, alignItems: 'center' }}>
-      <View style={{ position: 'relative', width: '100%', maxWidth: 368 }}>
-      <BaseToast
-        {...props}
-        style={{ 
-          borderLeftColor: 'transparent',
-          backgroundColor: '#d1fae5', // Fully opaque green
-          borderRadius: theme.radius.xl,
-          borderWidth: 0,
-          height: 'auto',
-          minHeight: 60,
-          paddingVertical: 12,
-          overflow: 'hidden',
-          ...Platform.select({
-            web: {
-              boxShadow: '0 4px 16px rgba(0, 0, 0, 0.08), 0 1px 0 rgba(255, 255, 255, 0.8) inset',
-            },
-            default: {
-              shadowColor: '#000',
-              shadowOffset: { width: 0, height: 2 },
-              shadowOpacity: 0.08,
-              shadowRadius: 16,
-              elevation: 4,
-            },
-          }),
-        }}
-        contentContainerStyle={{ paddingHorizontal: 16 }}
-        text1Style={{
-          fontSize: 15,
-          fontFamily: theme.font['bold'],
-          color: '#065f46',
-          letterSpacing: -0.2,
-        }}
-        text2Style={{
-          fontSize: 14,
-          fontFamily: theme.font['regular'],
-          color: '#047857',
-          letterSpacing: -0.1,
-          lineHeight: 20,
-        }}
-        text2NumberOfLines={3}
-      />
-      {/* iOS-style glossy shine */}
       <View style={{
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        right: 0,
-        height: 1,
-        backgroundColor: 'rgba(255, 255, 255, 0.8)',
-        borderTopLeftRadius: theme.radius.xl,
-        borderTopRightRadius: theme.radius.xl,
-        pointerEvents: 'none',
-      }} />
+        flexDirection: 'row',
+        alignItems: 'center',
+        width: '100%',
+        maxWidth: 400,
+        paddingVertical: 14,
+        paddingHorizontal: 16,
+        borderRadius: 16,
+        backgroundColor: 'rgba(26, 26, 28, 0.92)',
+        gap: 12,
+        ...Platform.select({
+          ios: {
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 4 },
+            shadowOpacity: 0.3,
+            shadowRadius: 12,
+          },
+          android: {
+            elevation: 8,
+          },
+          web: {
+            boxShadow: '0 4px 24px rgba(0, 0, 0, 0.3)',
+          },
+        }),
+        borderWidth: 1,
+        borderColor: 'rgba(255, 255, 255, 0.12)',
+      }}>
+        <View style={{
+          width: 44,
+          height: 44,
+          borderRadius: 22,
+          alignItems: 'center',
+          justifyContent: 'center',
+          backgroundColor: 'rgba(22, 163, 74, 0.2)',
+        }}>
+          <Ionicons name="checkmark-circle" size={28} color="#16A34A" />
+        </View>
+        
+        <View style={{ flex: 1 }}>
+          <Text style={{
+            fontSize: 16,
+            fontFamily: theme.font['bold'],
+            color: '#ffffff',
+            letterSpacing: -0.3,
+            marginBottom: 2,
+          }}>
+            {props.text1}
+          </Text>
+          {props.text2 && (
+            <Text style={{
+              fontSize: 14,
+              fontFamily: theme.font['regular'],
+              color: 'rgba(255, 255, 255, 0.85)',
+              letterSpacing: -0.2,
+              lineHeight: 20,
+            }} numberOfLines={3}>
+              {props.text2}
+            </Text>
+          )}
+        </View>
       </View>
     </View>
   ),
+  
   error: (props) => (
     <View style={{ paddingHorizontal: 16, alignItems: 'center' }}>
-      <View style={{ position: 'relative', width: '100%', maxWidth: 368 }}>
-      <ErrorToast
-        {...props}
-        style={{ 
-          borderLeftColor: 'transparent',
-          backgroundColor: '#fee2e2', // Fully opaque red
-          borderRadius: theme.radius.xl,
-          borderWidth: 0,
-          height: 'auto',
-          minHeight: 60,
-          paddingVertical: 12,
-          overflow: 'hidden',
-          ...Platform.select({
-            web: {
-              boxShadow: '0 4px 16px rgba(0, 0, 0, 0.08), 0 1px 0 rgba(255, 255, 255, 0.8) inset',
-            },
-            default: {
-              shadowColor: '#000',
-              shadowOffset: { width: 0, height: 2 },
-              shadowOpacity: 0.08,
-              shadowRadius: 16,
-              elevation: 4,
-            },
-          }),
-        }}
-        contentContainerStyle={{ paddingHorizontal: 16 }}
-        text1Style={{
-          fontSize: 15,
-          fontFamily: theme.font['bold'],
-          color: '#7f1d1d',
-          letterSpacing: -0.2,
-        }}
-        text2Style={{
-          fontSize: 14,
-          fontFamily: theme.font['regular'],
-          color: '#991b1b',
-          letterSpacing: -0.1,
-          lineHeight: 20,
-        }}
-        text2NumberOfLines={3}
-      />
-      {/* iOS-style glossy shine */}
       <View style={{
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        right: 0,
-        height: 1,
-        backgroundColor: 'rgba(255, 255, 255, 0.8)',
-        borderTopLeftRadius: theme.radius.xl,
-        borderTopRightRadius: theme.radius.xl,
-        pointerEvents: 'none',
-      }} />
+        flexDirection: 'row',
+        alignItems: 'center',
+        width: '100%',
+        maxWidth: 400,
+        paddingVertical: 14,
+        paddingHorizontal: 16,
+        borderRadius: 16,
+        backgroundColor: 'rgba(26, 26, 28, 0.92)',
+        gap: 12,
+        ...Platform.select({
+          ios: {
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 4 },
+            shadowOpacity: 0.3,
+            shadowRadius: 12,
+          },
+          android: {
+            elevation: 8,
+          },
+          web: {
+            boxShadow: '0 4px 24px rgba(0, 0, 0, 0.3)',
+          },
+        }),
+        borderWidth: 1,
+        borderColor: 'rgba(255, 255, 255, 0.12)',
+      }}>
+        <View style={{
+          width: 44,
+          height: 44,
+          borderRadius: 22,
+          alignItems: 'center',
+          justifyContent: 'center',
+          backgroundColor: 'rgba(192, 0, 0, 0.2)',
+        }}>
+          <Ionicons name="close-circle" size={28} color="#c00000" />
+        </View>
+        
+        <View style={{ flex: 1 }}>
+          <Text style={{
+            fontSize: 16,
+            fontFamily: theme.font['bold'],
+            color: '#ffffff',
+            letterSpacing: -0.3,
+            marginBottom: 2,
+          }}>
+            {props.text1}
+          </Text>
+          {props.text2 && (
+            <Text style={{
+              fontSize: 14,
+              fontFamily: theme.font['regular'],
+              color: 'rgba(255, 255, 255, 0.85)',
+              letterSpacing: -0.2,
+              lineHeight: 20,
+            }} numberOfLines={3}>
+              {props.text2}
+            </Text>
+          )}
+        </View>
       </View>
     </View>
   ),
+  
   info: (props) => (
     <View style={{ paddingHorizontal: 16, alignItems: 'center' }}>
-      <View style={{ position: 'relative', width: '100%', maxWidth: 368 }}>
-      <BaseToast
-        {...props}
-        style={{ 
-          borderLeftColor: 'transparent',
-          backgroundColor: '#dbeafe', // Fully opaque blue
-          borderRadius: theme.radius.xl,
-          borderWidth: 0,
-          height: 'auto',
-          minHeight: 60,
-          paddingVertical: 12,
-          overflow: 'hidden',
-          ...Platform.select({
-            web: {
-              boxShadow: '0 4px 16px rgba(0, 0, 0, 0.08), 0 1px 0 rgba(255, 255, 255, 0.8) inset',
-            },
-            default: {
-              shadowColor: '#000',
-              shadowOffset: { width: 0, height: 2 },
-              shadowOpacity: 0.08,
-              shadowRadius: 16,
-              elevation: 4,
-            },
-          }),
-        }}
-        contentContainerStyle={{ paddingHorizontal: 16 }}
-        text1Style={{
-          fontSize: 15,
-          fontFamily: theme.font['bold'],
-          color: '#1e3a8a',
-          letterSpacing: -0.2,
-        }}
-        text2Style={{
-          fontSize: 14,
-          fontFamily: theme.font['regular'],
-          color: '#1e40af',
-          lineHeight: 20,
-        }}
-        text2NumberOfLines={3}
-      />
-      {/* iOS-style glossy shine */}
       <View style={{
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        right: 0,
-        height: 1,
-        backgroundColor: 'rgba(255, 255, 255, 0.8)',
-        borderTopLeftRadius: theme.radius.xl,
-        borderTopRightRadius: theme.radius.xl,
-        pointerEvents: 'none',
-      }} />
+        flexDirection: 'row',
+        alignItems: 'center',
+        width: '100%',
+        maxWidth: 400,
+        paddingVertical: 14,
+        paddingHorizontal: 16,
+        borderRadius: 16,
+        backgroundColor: 'rgba(26, 26, 28, 0.92)',
+        gap: 12,
+        ...Platform.select({
+          ios: {
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 4 },
+            shadowOpacity: 0.3,
+            shadowRadius: 12,
+          },
+          android: {
+            elevation: 8,
+          },
+          web: {
+            boxShadow: '0 4px 24px rgba(0, 0, 0, 0.3)',
+          },
+        }),
+        borderWidth: 1,
+        borderColor: 'rgba(255, 255, 255, 0.12)',
+      }}>
+        <View style={{
+          width: 44,
+          height: 44,
+          borderRadius: 22,
+          alignItems: 'center',
+          justifyContent: 'center',
+          backgroundColor: 'rgba(59, 130, 246, 0.2)',
+        }}>
+          <Ionicons name="information-circle" size={28} color="#3b82f6" />
+        </View>
+        
+        <View style={{ flex: 1 }}>
+          <Text style={{
+            fontSize: 16,
+            fontFamily: theme.font['bold'],
+            color: '#ffffff',
+            letterSpacing: -0.3,
+            marginBottom: 2,
+          }}>
+            {props.text1}
+          </Text>
+          {props.text2 && (
+            <Text style={{
+              fontSize: 14,
+              fontFamily: theme.font['regular'],
+              color: 'rgba(255, 255, 255, 0.85)',
+              letterSpacing: -0.2,
+              lineHeight: 20,
+            }} numberOfLines={3}>
+              {props.text2}
+            </Text>
+          )}
+        </View>
       </View>
     </View>
-  )
+  ),
 };
 
 export default function RootLayout() {
