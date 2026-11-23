@@ -1,5 +1,5 @@
-﻿import React, { useContext, useRef, useState } from 'react';
-import { ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+﻿import React, { useContext, useEffect, useRef, useState } from 'react';
+import { ActivityIndicator, Keyboard, Platform, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import AnimatedScreen from '../../components/AnimatedScreen';
@@ -18,6 +18,21 @@ export default function JoinIndexScreen() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const scrollRef = useRef<ScrollView>(null);
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+
+  // The app uses Android adjustPan, so the window never resizes. Track the keyboard
+  // height ourselves and reserve that space at the bottom of the scroll content.
+  // iOS fires the "Will" events at the start of the animation; Android only has "Did".
+  useEffect(() => {
+    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+    const showSub = Keyboard.addListener(showEvent, (e) => setKeyboardHeight(e.endCoordinates.height));
+    const hideSub = Keyboard.addListener(hideEvent, () => setKeyboardHeight(0));
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
 
   const handleContinueWithCode = async () => {
     const normalizedCode = normalizeInviteCode(inviteCode);
@@ -46,18 +61,19 @@ export default function JoinIndexScreen() {
 
   return (
     <AnimatedScreen>
-      <KeyboardAvoidingView
-        style={{ flex: 1 }}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      >
+      <View style={{ flex: 1 }}>
         <View style={styles.header}>
           <Logo />
         </View>
         <ScrollView
           ref={scrollRef}
-          contentContainerStyle={styles.container}
+          contentContainerStyle={[styles.container, { paddingBottom: theme.spacing(6) + keyboardHeight }]}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
+          // Scroll once the extra bottom space has been laid out, not on a timer.
+          onContentSizeChange={() => {
+            if (keyboardHeight > 0) scrollRef.current?.scrollToEnd({ animated: true });
+          }}
         >
           <Card style={styles.card}>
             <Text style={styles.title} fontType="bold">Join Your Company</Text>
@@ -80,7 +96,6 @@ export default function JoinIndexScreen() {
               style={styles.input}
               value={inviteCode}
               onChangeText={(value) => setInviteCode(normalizeInviteCode(value))}
-              onFocus={() => setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100)}
               placeholder="AB7K92"
               autoCapitalize="characters"
               autoCorrect={false}
@@ -103,7 +118,7 @@ export default function JoinIndexScreen() {
             </Button>
           </Card>
         </ScrollView>
-      </KeyboardAvoidingView>
+      </View>
     </AnimatedScreen>
   );
 }
