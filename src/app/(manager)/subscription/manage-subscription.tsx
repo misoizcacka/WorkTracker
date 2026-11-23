@@ -57,7 +57,8 @@ export default function ManageSubscriptionScreen() {
         text2: pendingInvites > 0 
           ? `${seatsUsed} seats in use: ${activeWorkers} active + ${pendingInvites} pending.`
           : `${seatsUsed} seats in use. Deactivate workers first.`,
-        visibleTime: 5000,
+        autoHide: true,
+        visibilityTime: 5000,
       });
     }
   };

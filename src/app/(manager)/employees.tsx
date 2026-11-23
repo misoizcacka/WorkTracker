@@ -18,6 +18,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Dropdown } from "react-native-element-dropdown";
 import UserAvatar from "../../components/UserAvatar";
 import { useSession } from "../../context/AuthContext";
+import { useRouter } from "expo-router";
 import HourlyRateModal from "../../components/HourlyRateModal";
 import { useTranslation } from 'react-i18next';
 
@@ -42,6 +43,7 @@ type CombinedEmployeeType = Employee | PendingInviteRow;
 
 export default function ManagerEmployees() {
   const { width } = useWindowDimensions();
+  const router = useRouter();
   const employeesContext = useContext(EmployeesContext);
   const invitesContext = useContext(InvitesContext);
   const { user, userRole } = useSession();
@@ -203,7 +205,8 @@ export default function ManagerEmployees() {
         type: 'error',
         text1: 'Seat Limit Reached',
         text2: `All ${seatLimit} seats in use. Upgrade in Account.`,
-        visibleTime: 5000,
+        autoHide: true,
+        visibilityTime: 5000,
         onPress: () => {
           router.push('/(manager)/account');
         },

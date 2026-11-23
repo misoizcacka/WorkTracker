@@ -513,8 +513,7 @@
       "seatLimitNearlyReached": "Platzlimit fast erreicht",
       "seatLimitReachedMessage": "Alle {{limit}} Plaetze belegt ({{used}}/{{limit}}). Upgraden Sie, um mehr Mitarbeiter einzuladen.",
       "seatLimitWarningMessage": "{{percent}}% der Plaetze belegt ({{used}}/{{limit}}). Erwaegen Sie bald ein Upgrade.",
-      "upgradeSeats": "Plaetze upgraden"
-    },
+      "upgradeSeats": "Plaetze upgraden",
       "shareLink": "Link teilen",
       "done": "Fertig"
     },
