@@ -73,6 +73,7 @@ module.exports = () => {
       'expo-status-bar',
       ['react-native-maps', { androidGoogleMapsApiKey: googleMapsKey || 'AIzaSyDE81zzchDXalQuGapH-E8tBBjnN9fT304' }],
       './plugins/with-background-location.js',
+      './plugins/with-optional-hardware-features.js',
     ],
     extra: {
       router: {},
