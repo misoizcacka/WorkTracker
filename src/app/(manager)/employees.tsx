@@ -34,7 +34,7 @@ type PendingInviteRow = {
   company_id: string;
   avatar_url: null;
   created_at: string;
-  reporting_to: null;
+  reporting_to: string | null;
   token: string;
 };
 
@@ -106,7 +106,7 @@ export default function ManagerEmployees() {
       company_id: invite.company_id,
       avatar_url: null, // Invites don't have avatar_url yet
       created_at: invite.created_at,
-      reporting_to: null, // Invites don't have reporting_to yet
+      reporting_to: invite.reporting_to ?? null, // Use reporting_to from invite
       token: invite.token,
     }));
     return [...employees, ...pendingInvites];
@@ -248,7 +248,7 @@ export default function ManagerEmployees() {
         <Text style={[styles.tableCellText, { width: fixedColumnWidths.role }]} numberOfLines={1} ellipsizeMode="tail">{item.role}</Text>
         <Text style={[styles.tableCellText, { width: fixedColumnWidths.joined }]} numberOfLines={1} ellipsizeMode="tail">{moment(item.created_at).format("MMM D, YYYY")}</Text>
         <Text style={[styles.tableCellText, { flex: 1, minWidth: flexibleColumnMinLengths.reportingTo }]} numberOfLines={1} ellipsizeMode="tail">
-            {isPendingInvite ? 'N/A' : (item.role === 'manager' ? 'N/A' : manager?.full_name || 'N/A')}
+            {item.role === 'manager' ? 'N/A' : (item.reporting_to ? (getEmployeeById(item.reporting_to)?.full_name || 'N/A') : 'N/A')}
         </Text>
         <View style={[styles.tableCellActions, { width: fixedColumnWidths.actions }]}>
           {/* Share/Access Link - enabled for pending invites OR active employees (except yourself) */}

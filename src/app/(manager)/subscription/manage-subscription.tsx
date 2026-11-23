@@ -24,7 +24,9 @@ export default function ManageSubscriptionScreen() {
   const { t } = useTranslation();
 
   const currentSeats = employeesContext?.seatLimit || 0;
-  const activeWorkers = employeesContext?.seatsUsed || 0;
+  const seatsUsed = employeesContext?.seatsUsed || 0;
+  const pendingInvites = employeesContext?.pendingWorkerInvites || 0;
+  const activeWorkers = seatsUsed - pendingInvites; // Calculate actual active workers
   const scheduledSeats = employeesContext?.scheduledSeatLimit ?? null;
   const scheduledEffectiveAt = employeesContext?.scheduledSeatEffectiveAt || userSubscriptionPeriodEnd || null;
   const hasScheduledDowngrade = scheduledSeats !== null && scheduledSeats < currentSeats;
@@ -46,13 +48,16 @@ export default function ManageSubscriptionScreen() {
 
   const handleIncrement = () => setNewSlotCount(prev => prev + 1);
   const handleDecrement = () => {
-    if (newSlotCount > activeWorkers) {
+    if (newSlotCount > seatsUsed) {
       setNewSlotCount(prev => prev - 1);
     } else {
+      const breakdown = pendingInvites > 0 
+        ? `${activeWorkers} active + ${pendingInvites} pending = ${seatsUsed} total`
+        : `${activeWorkers} active`;
       Toast.show({
         type: 'error',
         text1: 'Action Not Allowed',
-        text2: `You cannot have fewer seats than your current number of active workers (${activeWorkers}).`,
+        text2: `You cannot have fewer seats than seats in use (${breakdown}).`,
       });
     }
   };
@@ -144,8 +149,13 @@ export default function ManageSubscriptionScreen() {
             <Text style={styles.sectionTitle} fontType="bold">{t('manager.subscription.planOverview')}</Text>
             <View style={styles.statsRow}>
               <View style={styles.statBox}>
-                <Text style={styles.statValue} fontType="bold">{activeWorkers}</Text>
-                <Text style={styles.statLabel}>{t('manager.subscription.activeWorkers')}</Text>
+                <Text style={styles.statValue} fontType="bold">{seatsUsed}</Text>
+                <Text style={styles.statLabel}>{t('manager.subscription.seatsInUse')}</Text>
+                {pendingInvites > 0 && (
+                  <Text style={styles.statHint}>
+                    {activeWorkers} active + {pendingInvites} pending
+                  </Text>
+                )}
               </View>
               <View style={[styles.statBox, styles.statDivider]}>
                 <Text style={styles.statValue} fontType="bold">{currentSeats}</Text>
@@ -317,6 +327,11 @@ const styles = StyleSheet.create({
     color: theme.colors.bodyText,
     textTransform: 'uppercase',
     marginTop: 4,
+  },
+  statHint: {
+    fontSize: 10,
+    color: theme.colors.disabledText,
+    marginTop: 2,
   },
   periodNote: {
     fontSize: 12,

@@ -10,6 +10,7 @@ export interface EmployeesContextType {
   seatsUsed: number;
   scheduledSeatLimit: number | null;
   scheduledSeatEffectiveAt: string | null;
+  pendingWorkerInvites: number;
   updateEmployee: (employee: Employee) => Promise<void>;
   deleteEmployee: (employeeId: string) => Promise<void>;
   enableEmployee: (employeeId: string) => Promise<void>;
@@ -27,6 +28,7 @@ export function EmployeesProvider({ children }: { children: React.ReactNode }) {
   const [seatLimit, setSeatLimit] = useState(0);
   const [scheduledSeatLimit, setScheduledSeatLimit] = useState<number | null>(null);
   const [scheduledSeatEffectiveAt, setScheduledSeatEffectiveAt] = useState<string | null>(null);
+  const [pendingWorkerInvites, setPendingWorkerInvites] = useState(0);
 
   useEffect(() => {
     if (isCompanyIdLoading) {
@@ -38,6 +40,7 @@ export function EmployeesProvider({ children }: { children: React.ReactNode }) {
       setSeatLimit(0);
       setScheduledSeatLimit(null);
       setScheduledSeatEffectiveAt(null);
+      setPendingWorkerInvites(0);
       setLoading(false);
       return;
     }
@@ -48,6 +51,7 @@ export function EmployeesProvider({ children }: { children: React.ReactNode }) {
       setSeatLimit(0);
       setScheduledSeatLimit(null);
       setScheduledSeatEffectiveAt(null);
+      setPendingWorkerInvites(0);
       setLoading(false);
       return;
     }
@@ -72,9 +76,20 @@ export function EmployeesProvider({ children }: { children: React.ReactNode }) {
               .maybeSingle()
           : Promise.resolve({ data: null, error: null });
 
-        const [empRes, compRes] = await Promise.all([
+        // Count pending worker invites (new invites only, not regenerated access links)
+        const pendingInvitesQuery = supabase
+          .from('invites')
+          .select('id', { count: 'exact', head: true })
+          .eq('company_id', userCompanyId)
+          .eq('role', 'worker')
+          .eq('status', 'pending')
+          .eq('used', false)
+          .is('employee_id', null);
+
+        const [empRes, compRes, inviteRes] = await Promise.all([
           employeesQuery,
           companySeatsQuery,
+          pendingInvitesQuery,
         ]);
 
         if (empRes.error) console.error('Error fetching employees:', empRes.error);
@@ -95,6 +110,11 @@ export function EmployeesProvider({ children }: { children: React.ReactNode }) {
           setSeatLimit(0);
           setScheduledSeatLimit(null);
           setScheduledSeatEffectiveAt(null);
+        }
+
+        if (inviteRes.error) console.error('Error counting pending invites:', inviteRes.error);
+        else {
+          setPendingWorkerInvites(inviteRes.count ?? 0);
         }
       } catch (error) {
         console.error('Error in fetchData:', error);
@@ -164,13 +184,42 @@ export function EmployeesProvider({ children }: { children: React.ReactNode }) {
       )
       .subscribe();
 
+    // Subscribe to invites changes to update pending worker invites count
+    const invitesSubscription = supabase
+      .channel(`invites_subscription_${userCompanyId}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'invites', filter: `company_id=eq.${userCompanyId}` },
+        async () => {
+          console.log('Invites changed - refreshing pending count');
+          // Refresh pending invites count
+          const { count, error } = await supabase
+            .from('invites')
+            .select('id', { count: 'exact', head: true })
+            .eq('company_id', userCompanyId)
+            .eq('role', 'worker')
+            .eq('status', 'pending')
+            .eq('used', false)
+            .is('employee_id', null);
+          
+          if (!error) {
+            setPendingWorkerInvites(count ?? 0);
+          }
+        }
+      )
+      .subscribe();
+
     return () => {
       supabase.removeChannel(employeeSubscription);
       supabase.removeChannel(companySubscription);
+      supabase.removeChannel(invitesSubscription);
     };
   }, [user?.id, userCompanyId, isCompanyIdLoading, userRole]); // Re-run effect when company ID, loading state, role, or user changes
 
-  const seatsUsed = useMemo(() => employees.filter(e => e.role === 'worker' && e.status === 'active').length, [employees]);
+  const seatsUsed = useMemo(() => {
+    const activeWorkers = employees.filter(e => e.role === 'worker' && e.status === 'active').length;
+    return activeWorkers + pendingWorkerInvites;
+  }, [employees, pendingWorkerInvites]);
 
   const getEmployeeById = useCallback((employeeId: string) => {
     // Ensure that the employee belongs to the current company
@@ -305,13 +354,14 @@ export function EmployeesProvider({ children }: { children: React.ReactNode }) {
     seatsUsed,
     scheduledSeatLimit,
     scheduledSeatEffectiveAt,
+    pendingWorkerInvites,
     updateEmployee,
     deleteEmployee,
     enableEmployee,
     getEmployeeById,
     loading,
     userCompanyId, // New: Add userCompanyId to the context value
-  }), [employees, seatLimit, seatsUsed, scheduledSeatLimit, scheduledSeatEffectiveAt, updateEmployee, deleteEmployee, enableEmployee, getEmployeeById, loading, userCompanyId]); // Add userCompanyId to dependencies
+  }), [employees, seatLimit, seatsUsed, scheduledSeatLimit, scheduledSeatEffectiveAt, pendingWorkerInvites, updateEmployee, deleteEmployee, enableEmployee, getEmployeeById, loading, userCompanyId]); // Add userCompanyId to dependencies
 
   return (
     <EmployeesContext.Provider value={value}>
