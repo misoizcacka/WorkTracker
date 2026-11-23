@@ -315,6 +315,7 @@
       "dataRights": "Your Data Rights (privacy@koordinate.app)",
       "version": "v{{version}}",
       "privacyPolicy": "Privacy Policy",
+      "legalNotice": "Legal Notice (Impressum)",
       "language": "Language",
       "locationDiagnostics": "Location Diagnostics"
     },

@@ -132,6 +132,17 @@ export default function WorkerAccountScreen() {
               <Ionicons name="open-outline" size={14} color={theme.colors.disabledText} />
             </TouchableOpacity>
 
+            {/* Legal Notice (Impressum, required by §5 DDG) */}
+            <TouchableOpacity
+              style={styles.privacyRow}
+              onPress={() => Linking.openURL('https://koordinate.app/legal-notice')}
+              activeOpacity={0.7}
+            >
+              <Ionicons name="business-outline" size={16} color={theme.colors.primary} />
+              <Text style={styles.privacyText} fontType="regular">{t('worker.account.legalNotice')}</Text>
+              <Ionicons name="open-outline" size={14} color={theme.colors.disabledText} />
+            </TouchableOpacity>
+
             {/* Data Rights */}
             <TouchableOpacity
               style={styles.privacyRow}
