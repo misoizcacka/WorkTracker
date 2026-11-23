@@ -187,7 +187,8 @@ export default function ManagerEmployees() {
   const managerCount = isOwner ? employees.filter(e => e.role === 'manager').length : 0;
   const visibleWorkerCount = employees.filter(e => e.role === 'worker').length;
   const seatUtilization = seatLimit > 0 ? (seatsUsed / seatLimit) * 100 : 0;
-  const showSeatWarning = isOwner && seatUtilization >= 100; // Only show banner at 100%
+  const showSeatWarning = isOwner && seatUtilization >= 80;
+  const [seatWarningExpanded, setSeatWarningExpanded] = useState(false);
 
   const getStatusStyle = (status: Employee['status']) => { // Changed type to Employee['status']
     switch (status) {
@@ -445,32 +446,59 @@ export default function ManagerEmployees() {
           </View>
           <View style={styles.headerStatsAndButton}>
             {isOwner ? (
-              <TouchableOpacity 
-                style={styles.statItem}
-                onPress={() => {
-                  if (seatUtilization >= 80 && seatUtilization < 100) {
-                    Toast.show({
-                      type: 'error',
-                      text1: t('manager.employees.seatLimitNearlyReached'),
-                      text2: t('manager.employees.seatLimitWarningMessage', { used: seatsUsed, limit: seatLimit, percent: Math.round(seatUtilization) }),
-                      autoHide: true,
-                      visibilityTime: 5000,
-                      onPress: () => {
-                        router.push('/(manager)/account');
-                      },
-                    });
-                  }
-                }}
-                disabled={seatUtilization < 80}
-              >
-                <View style={styles.statValueContainer}>
-                  <Text style={styles.statValue} fontType="bold">{seatsUsed}/{seatLimit}</Text>
-                  {seatUtilization >= 80 && seatUtilization < 100 && (
-                    <Ionicons name="warning" size={18} color="#f59e0b" style={styles.statWarningIcon} />
-                  )}
-                </View>
-                <Text style={styles.statLabel} fontType="regular">{t('manager.employees.seatsUsed')}</Text>
-              </TouchableOpacity>
+              <View style={styles.statItemWrapper}>
+                <TouchableOpacity 
+                  style={styles.statItem}
+                  onPress={() => {
+                    if (showSeatWarning) {
+                      setSeatWarningExpanded(!seatWarningExpanded);
+                    }
+                  }}
+                  disabled={!showSeatWarning}
+                >
+                  <View style={styles.statValueContainer}>
+                    <Text style={styles.statValue} fontType="bold">{seatsUsed}/{seatLimit}</Text>
+                    {showSeatWarning && (
+                      <Ionicons 
+                        name={seatUtilization >= 100 ? "alert-circle" : "warning"} 
+                        size={18} 
+                        color={seatUtilization >= 100 ? theme.colors.danger : "#f59e0b"} 
+                        style={styles.statWarningIcon} 
+                      />
+                    )}
+                  </View>
+                  <Text style={styles.statLabel} fontType="regular">{t('manager.employees.seatsUsed')}</Text>
+                </TouchableOpacity>
+                
+                {showSeatWarning && seatWarningExpanded && (
+                  <View style={[
+                    styles.seatWarningDropdown,
+                    seatUtilization >= 100 ? styles.seatWarningDropdownCritical : styles.seatWarningDropdownWarning
+                  ]}>
+                    <View style={styles.seatWarningContent}>
+                      <Text style={styles.seatWarningTitle} fontType="bold">
+                        {seatUtilization >= 100 
+                          ? t('manager.employees.seatLimitReached') 
+                          : t('manager.employees.seatLimitNearlyReached')}
+                      </Text>
+                      <Text style={styles.seatWarningMessage}>
+                        {seatUtilization >= 100
+                          ? t('manager.employees.seatLimitReachedMessage', { used: seatsUsed, limit: seatLimit })
+                          : t('manager.employees.seatLimitWarningMessage', { used: seatsUsed, limit: seatLimit, percent: Math.round(seatUtilization) })}
+                      </Text>
+                    </View>
+                    <TouchableOpacity 
+                      style={styles.seatWarningButton}
+                      onPress={() => router.push('/(manager)/account')}
+                    >
+                      <Text style={styles.seatWarningButtonText} fontType="bold">
+                        {t('manager.employees.upgradeSeats')}
+                      </Text>
+                      <Ionicons name="arrow-forward" size={14} color={theme.colors.primary} />
+                    </TouchableOpacity>
+                  </View>
+                )}
+              </View>
             ) : (
               <View style={styles.statItem}>
                 <Text style={styles.statValue} fontType="bold">{visibleWorkerCount}</Text>
@@ -492,33 +520,6 @@ export default function ManagerEmployees() {
             />
           </View>
         </View>
-
-        {showSeatWarning && (
-          <View style={styles.warningBannerCritical}>
-            <Ionicons 
-              name="alert-circle" 
-              size={20} 
-              color={theme.colors.danger} 
-            />
-            <View style={styles.warningBannerContent}>
-              <Text style={styles.warningBannerTitle} fontType="bold">
-                {t('manager.employees.seatLimitReached')}
-              </Text>
-              <Text style={styles.warningBannerSubtitle}>
-                {t('manager.employees.seatLimitReachedMessage', { used: seatsUsed, limit: seatLimit })}
-              </Text>
-            </View>
-            <TouchableOpacity 
-              style={styles.warningBannerButton}
-              onPress={() => router.push('/(manager)/account')}
-            >
-              <Text style={styles.warningBannerButtonText} fontType="bold">
-                {t('manager.employees.upgradeSeats')}
-              </Text>
-              <Ionicons name="arrow-forward" size={16} color={theme.colors.primary} />
-            </TouchableOpacity>
-          </View>
-        )}
 
 
         <ScrollView horizontal showsHorizontalScrollIndicator={true} contentContainerStyle={{ flexGrow: 1, minWidth: minTableContentWidth }}>
@@ -679,33 +680,6 @@ const styles = StyleSheet.create({
     color: theme.colors.bodyText,
     lineHeight: 20,
   },
-  warningBannerCritical: {
-    backgroundColor: theme.colors.danger + '15',
-    borderWidth: 1,
-    borderColor: theme.colors.danger,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: theme.spacing(2),
-    marginHorizontal: theme.spacing(2),
-    marginBottom: theme.spacing(2),
-    padding: theme.spacing(2),
-    borderRadius: theme.radius.lg,
-  },
-  warningBannerButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: theme.colors.cardBackground,
-    paddingHorizontal: theme.spacing(2),
-    paddingVertical: theme.spacing(1.25),
-    borderRadius: theme.radius.md,
-    gap: theme.spacing(0.5),
-    borderWidth: 1,
-    borderColor: theme.colors.borderColor,
-  },
-  warningBannerButtonText: {
-    color: theme.colors.primary,
-    fontSize: theme.fontSizes.sm,
-  },
   pageHeader: {
     paddingVertical: theme.spacing(4),
     paddingHorizontal: theme.spacing(2),
@@ -777,6 +751,10 @@ const styles = StyleSheet.create({
   selectedTextStyle: { fontSize: theme.fontSizes.md, color: theme.colors.headingText },
   headerStatsAndButton: { flexDirection: 'row', alignItems: 'center' },
   statItem: { alignItems: 'center', marginHorizontal: theme.spacing(1.5) },
+  statItemWrapper: {
+    position: 'relative',
+    marginHorizontal: theme.spacing(1.5),
+  },
   statValueContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -793,6 +771,67 @@ const styles = StyleSheet.create({
     fontSize: theme.fontSizes.sm,
     color: theme.colors.bodyText,
     marginTop: theme.spacing(0.5),
+  },
+  seatWarningDropdown: {
+    position: 'absolute',
+    top: '100%',
+    right: 0,
+    marginTop: theme.spacing(1),
+    minWidth: 320,
+    maxWidth: 400,
+    borderRadius: theme.radius.lg,
+    padding: theme.spacing(2),
+    ...Platform.select({
+      web: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.15,
+        shadowRadius: 12,
+      },
+      native: {
+        elevation: 8,
+      },
+    }),
+    zIndex: 1000,
+  },
+  seatWarningDropdownWarning: {
+    backgroundColor: '#fef3c7',
+    borderWidth: 1,
+    borderColor: '#f59e0b',
+  },
+  seatWarningDropdownCritical: {
+    backgroundColor: theme.colors.danger + '15',
+    borderWidth: 1,
+    borderColor: theme.colors.danger,
+  },
+  seatWarningContent: {
+    marginBottom: theme.spacing(1.5),
+  },
+  seatWarningTitle: {
+    fontSize: theme.fontSizes.md,
+    color: theme.colors.headingText,
+    marginBottom: theme.spacing(0.5),
+  },
+  seatWarningMessage: {
+    fontSize: theme.fontSizes.sm,
+    color: theme.colors.bodyText,
+    lineHeight: 20,
+  },
+  seatWarningButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: theme.colors.cardBackground,
+    paddingHorizontal: theme.spacing(2),
+    paddingVertical: theme.spacing(1.25),
+    borderRadius: theme.radius.md,
+    gap: theme.spacing(0.5),
+    borderWidth: 1,
+    borderColor: theme.colors.borderColor,
+  },
+  seatWarningButtonText: {
+    color: theme.colors.primary,
+    fontSize: theme.fontSizes.sm,
   },
   createButton: {
     backgroundColor: theme.colors.primary,
