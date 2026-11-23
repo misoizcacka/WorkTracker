@@ -522,7 +522,12 @@ export default function ManagerEmployees() {
         </View>
 
 
-        <ScrollView horizontal showsHorizontalScrollIndicator={true} contentContainerStyle={{ flexGrow: 1, minWidth: minTableContentWidth }}>
+        <ScrollView 
+          horizontal 
+          showsHorizontalScrollIndicator={true} 
+          contentContainerStyle={{ flexGrow: 1, minWidth: minTableContentWidth }}
+          style={{ zIndex: 1 }}
+        >
           <View style={{ flexGrow: 1 }}>
             <TableHeader />
             {filteredItems.map(renderEmployeeRow)}
@@ -704,6 +709,7 @@ const styles = StyleSheet.create({
     padding: theme.spacing(3), // Add padding within the card
     marginHorizontal: theme.spacing(2), // Match dashboard's column margin
     marginBottom: theme.spacing(2),
+    overflow: 'visible', // Allow dropdown to overflow
     ...Platform.select({
       web: {
         shadowColor: '#000',
@@ -721,6 +727,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     marginBottom: theme.spacing(3), // Increased margin for better separation
+    zIndex: 1001, // Higher than dropdown to ensure controls are on top
   },
   searchAndFilter: {
     flexDirection: 'row',
@@ -749,11 +756,16 @@ const styles = StyleSheet.create({
   },
   placeholderStyle: { fontSize: theme.fontSizes.md, color: theme.colors.bodyText },
   selectedTextStyle: { fontSize: theme.fontSizes.md, color: theme.colors.headingText },
-  headerStatsAndButton: { flexDirection: 'row', alignItems: 'center' },
+  headerStatsAndButton: { 
+    flexDirection: 'row', 
+    alignItems: 'center',
+    zIndex: 1001,
+  },
   statItem: { alignItems: 'center', marginHorizontal: theme.spacing(1.5) },
   statItemWrapper: {
     position: 'relative',
     marginHorizontal: theme.spacing(1.5),
+    zIndex: 1002, // Higher than parent to ensure dropdown appears above everything
   },
   statValueContainer: {
     flexDirection: 'row',
@@ -789,10 +801,10 @@ const styles = StyleSheet.create({
         shadowRadius: 12,
       },
       native: {
-        elevation: 8,
+        elevation: 10, // Higher elevation for Android
       },
     }),
-    zIndex: 1000,
+    zIndex: 9999, // Very high z-index to ensure it appears above everything
   },
   seatWarningDropdownWarning: {
     backgroundColor: '#fef3c7',
