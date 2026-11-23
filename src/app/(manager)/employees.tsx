@@ -494,7 +494,7 @@ export default function ManagerEmployees() {
                       <Text style={styles.seatWarningButtonText} fontType="bold">
                         {t('manager.employees.upgradeSeats')}
                       </Text>
-                      <Ionicons name="arrow-forward" size={14} color={theme.colors.primary} />
+                      <Ionicons name="arrow-forward" size={14} color="#ffffff" />
                     </TouchableOpacity>
                   </View>
                 )}
@@ -807,42 +807,42 @@ const styles = StyleSheet.create({
     zIndex: 9999, // Very high z-index to ensure it appears above everything
   },
   seatWarningDropdownWarning: {
-    backgroundColor: '#fef3c7',
+    backgroundColor: 'rgba(26, 26, 28, 0.92)',
     borderWidth: 1,
-    borderColor: '#f59e0b',
+    borderColor: 'rgba(245, 158, 11, 0.3)',
   },
   seatWarningDropdownCritical: {
-    backgroundColor: theme.colors.danger + '15',
+    backgroundColor: 'rgba(26, 26, 28, 0.92)',
     borderWidth: 1,
-    borderColor: theme.colors.danger,
+    borderColor: 'rgba(239, 68, 68, 0.3)',
   },
   seatWarningContent: {
     marginBottom: theme.spacing(1.5),
   },
   seatWarningTitle: {
     fontSize: theme.fontSizes.md,
-    color: theme.colors.headingText,
+    color: '#ffffff',
     marginBottom: theme.spacing(0.5),
   },
   seatWarningMessage: {
     fontSize: theme.fontSizes.sm,
-    color: theme.colors.bodyText,
+    color: 'rgba(255, 255, 255, 0.85)',
     lineHeight: 20,
   },
   seatWarningButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: theme.colors.cardBackground,
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
     paddingHorizontal: theme.spacing(2),
     paddingVertical: theme.spacing(1.25),
     borderRadius: theme.radius.md,
     gap: theme.spacing(0.5),
     borderWidth: 1,
-    borderColor: theme.colors.borderColor,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
   },
   seatWarningButtonText: {
-    color: theme.colors.primary,
+    color: '#ffffff',
     fontSize: theme.fontSizes.sm,
   },
   createButton: {
