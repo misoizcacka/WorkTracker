@@ -185,7 +185,7 @@ class GeofenceBroadcastReceiver : BroadcastReceiver() {
 
                     validIds.forEach { id ->
                         BackgroundLocationManager.sendGeofenceTransitionEvent(
-                            context, id, eventType, workerId, companyId, lat, lon, supabaseService
+                            context, id, eventType, workerId, companyId, lat, lon, supabaseService, Constants.eventTimeFor(location)
                         )
                     }
                 } catch (e: Exception) {

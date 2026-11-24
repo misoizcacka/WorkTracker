@@ -100,8 +100,25 @@ class LocationFileLogger {
   }
   
   // MARK: - Private
+
+  // Numbers with 4+ decimals are coordinates in these logs (distances and accuracy are whole meters).
+  // Round them to 2 decimals (~1 km) so the log files don't record a worker's precise movements (GDPR).
+  private static let preciseNumber = try! NSRegularExpression(pattern: "-?\\d{1,3}\\.\\d{4,}")
+
+  static func redact(_ message: String) -> String {
+    let ns = message as NSString
+    var result = message
+    // Replace from the end so earlier ranges stay valid.
+    for match in preciseNumber.matches(in: message, range: NSRange(location: 0, length: ns.length)).reversed() {
+      guard let value = Double(ns.substring(with: match.range)),
+            let range = Range(match.range, in: result) else { continue }
+      result.replaceSubrange(range, with: String(format: "%.2f", value))
+    }
+    return result
+  }
   
-  private func writeLog(level: String, tag: String, message: String) {
+  private func writeLog(level: String, tag: String, message rawMessage: String) {
+    let message = LocationFileLogger.redact(rawMessage)
     let timestamp = ISO8601DateFormatter().string(from: Date())
     let logLine = "[\(timestamp)] \(level)/\(tag): \(message)\n"
     

@@ -54,7 +54,9 @@ object BackgroundLocationManager {
         companyId: String,
         latitude: Double,
         longitude: Double,
-        supabaseService: SupabaseService
+        supabaseService: SupabaseService,
+        // Time of the location reading that caused the transition (see Constants.eventTimeFor).
+        eventTime: Long = System.currentTimeMillis()
     ) {
         if (isDuplicateEvent(geofenceId, eventType)) {
             Log.d(TAG, "Deduplicated duplicate $eventType for $geofenceId. Skipping.")
@@ -62,7 +64,7 @@ object BackgroundLocationManager {
         }
 
         val eventId = UUID.randomUUID().toString()
-        val timestamp = System.currentTimeMillis()
+        val timestamp = eventTime
         
         val success = supabaseService.sendGeofenceTransitionEvent(
             id = eventId,

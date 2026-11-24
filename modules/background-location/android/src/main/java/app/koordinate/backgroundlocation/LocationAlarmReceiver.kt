@@ -155,7 +155,7 @@ class LocationAlarmReceiver : BroadcastReceiver() {
         
         val supabaseService = SupabaseService(context, supabaseUrl, supabaseKey, DeviceAuthenticator(context))
         val eventId = UUID.randomUUID().toString()
-        val timestamp = System.currentTimeMillis()
+        val timestamp = Constants.eventTimeFor(location)
         
         // Determine if we're in active or passive mode
         val isInside = sharedPrefs.getBoolean(Constants.SHARED_PREFS_KEY_IS_INSIDE_GEOFENCE, false)

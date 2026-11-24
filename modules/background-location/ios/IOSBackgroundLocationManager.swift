@@ -35,6 +35,8 @@ final class IOSBackgroundLocationManager: NSObject, CLLocationManagerDelegate {
   private var currentMode: TrackingMode?
   private var currentModeIsActive: Bool?  // Deprecated: use currentMode instead
   private var periodicTimer: Timer?  // Force location updates at regular intervals
+  private var exitPendingTimeoutWork: DispatchWorkItem?  // EXIT_PENDING time limit
+  private let exitPendingTimeout: TimeInterval = 10 * 60  // give up verifying after 10 min
   private var shouldTreatNextLocationAsReconcile = false
   private var backgroundTask: UIBackgroundTaskIdentifier = .invalid
   private var notificationId = "koord.work.session"
@@ -194,6 +196,8 @@ final class IOSBackgroundLocationManager: NSObject, CLLocationManagerDelegate {
 
   func stop() {
     IOSBackgroundLocationManager.isRunning = false
+    exitPendingTimeoutWork?.cancel()
+    exitPendingTimeoutWork = nil
     periodicTimer?.invalidate()
     periodicTimer = nil
     locationManager.stopUpdatingLocation()
@@ -357,6 +361,22 @@ final class IOSBackgroundLocationManager: NSObject, CLLocationManagerDelegate {
   private func applyLocationConfiguration(for newMode: TrackingMode, from oldModeName: String) {
     // If another switch happened before this ran, that one wins.
     guard currentMode == newMode else { return }
+
+    // EXIT_PENDING time limit: give up verifying after 10 min without a GPS decision (e.g. indoors)
+    // and fall back to PASSIVE. Without a limit, one bad fix kept best-accuracy GPS on all day.
+    exitPendingTimeoutWork?.cancel()
+    exitPendingTimeoutWork = nil
+    if newMode == .exitPending {
+      let work = DispatchWorkItem { [weak self] in
+        guard let self = self, self.currentMode == .exitPending else { return }
+        NSLog("IOSBackgroundLocationManager: EXIT_PENDING timed out without a GPS decision - back to PASSIVE")
+        LocationFileLogger.shared.warning("Geofence", "EXIT_PENDING timed out after 10 min without GPS confirmation - back to PASSIVE")
+        self.stateStore.isExitPending = false
+        self.switchToMode(.passive)
+      }
+      exitPendingTimeoutWork = work
+      DispatchQueue.main.asyncAfter(deadline: .now() + exitPendingTimeout, execute: work)
+    }
     
     // Stop existing timer
     periodicTimer?.invalidate()
@@ -550,7 +570,8 @@ final class IOSBackgroundLocationManager: NSObject, CLLocationManagerDelegate {
             latitude: location.coordinate.latitude,
             longitude: location.coordinate.longitude,
             notes: source == "reconcile" ? "Reconciled on app resume" : "Transition detected via \(source)",
-            config: config
+            config: config,
+            timestamp: location.timestamp
           )
         } else {
           // Entry quality insufficient - log and skip
@@ -581,7 +602,8 @@ final class IOSBackgroundLocationManager: NSObject, CLLocationManagerDelegate {
             latitude: location.coordinate.latitude,
             longitude: location.coordinate.longitude,
             notes: source == "reconcile" ? "Reconciled on app resume" : "Transition detected via \(source)",
-            config: config
+            config: config,
+            timestamp: location.timestamp
           )
         } else if !stateStore.isExitPending {
           // POSSIBLE EXIT DETECTED - switch to EXIT_PENDING to verify with GPS
@@ -662,7 +684,8 @@ final class IOSBackgroundLocationManager: NSObject, CLLocationManagerDelegate {
       latitude: location.coordinate.latitude,
       longitude: location.coordinate.longitude,
       notes: "Periodic update (\(trackingType))",
-      config: config
+      config: config,
+      timestamp: location.timestamp
     )
     
     let icon = location.horizontalAccuracy <= 20 ? "🟢" : (location.horizontalAccuracy <= 50 ? "🟡" : "🔵")
@@ -728,6 +751,7 @@ final class IOSBackgroundLocationManager: NSObject, CLLocationManagerDelegate {
 
     let latitude = location.coordinate.latitude
     let longitude = location.coordinate.longitude
+    let fixTime = location.timestamp
     let type = isInside ? "enter_geofence" : "exit_geofence"
 
     let icon = location.horizontalAccuracy <= 20 ? "🟢" : (location.horizontalAccuracy <= 50 ? "🟡" : "🔵")
@@ -742,7 +766,8 @@ final class IOSBackgroundLocationManager: NSObject, CLLocationManagerDelegate {
         latitude: latitude,
         longitude: longitude,
         notes: "Transition detected via \(source)",
-        config: config
+        config: config,
+        timestamp: fixTime
       )
       let service = SupabaseService(config: config, authenticator: self.authenticator)
       await service.flushPendingEvents()
@@ -765,6 +790,14 @@ final class IOSBackgroundLocationManager: NSObject, CLLocationManagerDelegate {
 
   // ─── Event emission ───────────────────────────────────────────────────────
 
+  /// Event time for a location event: the time of the reading, not the send time. Falls back to
+  /// now if the fix time looks wrong (older than 1 hour or more than 1 minute ahead). Same rule as
+  /// Android's Constants.eventTimeFor.
+  static func eventTime(for fixTime: Date) -> Date {
+    let age = -fixTime.timeIntervalSinceNow
+    return (age <= 60 * 60 && age >= -60) ? fixTime : Date()
+  }
+
   private func emitEvent(
     type: String,
     assignmentId: String,
@@ -773,11 +806,13 @@ final class IOSBackgroundLocationManager: NSObject, CLLocationManagerDelegate {
     latitude: Double,
     longitude: Double,
     notes: String?,
-    config: SupabaseConfig
+    config: SupabaseConfig,
+    // Time of the location reading, not the send time. Defaults to now for events without a fix.
+    timestamp: Date = Date()
   ) async {
     let event = LocationEventRecord(
       id: UUID().uuidString.lowercased(),
-      createdAt: Date(),
+      createdAt: IOSBackgroundLocationManager.eventTime(for: timestamp),
       companyId: companyId,
       workerId: workerId,
       assignmentId: assignmentId,

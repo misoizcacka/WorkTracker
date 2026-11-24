@@ -18,11 +18,23 @@ object LocationFileLogger {
     private const val OLD_LOG_FILE_NAME = "location_tracking_old.log"
     private const val MAX_LOG_SIZE_BYTES = 5 * 1024 * 1024  // 5MB max
     private val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS", Locale.US)
+
+    // Numbers with 4+ decimals are coordinates in these logs (distances and accuracy are whole meters).
+    // Round them to 2 decimals (~1 km) so the log files don't record a worker's precise movements (GDPR).
+    private val preciseNumber = Regex("""-?\d{1,3}\.\d{4,}""")
+
+    internal fun redact(message: String): String =
+        preciseNumber.replace(message) { m ->
+            m.value.toDoubleOrNull()?.let { String.format(Locale.US, "%.2f", it) } ?: m.value
+        }
     
     /**
-     * Log a message to both logcat and file.
+     * Log a message to both logcat and file. Synchronized: called from the service, receivers and
+     * coroutines at once, and SimpleDateFormat and appendText aren't thread-safe.
      */
-    fun log(context: Context, tag: String, level: String, message: String) {
+    @Synchronized
+    fun log(context: Context, tag: String, level: String, rawMessage: String) {
+        val message = redact(rawMessage)
         // Also log to logcat based on level
         when (level) {
             "D" -> Log.d(tag, message)

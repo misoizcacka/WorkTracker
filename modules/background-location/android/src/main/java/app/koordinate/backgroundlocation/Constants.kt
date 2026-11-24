@@ -30,9 +30,22 @@ enum class Confidence {
 }
 
 object Constants {
+    /**
+     * Event time for a location event: the time of the reading, not the time it's sent. Geofence
+     * broadcasts can arrive minutes late, which pushed exit times later and inflated hours. Falls
+     * back to "now" if the fix time looks wrong (older than 1 hour or more than 1 minute ahead).
+     */
+    fun eventTimeFor(location: Location?): Long {
+        val now = System.currentTimeMillis()
+        val fixTime = location?.time ?: return now
+        return if (fixTime in (now - 60 * 60 * 1000L)..(now + 60 * 1000L)) fixTime else now
+    }
     const val ACTIVE_TRACKING_INTERVAL_MS = 1 * 60 * 1000L   // 1 min — worker outside geofence, traveling
     const val PASSIVE_TRACKING_INTERVAL_MS = 5 * 60 * 1000L  // 5 min — worker inside geofence, on site
     const val EXIT_PENDING_INTERVAL_MS = 30 * 1000L          // 30 sec — verifying exit with high-accuracy GPS
+    // Give up verifying after this long without a GPS decision (e.g. indoors, GPS never locks) and fall
+    // back to PASSIVE. Without a limit, one bad WiFi fix kept high-accuracy GPS on for the rest of the day.
+    const val EXIT_PENDING_TIMEOUT_MS = 10 * 60 * 1000L
     const val PERIODIC_FORCE_CHECK_INTERVAL_MS = 5 * 60 * 1000L  // 5 min — CRITICAL: Wake device from Doze to check if worker left (was 15 min, too slow)
 
     const val SHARED_PREFS_NAME = "location_tracking_prefs"

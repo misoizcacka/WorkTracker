@@ -1,4 +1,4 @@
-﻿package app.koordinate.backgroundlocation
+package app.koordinate.backgroundlocation
 
 import android.Manifest
 import android.app.NotificationChannel
@@ -61,6 +61,19 @@ class PeriodicLocationTrackingService : Service() {
     // null = no location request is active yet. Starting at PASSIVE made the first
     // switchToMode(PASSIVE) a no-op, so on-site check-ins never started location updates.
     private var currentMode: TrackingMode? = null
+
+    // EXIT_PENDING time limit (see Constants.EXIT_PENDING_TIMEOUT_MS).
+    private val mainHandler = android.os.Handler(Looper.getMainLooper())
+    private val exitPendingTimeout = Runnable {
+        if (currentMode == TrackingMode.EXIT_PENDING) {
+            Log.w("PeriodicLocationTrackingService", "EXIT_PENDING timed out without a GPS decision - back to PASSIVE")
+            LocationFileLogger.w(this, "Geofence", "EXIT_PENDING timed out after ${Constants.EXIT_PENDING_TIMEOUT_MS / 60000} min without GPS confirmation - back to PASSIVE (force-checks continue)")
+            getSharedPreferences(Constants.SHARED_PREFS_NAME, Context.MODE_PRIVATE).edit()
+                .putBoolean(Constants.SHARED_PREFS_KEY_IS_EXIT_PENDING, false)
+                .apply()
+            switchToMode(TrackingMode.PASSIVE)
+        }
+    }
     private var isTrackingActive = false  // Deprecated: use currentMode instead
     private val serviceJob = SupervisorJob()
     private val serviceScope = CoroutineScope(
@@ -218,7 +231,7 @@ class PeriodicLocationTrackingService : Service() {
                         if (workerId != null && companyId != null) {
                             serviceScope.launch {
                                 BackgroundLocationManager.sendGeofenceTransitionEvent(
-                                    applicationContext, it.id, eventType, workerId, companyId, location.latitude, location.longitude, svc
+                                    applicationContext, it.id, eventType, workerId, companyId, location.latitude, location.longitude, svc, Constants.eventTimeFor(location)
                                 )
                                 val qualityIcon = when(quality?.source) {
                                     LocationSource.GPS_HIGH_QUALITY -> "ðŸŸ¢"
@@ -273,7 +286,7 @@ class PeriodicLocationTrackingService : Service() {
                         if (workerId != null && companyId != null) {
                             serviceScope.launch {
                                 BackgroundLocationManager.sendGeofenceTransitionEvent(
-                                    applicationContext, it.id, eventType, workerId, companyId, location.latitude, location.longitude, svc
+                                    applicationContext, it.id, eventType, workerId, companyId, location.latitude, location.longitude, svc, Constants.eventTimeFor(location)
                                 )
                                 val qualityIcon = when(quality.source) {
                                     LocationSource.GPS_HIGH_QUALITY -> "ðŸŸ¢"
@@ -423,7 +436,7 @@ class PeriodicLocationTrackingService : Service() {
             lastLocationSentTime = currentTime
             serviceScope.launch {
                 val eventId = UUID.randomUUID().toString()
-                val timestamp = System.currentTimeMillis()
+                val timestamp = Constants.eventTimeFor(location)
                 val type = when (currentMode ?: TrackingMode.PASSIVE) {
                     TrackingMode.ACTIVE -> "active_tracking"
                     TrackingMode.EXIT_PENDING -> "exit_pending_tracking"
@@ -707,6 +720,12 @@ class PeriodicLocationTrackingService : Service() {
         currentMode = newMode
         isTrackingActive = (newMode == TrackingMode.ACTIVE)  // For backwards compatibility
         currentModeIsActive = isTrackingActive  // For backwards compatibility
+
+        // Start the EXIT_PENDING time limit on entry; any other mode cancels it.
+        mainHandler.removeCallbacks(exitPendingTimeout)
+        if (newMode == TrackingMode.EXIT_PENDING) {
+            mainHandler.postDelayed(exitPendingTimeout, Constants.EXIT_PENDING_TIMEOUT_MS)
+        }
         
         LocationFileLogger.i(this, "Service", "Mode switched: $oldMode â†’ $newMode")
         Log.d("PeriodicLocationTrackingService", "ðŸ”„ Mode switch: $oldMode â†’ $newMode")
@@ -864,6 +883,7 @@ class PeriodicLocationTrackingService : Service() {
     override fun onDestroy() {
         super.onDestroy()
         isRunning.set(false)
+        mainHandler.removeCallbacks(exitPendingTimeout)
         fusedLocationClient.removeLocationUpdates(locationCallback)
         BackgroundLocationManager.stopPeriodicUpdates(this)
         LocationAlarmScheduler.cancelAlarms(this)
