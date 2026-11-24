@@ -1,4 +1,4 @@
-import React, { useContext, useEffect, useState } from 'react';
+import React, { useContext, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Platform, Pressable, ScrollView, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
 import { Link, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -25,6 +25,9 @@ export function InviteAcceptanceScreen({ token }: InviteAcceptanceScreenProps) {
   const invitesContext = useContext(InvitesContext);
   const { refreshUser } = useSession();
 
+  // Set to false on unmount. Used to detect that the root layout already redirected us.
+  const isMountedRef = useRef(true);
+  useEffect(() => () => { isMountedRef.current = false; }, []);
   const [invite, setInvite] = useState<Invite | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -139,7 +142,18 @@ export function InviteAcceptanceScreen({ token }: InviteAcceptanceScreenProps) {
       }
 
       await refreshUser();
-      router.replace(invite.role === 'worker' ? '/(worker)/home' : '/(manager)/account');
+
+      if (invite.role === 'worker') {
+        // The root layout already redirects a signed-in worker to the worker area as soon as
+        // their role is known. A second router.replace creates a new route key, which remounts
+        // the worker layout (the privacy notice flashes, goes blank, then appears again).
+        // So only navigate here if that redirect has not already happened.
+        if (isMountedRef.current) {
+          router.replace('/(worker)/home');
+        }
+      } else {
+        router.replace('/(manager)/account');
+      }
     } catch (e: any) {
       setFormError(e.message || 'Could not join the company.');
     } finally {

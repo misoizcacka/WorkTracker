@@ -10,11 +10,15 @@ import { useTranslation } from 'react-i18next';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { WorkerPrivacyNotice, PRIVACY_NOTICE_ACCEPTED_KEY } from "../../components/WorkerPrivacyNotice";
 
+// Cached at module level: if the layout remounts, the (async) AsyncStorage read below
+// would otherwise return null and blank the screen for a frame on every remount.
+let privacyAcceptedCache: boolean | null = null;
+
 function ProtectedWorkerLayout() {
   const { user, isLoading, userRole, isSubscriptionExpired } = useSession();
   const router = useRouter();
   const { t } = useTranslation();
-  const [privacyAccepted, setPrivacyAccepted] = useState<boolean | null>(null);
+  const [privacyAccepted, setPrivacyAccepted] = useState<boolean | null>(privacyAcceptedCache);
 
   useEffect(() => {
     if (isLoading || !user || !userRole) return;
@@ -25,7 +29,9 @@ function ProtectedWorkerLayout() {
 
   useEffect(() => {
     AsyncStorage.getItem(PRIVACY_NOTICE_ACCEPTED_KEY).then(val => {
-      setPrivacyAccepted(val === 'true');
+      const accepted = val === 'true';
+      privacyAcceptedCache = accepted;
+      setPrivacyAccepted(accepted);
     }).catch(() => setPrivacyAccepted(false));
   }, []);
 
@@ -39,7 +45,7 @@ function ProtectedWorkerLayout() {
 
   // Show privacy notice on first launch
   if (!privacyAccepted) {
-    return <WorkerPrivacyNotice onAccept={() => setPrivacyAccepted(true)} />;
+    return <WorkerPrivacyNotice onAccept={() => { privacyAcceptedCache = true; setPrivacyAccepted(true); }} />;
   }
 
   return (
