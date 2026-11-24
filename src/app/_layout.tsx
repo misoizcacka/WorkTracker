@@ -3,20 +3,20 @@ import 'react-native-gesture-handler';
 import React, { useEffect, useState, useCallback, useRef } from 'react'; // Added useState, useCallback, useRef
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { SessionProvider, useSession } from '../context/AuthContext';
-import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaProvider, SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
 import { EmployeesProvider } from '../context/EmployeesContext';
 import { ProjectsProvider } from '../context/ProjectsContext';
 import { AssignmentsProvider } from '../context/AssignmentsContext';
 import { InvitesProvider } from '../context/InvitesContext';
-import { Platform, View, Text } from 'react-native';
+import { Platform, View, Text, TouchableOpacity } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 
 import { I18nextProvider } from 'react-i18next';
 import i18n, { loadPersistedLanguage } from '../i18n';
 import { theme } from '../theme';
 
-import Toast, { BaseToast, ErrorToast, ToastConfig } from 'react-native-toast-message';
+import Toast, { ToastConfig } from 'react-native-toast-message';
 
 import { useFonts } from 'expo-font';
 import * as SplashScreen from 'expo-splash-screen';
@@ -34,205 +34,122 @@ import {
 // Keep the splash screen visible while we fetch resources
 SplashScreen.preventAutoHideAsync();
 
-const toastConfig: ToastConfig = {
-  success: (props) => (
-    <View style={{ paddingHorizontal: 16, alignItems: 'center' }}>
-      <View style={{
-        flexDirection: 'row',
-        alignItems: 'center',
-        width: '100%',
-        maxWidth: 400,
-        paddingVertical: 14,
-        paddingHorizontal: 16,
-        borderRadius: 16,
-        backgroundColor: 'rgba(26, 26, 28, 0.92)',
-        gap: 12,
-        ...Platform.select({
-          ios: {
-            shadowColor: '#000',
-            shadowOffset: { width: 0, height: 4 },
-            shadowOpacity: 0.3,
-            shadowRadius: 12,
-          },
-          android: {
-            elevation: 8,
-          },
-          web: {
-            boxShadow: '0 4px 24px rgba(0, 0, 0, 0.3)',
-          },
-        }),
-        borderWidth: 1,
-        borderColor: 'rgba(255, 255, 255, 0.12)',
-      }}>
-        <View style={{
-          width: 44,
-          height: 44,
-          borderRadius: 22,
-          alignItems: 'center',
-          justifyContent: 'center',
-          backgroundColor: 'rgba(22, 163, 74, 0.2)',
-        }}>
-          <Ionicons name="checkmark-circle" size={28} color="#16A34A" />
-        </View>
-        
-        <View style={{ flex: 1 }}>
-          <Text style={{
-            fontSize: 16,
-            fontFamily: theme.font['bold'],
-            color: '#ffffff',
-            letterSpacing: -0.3,
-            marginBottom: 2,
-          }}>
-            {props.text1}
-          </Text>
-          {props.text2 && (
-            <Text style={{
-              fontSize: 14,
-              fontFamily: theme.font['regular'],
-              color: 'rgba(255, 255, 255, 0.85)',
-              letterSpacing: -0.2,
-              lineHeight: 20,
-            }} numberOfLines={3}>
-              {props.text2}
-            </Text>
-          )}
-        </View>
-      </View>
-    </View>
-  ),
-  
-  error: (props) => (
-    <View style={{ paddingHorizontal: 16, alignItems: 'center' }}>
-      <View style={{
-        flexDirection: 'row',
-        alignItems: 'center',
-        width: '100%',
-        maxWidth: 400,
-        paddingVertical: 14,
-        paddingHorizontal: 16,
-        borderRadius: 16,
-        backgroundColor: 'rgba(26, 26, 28, 0.92)',
-        gap: 12,
-        ...Platform.select({
-          ios: {
-            shadowColor: '#000',
-            shadowOffset: { width: 0, height: 4 },
-            shadowOpacity: 0.3,
-            shadowRadius: 12,
-          },
-          android: {
-            elevation: 8,
-          },
-          web: {
-            boxShadow: '0 4px 24px rgba(0, 0, 0, 0.3)',
-          },
-        }),
-        borderWidth: 1,
-        borderColor: 'rgba(255, 255, 255, 0.12)',
-      }}>
-        <View style={{
-          width: 44,
-          height: 44,
-          borderRadius: 22,
-          alignItems: 'center',
-          justifyContent: 'center',
-          backgroundColor: 'rgba(192, 0, 0, 0.2)',
-        }}>
-          <Ionicons name="close-circle" size={28} color="#c00000" />
-        </View>
-        
-        <View style={{ flex: 1 }}>
-          <Text style={{
-            fontSize: 16,
-            fontFamily: theme.font['bold'],
-            color: '#ffffff',
-            letterSpacing: -0.3,
-            marginBottom: 2,
-          }}>
-            {props.text1}
-          </Text>
-          {props.text2 && (
-            <Text style={{
-              fontSize: 14,
-              fontFamily: theme.font['regular'],
-              color: 'rgba(255, 255, 255, 0.85)',
-              letterSpacing: -0.2,
-              lineHeight: 20,
-            }} numberOfLines={3}>
-              {props.text2}
-            </Text>
-          )}
-        </View>
-      </View>
-    </View>
-  ),
-  
-  info: (props) => (
-    <View style={{ paddingHorizontal: 16, alignItems: 'center' }}>
-      <View style={{
-        flexDirection: 'row',
-        alignItems: 'center',
-        width: '100%',
-        maxWidth: 400,
-        paddingVertical: 14,
-        paddingHorizontal: 16,
-        borderRadius: 16,
-        backgroundColor: 'rgba(26, 26, 28, 0.92)',
-        gap: 12,
-        ...Platform.select({
-          ios: {
-            shadowColor: '#000',
-            shadowOffset: { width: 0, height: 4 },
-            shadowOpacity: 0.3,
-            shadowRadius: 12,
-          },
-          android: {
-            elevation: 8,
-          },
-          web: {
-            boxShadow: '0 4px 24px rgba(0, 0, 0, 0.3)',
-          },
-        }),
-        borderWidth: 1,
-        borderColor: 'rgba(255, 255, 255, 0.12)',
-      }}>
-        <View style={{
-          width: 44,
-          height: 44,
-          borderRadius: 22,
-          alignItems: 'center',
-          justifyContent: 'center',
-          backgroundColor: 'rgba(59, 130, 246, 0.2)',
-        }}>
-          <Ionicons name="information-circle" size={28} color="#3b82f6" />
-        </View>
-        
-        <View style={{ flex: 1 }}>
-          <Text style={{
-            fontSize: 16,
-            fontFamily: theme.font['bold'],
-            color: '#ffffff',
-            letterSpacing: -0.3,
-            marginBottom: 2,
-          }}>
-            {props.text1}
-          </Text>
-          {props.text2 && (
-            <Text style={{
-              fontSize: 14,
-              fontFamily: theme.font['regular'],
-              color: 'rgba(255, 255, 255, 0.85)',
-              letterSpacing: -0.2,
-              lineHeight: 20,
-            }} numberOfLines={3}>
-              {props.text2}
-            </Text>
-          )}
-        </View>
-      </View>
-    </View>
-  ),
+type ToastVariant = {
+  icon: React.ComponentProps<typeof Ionicons>['name'];
+  color: string; // icon colour
+  tint: string; // icon circle background
 };
+
+const TOAST_VARIANTS: Record<'success' | 'error' | 'info', ToastVariant> = {
+  success: { icon: 'checkmark-circle', color: '#16A34A', tint: 'rgba(22, 163, 74, 0.2)' },
+  // Lighter red than before: #c00000 on the dark card is only ~2.7:1, #ef4444 is ~4.6:1.
+  error: { icon: 'close-circle', color: '#ef4444', tint: 'rgba(239, 68, 68, 0.2)' },
+  info: { icon: 'information-circle', color: '#3b82f6', tint: 'rgba(59, 130, 246, 0.2)' },
+};
+
+// Android draws the elevation shadow through translucent fills, so use an opaque fill there.
+const TOAST_BACKGROUND = Platform.OS === 'android' ? '#1A1A1C' : 'rgba(26, 26, 28, 0.92)';
+
+type GlassToastProps = {
+  variant: keyof typeof TOAST_VARIANTS;
+  text1?: string;
+  text2?: string;
+  onPress?: () => void;
+  hide?: () => void;
+};
+
+function GlassToast({ variant, text1, text2, onPress, hide }: GlassToastProps) {
+  const { icon, color, tint } = TOAST_VARIANTS[variant];
+
+  return (
+    <View style={{ paddingHorizontal: 16, alignItems: 'center' }}>
+      <TouchableOpacity
+        activeOpacity={0.9}
+        // Custom renderers must wire onPress themselves. Tapping runs the caller's
+        // action (if any) and then dismisses the toast.
+        onPress={() => {
+          onPress?.();
+          hide?.();
+        }}
+        accessibilityRole="alert"
+        style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          width: '100%',
+          maxWidth: 400,
+          paddingVertical: 14,
+          paddingHorizontal: 16,
+          borderRadius: 16,
+          backgroundColor: TOAST_BACKGROUND,
+          gap: 12,
+          ...Platform.select({
+            ios: {
+              shadowColor: '#000',
+              shadowOffset: { width: 0, height: 4 },
+              shadowOpacity: 0.3,
+              shadowRadius: 12,
+            },
+            android: {
+              elevation: 8,
+            },
+            web: {
+              boxShadow: '0 4px 24px rgba(0, 0, 0, 0.3)',
+            },
+          }),
+          borderWidth: 1,
+          borderColor: 'rgba(255, 255, 255, 0.12)',
+        }}
+      >
+        <View style={{
+          width: 44,
+          height: 44,
+          borderRadius: 22,
+          alignItems: 'center',
+          justifyContent: 'center',
+          backgroundColor: tint,
+        }}>
+          <Ionicons name={icon} size={28} color={color} />
+        </View>
+
+        <View style={{ flex: 1 }}>
+          <Text style={{
+            fontSize: 16,
+            fontFamily: theme.font['bold'],
+            color: '#ffffff',
+            letterSpacing: -0.3,
+            marginBottom: 2,
+          }}>
+            {text1}
+          </Text>
+          {text2 ? (
+            <Text style={{
+              fontSize: 14,
+              fontFamily: theme.font['regular'],
+              color: 'rgba(255, 255, 255, 0.85)',
+              letterSpacing: -0.2,
+              lineHeight: 20,
+            }} numberOfLines={3}>
+              {text2}
+            </Text>
+          ) : null}
+        </View>
+      </TouchableOpacity>
+    </View>
+  );
+}
+
+const toastConfig: ToastConfig = {
+  success: (props) => <GlassToast variant="success" {...props} />,
+  error: (props) => <GlassToast variant="error" {...props} />,
+  info: (props) => <GlassToast variant="info" {...props} />,
+};
+
+// The library's default topOffset is a fixed 40 and ignores the notch / status bar.
+// Must render inside SafeAreaProvider to read the insets.
+function AppToast() {
+  const insets = useSafeAreaInsets();
+  return <Toast config={toastConfig} topOffset={Math.max(insets.top + 8, 40)} />;
+}
 
 export default function RootLayout() {
   const [fontsLoaded, fontError] = useFonts({
@@ -308,7 +225,7 @@ export default function RootLayout() {
             </EmployeesProvider>
           </I18nextProvider>
         </SessionProvider>
-        <Toast config={toastConfig} />
+        <AppToast />
       </KeyboardProvider>
     </SafeAreaProvider>
   );
