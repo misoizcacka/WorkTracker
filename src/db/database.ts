@@ -175,11 +175,19 @@ export async function insertLocalWorkSession(session: any) {
   );
 }
 
-/** Returns any open (no end_time) work session for this worker, regardless of date. */
-export async function getLocalActiveWorkSession(workerId: string): Promise<any | null> {
+/**
+ * Returns any open (no end_time) work session for this worker, regardless of date.
+ * With `unsyncedOnly`, only sessions that haven't reached the server yet count. Use that when the
+ * server has just said there is no active session: a synced open copy then means the shift was
+ * ended remotely (e.g. by a manager while the app was closed), not that it is still running.
+ */
+export async function getLocalActiveWorkSession(
+  workerId: string,
+  options: { unsyncedOnly?: boolean } = {}
+): Promise<any | null> {
   const db = await getDb();
   const result = await db.getAllAsync(
-    `SELECT * FROM local_work_sessions WHERE worker_id = ? AND (end_time IS NULL OR end_time = '') ORDER BY start_time DESC LIMIT 1`,
+    `SELECT * FROM local_work_sessions WHERE worker_id = ? AND (end_time IS NULL OR end_time = '')${options.unsyncedOnly ? ' AND synced = 0' : ''} ORDER BY start_time DESC LIMIT 1`,
     workerId
   );
   const row = result[0] as any;

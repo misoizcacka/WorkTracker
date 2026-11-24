@@ -525,9 +525,10 @@ export function AssignmentsProvider({ children }: { children: React.ReactNode })
         }
         return 'active';
       }
-      // Supabase returned nothing — check local SQLite for an unsynced active session (mobile only)
+      // Supabase returned nothing — check local SQLite for an unsynced active session (mobile only).
+      // Synced open copies don't count: the server just said they're not active (ended remotely).
       if (Platform.OS !== 'web') {
-        const localActive = await getLocalActiveWorkSession(user.id);
+        const localActive = await getLocalActiveWorkSession(user.id, { unsyncedOnly: true });
         setActiveWorkSession(localActive);
         return localActive ? 'active' : 'none-confirmed';
       } else {
