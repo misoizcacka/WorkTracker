@@ -176,10 +176,22 @@ final class IOSBackgroundLocationManager: NSObject, CLLocationManagerDelegate {
     }
     currentModeIsActive = nil
     stateStore.clear()
-    authenticator.clearCredentials()
+    // Keep the device credentials while events are still queued. JS flushes right after
+    // checkout; clearing here made that flush fail and the queue was lost.
+    clearCredentialsIfQueueEmpty()
     removeNotification()
     cancelBackgroundRefresh()
     endBackgroundTask()
+  }
+
+  /// Clears the device credentials only when tracking is stopped and nothing is left to upload.
+  private func clearCredentialsIfQueueEmpty() {
+    guard !IOSBackgroundLocationManager.isRunning else { return }
+    if LocationDbHelper.shared.unsyncedEventCount() == 0 {
+      authenticator.clearCredentials()
+    } else {
+      NSLog("IOSBackgroundLocationManager: keeping device credentials until queued events are uploaded")
+    }
   }
 
   // ─── Diagnostics ──────────────────────────────────────────────────────────
@@ -241,7 +253,10 @@ final class IOSBackgroundLocationManager: NSObject, CLLocationManagerDelegate {
       return 0
     }
     let service = SupabaseService(config: config, authenticator: authenticator)
-    return await service.flushPendingEvents()
+    let flushed = await service.flushPendingEvents()
+    // After checkout, this is the flush that empties the queue; drop the credentials then.
+    clearCredentialsIfQueueEmpty()
+    return flushed
   }
 
   // ─── App Lifecycle ────────────────────────────────────────────────────────

@@ -42,6 +42,31 @@ class SupabaseService(
                caps.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET)
     }
 
+    /**
+     * Outcome of a single upload attempt. Only SUCCESS and REJECTED change the row's status.
+     * RETRYABLE leaves the row queued (synced = 0) so a later flush tries again.
+     */
+    private enum class PushResult { SUCCESS, RETRYABLE, REJECTED }
+
+    companion object {
+        /** Row is stored on the server. */
+        const val SYNC_STATUS_SYNCED = 1
+
+        /**
+         * The server permanently rejected the row (bad payload, HMAC mismatch, too old).
+         * It is kept on the device for diagnosis and recovery but never retried, so it
+         * can't block the queue.
+         */
+        const val SYNC_STATUS_REJECTED = 2
+
+        /**
+         * HTTP codes PostgREST returns for errors that a retry won't fix (RAISE EXCEPTION,
+         * invalid input, conflicts). Everything else (401/403/404/408/429/5xx, network
+         * errors) is treated as temporary.
+         */
+        private val PERMANENT_HTTP_CODES = setOf(400, 409, 422)
+    }
+
     private suspend fun pushEvent(
         id: String,
         timestamp: Long,
@@ -52,11 +77,11 @@ class SupabaseService(
         latitude: Double,
         longitude: Double,
         notes: String?
-    ): Boolean = withContext(Dispatchers.IO) {
+    ): PushResult = withContext(Dispatchers.IO) {
         val deviceToken = deviceAuthenticator.deviceToken
         if (deviceToken == null) {
-            Log.e("SupabaseService", "pushEvent SKIP — no device token in EncryptedSharedPrefs. Event $id will be marked as unflushable.")
-            return@withContext false
+            Log.e("SupabaseService", "pushEvent: no device token in EncryptedSharedPrefs. Event $id stays queued for retry.")
+            return@withContext PushResult.RETRYABLE
         }
 
         val dateFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US)
@@ -77,8 +102,9 @@ class SupabaseService(
 
         val hmac = deviceAuthenticator.computeHmac(payloadJson)
         if (hmac.isBlank()) {
-            Log.e("SupabaseService", "HMAC computation failed for event $id")
-            return@withContext false
+            // Secret unavailable (e.g. keystore not ready). Keep the event for a later retry.
+            Log.e("SupabaseService", "HMAC computation failed for event $id. Event stays queued for retry.")
+            return@withContext PushResult.RETRYABLE
         }
 
         // Call insert_location_event RPC — no JWT needed, authenticated by device HMAC
@@ -97,18 +123,27 @@ class SupabaseService(
 
         return@withContext try {
             client.newCall(request).execute().use { response ->
-                val success = response.isSuccessful
-                if (success) {
-                    locationDbHelper.updateLocationEventSyncedStatus(id, 1)
-                    Log.d("SupabaseService", "Event $id ($type) pushed. Code: ${response.code}")
-                } else {
-                    Log.e("SupabaseService", "Failed event $id. Code: ${response.code}, Body: ${response.body?.string()}")
+                when {
+                    response.isSuccessful -> {
+                        locationDbHelper.updateLocationEventSyncedStatus(id, SYNC_STATUS_SYNCED)
+                        Log.d("SupabaseService", "Event $id ($type) pushed. Code: ${response.code}")
+                        PushResult.SUCCESS
+                    }
+                    response.code in PERMANENT_HTTP_CODES -> {
+                        locationDbHelper.updateLocationEventSyncedStatus(id, SYNC_STATUS_REJECTED)
+                        Log.e("SupabaseService", "Event $id rejected permanently. Code: ${response.code}, Body: ${response.body?.string()}")
+                        PushResult.REJECTED
+                    }
+                    else -> {
+                        Log.w("SupabaseService", "Event $id failed temporarily. Code: ${response.code}. Stays queued for retry.")
+                        PushResult.RETRYABLE
+                    }
                 }
-                success
             }
         } catch (e: Exception) {
-            Log.e("SupabaseService", "Error pushing event $id: ${e.message}")
-            false
+            // Network-level failure (no connectivity, timeout, DNS). Keep the event queued.
+            Log.e("SupabaseService", "Network error pushing event $id: ${e.message}. Stays queued for retry.")
+            PushResult.RETRYABLE
         }
     }
 
@@ -131,64 +166,50 @@ class SupabaseService(
             Log.d("SupabaseService", "Offline — event $id ($type) queued in SQLite, will sync on reconnect.")
             return@withContext false
         }
-        pushEvent(id, timestamp, type, assignmentId, workerId, companyId, latitude, longitude, notes)
+        pushEvent(id, timestamp, type, assignmentId, workerId, companyId, latitude, longitude, notes) == PushResult.SUCCESS
     }
 
     /**
-     * Reads all unsynced events from native SQLite and pushes them to Supabase.
-     * Loops in batches of 50 until the queue is fully drained.
+     * Reads unsynced events from native SQLite (oldest first) and pushes them to Supabase
+     * in batches of 50 until the queue is drained.
      *
-     * Individual event failures (e.g. HMAC mismatch on old events with wrong timestamps)
-     * are skipped — the event is marked synced to prevent it from blocking the queue forever.
-     * Network-level failures (no connectivity, server down) abort the loop so we don't
-     * hammer a server that is genuinely unavailable.
+     * - SUCCESS: row marked synced.
+     * - REJECTED (permanent 4xx): row moved to SYNC_STATUS_REJECTED so it doesn't block the queue.
+     * - RETRYABLE (network error, 5xx, auth/token not available): the flush stops and the row
+     *   stays queued. The same condition would hit every following row, and continuing would
+     *   re-read the same rows forever.
      */
     suspend fun flushPendingEvents(): Int = withContext(Dispatchers.IO) {
         if (!isOnline()) return@withContext 0
         var totalFlushed = 0
-        var consecutiveNetworkFailures = 0
-        while (true) {
+        var totalRejected = 0
+        flush@ while (true) {
             val pending = locationDbHelper.getUnsyncedEvents(limit = 50)
             if (pending.isEmpty()) break
             Log.d("SupabaseService", "flushPendingEvents: flushing batch of ${pending.size} events.")
-            var batchFlushed = 0
-            var batchNetworkErrors = 0
             for (event in pending) {
-                try {
-                    val success = pushEvent(
-                        id = event.id,
-                        timestamp = event.timestamp,
-                        type = event.type,
-                        assignmentId = event.assignmentId,
-                        workerId = event.workerId,
-                        companyId = event.companyId,
-                        latitude = event.latitude,
-                        longitude = event.longitude,
-                        notes = event.notes
-                    )
-                    if (success) {
-                        batchFlushed++
-                    } else {
-                        // Server rejected the event (4xx) — mark it synced so it doesn't
-                        // block the queue. Likely a stale event with a bad timestamp/HMAC.
-                        Log.w("SupabaseService", "Event ${event.id} rejected by server — marking as synced to unblock queue.")
-                        locationDbHelper.updateLocationEventSyncedStatus(event.id, 1)
+                val result = pushEvent(
+                    id = event.id,
+                    timestamp = event.timestamp,
+                    type = event.type,
+                    assignmentId = event.assignmentId,
+                    workerId = event.workerId,
+                    companyId = event.companyId,
+                    latitude = event.latitude,
+                    longitude = event.longitude,
+                    notes = event.notes
+                )
+                when (result) {
+                    PushResult.SUCCESS -> totalFlushed++
+                    PushResult.REJECTED -> totalRejected++
+                    PushResult.RETRYABLE -> {
+                        Log.w("SupabaseService", "flushPendingEvents: temporary failure, stopping. Remaining events stay queued.")
+                        break@flush
                     }
-                } catch (e: Exception) {
-                    // Network-level error — count it, don't skip
-                    batchNetworkErrors++
-                    Log.e("SupabaseService", "Network error pushing event ${event.id}: ${e.message}")
                 }
             }
-            totalFlushed += batchFlushed
-            consecutiveNetworkFailures = if (batchNetworkErrors > 0) consecutiveNetworkFailures + 1 else 0
-            // Stop if we're getting consistent network errors — server may be down
-            if (consecutiveNetworkFailures >= 2) {
-                Log.w("SupabaseService", "flushPendingEvents: stopping after repeated network errors.")
-                break
-            }
         }
-        Log.d("SupabaseService", "flushPendingEvents: total flushed $totalFlushed.")
+        Log.d("SupabaseService", "flushPendingEvents: flushed $totalFlushed, rejected $totalRejected.")
         totalFlushed
     }
 
@@ -211,6 +232,6 @@ class SupabaseService(
             Log.d("SupabaseService", "Offline — event $id ($type) queued in SQLite, will sync on reconnect.")
             return@withContext false
         }
-        pushEvent(id, timestamp, type, assignmentId, workerId, companyId, latitude, longitude, notes)
+        pushEvent(id, timestamp, type, assignmentId, workerId, companyId, latitude, longitude, notes) == PushResult.SUCCESS
     }
 }

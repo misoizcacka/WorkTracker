@@ -82,16 +82,31 @@ final class LocationDbHelper {
     return sqlite3_step(statement) == SQLITE_DONE && sqlite3_changes(db) > 0
   }
 
+  /// Row is stored on the server.
+  static let syncStatusSynced: Int32 = 1
+  /// The server permanently rejected the row (bad payload, HMAC mismatch, too old).
+  /// Kept on the device for diagnosis and recovery, but never retried so it can't block the queue.
+  static let syncStatusRejected: Int32 = 2
+
   func markSynced(id: String) {
+    setSyncStatus(id: id, status: LocationDbHelper.syncStatusSynced)
+  }
+
+  func markRejected(id: String) {
+    setSyncStatus(id: id, status: LocationDbHelper.syncStatusRejected)
+  }
+
+  private func setSyncStatus(id: String, status: Int32) {
     guard let db = openDatabase() else { return }
     defer { sqlite3_close(db) }
     guard prepareDatabase(db) else { return }
 
-    let sql = "UPDATE \(tableName) SET synced = 1 WHERE id = ?;"
+    let sql = "UPDATE \(tableName) SET synced = ? WHERE id = ?;"
     var statement: OpaquePointer?
     guard sqlite3_prepare_v2(db, sql, -1, &statement, nil) == SQLITE_OK else { return }
     defer { sqlite3_finalize(statement) }
-    bind(text: id, to: 1, in: statement)
+    sqlite3_bind_int(statement, 1, status)
+    bind(text: id, to: 2, in: statement)
     sqlite3_step(statement)
   }
 

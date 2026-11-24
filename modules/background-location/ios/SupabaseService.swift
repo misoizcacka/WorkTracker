@@ -1,6 +1,19 @@
 import Foundation
 
 final class SupabaseService {
+  /// Outcome of a single upload attempt. Only `.success` and `.rejected` change the row's status.
+  /// `.retryable` leaves the row queued (synced = 0) so a later flush tries again.
+  private enum PushResult {
+    case success
+    case retryable
+    case rejected
+  }
+
+  /// HTTP codes PostgREST returns for errors that a retry won't fix (RAISE EXCEPTION,
+  /// invalid input, conflicts). Everything else (401/403/404/408/429/5xx, network errors)
+  /// is treated as temporary.
+  private static let permanentHttpCodes: Set<Int> = [400, 409, 422]
+
   private let config: SupabaseConfig
   private let authenticator: DeviceAuthenticator
   private let dbHelper = LocationDbHelper.shared
@@ -25,109 +38,120 @@ final class SupabaseService {
       NSLog("SupabaseService: skipping \(event.type) for assignment \(event.assignmentId) — local insert rejected (duplicate)")
       return false
     }
-    return await sendPersistedEvent(event)
+    return await push(event) == .success
   }
 
-  /// Flush all unsynced events from the local DB.
+  /// Flush unsynced events from the local DB, oldest first.
   /// Mirrors Android SupabaseService.flushPendingEvents():
-  ///   - Events the server permanently rejects (4xx) are marked synced to unblock the queue.
-  ///   - Network-level errors abort the loop early so we don't hammer a down server.
+  ///   - `.success`: row marked synced.
+  ///   - `.rejected` (permanent 4xx): row moved to the rejected status so it doesn't block the queue.
+  ///   - `.retryable` (network error, 5xx, credentials unavailable e.g. phone locked): the flush stops
+  ///     and the row stays queued. The same condition would hit every following row, and continuing
+  ///     would re-read the same rows forever.
   /// Returns the number of events successfully pushed.
   @discardableResult
   func flushPendingEvents(limit: Int = 25) async -> Int {
-    guard isOnline() else { return 0 }
-
     var totalFlushed = 0
-    var consecutiveNetworkFailures = 0
+    var totalRejected = 0
 
-    while true {
+    flush: while true {
       let pending = dbHelper.unsyncedEvents(limit: limit)
       guard !pending.isEmpty else { break }
 
       NSLog("SupabaseService: flushPendingEvents — flushing batch of \(pending.count)")
 
-      var batchNetworkErrors = 0
-
       for event in pending {
-        do {
-          let success = try await sendPersistedEventThrowing(event)
-          if success {
-            totalFlushed += 1
-          } else {
-            // Server rejected with a non-network error (4xx) — mark synced to unblock the queue.
-            // Likely a stale event with bad HMAC / wrong timestamp.
-            NSLog("SupabaseService: event \(event.id) permanently rejected — marking synced to unblock queue")
-            dbHelper.markSynced(id: event.id)
-          }
-        } catch {
-          // URLSession threw — genuine network error, don't skip the event.
-          batchNetworkErrors += 1
-          NSLog("SupabaseService: network error pushing event \(event.id): \(error.localizedDescription)")
+        switch await push(event) {
+        case .success:
+          totalFlushed += 1
+        case .rejected:
+          totalRejected += 1
+        case .retryable:
+          NSLog("SupabaseService: flushPendingEvents — temporary failure, stopping. Remaining events stay queued.")
+          break flush
         }
-      }
-
-      consecutiveNetworkFailures = batchNetworkErrors > 0 ? consecutiveNetworkFailures + 1 : 0
-      if consecutiveNetworkFailures >= 2 {
-        NSLog("SupabaseService: aborting flush after repeated network errors")
-        break
       }
     }
 
-    NSLog("SupabaseService: flushPendingEvents — total flushed \(totalFlushed)")
+    NSLog("SupabaseService: flushPendingEvents — flushed \(totalFlushed), rejected \(totalRejected)")
     return totalFlushed
   }
 
   // ─── Private helpers ───────────────────────────────────────────────────────
 
-  /// Attempt to push a single persisted event.
-  /// Returns true on HTTP 2xx, false on HTTP 4xx/5xx (server-rejected), throws on network error.
-  private func sendPersistedEventThrowing(_ event: LocationEventRecord) async throws -> Bool {
+  /// Attempt to push a single persisted event and record the outcome in the local DB.
+  private func push(_ event: LocationEventRecord) async -> PushResult {
+    // The Keychain can be unreadable (e.g. before first unlock after a reboot). That is temporary.
     guard let deviceToken = authenticator.deviceToken else {
-      NSLog("SupabaseService: no device token — cannot push event \(event.id)")
-      return false
+      NSLog("SupabaseService: no device token available — event \(event.id) stays queued for retry")
+      return .retryable
     }
 
-    guard let (bodyData, _) = buildRequestBody(event: event, deviceToken: deviceToken) else {
-      return false
+    let body: Data
+    switch buildRequestBody(event: event, deviceToken: deviceToken) {
+    case .success(let data):
+      body = data
+    case .failure(let error):
+      switch error {
+      case .secretUnavailable:
+        NSLog("SupabaseService: device secret unavailable — event \(event.id) stays queued for retry")
+        return .retryable
+      case .serializationFailed:
+        // A row that can't be encoded will never succeed; don't let it block the queue.
+        NSLog("SupabaseService: event \(event.id) can't be serialized — marking rejected")
+        dbHelper.markRejected(id: event.id)
+        return .rejected
+      }
     }
 
     guard let requestURL = URL(string: config.url + "/rest/v1/rpc/insert_location_event") else {
-      return false
+      NSLog("SupabaseService: invalid Supabase URL — event \(event.id) stays queued for retry")
+      return .retryable
     }
 
     var request = URLRequest(url: requestURL)
     request.httpMethod = "POST"
     request.setValue(config.key, forHTTPHeaderField: "apikey")
     request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-    request.httpBody = bodyData
+    request.httpBody = body
     request.timeoutInterval = 15
 
-    // Throws on network error (no connectivity, timeout, DNS failure, etc.)
-    let (_, response) = try await session.data(for: request)
-    guard let httpResponse = response as? HTTPURLResponse else { return false }
-
-    if (200..<300).contains(httpResponse.statusCode) {
-      dbHelper.markSynced(id: event.id)
-      return true
+    let response: URLResponse
+    do {
+      let (_, urlResponse) = try await session.data(for: request)
+      response = urlResponse
+    } catch {
+      // No connectivity, timeout, DNS failure, etc.
+      NSLog("SupabaseService: network error for event \(event.id): \(error.localizedDescription) — stays queued for retry")
+      return .retryable
     }
 
-    NSLog("SupabaseService: server returned \(httpResponse.statusCode) for event \(event.id)")
-    return false
+    guard let httpResponse = response as? HTTPURLResponse else {
+      return .retryable
+    }
+
+    let status = httpResponse.statusCode
+    if (200..<300).contains(status) {
+      dbHelper.markSynced(id: event.id)
+      return .success
+    }
+    if SupabaseService.permanentHttpCodes.contains(status) {
+      NSLog("SupabaseService: server permanently rejected event \(event.id) (HTTP \(status)) — marking rejected")
+      dbHelper.markRejected(id: event.id)
+      return .rejected
+    }
+
+    NSLog("SupabaseService: server returned HTTP \(status) for event \(event.id) — stays queued for retry")
+    return .retryable
   }
 
-  /// Non-throwing version used by sendEvent (called for individual events, not batch flush).
-  private func sendPersistedEvent(_ event: LocationEventRecord) async -> Bool {
-    do {
-      return try await sendPersistedEventThrowing(event)
-    } catch {
-      NSLog("SupabaseService: network error for event \(event.id): \(error.localizedDescription)")
-      return false
-    }
+  private enum BuildError: Error {
+    case secretUnavailable
+    case serializationFailed
   }
 
   /// Builds the canonical JSON payload and signs it with HMAC.
-  /// Returns (bodyData, payloadString) on success, nil on failure.
-  private func buildRequestBody(event: LocationEventRecord, deviceToken: String) -> (Data, String)? {
+  private func buildRequestBody(event: LocationEventRecord, deviceToken: String) -> Result<Data, BuildError> {
     var payload: [String: Any] = [
       "id": event.id,
       "created_at": formatter.string(from: event.createdAt),
@@ -145,13 +169,12 @@ final class SupabaseService {
     guard let payloadData = try? JSONSerialization.data(withJSONObject: payload, options: [.sortedKeys]),
           let payloadString = String(data: payloadData, encoding: .utf8) else {
       NSLog("SupabaseService: failed to serialize payload for event \(event.id)")
-      return nil
+      return .failure(.serializationFailed)
     }
 
     let hmac = authenticator.computeHmac(payloadString)
     guard !hmac.isEmpty else {
-      NSLog("SupabaseService: HMAC computation failed for event \(event.id)")
-      return nil
+      return .failure(.secretUnavailable)
     }
 
     let body: [String: String] = [
@@ -161,16 +184,9 @@ final class SupabaseService {
     ]
 
     guard let bodyData = try? JSONSerialization.data(withJSONObject: body, options: []) else {
-      return nil
+      return .failure(.serializationFailed)
     }
 
-    return (bodyData, payloadString)
-  }
-
-  private func isOnline() -> Bool {
-    // Simple reachability check — a URLSession data task will also fail fast when offline.
-    // For a more robust check we'd import Network framework, but that adds complexity.
-    // The flush loop handles network errors gracefully anyway.
-    return true
+    return .success(bodyData)
   }
 }

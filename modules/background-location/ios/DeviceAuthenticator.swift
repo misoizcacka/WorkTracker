@@ -9,6 +9,16 @@ final class DeviceAuthenticator {
     static let secret = "device_secret"
   }
 
+  /// Readable after the first unlock following a reboot, including while the phone is locked.
+  /// The default (`WhenUnlocked`) made the credentials unreadable whenever the phone was locked,
+  /// which is exactly when background geofence events upload. `ThisDeviceOnly` keeps the
+  /// device secret out of backups, so it never moves to another phone.
+  private static let accessibility = kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly
+
+  init() {
+    migrateAccessibility()
+  }
+
   var deviceToken: String? {
     readValue(for: Keys.token)
   }
@@ -47,7 +57,32 @@ final class DeviceAuthenticator {
     SecItemDelete(query as CFDictionary)
     var insertQuery = query
     insertQuery[kSecValueData as String] = data
-    SecItemAdd(insertQuery as CFDictionary, nil)
+    insertQuery[kSecAttrAccessible as String] = DeviceAuthenticator.accessibility
+    let status = SecItemAdd(insertQuery as CFDictionary, nil)
+    if status != errSecSuccess {
+      NSLog("DeviceAuthenticator: failed to store \(account) (OSStatus \(status))")
+    }
+  }
+
+  /// Items written by earlier builds use the default accessibility (`WhenUnlocked`).
+  /// Move them to the new class. This only succeeds while the device is unlocked
+  /// (errSecInteractionNotAllowed otherwise), so it is retried on every init and is a
+  /// no-op once migrated or when nothing is stored.
+  private func migrateAccessibility() {
+    for account in [Keys.token, Keys.secret] {
+      let query: [String: Any] = [
+        kSecClass as String: kSecClassGenericPassword,
+        kSecAttrService as String: Keys.service,
+        kSecAttrAccount as String: account
+      ]
+      let update: [String: Any] = [
+        kSecAttrAccessible as String: DeviceAuthenticator.accessibility
+      ]
+      let status = SecItemUpdate(query as CFDictionary, update as CFDictionary)
+      if status != errSecSuccess && status != errSecItemNotFound && status != errSecInteractionNotAllowed {
+        NSLog("DeviceAuthenticator: accessibility migration for \(account) failed (OSStatus \(status))")
+      }
+    }
   }
 
   private func readValue(for account: String) -> String? {
