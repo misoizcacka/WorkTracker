@@ -30,7 +30,8 @@ public class BackgroundLocationModule: Module {
         supabaseConfig: parsedConfig,
         deviceToken: deviceToken,
         deviceSecret: deviceSecret,
-        geofenceAssignments: parsedAssignments
+        geofenceAssignments: parsedAssignments,
+        sessionId: parsedConfig.sessionId ?? ""
       )
     }
 

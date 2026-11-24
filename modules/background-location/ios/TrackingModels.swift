@@ -28,6 +28,9 @@ struct SupabaseConfig: Codable {
   let locationName: String?
   /// Access token — reserved for future authenticated endpoints.
   let accessToken: String?
+  /// Work session ID, used to tell a new check-in from the same shift resuming.
+  /// A `var` with a default, so existing `SupabaseConfig(url:key:locationName:accessToken:)` calls still work.
+  var sessionId: String? = nil
 }
 
 struct LocationEventRecord {

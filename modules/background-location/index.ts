@@ -19,10 +19,13 @@ export function start(
   deviceToken: string,
   deviceSecret: string,
   geofenceAssignments: string,
+  /** Work session ID. Native code uses it to tell a new check-in from the same shift resuming. */
+  sessionId: string = '',
   locationName: string = '',
   accessToken: string = ''
 ): Promise<void> {
-    const config = { ...JSON.parse(supabaseConfig), locationName, accessToken };
+    // sessionId travels inside the config JSON: Expo's Kotlin AsyncFunction can't take another argument.
+    const config = { ...JSON.parse(supabaseConfig), locationName, accessToken, sessionId };
 
     try {
         return BackgroundLocationModule.start(

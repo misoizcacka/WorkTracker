@@ -486,7 +486,8 @@ export default function Home() {
       JSON.stringify({ url: supabaseUrl, key: supabaseKey, locationName: projectLocationName }),
       deviceToken,
       deviceSecret,
-      JSON.stringify(backgroundGeofenceAssignments)
+      JSON.stringify(backgroundGeofenceAssignments),
+      sessionId
     )
       .then(() => {
         console.log('Background location tracking started successfully');

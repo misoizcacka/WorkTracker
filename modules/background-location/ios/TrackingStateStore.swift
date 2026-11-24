@@ -21,6 +21,7 @@ final class TrackingStateStore {
 
   private enum Keys {
     static let workerId          = "bg.workerId"
+    static let sessionId         = "bg.sessionId"
     static let assignmentId      = "bg.assignmentId"
     static let companyId         = "bg.companyId"
     static let supabaseConfig    = "bg.supabaseConfig"
@@ -53,6 +54,12 @@ final class TrackingStateStore {
   var workerId: String? {
     get { defaults.string(forKey: Keys.workerId) }
     set { defaults.set(newValue, forKey: Keys.workerId) }
+  }
+
+  /// Work session the native tracking belongs to. Used to tell a new check-in from the same shift.
+  var sessionId: String? {
+    get { defaults.string(forKey: Keys.sessionId) }
+    set { defaults.set(newValue, forKey: Keys.sessionId) }
   }
 
   var assignmentId: String? {
@@ -211,6 +218,7 @@ final class TrackingStateStore {
   func clear() {
     [
       Keys.workerId,
+      Keys.sessionId,
       Keys.assignmentId,
       Keys.companyId,
       Keys.supabaseConfig,

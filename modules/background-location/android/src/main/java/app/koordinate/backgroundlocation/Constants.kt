@@ -37,6 +37,7 @@ object Constants {
 
     const val SHARED_PREFS_NAME = "location_tracking_prefs"
     const val KEY_WORKER_ID = "worker_id"
+    const val KEY_SESSION_ID = "work_session_id" // Work session the native tracking belongs to
     const val KEY_ASSIGNMENT_ID = "assignment_id" // Current active assignment ID (not for geofence)
     const val KEY_COMPANY_ID = "company_id"
     const val KEY_SUPABASE_URL = "supabase_url"

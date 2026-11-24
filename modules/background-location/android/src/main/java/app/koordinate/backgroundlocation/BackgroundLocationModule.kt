@@ -35,7 +35,8 @@ data class GeofenceAssignment(
 data class SupabaseConfig(
     val url: String,
     val key: String,
-    val locationName: String? = null
+    val locationName: String? = null,
+    val sessionId: String? = null
 )
 
 class BackgroundLocationModule : Module() {
@@ -82,11 +83,18 @@ class BackgroundLocationModule : Module() {
             }
 
             val prefs = context.getSharedPreferences(Constants.SHARED_PREFS_NAME, Context.MODE_PRIVATE)
-            // A different worker or assignment means a new session. Don't inherit the previous
+            // A different work session means a new check-in. Don't inherit the previous
             // session's inside/outside state or EXIT_PENDING flag, even if stop() was never
-            // called for it (e.g. the shift was ended while the app was closed).
-            val isSameSession = prefs.getString(Constants.KEY_WORKER_ID, null) == workerId &&
-                prefs.getString(Constants.KEY_ASSIGNMENT_ID, null) == assignmentId
+            // called for it (e.g. the shift was ended while the app was closed). The session ID
+            // also catches a new check-in to the same assignment; without it, fall back to
+            // comparing worker and assignment.
+            val sessionId = parsedSupabaseConfig.sessionId.orEmpty()
+            val isSameSession = if (sessionId.isNotEmpty()) {
+                prefs.getString(Constants.KEY_SESSION_ID, null) == sessionId
+            } else {
+                prefs.getString(Constants.KEY_WORKER_ID, null) == workerId &&
+                    prefs.getString(Constants.KEY_ASSIGNMENT_ID, null) == assignmentId
+            }
 
             prefs.edit().apply {
                 if (!isSameSession) {
@@ -96,6 +104,7 @@ class BackgroundLocationModule : Module() {
                     // session has to clear it here.
                     prefs.all.keys.filter { it.startsWith("manual_inside_") }.forEach { remove(it) }
                 }
+                putString(Constants.KEY_SESSION_ID, sessionId)
                 putString(Constants.KEY_WORKER_ID, workerId)
                 putString(Constants.KEY_ASSIGNMENT_ID, assignmentId)
                 putString(Constants.KEY_COMPANY_ID, companyId)

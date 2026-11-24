@@ -89,7 +89,8 @@ final class IOSBackgroundLocationManager: NSObject, CLLocationManagerDelegate {
     supabaseConfig: SupabaseConfig,
     deviceToken: String,
     deviceSecret: String,
-    geofenceAssignments: [GeofenceAssignment]
+    geofenceAssignments: [GeofenceAssignment],
+    sessionId: String = ""
   ) throws {
     let authStatus = locationManager.authorizationStatus
     guard authStatus == .authorizedAlways else {
@@ -103,15 +104,22 @@ final class IOSBackgroundLocationManager: NSObject, CLLocationManagerDelegate {
       )
     }
 
-    // A different worker or assignment means a new session. Don't inherit the previous
-    // session's mode, EXIT_PENDING flag or inside/outside state, even if stop() was never
-    // called for it (e.g. the shift was ended while the app was closed).
-    let isSameSession = stateStore.workerId == workerId && stateStore.assignmentId == assignmentId
+    // A different work session means a new check-in. Don't inherit the previous session's mode,
+    // EXIT_PENDING flag or inside/outside state, even if stop() was never called for it (e.g. the
+    // shift was ended while the app was closed). The session ID also catches a new check-in to the
+    // same assignment; without it, fall back to comparing worker and assignment.
+    let isSameSession: Bool
+    if !sessionId.isEmpty {
+      isSameSession = stateStore.sessionId == sessionId
+    } else {
+      isSameSession = stateStore.workerId == workerId && stateStore.assignmentId == assignmentId
+    }
     if !isSameSession {
       stateStore.clearModeState()
       currentMode = nil
     }
 
+    stateStore.sessionId   = sessionId
     stateStore.workerId    = workerId
     stateStore.assignmentId = assignmentId
     stateStore.companyId   = companyId

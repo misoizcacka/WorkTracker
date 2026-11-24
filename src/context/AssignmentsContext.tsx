@@ -117,7 +117,16 @@ export function AssignmentsProvider({ children }: { children: React.ReactNode })
   const [isOffline, setIsOffline] = useState(false);
   const [isOfflineInitialised, setIsOfflineInitialised] = useState(false);
 
-  const [activeWorkSession, setActiveWorkSession] = useState<WorkSession | null>(null);
+  const [activeWorkSession, setActiveWorkSessionState] = useState<WorkSession | null>(null);
+  // Updated together with the state (not in an effect), so async checks such as
+  // stopStaleNativeTracking see a check-in the moment it happens. Screen effects (e.g. the one
+  // that calls BackgroundLocation.start) run before this provider's effects, so an effect-synced
+  // ref could lag behind a native start.
+  const activeWorkSessionRef = useRef<WorkSession | null>(null);
+  const setActiveWorkSession = useCallback((session: WorkSession | null) => {
+    activeWorkSessionRef.current = session;
+    setActiveWorkSessionState(session);
+  }, []);
   const [loadedWorkSessions, setLoadedWorkSessions] = useState<WorkSession[]>([]);
   const loadingDates = useRef(new Set<string>());
   const isSyncing = useRef(false);
@@ -554,12 +563,6 @@ export function AssignmentsProvider({ children }: { children: React.ReactNode })
     }
   }, [user?.id]);
 
-  // Kept in sync with state so async checks can see a check-in that happened meanwhile.
-  const activeWorkSessionRef = useRef<WorkSession | null>(null);
-  useEffect(() => {
-    activeWorkSessionRef.current = activeWorkSession;
-  }, [activeWorkSession]);
-
   /**
    * If the shift was ended while the app was closed or offline (e.g. the manager ended it),
    * nothing called BackgroundLocation.stop(), so native tracking kept running for a finished
@@ -569,7 +572,9 @@ export function AssignmentsProvider({ children }: { children: React.ReactNode })
     try {
       const diagnostics = await BackgroundLocation.getDiagnostics();
       if (!diagnostics.serviceRunning && !diagnostics.hasActiveSession) return;
-      // A check-in may have started while we were checking; never stop a real session.
+      // A check-in may have started while we were checking; never stop a real session. The ref is
+      // set synchronously with the state, and stop() is called right after this check with no
+      // await in between, so a check-in can't slip in.
       if (activeWorkSessionRef.current) return;
       console.log('AssignmentsContext: no active session on the server, but native tracking is still running. Stopping it.');
       await BackgroundLocation.stop();
