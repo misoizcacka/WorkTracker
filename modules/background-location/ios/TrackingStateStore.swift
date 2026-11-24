@@ -198,6 +198,16 @@ final class TrackingStateStore {
 
   // ─── Lifecycle ────────────────────────────────────────────────────────────
 
+  /// Forget the tracking mode, EXIT_PENDING flag and inside/outside states, but keep the
+  /// session details. Used when start() begins a session that differs from the stored one.
+  func clearModeState() {
+    [
+      Keys.trackingMode,
+      Keys.isExitPending,
+      Keys.lastInsideStates,
+    ].forEach(defaults.removeObject(forKey:))
+  }
+
   func clear() {
     [
       Keys.workerId,

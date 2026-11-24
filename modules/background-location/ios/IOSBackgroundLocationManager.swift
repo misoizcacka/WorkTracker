@@ -103,6 +103,15 @@ final class IOSBackgroundLocationManager: NSObject, CLLocationManagerDelegate {
       )
     }
 
+    // A different worker or assignment means a new session. Don't inherit the previous
+    // session's mode, EXIT_PENDING flag or inside/outside state, even if stop() was never
+    // called for it (e.g. the shift was ended while the app was closed).
+    let isSameSession = stateStore.workerId == workerId && stateStore.assignmentId == assignmentId
+    if !isSameSession {
+      stateStore.clearModeState()
+      currentMode = nil
+    }
+
     stateStore.workerId    = workerId
     stateStore.assignmentId = assignmentId
     stateStore.companyId   = companyId

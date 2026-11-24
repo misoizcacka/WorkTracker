@@ -501,10 +501,16 @@ export function AssignmentsProvider({ children }: { children: React.ReactNode })
   }, [userCompanyId, reconcileSessionGeofenceEvents]);
 
 
-  const loadActiveWorkSession = useCallback(async () => {
+  /**
+   * Loads the active session and reports how certain the answer is:
+   * - 'active': a session is in progress.
+   * - 'none-confirmed': the server answered and there is no active session (and none unsynced locally).
+   * - 'none-unconfirmed': no session found, but we couldn't ask the server (offline / no user).
+   */
+  const loadActiveWorkSession = useCallback(async (): Promise<'active' | 'none-confirmed' | 'none-unconfirmed'> => {
     if (!user?.id) {
       setActiveWorkSession(null);
-      return;
+      return 'none-unconfirmed';
     }
     setError(null);
     try {
@@ -517,14 +523,16 @@ export function AssignmentsProvider({ children }: { children: React.ReactNode })
             await insertLocalWorkSession({ ...session, synced: true });
           } catch {}
         }
-        return;
+        return 'active';
       }
       // Supabase returned nothing — check local SQLite for an unsynced active session (mobile only)
       if (Platform.OS !== 'web') {
         const localActive = await getLocalActiveWorkSession(user.id);
         setActiveWorkSession(localActive);
+        return localActive ? 'active' : 'none-confirmed';
       } else {
         setActiveWorkSession(null);
+        return 'none-confirmed';
       }
     } catch (err: any) {
       // Supabase unreachable (offline) — fall back to local SQLite (mobile only)
@@ -532,19 +540,53 @@ export function AssignmentsProvider({ children }: { children: React.ReactNode })
         try {
           const localActive = await getLocalActiveWorkSession(user.id);
           setActiveWorkSession(localActive);
+          return localActive ? 'active' : 'none-unconfirmed';
         } catch (localErr) {
           console.error('Error fetching active work session from local SQLite:', localErr);
           setActiveWorkSession(null);
+          return 'none-unconfirmed';
         }
       } else {
         setActiveWorkSession(null);
+        return 'none-unconfirmed';
       }
     }
   }, [user?.id]);
 
+  // Kept in sync with state so async checks can see a check-in that happened meanwhile.
+  const activeWorkSessionRef = useRef<WorkSession | null>(null);
   useEffect(() => {
-    loadActiveWorkSession();
-  }, [loadActiveWorkSession]);
+    activeWorkSessionRef.current = activeWorkSession;
+  }, [activeWorkSession]);
+
+  /**
+   * If the shift was ended while the app was closed or offline (e.g. the manager ended it),
+   * nothing called BackgroundLocation.stop(), so native tracking kept running for a finished
+   * shift and the next check-in could inherit its saved state. Stop it.
+   */
+  const stopStaleNativeTracking = useCallback(async () => {
+    try {
+      const diagnostics = await BackgroundLocation.getDiagnostics();
+      if (!diagnostics.serviceRunning && !diagnostics.hasActiveSession) return;
+      // A check-in may have started while we were checking; never stop a real session.
+      if (activeWorkSessionRef.current) return;
+      console.log('AssignmentsContext: no active session on the server, but native tracking is still running. Stopping it.');
+      await BackgroundLocation.stop();
+    } catch (e) {
+      console.warn('AssignmentsContext: stale tracking check failed (non-fatal):', e);
+    }
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const status = await loadActiveWorkSession();
+      // Only when the server confirmed there is no active session. Offline, we can't know.
+      if (cancelled || status !== 'none-confirmed' || Platform.OS === 'web') return;
+      await stopStaleNativeTracking();
+    })();
+    return () => { cancelled = true; };
+  }, [loadActiveWorkSession, stopStaleNativeTracking]);
 
   // Realtime subscription — workers only.
   // If the manager remotely ends the active session via Corrections, detect it here

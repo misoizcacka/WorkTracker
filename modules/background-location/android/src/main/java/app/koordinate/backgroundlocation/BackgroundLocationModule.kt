@@ -81,7 +81,18 @@ class BackgroundLocationModule : Module() {
                 return@AsyncFunction
             }
 
-            context.getSharedPreferences(Constants.SHARED_PREFS_NAME, Context.MODE_PRIVATE).edit().apply {
+            val prefs = context.getSharedPreferences(Constants.SHARED_PREFS_NAME, Context.MODE_PRIVATE)
+            // A different worker or assignment means a new session. Don't inherit the previous
+            // session's inside/outside state or EXIT_PENDING flag, even if stop() was never
+            // called for it (e.g. the shift was ended while the app was closed).
+            val isSameSession = prefs.getString(Constants.KEY_WORKER_ID, null) == workerId &&
+                prefs.getString(Constants.KEY_ASSIGNMENT_ID, null) == assignmentId
+
+            prefs.edit().apply {
+                if (!isSameSession) {
+                    remove(Constants.SHARED_PREFS_KEY_IS_INSIDE_GEOFENCE)
+                    remove(Constants.SHARED_PREFS_KEY_IS_EXIT_PENDING)
+                }
                 putString(Constants.KEY_WORKER_ID, workerId)
                 putString(Constants.KEY_ASSIGNMENT_ID, assignmentId)
                 putString(Constants.KEY_COMPANY_ID, companyId)
