@@ -1,0 +1,80 @@
+# Koordinate launch tracker
+
+Status: ✅ done · 🟡 in progress · ⬜ to do · 👤 needs you (outside the code)
+
+"Verified" says how the change was checked. Nothing below has been tested on a phone yet.
+Android = `gradlew :background-location:compileDebugKotlin`. JS = `npx tsc --noEmit`.
+iOS Swift can't be compiled on the dev Windows machine, so iOS changes are unverified until an Xcode build.
+
+---
+
+## 1. Blocks any launch
+
+| # | Item | Status | Notes |
+|---|------|--------|-------|
+| B1 | Build both apps and field-test on real phones | 👤 | Xcode build for iOS. Test: check in on site, stay indoors, leave, reboot the phone, swipe the app away, location off and on, offline for a while, manager ends a shift while the app is closed. |
+| B2 | Google Play background-location declaration and video | 👤 | Play Console > App content > Location permissions. Needs a short video of the feature. |
+| B3 | Privacy labels (App Store) and Data safety form (Play) | 👤 | Must match what the app collects (location, name, email, device ID). |
+| B4 | In-app account deletion | ⬜ | Required by both stores. Overlaps with G4. |
+
+---
+
+## 2. Tracking module
+
+### Done
+
+| Item | Commit | Verified |
+|------|--------|----------|
+| Failed uploads are retried instead of deleted; permanent rejects kept locally (`synced = 2`) | 2ddb1b3 | Android, iOS by reading |
+| iOS Keychain readable while the phone is locked; credentials kept until the queue is empty | 2ddb1b3 | iOS by reading |
+| Server: no HMAC/token in errors, 30-day age window (applied to dev and prod) | root 9610701 | applied with `supabase db push` |
+| First mode switch actually starts location updates (both platforms) | 3e9f471 | Android, iOS by reading |
+| iOS resumes in the saved mode after a relaunch; CoreLocation set up on the main thread | 3e9f471 | iOS by reading |
+| Stale native tracking is stopped when the server confirms no active shift | d21e4d3, fe5efbd | JS |
+| New check-in never inherits the previous session's state (work session ID passed to native) | dc66714 | Android, JS, iOS by reading |
+| Check-in race in the stale-tracking stop closed | dc66714 | JS |
+| iOS: GPS (≤ 50 m) required to cancel EXIT_PENDING; OS exits verified with a fresh fix | 6586a31 | iOS by reading |
+| iOS: background task identifier fixed, safe to register twice | 6586a31 | iOS by reading |
+| Android: inside/outside state survives restarts; mode follows confirmed state; stale flags cleared | cc57925 | Android |
+| Android: geofence receiver not exported; restart after app update; geofences re-registered when location comes back; `startForeground` guarded | 6fe4189 | Android |
+| Android: battery prompt opens the optimization list (no restricted permission) | 6fe4189 | Android, JS |
+| T1: EXIT_PENDING time limit. After 10 min without a GPS decision, back to PASSIVE (force-checks continue) | 680c9ff | Android, iOS by reading |
+| T2: coordinates in log files rounded to 2 decimals (~1 km); Android logger made thread-safe | 680c9ff | Android, iOS by reading |
+| T3: events stamped with the time of the reading (falls back to now if older than 1 h or ahead by over 1 min) | 680c9ff | Android, iOS by reading |
+
+### Before public launch
+
+| # | Item | Status | Effort | Notes |
+|---|------|--------|--------|-------|
+| T4 | Mock-location detection | ⬜ | S–M | Android `isMock`, iOS `isSimulatedBySoftware`. |
+| T5 | Tell the worker when tracking degrades | ⬜ | M | Location off, permission reduced to "While using", approximate location. |
+| T6 | Battery: overlapping wake-ups (Android), 1 Hz GPS with no distance filter (iOS) | ⬜ | M–L | Needs device measurements before and after. |
+| T7 | Native background retry of the upload queue | ⬜ | M | Today the queue uploads when the app opens or at transitions. |
+| T8 | `exit_pending_tracking` events dropped by the JS upload RPC and reconciliation | ⬜ | S | Server whitelist + `locationEventReconciliation.ts`. |
+| T9 | Android receiver and service apply different exit rules | ⬜ | M | One shared rule set. |
+
+---
+
+## 3. GDPR and legal
+
+| # | Item | Status | Effort | Notes |
+|---|------|--------|--------|-------|
+| G1 | German versions of Privacy, Terms, DPA, Impressum | ⬜ | M | Drafts, then lawyer review (G7). |
+| G2 | Rework the worker notice | ⬜ | M | Name the employer as controller, add purposes, recipients, full rights list; record "acknowledged" instead of consent; store per user, versioned. |
+| G3 | Deletion schedules for data without one | ⬜ | M | Pending invites, `consent_logs` IP/user agent, chat messages, avatars, removed employees, derived location summaries. Check `pg_cron` runs in prod. |
+| G4 | Data export and deletion tools | ⬜ | L | Promised in the privacy policy. Covers B4. |
+| G5 | Full sub-processor list in the privacy policy | ⬜ | S | Add Expo push, Apple/Google push, Geoapify, web host; check what the web app loads from Google Maps. |
+| G6 | Record of processing, security measures (TOMs), breach process | 👤 | M | Drafts can be written here; you own them. |
+| G7 | Data-protection lawyer review | 👤 | – | DPA, Terms, privacy policy, works-council question (§87 BetrVG). |
+| G8 | Impressum | ✅ | – | DDG/MStV references, ODR link removed, VAT ID, link in worker app. |
+
+---
+
+## 4. Security
+
+| # | Item | Status | Notes |
+|---|------|--------|-------|
+| S1 | Google Maps API key | 👤 | The key ships inside the app no matter what, so the fix is to restrict it in Google Cloud Console: Android apps (package `app.koordinate` + signing SHA-1) and iOS apps (bundle `app.koordinate`), Maps SDK APIs only. A hard-coded fallback key is also in `app.config.js`. |
+| S2 | Server `insert_location_event` doesn't check company/assignment, no `search_path` | ⬜ | Small migration. |
+| S3 | `.env` is committed to git | 👤 | Only `EXPO_PUBLIC_*` values (they end up in the app anyway), so not a leak today. Keep server secrets out of it; consider untracking it and keeping `.env.example`. |
+| S4 | Geoapify API key in the app | 👤 | Restrict it to your domains/app IDs in the Geoapify dashboard. |
