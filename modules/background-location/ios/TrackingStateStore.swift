@@ -161,6 +161,13 @@ final class TrackingStateStore {
     set { defaults.set(newValue.rawValue, forKey: Keys.trackingMode) }
   }
 
+  /// The mode saved by the running session, or nil if none was saved (fresh check-in,
+  /// or after stop() cleared the store). Used to resume in the same mode after a relaunch.
+  var savedTrackingMode: TrackingMode? {
+    guard let rawValue = defaults.string(forKey: Keys.trackingMode) else { return nil }
+    return TrackingMode(rawValue: rawValue)
+  }
+
   var isExitPending: Bool {
     get { defaults.bool(forKey: Keys.isExitPending) }
     set { defaults.set(newValue, forKey: Keys.isExitPending) }

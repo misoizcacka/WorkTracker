@@ -30,7 +30,9 @@ final class IOSBackgroundLocationManager: NSObject, CLLocationManagerDelegate {
   private let stateStore = TrackingStateStore.shared
   private let authenticator = DeviceAuthenticator()
 
-  private var currentMode: TrackingMode = .passive
+  // nil = no location updates have been configured yet. Starting at .passive made the first
+  // switchToMode(.passive) a no-op, so on-site check-ins never started location updates.
+  private var currentMode: TrackingMode?
   private var currentModeIsActive: Bool?  // Deprecated: use currentMode instead
   private var periodicTimer: Timer?  // Force location updates at regular intervals
   private var shouldTreatNextLocationAsReconcile = false
@@ -112,9 +114,7 @@ final class IOSBackgroundLocationManager: NSObject, CLLocationManagerDelegate {
 
     registerGeofences(assignments: geofenceAssignments)
 
-    let isInsideCurrent = currentAssignment()
-      .flatMap { stateStore.insideState(for: $0.id) } ?? true
-    startLocationUpdates(active: !isInsideCurrent)
+    switchToMode(initialMode())
 
     locationManager.startMonitoringSignificantLocationChanges()
     shouldTreatNextLocationAsReconcile = true
@@ -149,11 +149,10 @@ final class IOSBackgroundLocationManager: NSObject, CLLocationManagerDelegate {
 
     registerGeofences(assignments: stateStore.geofenceAssignments)
 
-    let isInsideCurrent = currentAssignment()
-      .flatMap { stateStore.insideState(for: $0.id) } ?? true
-    
-    // Restart location updates with timer (critical for post-force-swipe recovery)
-    startLocationUpdates(active: !isInsideCurrent)
+    // Restart location updates in the saved mode (critical for post-force-swipe recovery).
+    // Without this, a relaunch during EXIT_PENDING dropped back to PASSIVE and stopped verifying.
+    let resumeMode = initialMode()
+    switchToMode(resumeMode)
 
     locationManager.startMonitoringSignificantLocationChanges()
     shouldTreatNextLocationAsReconcile = true
@@ -162,7 +161,18 @@ final class IOSBackgroundLocationManager: NSObject, CLLocationManagerDelegate {
     scheduleBackgroundRefresh()
     flushPendingEvents()
     
-    LocationFileLogger.shared.info("Service", "Location tracking resumed: \(stateStore.geofenceAssignments.count) geofences, mode: \(isInsideCurrent ? "PASSIVE" : "ACTIVE")")
+    LocationFileLogger.shared.info("Service", "Location tracking resumed: \(stateStore.geofenceAssignments.count) geofences, mode: \(resumeMode.rawValue)")
+  }
+
+  /// Mode to start in: the saved mode if this session already chose one (relaunch, or JS calling
+  /// start() again on app launch), otherwise PASSIVE if the worker is inside the current site.
+  private func initialMode() -> TrackingMode {
+    if let saved = stateStore.savedTrackingMode {
+      return saved
+    }
+    let isInsideCurrent = currentAssignment()
+      .flatMap { stateStore.insideState(for: $0.id) } ?? true
+    return isInsideCurrent ? .passive : .active
   }
 
   func stop() {
@@ -174,6 +184,7 @@ final class IOSBackgroundLocationManager: NSObject, CLLocationManagerDelegate {
     for region in locationManager.monitoredRegions {
       locationManager.stopMonitoring(for: region)
     }
+    currentMode = nil  // next start() must configure location updates again
     currentModeIsActive = nil
     stateStore.clear()
     // Keep the device credentials while events are still queued. JS flushes right after
@@ -206,7 +217,7 @@ final class IOSBackgroundLocationManager: NSObject, CLLocationManagerDelegate {
       .count
 
     let monitoredRegionCount = locationManager.monitoredRegions.count
-    let trackingModeString = currentMode.rawValue
+    let trackingModeString = currentMode?.rawValue ?? "NONE"
 
     let lastCoord = stateStore.lastKnownLocation
     let lastEventAt = stateStore.lastLocationEventAt
@@ -309,10 +320,26 @@ final class IOSBackgroundLocationManager: NSObject, CLLocationManagerDelegate {
   private func switchToMode(_ newMode: TrackingMode) {
     if currentMode == newMode { return }
     
-    let oldMode = currentMode
+    let oldModeName = currentMode?.rawValue ?? "NONE"
     currentMode = newMode
     currentModeIsActive = (newMode == .active)  // For backwards compatibility
     stateStore.trackingMode = newMode
+
+    // The mode itself is updated synchronously above, so callers read the new mode right away.
+    // CoreLocation configuration and the periodic Timer need the main run loop: start() runs on
+    // Expo's background queue and location processing runs in Tasks, where a Timer never fires.
+    if Thread.isMainThread {
+      applyLocationConfiguration(for: newMode, from: oldModeName)
+    } else {
+      DispatchQueue.main.async { [weak self] in
+        self?.applyLocationConfiguration(for: newMode, from: oldModeName)
+      }
+    }
+  }
+
+  private func applyLocationConfiguration(for newMode: TrackingMode, from oldModeName: String) {
+    // If another switch happened before this ran, that one wins.
+    guard currentMode == newMode else { return }
     
     // Stop existing timer
     periodicTimer?.invalidate()
@@ -349,7 +376,7 @@ final class IOSBackgroundLocationManager: NSObject, CLLocationManagerDelegate {
     // Start periodic timer to force location requests
     startPeriodicLocationTimer()
     
-    LocationFileLogger.shared.info("Service", "Mode switched: \(oldMode.rawValue) → \(newMode.rawValue)")
+    LocationFileLogger.shared.info("Service", "Mode switched: \(oldModeName) → \(newMode.rawValue)")
     NSLog("IOSBackgroundLocationManager: location updates mode → \(newMode.rawValue)")
   }
   
@@ -395,7 +422,7 @@ final class IOSBackgroundLocationManager: NSObject, CLLocationManagerDelegate {
   private func determineCurrentInterval() -> TimeInterval {
     guard let lastLocation = stateStore.lastKnownLocation else {
       // No last location, use default based on mode
-      switch currentMode {
+      switch currentMode ?? .passive {
       case .active:
         return activeInterval
       case .exitPending:
@@ -405,7 +432,7 @@ final class IOSBackgroundLocationManager: NSObject, CLLocationManagerDelegate {
       }
     }
     
-    switch currentMode {
+    switch currentMode ?? .passive {
     case .active:
       return activeInterval  // Always 1 minute
     case .exitPending:
@@ -563,7 +590,7 @@ final class IOSBackgroundLocationManager: NSObject, CLLocationManagerDelegate {
     
     // Apply mode change if needed
     if modeChangeNeeded, let newMode = newMode {
-      NSLog("IOSBackgroundLocationManager: 🔄 Mode change requested: \(currentMode.rawValue) → \(newMode.rawValue)")
+      NSLog("IOSBackgroundLocationManager: 🔄 Mode change requested: \(currentMode?.rawValue ?? "NONE") → \(newMode.rawValue)")
       switchToMode(newMode)
     }
     
@@ -573,7 +600,7 @@ final class IOSBackgroundLocationManager: NSObject, CLLocationManagerDelegate {
 
     // ============ PERIODIC TRACKING LOGIC ============
     let interval: TimeInterval
-    switch currentMode {
+    switch currentMode ?? .passive {
     case .active:
       interval = activeInterval  // 1 min
     case .exitPending:
@@ -591,7 +618,7 @@ final class IOSBackgroundLocationManager: NSObject, CLLocationManagerDelegate {
     // Send periodic update
     let trackingType: String
     let modeLabel: String
-    switch currentMode {
+    switch currentMode ?? .passive {
     case .active:
       trackingType = "active_tracking"
       modeLabel = "active"

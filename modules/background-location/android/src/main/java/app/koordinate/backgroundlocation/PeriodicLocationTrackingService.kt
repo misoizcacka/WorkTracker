@@ -58,7 +58,9 @@ class PeriodicLocationTrackingService : Service() {
     // Single SupabaseService instance â€” created once in onCreate so we reuse the
     // OkHttpClient connection pool and avoid spawning new threads on every callback.
     private var supabaseService: SupabaseService? = null
-    private var currentMode = TrackingMode.PASSIVE
+    // null = no location request is active yet. Starting at PASSIVE made the first
+    // switchToMode(PASSIVE) a no-op, so on-site check-ins never started location updates.
+    private var currentMode: TrackingMode? = null
     private var isTrackingActive = false  // Deprecated: use currentMode instead
     private val serviceJob = SupervisorJob()
     private val serviceScope = CoroutineScope(
@@ -354,7 +356,7 @@ class PeriodicLocationTrackingService : Service() {
         }
 
         // 2. PERIODIC TRACKING LOGIC
-        val interval = when (currentMode) {
+        val interval = when (currentMode ?: TrackingMode.PASSIVE) {
             TrackingMode.ACTIVE -> Constants.ACTIVE_TRACKING_INTERVAL_MS  // 1 min
             TrackingMode.EXIT_PENDING -> Constants.EXIT_PENDING_INTERVAL_MS  // 30 sec
             TrackingMode.PASSIVE -> {
@@ -366,7 +368,7 @@ class PeriodicLocationTrackingService : Service() {
         }
         
         if (currentTime - lastLocationSentTime < interval - 5000L) {
-            val modeLabel = when (currentMode) {
+            val modeLabel = when (currentMode ?: TrackingMode.PASSIVE) {
                 TrackingMode.ACTIVE -> "ACTIVE"
                 TrackingMode.EXIT_PENDING -> "EXIT_PENDING"
                 TrackingMode.PASSIVE -> {
@@ -407,7 +409,7 @@ class PeriodicLocationTrackingService : Service() {
             serviceScope.launch {
                 val eventId = UUID.randomUUID().toString()
                 val timestamp = System.currentTimeMillis()
-                val type = when (currentMode) {
+                val type = when (currentMode ?: TrackingMode.PASSIVE) {
                     TrackingMode.ACTIVE -> "active_tracking"
                     TrackingMode.EXIT_PENDING -> "exit_pending_tracking"
                     TrackingMode.PASSIVE -> "passive_tracking"
