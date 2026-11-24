@@ -92,6 +92,9 @@ class BackgroundLocationModule : Module() {
                 if (!isSameSession) {
                     remove(Constants.SHARED_PREFS_KEY_IS_INSIDE_GEOFENCE)
                     remove(Constants.SHARED_PREFS_KEY_IS_EXIT_PENDING)
+                    // Per-site inside/outside state now survives re-registration, so a new
+                    // session has to clear it here.
+                    prefs.all.keys.filter { it.startsWith("manual_inside_") }.forEach { remove(it) }
                 }
                 putString(Constants.KEY_WORKER_ID, workerId)
                 putString(Constants.KEY_ASSIGNMENT_ID, assignmentId)

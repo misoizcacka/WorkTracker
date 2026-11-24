@@ -143,6 +143,9 @@ class GeofenceBroadcastReceiver : BroadcastReceiver() {
 
                     // Synchronize manual fallback flags and filter geofences
                     val editor = sharedPrefs.edit()
+                    // A confirmed transition ends any pending exit verification. A stale flag made the
+                    // service skip EXIT_PENDING on the next possible exit.
+                    editor.putBoolean(Constants.SHARED_PREFS_KEY_IS_EXIT_PENDING, false)
                     
                     // Filter triggeringIds based on enter/exit state
                     val validIds = if (transition == Geofence.GEOFENCE_TRANSITION_ENTER) {

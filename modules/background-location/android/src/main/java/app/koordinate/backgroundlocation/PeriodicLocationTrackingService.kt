@@ -330,6 +330,9 @@ class PeriodicLocationTrackingService : Service() {
                     )
                     sharedPrefs.edit()
                         .putBoolean(Constants.SHARED_PREFS_KEY_IS_EXIT_PENDING, false)
+                        // A force-check may have marked us outside; we're confirmed inside again.
+                        // Without this the next force-check saw "outside" and stopped scheduling itself.
+                        .putBoolean(Constants.SHARED_PREFS_KEY_IS_INSIDE_GEOFENCE, true)
                         .apply()
                     modeChangeNeeded = true
                     newMode = TrackingMode.PASSIVE
@@ -341,6 +344,18 @@ class PeriodicLocationTrackingService : Service() {
                         "Geofence",
                         "⏳ EXIT_PENDING: Ignoring low-quality signal (source: ${quality?.source?.label}, trust: ${quality?.trustScore}%) - waiting for GPS"
                     )
+                }
+            }
+
+            // Keep the mode in line with the confirmed state. That state now survives restarts, so a
+            // restart can begin in a mode that doesn't match it (e.g. ACTIVE because the first fix was
+            // poor, while the worker is confirmed inside). Only when nothing changed above.
+            if (!modeChangeNeeded && !isExitPending && hasPreviousState && isNowInside == wasInside) {
+                val expectedMode = if (wasInside) TrackingMode.PASSIVE else TrackingMode.ACTIVE
+                if (currentMode != expectedMode) {
+                    Log.d("PeriodicLocationTrackingService", "Mode $currentMode doesn't match confirmed state (inside=$wasInside) - switching to $expectedMode")
+                    modeChangeNeeded = true
+                    newMode = expectedMode
                 }
             }
         }
@@ -545,10 +560,16 @@ class PeriodicLocationTrackingService : Service() {
         
         LocationFileLogger.i(this, "Service", "Location tracking started: ${activeAssignments.size} geofences registered")
 
-        // Clear old manual states when re-registering
+        // Keep the inside/outside state of today's assignments across re-registration (reboot,
+        // watchdog restart, app relaunch). Wiping it turned a real exit after a restart into a
+        // "phantom exit" that was never recorded. Only drop state for assignments no longer listed;
+        // a new session clears all of it in BackgroundLocationModule.start().
         val sharedPrefs = getSharedPreferences(Constants.SHARED_PREFS_NAME, Context.MODE_PRIVATE)
         val editor = sharedPrefs.edit()
-        sharedPrefs.all.keys.filter { it.startsWith("manual_inside_") }.forEach { editor.remove(it) }
+        val activeIds = activeAssignments.map { it.id }.toSet()
+        sharedPrefs.all.keys
+            .filter { it.startsWith("manual_inside_") && it.removePrefix("manual_inside_") !in activeIds }
+            .forEach { editor.remove(it) }
         editor.apply()
 
         val geofences = activeAssignments.map {
