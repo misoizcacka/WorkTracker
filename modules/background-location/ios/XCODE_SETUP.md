@@ -30,13 +30,13 @@ Without this, the module falls back to standard `UserDefaults` (state may not su
 `IOSBackgroundLocationManager` schedules a `BGAppRefreshTask` with identifier:
 
 ```
-app.koord.location.refresh
+app.koordinate.location.refresh
 ```
 
 **Steps:**
 1. In Xcode, select the **Koord** target → **Info** tab (or edit `Info.plist` directly)
 2. Add the key: `BGTaskSchedulerPermittedIdentifiers`  (type: Array of String)
-3. Add one item: `app.koord.location.refresh`
+3. Add one item: `app.koordinate.location.refresh`
 
 You can also add this in `app.config.js` under `ios.infoPlist`:
 
@@ -44,7 +44,7 @@ You can also add this in `app.config.js` under `ios.infoPlist`:
 ios: {
   infoPlist: {
     // ... existing keys ...
-    BGTaskSchedulerPermittedIdentifiers: ['app.koord.location.refresh'],
+    BGTaskSchedulerPermittedIdentifiers: ['app.koordinate.location.refresh'],
   }
 }
 ```

@@ -13,8 +13,8 @@ final class IOSBackgroundLocationManager: NSObject, CLLocationManagerDelegate {
 
   // ─── BGTaskScheduler identifier ──────────────────────────────────────────
   // Must be added to Info.plist under "Permitted background task scheduler identifiers":
-  //   app.koord.location.refresh
-  static let bgTaskIdentifier = "app.koord.location.refresh"
+  //   app.koordinate.location.refresh
+  static let bgTaskIdentifier = "app.koordinate.location.refresh"
 
   // ─── Tracking intervals (mirrors Android Constants) ──────────────────────
   // Active = worker travelling outside geofence  → frequent updates
@@ -589,12 +589,18 @@ final class IOSBackgroundLocationManager: NSObject, CLLocationManagerDelegate {
         }
       }
     } else if stateStore.isExitPending && isNowInside {
-      // FALSE ALARM - we thought we were exiting but GPS confirms we're still inside
-      NSLog("IOSBackgroundLocationManager: ❌ FALSE ALARM: GPS confirms still inside \(currentAssignment.id.prefix(8))")
-      LocationFileLogger.shared.info("Geofence", "❌ Exit false alarm - GPS confirms still inside (dist: \(Int(distance))m, accuracy: \(Int(location.horizontalAccuracy))m)")
-      stateStore.isExitPending = false
-      modeChangeNeeded = true
-      newMode = .passive
+      if location.horizontalAccuracy <= 50 {
+        // FALSE ALARM - we thought we were exiting but GPS confirms we're still inside
+        NSLog("IOSBackgroundLocationManager: ❌ FALSE ALARM: GPS confirms still inside \(currentAssignment.id.prefix(8))")
+        LocationFileLogger.shared.info("Geofence", "❌ Exit false alarm - GPS confirms still inside (dist: \(Int(distance))m, accuracy: \(Int(location.horizontalAccuracy))m)")
+        stateStore.isExitPending = false
+        modeChangeNeeded = true
+        newMode = .passive
+      } else {
+        // An imprecise (WiFi/cell) fix "inside" must not cancel a pending exit: WiFi often snaps
+        // to the site after the worker has left. Same rule as Android (GPS required to cancel).
+        NSLog("IOSBackgroundLocationManager: ⏳ EXIT_PENDING: inside reading too imprecise to cancel (accuracy: \(Int(location.horizontalAccuracy))m)")
+      }
     }
     
     // Apply mode change if needed
@@ -671,28 +677,35 @@ final class IOSBackgroundLocationManager: NSObject, CLLocationManagerDelegate {
     }
 
     // QUALITY VERIFICATION (mirrors Android's GeofenceBroadcastReceiver)
-    // Verify OS geofence transitions with actual location quality
+    // Verify OS geofence transitions with actual location quality. The cached location can be
+    // minutes old, so only use it if it is recent.
     guard let location = locationManager.location,
           location.horizontalAccuracy > 0,
-          location.horizontalAccuracy < 200 else {
+          location.horizontalAccuracy < 200,
+          -location.timestamp.timeIntervalSinceNow <= 30 else {
       let accuracy = locationManager.location?.horizontalAccuracy ?? -1
-      LocationFileLogger.shared.warning("Geofence", "⚠️ OS geofence \(isInside ? "enter" : "exit") blocked: poor location quality (\(Int(accuracy))m)")
-      NSLog("IOSBackgroundLocationManager: Ignoring OS geofence event - poor location quality")
+      LocationFileLogger.shared.warning("Geofence", "⚠️ OS geofence \(isInside ? "enter" : "exit") not confirmed: no recent good-quality fix (\(Int(accuracy))m)")
+      NSLog("IOSBackgroundLocationManager: Ignoring OS geofence event - no recent good-quality fix")
+      if !isInside {
+        beginExitVerification(for: assignment)
+      }
       shouldTreatNextLocationAsReconcile = true
       locationManager.requestLocation()
       return
     }
     
-    // For exits, require GPS or be clearly outside
+    // For exits, the fix must actually be outside the fence, and either GPS-quality or clearly outside
     if !isInside {
       let target = CLLocation(latitude: assignment.latitude, longitude: assignment.longitude)
       let distance = location.distance(from: target)
       let isGPS = location.horizontalAccuracy <= 50
+      let isOutside = distance > assignment.radius
       let isWellOutside = distance > assignment.radius * 1.5  // > 225m
       
-      if !isGPS && !isWellOutside {
-        LocationFileLogger.shared.warning("Geofence", "⚠️ OS geofence exit blocked: GPS required or clearly outside (got \(Int(location.horizontalAccuracy))m accuracy at \(Int(distance))m)")
-        NSLog("IOSBackgroundLocationManager: Ignoring OS geofence exit - quality insufficient")
+      if !isOutside || (!isGPS && !isWellOutside) {
+        LocationFileLogger.shared.warning("Geofence", "⚠️ OS geofence exit not confirmed (got \(Int(location.horizontalAccuracy))m accuracy at \(Int(distance))m) - verifying with GPS")
+        NSLog("IOSBackgroundLocationManager: OS geofence exit not confirmed - switching to EXIT_PENDING")
+        beginExitVerification(for: assignment)
         shouldTreatNextLocationAsReconcile = true
         locationManager.requestLocation()
         return
@@ -729,6 +742,17 @@ final class IOSBackgroundLocationManager: NSObject, CLLocationManagerDelegate {
 
     shouldTreatNextLocationAsReconcile = true
     locationManager.requestLocation()
+  }
+
+  /// An OS exit we couldn't confirm. Verify it with high-accuracy GPS (EXIT_PENDING), like
+  /// Android's GeofenceBroadcastReceiver, instead of relying on a single requestLocation()
+  /// during the short background wake. Only for the current assignment, and only if the
+  /// worker is not already known to be outside.
+  private func beginExitVerification(for assignment: GeofenceAssignment) {
+    guard assignment.id == stateStore.assignmentId,
+          stateStore.insideState(for: assignment.id) != false else { return }
+    stateStore.isExitPending = true
+    switchToMode(.exitPending)
   }
 
   // ─── Event emission ───────────────────────────────────────────────────────
@@ -802,15 +826,23 @@ final class IOSBackgroundLocationManager: NSObject, CLLocationManagerDelegate {
   //
   // Setup required in Xcode:
   //   1. Add BGTaskScheduler to Signing & Capabilities → Background Modes
-  //   2. Add "app.koord.location.refresh" to Info.plist key
+  //   2. Add "app.koordinate.location.refresh" to Info.plist key
   //      "BGTaskSchedulerPermittedIdentifiers" (array of strings)
 
+  private var didRegisterBGTask = false
+
   func registerBGTaskScheduler() {
-    BGTaskScheduler.shared.register(
+    // Registering the same identifier twice crashes the app, so only do it once.
+    guard !didRegisterBGTask else { return }
+    let registered = BGTaskScheduler.shared.register(
       forTaskWithIdentifier: IOSBackgroundLocationManager.bgTaskIdentifier,
       using: nil
     ) { task in
       self.handleBackgroundRefreshTask(task as! BGAppRefreshTask)
+    }
+    didRegisterBGTask = registered
+    if !registered {
+      NSLog("IOSBackgroundLocationManager: BGTask registration failed - is \(IOSBackgroundLocationManager.bgTaskIdentifier) in BGTaskSchedulerPermittedIdentifiers?")
     }
   }
 
