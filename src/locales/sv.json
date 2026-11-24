@@ -30,7 +30,7 @@
     "getStarted": "Kom igång",
     "faqHeading": "Vanliga frågor",
     "faq1Q": "Hur beräknas månadskostnaden?",
-    "faq1A": "Du betalar en fast grundavgift på {{baseFee}}€/månad plus {{perWorkerFee}}€ per aktiv medarbetare. Till exempel kostar 10 medarbetare {{baseFee}}€ + (10 Ã— {{perWorkerFee}}€) = 90€/månad.",
+    "faq1A": "Du betalar en fast grundavgift på {{baseFee}}€/månad plus {{perWorkerFee}}€ per aktiv medarbetare. Till exempel kostar 10 medarbetare {{baseFee}}€ + (10 × {{perWorkerFee}}€) = 90€/månad.",
     "faq2Q": "Finns det dolda avgifter?",
     "faq2A": "Nej. Grundavgiften och priset per medarbetare är de enda kostnaderna. Inga installationsavgifter, inga introduktionsavgifter, inga projektkostnader.",
     "faq3Q": "Kan jag lägga till eller ta bort medarbetare när som helst?",
@@ -72,7 +72,7 @@
     "marketingBullet1": "Enkel tidsregistrering",
     "marketingBullet2": "Smidig projekttilldelning",
     "marketingBullet3": "Noggrann löneförberedelse",
-    "marketingBullet4": "Ã–kad produktivitet och effektivitet",
+    "marketingBullet4": "Ökad produktivitet och effektivitet",
     "marketingDescription2": "Gå med företag världen över som litar på Koordinate för exakta tidsdata och robust personalanalys. Fokusera på det som är viktigast, vi tar hand om resten."
   },
   "signup": {
@@ -81,7 +81,7 @@
     "smartSchedulingTitle": "Smart schemaläggning",
     "smartSchedulingDesc": "Tilldela projekt och platser med ett intuitivt dra-och-släpp-gränssnitt.",
     "realTimeOversightTitle": "Realtidsövervakning",
-    "realTimeOversightDesc": "Ã–vervaka medarbetarnas platser och aktiva sessioner live från din instrumentpanel.",
+    "realTimeOversightDesc": "Övervaka medarbetarnas platser och aktiva sessioner live från din instrumentpanel.",
     "automatedReportingTitle": "Automatiserad rapportering",
     "automatedReportingDesc": "Generera exakta löne- och projektkostnadsrapporter på sekunder.",
     "welcomeToCompany": "Välkommen till",
@@ -182,7 +182,7 @@
   "signupSuccess": {
     "title": "Ditt konto har skapats!",
     "subtitle": "Ladda ner mobilappen och logga in där för att fortsätta.",
-    "openApp": "Ã–ppna appen",
+    "openApp": "Öppna appen",
     "laterLink": "Jag öppnar appen senare"
   },
   "guest": {
@@ -216,7 +216,7 @@
       "cardReplayEvent1": "Anlänt till Plats A",
       "cardReplayEvent2": "Lämnat Plats A",
       "cardReplayEvent3": "Anlänt till Plats B",
-      "howItWorksEyebrow": "SÃ… HÃ„R FUNGERAR DET",
+      "howItWorksEyebrow": "SÅ HÄR FUNGERAR DET",
       "howItWorksTitle": "Igång redan idag.",
       "step01Title": "Konfigurera ditt företag",
       "step01Desc": "Skapa ditt konto, lägg till projekt och platser. Tar under 5 minuter.",
@@ -265,9 +265,9 @@
       "noAssignmentsToday": "Inga uppdrag idag",
       "noAssignmentsSub": "Ditt schema visas här när din chef tilldelar dig en plats.",
       "statusWorking": "ARBETAR",
-      "statusOffSite": "EJ PÃ… PLATS",
+      "statusOffSite": "EJ PÅ PLATS",
       "statusReady": "REDO",
-      "statusAway": "FRÃ…NVARANDE",
+      "statusAway": "FRÅNVARANDE",
       "locating": "Bestämmer position...",
       "noLocationCoords": "Inga koordinater för den här platsen.",
       "atSite": "På {{name}}",
@@ -306,7 +306,7 @@
     "account": {
       "title": "Kontoinställningar",
       "subtitle": "Din profil och företagsinformation",
-      "access": "Ã…tkomst",
+      "access": "Åtkomst",
       "accessDescription": "Använd en inbjudningskod från din chef för att logga in på en annan enhet.",
       "company": "Företag",
       "logOut": "Logga ut",
@@ -360,8 +360,8 @@
     },
     "batteryOptimization": {
       "title": "Inaktivera batterioptimering",
-      "message": "För noggrann tidregistrering, inaktivera batterioptimering för den här appen. Tryck på 'Ã–ppna inställningar', hitta den här appen och välj 'Obegränsad' eller 'Optimera inte'.",
-      "openSettings": "Ã–ppna inställningar",
+      "message": "För noggrann tidregistrering, inaktivera batterioptimering för den här appen. Tryck på 'Öppna inställningar', hitta den här appen och välj 'Obegränsad' eller 'Optimera inte'.",
+      "openSettings": "Öppna inställningar",
       "later": "Senare"
     }
   },
@@ -397,7 +397,7 @@
     "cardReplayEvent1": "Anlänt till Plats A",
     "cardReplayEvent2": "Lämnat Plats A",
     "cardReplayEvent3": "Anlänt till Plats B",
-    "howItWorksEyebrow": "SÃ… HÃ„R FUNGERAR DET",
+    "howItWorksEyebrow": "SÅ HÄR FUNGERAR DET",
     "howItWorksTitle": "Igång redan idag.",
     "step01Title": "Konfigurera ditt företag",
     "step01Desc": "Skapa ditt konto, lägg till projekt och platser. Tar under 5 minuter.",
@@ -667,7 +667,7 @@
       "ownerOnlyBilling": "Endast kontoägaren kan hantera fakturering.",
       "scheduledOn": "den {{date}}",
       "errUserNotLoggedIn": "Användaren är inte inloggad.",
-      "errPermissionDenied": "Ã…tkomst nekad",
+      "errPermissionDenied": "Åtkomst nekad",
       "errCameraRollPermission": "Vi behöver åtkomst till ditt fotobibliotek.",
       "avatarUpdated": "Avatar uppdaterad",
       "errUploadFailed": "Uppladdning misslyckades",
@@ -736,7 +736,7 @@
       "pricingTitle": "Ny total per manad",
       "nextRenewalTitle": "Total vid nasta fornyelse",
       "baseFee": "Grundavgift",
-      "workerSeats": "Medarbetarplatser ({{count}} Ã— €{{price}})",
+      "workerSeats": "Medarbetarplatser ({{count}} × €{{price}})",
       "total": "Totalt",
       "difference": "Skillnad:",
       "confirmChanges": "Bekrafta andringar",

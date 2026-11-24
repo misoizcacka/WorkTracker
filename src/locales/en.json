@@ -30,7 +30,7 @@
     "getStarted": "Get Started",
     "faqHeading": "Frequently Asked Questions",
     "faq1Q": "How is the monthly cost calculated?",
-    "faq1A": "You pay a flat base fee of {{baseFee}}€/month, plus {{perWorkerFee}}€ for each active worker. For example, 10 workers costs {{baseFee}}€ + (10 Ã— {{perWorkerFee}}€) = 90€/month.",
+    "faq1A": "You pay a flat base fee of {{baseFee}}€/month, plus {{perWorkerFee}}€ for each active worker. For example, 10 workers costs {{baseFee}}€ + (10 × {{perWorkerFee}}€) = 90€/month.",
     "faq2Q": "Are there any hidden fees?",
     "faq2A": "No. The base fee and the per-worker rate are the only charges. No setup fee, no onboarding fee, no per-project fee.",
     "faq3Q": "Can I add or remove workers at any time?",

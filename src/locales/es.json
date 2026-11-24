@@ -30,7 +30,7 @@
     "getStarted": "Comenzar",
     "faqHeading": "Preguntas frecuentes",
     "faq1Q": "¿Cómo se calcula el costo mensual?",
-    "faq1A": "Paga una tarifa base fija de {{baseFee}}€/mes más {{perWorkerFee}}€ por cada trabajador activo. Por ejemplo, 10 trabajadores cuestan {{baseFee}}€ + (10 Ã— {{perWorkerFee}}€) = 90€/mes.",
+    "faq1A": "Paga una tarifa base fija de {{baseFee}}€/mes más {{perWorkerFee}}€ por cada trabajador activo. Por ejemplo, 10 trabajadores cuestan {{baseFee}}€ + (10 × {{perWorkerFee}}€) = 90€/mes.",
     "faq2Q": "¿Hay tarifas ocultas?",
     "faq2A": "No. La tarifa base y el precio por trabajador son los únicos cargos. Sin tarifa de configuración, sin tarifa de incorporación, sin cargos por proyecto.",
     "faq3Q": "¿Puedo agregar o eliminar trabajadores en cualquier momento?",
@@ -73,7 +73,7 @@
     "marketingBullet2": "Asignación de proyectos sin fricciones",
     "marketingBullet3": "Preparación de nómina precisa",
     "marketingBullet4": "Mayor productividad y eficiencia",
-    "marketingDescription2": "Ãšnase a las empresas de todo el mundo que confían en Koordinate para obtener datos de tiempo precisos y análisis sólidos de su fuerza laboral. Concéntrese en lo que más importa, nosotros nos encargamos del resto."
+    "marketingDescription2": "Únase a las empresas de todo el mundo que confían en Koordinate para obtener datos de tiempo precisos y análisis sólidos de su fuerza laboral. Concéntrese en lo que más importa, nosotros nos encargamos del resto."
   },
   "signup": {
     "marketingTitle": "Potencie su equipo con precisión",
@@ -193,7 +193,7 @@
       "cardReplayEvent1": "Entrada en Obra A",
       "cardReplayEvent2": "Salida de Obra A",
       "cardReplayEvent3": "Entrada en Obra B",
-      "howItWorksEyebrow": "CÃ“MO FUNCIONA",
+      "howItWorksEyebrow": "CÓMO FUNCIONA",
       "howItWorksTitle": "Operativo desde hoy.",
       "step01Title": "Configure su empresa",
       "step01Desc": "Cree su cuenta, añada proyectos y ubicaciones. En menos de 5 minutos.",
@@ -204,7 +204,7 @@
       "step04Title": "Observe cómo funciona",
       "step04Desc": "Mapa en directo, sesiones activas, visibilidad total sin necesidad de coger el teléfono.",
       "ctaTitle": "¿Listo para tener su equipo bajo control?",
-      "ctaSub": "Ãšnase a las empresas de construcción que utilizan Koordinate para operaciones de campo más ágiles y eficientes.",
+      "ctaSub": "Únase a las empresas de construcción que utilizan Koordinate para operaciones de campo más ágiles y eficientes.",
       "ctaButton": "Empieza gratis"
     },
     "pricing": {
@@ -325,8 +325,8 @@
       "workHistory": "Historial de trabajo",
       "noHistory": "No hay historial para este período.",
       "filterYesterday": "Ayer",
-      "filterLast7": "Ãšltimos 7 días",
-      "filterLast30": "Ãšltimos 30 días",
+      "filterLast7": "Últimos 7 días",
+      "filterLast30": "Últimos 30 días",
       "filterThisMonth": "Este mes",
       "filterCustom": "Personalizado",
       "failedToLoad": "No se pudieron cargar las sesiones de trabajo."
@@ -397,7 +397,7 @@
     "cardReplayEvent1": "Entrada en Obra A",
     "cardReplayEvent2": "Salida de Obra A",
     "cardReplayEvent3": "Entrada en Obra B",
-    "howItWorksEyebrow": "CÃ“MO FUNCIONA",
+    "howItWorksEyebrow": "CÓMO FUNCIONA",
     "howItWorksTitle": "Operativo desde hoy.",
     "step01Title": "Configure su empresa",
     "step01Desc": "Cree su cuenta, añada proyectos y ubicaciones. En menos de 5 minutos.",
@@ -408,7 +408,7 @@
     "step04Title": "Observe cómo funciona",
     "step04Desc": "Mapa en directo, sesiones activas, visibilidad total sin necesidad de coger el teléfono.",
     "ctaTitle": "¿Listo para tener su equipo bajo control?",
-    "ctaSub": "Ãšnase a las empresas de construcción que utilizan Koordinate para operaciones de campo más ágiles y eficientes.",
+    "ctaSub": "Únase a las empresas de construcción que utilizan Koordinate para operaciones de campo más ágiles y eficientes.",
     "ctaButton": "Empieza gratis"
   },
   "manager": {
@@ -759,7 +759,7 @@
       "pricingTitle": "Nuevo total mensual",
       "nextRenewalTitle": "Total en la proxima renovacion",
       "baseFee": "Tarifa base",
-      "workerSeats": "Plazas de trabajadores ({{count}} Ã— €{{price}})",
+      "workerSeats": "Plazas de trabajadores ({{count}} × €{{price}})",
       "total": "Total",
       "difference": "Diferencia:",
       "confirmChanges": "Confirmar cambios",

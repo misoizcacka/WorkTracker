@@ -22,7 +22,7 @@
   },
   "pricing": {
     "simpleTransparentPricingTitle": "Einfache & transparente Preise",
-    "simpleTransparentPricingDescription": "Ein Plan, keine Ãœberraschungen. Sie zahlen eine feste Grundgebühr plus einen kleinen Betrag pro aktivem Mitarbeiter – sonst nichts.",
+    "simpleTransparentPricingDescription": "Ein Plan, keine Überraschungen. Sie zahlen eine feste Grundgebühr plus einen kleinen Betrag pro aktivem Mitarbeiter – sonst nichts.",
     "singlePlanTitle": "Einheitstarif",
     "workerPerMonth": "Mitarbeiter/Monat",
     "howManyWorkers": "Wie viele Mitarbeiter?",
@@ -30,7 +30,7 @@
     "getStarted": "Jetzt starten",
     "faqHeading": "Häufig gestellte Fragen",
     "faq1Q": "Wie werden die monatlichen Kosten berechnet?",
-    "faq1A": "Sie zahlen eine feste Grundgebühr von {{baseFee}}€/Monat plus {{perWorkerFee}}€ pro aktivem Mitarbeiter. Beispiel: 10 Mitarbeiter kosten {{baseFee}}€ + (10 Ã— {{perWorkerFee}}€) = 90€/Monat.",
+    "faq1A": "Sie zahlen eine feste Grundgebühr von {{baseFee}}€/Monat plus {{perWorkerFee}}€ pro aktivem Mitarbeiter. Beispiel: 10 Mitarbeiter kosten {{baseFee}}€ + (10 × {{perWorkerFee}}€) = 90€/Monat.",
     "faq2Q": "Gibt es versteckte Kosten?",
     "faq2A": "Nein. Die Grundgebühr und der Preis pro Mitarbeiter sind die einzigen Kosten. Keine Einrichtungsgebühr, keine Onboarding-Gebühr, keine projektbezogenen Kosten.",
     "faq3Q": "Kann ich Mitarbeiter jederzeit hinzufügen oder entfernen?",
@@ -40,7 +40,7 @@
     "faq5Q": "Was benötigen Mitarbeiter zur Nutzung der App?",
     "faq5A": "Mitarbeiter installieren die kostenlose Koordinate-App auf ihrem Android- oder iOS-Smartphone. Sie laden sie per Code ein – keine E-Mail-Adresse erforderlich. Mitarbeiter sehen keinerlei Abrechnungsinformationen.",
     "faq6Q": "Wie funktioniert die Standortverfolgung für Mitarbeiter?",
-    "faq6A": "Wenn sich ein Mitarbeiter bei einem Auftrag eincheckt, verfolgt die App seinen GPS-Standort im Hintergrund und sendet regelmäÃŸige Updates. Die Verfolgung stoppt automatisch beim Auschecken. Mitarbeiter werden in der App über die Verfolgung informiert."
+    "faq6A": "Wenn sich ein Mitarbeiter bei einem Auftrag eincheckt, verfolgt die App seinen GPS-Standort im Hintergrund und sendet regelmäßige Updates. Die Verfolgung stoppt automatisch beim Auschecken. Mitarbeiter werden in der App über die Verfolgung informiert."
   },
   "login": {
     "loginHeading": "Willkommen zurück!",
@@ -73,15 +73,15 @@
     "marketingBullet2": "Nahtlose Projektzuweisungen",
     "marketingBullet3": "Präzise Lohnabrechnung",
     "marketingBullet4": "Produktivität & Effizienz steigern",
-    "marketingDescription2": "SchlieÃŸen Sie sich Unternehmen weltweit an, die Koordinate für präzise Zeitdaten und robuste Personalanalysen vertrauen. Konzentrieren Sie sich auf das Wesentliche – den Rest erledigen wir."
+    "marketingDescription2": "Schließen Sie sich Unternehmen weltweit an, die Koordinate für präzise Zeitdaten und robuste Personalanalysen vertrauen. Konzentrieren Sie sich auf das Wesentliche – den Rest erledigen wir."
   },
   "signup": {
     "marketingTitle": "Stärken Sie Ihre Belegschaft mit Präzision",
     "marketingDescription": "Koordinate bietet Ihnen die Werkzeuge, die Sie benötigen, um Teams zu führen, den Fortschritt zu verfolgen und Ihr Unternehmen mit Sicherheit zu skalieren.",
     "smartSchedulingTitle": "Intelligente Planung",
     "smartSchedulingDesc": "Weisen Sie Projekte und Standorte mit einer intuitiven Drag-and-Drop-Oberfläche zu.",
-    "realTimeOversightTitle": "Echtzeit-Ãœbersicht",
-    "realTimeOversightDesc": "Ãœberwachen Sie Mitarbeiterstandorte und aktive Sitzungen live von Ihrem Dashboard aus.",
+    "realTimeOversightTitle": "Echtzeit-Übersicht",
+    "realTimeOversightDesc": "Überwachen Sie Mitarbeiterstandorte und aktive Sitzungen live von Ihrem Dashboard aus.",
     "automatedReportingTitle": "Automatisiertes Berichtswesen",
     "automatedReportingDesc": "Erstellen Sie in Sekunden präzise Lohnabrechnungs- und Projektkostenberichte.",
     "welcomeToCompany": "Willkommen bei",
@@ -164,7 +164,7 @@
   },
   "guest": {
     "index": {
-      "heroPill": "Für Bau- und AuÃŸendienstteams",
+      "heroPill": "Für Bau- und Außendienstteams",
       "heroTitle": "Ihr Team.\nIhre Baustellen.\nUnter Kontrolle.",
       "heroTitleLine1": "Ihr Team.",
       "heroTitleLine2": "Ihre Baustellen.",
@@ -204,7 +204,7 @@
       "step04Title": "Betrieb verfolgen",
       "step04Desc": "Live-Karte, Live-Sitzungen, volle Transparenz – ohne das Telefon in die Hand nehmen zu müssen.",
       "ctaTitle": "Bereit, Ihr Team zu organisieren?",
-      "ctaSub": "SchlieÃŸen Sie sich Bauunternehmen an, die Koordinate für einen reibungsloseren und schnelleren AuÃŸendienst nutzen.",
+      "ctaSub": "Schließen Sie sich Bauunternehmen an, die Koordinate für einen reibungsloseren und schnelleren Außendienst nutzen.",
       "ctaButton": "Kostenlos starten"
     },
     "pricing": {
@@ -238,7 +238,7 @@
     "noAccountYet": "Noch kein Konto?"
   },
   "guestFooter": {
-    "tagline": "Personalmanagement für AuÃŸendienstteams.",
+    "tagline": "Personalmanagement für Außendienstteams.",
     "terms": "Nutzungsbedingungen",
     "privacy": "Datenschutz",
     "dpa": "AVV",
@@ -322,7 +322,7 @@
     "dashboard": {
       "title": "Persönliches Dashboard",
       "totalHours": "Gesamtstunden",
-      "avgDaily": "Ã˜ täglich",
+      "avgDaily": "Ø täglich",
       "workHistory": "Arbeitsverlauf",
       "noHistory": "Kein Verlauf für diesen Zeitraum.",
       "filterYesterday": "Gestern",
@@ -357,7 +357,7 @@
       "rightsBody": "Sie können Auskunft, Berichtigung oder Löschung Ihrer personenbezogenen Daten beantragen, indem Sie Ihren Arbeitgeber oder Koordinate unter info@koordinate.app kontaktieren.",
       "policyLink": "Vollständige Datenschutzrichtlinie lesen",
       "confirm": "Ich verstehe, weiter",
-      "poweredBy": "Ihre Daten werden von Koordinate gemäÃŸ DSGVO verarbeitet."
+      "poweredBy": "Ihre Daten werden von Koordinate gemäß DSGVO verarbeitet."
     },
     "batteryOptimization": {
       "title": "Akkuoptimierung deaktivieren",
@@ -387,11 +387,11 @@
   },
   "subscriptionSetup": {
     "title": "Tarif bestätigen",
-    "description": "Ãœberprüfen Sie Ihre Abonnementdetails, bevor Sie mit der Zahlung fortfahren.",
+    "description": "Überprüfen Sie Ihre Abonnementdetails, bevor Sie mit der Zahlung fortfahren.",
     "proceedToPayment": "Zur Zahlung"
   },
   "landing": {
-    "heroPill": "Für Bau- und AuÃŸendienstteams",
+    "heroPill": "Für Bau- und Außendienstteams",
     "heroTitle": "Ihr Team.\nIhre Baustellen.\nUnter Kontrolle.",
     "heroTitleAccent": "Unter Kontrolle.",
     "heroSub": "Live-Karte aller Mitarbeiter, automatische Zeiterfassung und Lohnabrechnung auf Knopfdruck.",
@@ -428,7 +428,7 @@
     "step04Title": "Betrieb verfolgen",
     "step04Desc": "Live-Karte, Live-Sitzungen, volle Transparenz — ohne das Telefon in die Hand nehmen zu müssen.",
     "ctaTitle": "Bereit, Ihr Team zu organisieren?",
-    "ctaSub": "SchlieÃŸen Sie sich Bauunternehmen an, die Koordinate für einen reibungsloseren und schnelleren AuÃŸendienst nutzen.",
+    "ctaSub": "Schließen Sie sich Bauunternehmen an, die Koordinate für einen reibungsloseren und schnelleren Außendienst nutzen.",
     "ctaButton": "Kostenlos starten"
   },
   "manager": {
@@ -780,7 +780,7 @@
       "errEnterValidName": "Bitte geben Sie einen gültigen vollständigen Namen ein.",
       "errInvalidEmail": "Ungültige E-Mail",
       "errEnterValidEmail": "Bitte geben Sie eine gültige E-Mail-Adresse ein.",
-      "noChanges": "Keine Ã„nderungen",
+      "noChanges": "Keine Änderungen",
       "noProfileChanges": "Keine Profiländerungen zu speichern.",
       "profileSaved": "Profil gespeichert",
       "profileSavedDesc": "Ihre Profildetails wurden aktualisiert.",
