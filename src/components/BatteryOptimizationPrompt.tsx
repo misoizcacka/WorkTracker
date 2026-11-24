@@ -34,7 +34,7 @@ const BatteryOptimizationPrompt: React.FC<BatteryOptimizationPromptProps> = ({
     }
   };
 
-  const getInstructions = () => {
+  const getDeviceSteps = () => {
     switch (manufacturer) {
       case 'samsung':
         return [
@@ -87,6 +87,13 @@ const BatteryOptimizationPrompt: React.FC<BatteryOptimizationPromptProps> = ({
           'This ensures accurate location tracking throughout your shift',
         ];
     }
+  };
+
+  // "Open Settings" opens the battery optimization list (not a per-app dialog), so the worker
+  // first has to find the app in that list.
+  const getInstructions = () => {
+    const [first, ...rest] = getDeviceSteps();
+    return [first, 'Find Koordinate in the list (switch to "All apps" if you don\'t see it)', ...rest];
   };
 
   const getDeviceName = () => {

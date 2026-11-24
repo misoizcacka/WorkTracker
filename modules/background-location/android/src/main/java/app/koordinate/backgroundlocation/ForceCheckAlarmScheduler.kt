@@ -37,8 +37,11 @@ object ForceCheckAlarmScheduler {
         val nextAlarmTime = System.currentTimeMillis() + Constants.PERIODIC_FORCE_CHECK_INTERVAL_MS
         
         try {
-            // Android 12+ requires SCHEDULE_EXACT_ALARM permission
-            // For foreground location services, this is usually auto-granted
+            // Exact alarms need SCHEDULE_EXACT_ALARM on Android 12+. We deliberately don't declare it:
+            // it's denied by default on Android 14, and Google Play limits exact alarms to alarm-clock and
+            // calendar apps. So this normally takes the inexact path below, which still runs in Doze but
+            // only in maintenance windows (minutes late). The foreground service's own location
+            // requests are the primary signal; these alarms are a backup.
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                 if (alarmManager.canScheduleExactAlarms()) {
                     alarmManager.setExactAndAllowWhileIdle(

@@ -324,11 +324,21 @@ class BackgroundLocationModule : Module() {
             
             try {
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                    // Try to open the battery optimization settings directly
-                    val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
-                        data = Uri.parse("package:${context.packageName}")
-                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                    }
+                    // The direct "Allow?" dialog (ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS) needs the
+                    // REQUEST_IGNORE_BATTERY_OPTIMIZATIONS permission, which Google Play only allows for a few
+                    // app types. Without it the dialog closes immediately and nothing happens. So use the
+                    // dialog only if the permission is granted, otherwise open the battery optimization list,
+                    // where the worker picks the app and chooses "Don't optimize". That needs no permission.
+                    val canRequestDirectly = ContextCompat.checkSelfPermission(
+                        context, Manifest.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS
+                    ) == PackageManager.PERMISSION_GRANTED
+                    val intent = if (canRequestDirectly) {
+                        Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
+                            data = Uri.parse("package:${context.packageName}")
+                        }
+                    } else {
+                        Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)
+                    }.apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) }
                     context.startActivity(intent)
                     promise.resolve(true)
                 } else {

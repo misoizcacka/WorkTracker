@@ -492,7 +492,12 @@ class PeriodicLocationTrackingService : Service() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         val appPackageName = applicationContext.packageName
-        showForegroundNotification(appPackageName)
+        if (!showForegroundNotification(appPackageName)) {
+            // Can't run as a foreground service (e.g. location permission revoked). Stop instead of
+            // crashing, and don't ask Android to restart us in a loop.
+            stopSelf()
+            return START_NOT_STICKY
+        }
 
         val action = intent?.action
         if (action == Constants.ACTION_START_ACTIVE_TRACKING) {
@@ -788,7 +793,7 @@ class PeriodicLocationTrackingService : Service() {
         switchToMode(if (active) TrackingMode.ACTIVE else TrackingMode.PASSIVE)
     }
 
-    private fun showForegroundNotification(appPackageName: String) {
+    private fun showForegroundNotification(appPackageName: String): Boolean {
         // Class.forName can throw ClassNotFoundException on some Expo/EAS builds where
         // MainActivity lives at a different path â€” fall back to a generic launch intent.
         val notificationIntent = try {
@@ -816,10 +821,20 @@ class PeriodicLocationTrackingService : Service() {
             .setOngoing(true)
             .build()
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            startForeground(Constants.GEOFENCE_NOTIFICATION_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION)
-        } else {
-            startForeground(Constants.GEOFENCE_NOTIFICATION_ID, notification)
+        // Can throw if location permission was revoked (SecurityException) or if Android doesn't allow
+        // a foreground service start right now (ForegroundServiceStartNotAllowedException, API 31+).
+        // Crashing here takes the whole app down, so report failure and let the caller stop.
+        return try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                startForeground(Constants.GEOFENCE_NOTIFICATION_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION)
+            } else {
+                startForeground(Constants.GEOFENCE_NOTIFICATION_ID, notification)
+            }
+            true
+        } catch (e: Exception) {
+            Log.e("PeriodicLocationTrackingService", "Could not start foreground service: ${e.message}")
+            LocationFileLogger.e(this, "Service", "Could not start foreground tracking (permission revoked?): ${e.message}")
+            false
         }
     }
 

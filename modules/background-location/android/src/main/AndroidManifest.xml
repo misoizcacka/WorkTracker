@@ -7,7 +7,7 @@
         <receiver
             android:name="app.koordinate.backgroundlocation.GeofenceBroadcastReceiver"
             android:enabled="true"
-            android:exported="true" />
+            android:exported="false" />
         
         <receiver
             android:name="app.koordinate.backgroundlocation.LocationAlarmReceiver"
@@ -20,12 +20,22 @@
             android:exported="false" />
 
         <receiver
+            android:name="app.koordinate.backgroundlocation.LocationProviderChangedReceiver"
+            android:enabled="true"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.location.PROVIDERS_CHANGED" />
+            </intent-filter>
+        </receiver>
+
+        <receiver
             android:name="app.koordinate.backgroundlocation.BootReceiver"
             android:enabled="true"
             android:exported="false">
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
                 <action android:name="android.intent.action.QUICKBOOT_POWERON" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
             </intent-filter>
         </receiver>
     </application>
