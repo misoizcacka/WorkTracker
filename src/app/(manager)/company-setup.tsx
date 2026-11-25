@@ -12,7 +12,7 @@ import { Dropdown } from 'react-native-element-dropdown';
 import { countries } from '../../utils/countries';
 import { Text } from '../../components/Themed';
 import { useTranslation } from 'react-i18next';
-import CountryFlag from 'react-native-country-flag';
+import CountryFlag from '~/components/CountryFlag';
 
 const { width } = Dimensions.get('window');
 const isLargeScreen = width > 900;

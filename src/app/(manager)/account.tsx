@@ -18,7 +18,7 @@ import { useRouter } from "expo-router";
 import { uploadAvatar, updateEmployeeProfile } from "../../services/profile";
 import { supabase } from "../../utils/supabase";
 import { LanguagePicker } from "../../components/LanguagePicker";
-import CountryFlag from 'react-native-country-flag';
+import CountryFlag from '~/components/CountryFlag';
 
 const COUNTRY_NAMES: Record<string, string> = {
   DE: 'Germany', AT: 'Austria', NL: 'Netherlands', BE: 'Belgium', PL: 'Poland', SE: 'Sweden',

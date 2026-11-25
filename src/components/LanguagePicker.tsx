@@ -1,9 +1,9 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import { View, TouchableOpacity, StyleSheet, Modal, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
-import CountryFlag from 'react-native-country-flag';
+import CountryFlag from '~/components/CountryFlag';
 import { Text } from './Themed';
 import { theme } from '../theme';
 import { SUPPORTED_LANGUAGES, changeLanguage, type LanguageCode } from '../i18n';

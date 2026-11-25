@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Animated } from 'react-native';
-import CountryFlag from "react-native-country-flag";
+import CountryFlag from '~/components/CountryFlag';
 import { useTranslation } from 'react-i18next';
 import { theme } from '../theme';
 

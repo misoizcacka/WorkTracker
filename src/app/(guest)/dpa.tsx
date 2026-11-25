@@ -138,15 +138,14 @@ export default function DataProcessingAgreement() {
               <Text style={[styles.tableCell, styles.tableCellHeader, { flex: 1 }]} fontType="bold">Location</Text>
             </View>
             {[
-              { name: 'Supabase', purpose: 'Database, authentication, file storage', location: 'EU (Ireland)' },
-              { name: 'Stripe, Inc.', purpose: 'Payment processing (Controller billing only)', location: 'EU data residency' },
-              { name: 'Vercel, Inc.', purpose: 'Web application hosting', location: 'EU regions available' },
-              { name: 'Resend', purpose: 'Transactional invitation and account emails', location: 'Per provider DPA (Standard Contractual Clauses)' },
+              { name: 'Supabase Pte. Ltd.', purpose: 'Database, authentication, file storage', location: 'EU (Ireland)' },
+              { name: 'Stripe Payments Europe, Ltd. / Stripe, Inc.', purpose: 'Payment processing (Controller billing only)', location: 'EU and USA (Data Privacy Framework, Standard Contractual Clauses)' },
+              { name: 'Vercel Inc.', purpose: 'Web application hosting', location: 'Global edge network (Standard Contractual Clauses)' },
+              { name: 'Resend', purpose: 'Transactional invitation and account emails', location: 'USA (Standard Contractual Clauses)' },
               { name: 'Geoapify', purpose: 'Address search (geocoding) for managers', location: 'EU' },
               { name: 'Map tile provider (data.lfmaps.fr)', purpose: 'Map images in the web dashboard (no worker location events sent)', location: 'Under review' },
               { name: 'Google LLC', purpose: 'Map display in the Android app; embedded map preview on manager pages', location: 'Global infrastructure' },
               { name: 'Apple Inc.', purpose: 'Map display in the iOS app', location: 'Global infrastructure' },
-              { name: 'jsDelivr', purpose: 'Content delivery network for country flag images', location: 'Global CDN' },
             ].map((row, i) => (
               <View key={i} style={[styles.tableRow, i % 2 === 0 && styles.tableRowAlt]}>
                 <Text style={[styles.tableCell, { flex: 1.2 }]} fontType="medium">{row.name}</Text>
