@@ -73,7 +73,6 @@ export const MapPreview: React.FC<MapPreviewProps> = ({
         initialViewState={{ latitude, longitude, zoom: initialZoom }}
         style={{ width: '100%', height: '100%' }}
         mapStyle={TILE_STYLE as any}
-        attributionControl={false}
         scrollZoom={false}
         dragPan={false}
         dragRotate={false}

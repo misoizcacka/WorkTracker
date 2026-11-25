@@ -315,7 +315,6 @@ const DailyWorkerMapWeb: React.FC<DailyWorkerMapProps & {
         onLoad={onMapLoad}
         style={{ width: '100%', height: '100%' }}
         mapStyle={TILE_PROVIDER_STYLE}
-        attributionControl={false}
       >
         <NavigationControl visualizePitch={true} showZoom={true} showCompass={false} position="top-right" />
 

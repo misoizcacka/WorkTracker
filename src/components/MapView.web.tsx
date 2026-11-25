@@ -507,7 +507,6 @@ export const MapView = React.forwardRef<any, MapViewProps>(({
         onMove={handleMapMove}
         style={{ width: '100%', height: '100%' }}
         mapStyle={TILE_PROVIDER_STYLE as any}
-        attributionControl={false}
         onLoad={onMapLoad}
         onClick={clearAll}
         onMoveEnd={(evt) => {
