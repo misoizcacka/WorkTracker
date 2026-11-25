@@ -143,7 +143,7 @@ export default function DataProcessingAgreement() {
               { name: 'Vercel Inc.', purpose: 'Web application hosting', location: 'Global edge network (Standard Contractual Clauses)' },
               { name: 'Resend', purpose: 'Transactional invitation and account emails', location: 'USA (Standard Contractual Clauses)' },
               { name: 'Geoapify', purpose: 'Address search (geocoding) for managers', location: 'EU' },
-              { name: 'Map tile provider (data.lfmaps.fr)', purpose: 'Map images in the web dashboard (no worker location events sent)', location: 'Under review' },
+              { name: 'OpenFreeMap (Hyperknot Software Kft.)', purpose: 'Map images in the web dashboard (no worker location events sent)', location: 'Hungary (EU); Cloudflare CDN' },
               { name: 'Google LLC', purpose: 'Map display in the Android app; embedded map preview on manager pages', location: 'Global infrastructure' },
               { name: 'Apple Inc.', purpose: 'Map display in the iOS app', location: 'Global infrastructure' },
             ].map((row, i) => (

@@ -9,7 +9,7 @@ import 'maplibre-gl/dist/maplibre-gl.css';
 import { View, StyleSheet } from 'react-native';
 import { theme } from '../theme';
 
-const TILE_STYLE = 'https://data.lfmaps.fr/styles/bright';
+const TILE_STYLE = 'https://tiles.openfreemap.org/styles/bright';
 
 // Build an accurate GeoJSON circle polygon from centre + radius in metres.
 function makeCircleGeoJSON(lng: number, lat: number, radiusMeters: number, steps = 64) {

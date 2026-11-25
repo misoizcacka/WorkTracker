@@ -120,7 +120,7 @@ export default function PrivacyPolicy() {
           <Li>Vercel (web hosting) — processes request data such as IP addresses when you use the web app</Li>
           <Li>Resend (sending invitation and account emails) — receives the recipient's email address and name; processing takes place mainly in the USA</Li>
           <Li>Geoapify (address search when managers create projects and locations) — receives the address that is typed in and the IP address of the request; EU-hosted</Li>
-          <Li>Map display — on the web, map images are loaded from a third-party tile server (data.lfmaps.fr) and a Google Maps preview is embedded on some manager pages; in the Android app maps are provided by Google Maps, and in the iOS app by Apple Maps. These providers receive technical data such as the IP address and the map area being displayed. Worker location events are not sent to them.</Li>
+          <Li>Map display — on the web, map images are loaded from the OpenFreeMap tile service (tiles.openfreemap.org, operated by Hyperknot Software Kft., Hungary), which uses no cookies and does not store IP addresses in its access logs and a Google Maps preview is embedded on some manager pages; in the Android app maps are provided by Google Maps, and in the iOS app by Apple Maps. These providers receive technical data such as the IP address and the map area being displayed. Worker location events are not sent to them.</Li>
           <P>We do not sell personal data to third parties. The full list of sub-processors is included in our DPA at koordinate.app/dpa.</P>
         </Section>
 

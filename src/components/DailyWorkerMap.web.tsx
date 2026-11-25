@@ -74,7 +74,7 @@ const trackingDotsLayerStyle: CircleLayerSpecification = {
   },
 };
 
-const TILE_PROVIDER_STYLE = 'https://data.lfmaps.fr/styles/bright';
+const TILE_PROVIDER_STYLE = 'https://tiles.openfreemap.org/styles/bright';
 
 const DailyWorkerMapWeb: React.FC<DailyWorkerMapProps & {
   assignmentPointsGeoJSON: FeatureCollection<Point>;
