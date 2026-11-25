@@ -41,16 +41,17 @@ iOS Swift can't be compiled on the dev Windows machine, so iOS changes are unver
 | T1: EXIT_PENDING time limit. After 10 min without a GPS decision, back to PASSIVE (force-checks continue) | 680c9ff | Android, iOS by reading |
 | T2: coordinates in log files rounded to 2 decimals (~1 km); Android logger made thread-safe | 680c9ff | Android, iOS by reading |
 | T3: events stamped with the time of the reading (falls back to now if older than 1 h or ahead by over 1 min) | 680c9ff | Android, iOS by reading |
+| T4: mock-location detection. Readings from a fake GPS app are tagged `[MOCK_LOCATION]` in the event notes (Android `isMock`, iOS `isSimulatedBySoftware`, Android check-in via expo-location `mocked`). Managers see a warning banner on the worker's daily details. Flag only, nothing is blocked. A rooted phone can hide the flag | 1d568cd | Android, JS, iOS by reading |
+| T8: `exit_pending_tracking` events no longer stored (decision: they add rows and uploads but nothing uses them). The 30 s GPS checking that verifies an exit is unchanged | 1d568cd | Android, iOS by reading |
+| G5: sub-processor list corrected. Supabase region fixed (Ireland, not Frankfurt), Resend, Geoapify, map providers and jsDelivr added, "no transfers outside the EEA" statement replaced. Expo/Apple/Google push are NOT used (no push token is ever created) so they are not listed | 881e271 | `tsc` |
 
 ### Before public launch
 
 | # | Item | Status | Effort | Notes |
 |---|------|--------|--------|-------|
-| T4 | Mock-location detection | ⬜ | S–M | Android `isMock`, iOS `isSimulatedBySoftware`. |
 | T5 | Tell the worker when tracking degrades | ⬜ | M | Location off, permission reduced to "While using", approximate location. |
 | T6 | Battery: overlapping wake-ups (Android), 1 Hz GPS with no distance filter (iOS) | ⬜ | M–L | Needs device measurements before and after. |
 | T7 | Native background retry of the upload queue | ⬜ | M | Today the queue uploads when the app opens or at transitions. |
-| T8 | `exit_pending_tracking` events dropped by the JS upload RPC and reconciliation | ⬜ | S | Server whitelist + `locationEventReconciliation.ts`. |
 | T9 | Android receiver and service apply different exit rules | ⬜ | M | One shared rule set. |
 
 ---
@@ -63,7 +64,10 @@ iOS Swift can't be compiled on the dev Windows machine, so iOS changes are unver
 | G2 | Rework the worker notice | ⬜ | M | Name the employer as controller, add purposes, recipients, full rights list; record "acknowledged" instead of consent; store per user, versioned. |
 | G3 | Deletion schedules for data without one | ⬜ | M | Pending invites, `consent_logs` IP/user agent, chat messages, avatars, removed employees, derived location summaries. Check `pg_cron` runs in prod. |
 | G4 | Data export and deletion tools | ⬜ | L | Promised in the privacy policy. Covers B4. |
-| G5 | Full sub-processor list in the privacy policy | ⬜ | S | Add Expo push, Apple/Google push, Geoapify, web host; check what the web app loads from Google Maps. |
+| G5 | Full sub-processor list in the privacy policy | ✅ | – | Done in 881e271, see the tracking table above. Follow-ups G9 to G11. |
+| G9 | Web map tiles come from `data.lfmaps.fr`, an operator I could not identify | ⬜ | S–M | Listed as "Under review" in the DPA. Visitors' IP addresses and viewed map areas go to an unknown third party. Recommended: switch the web map to Geoapify tiles (already a processor, EU) or another provider with a DPA. |
+| G10 | Country flag images load from `cdn.jsdelivr.net` | ⬜ | S | Bundle the images in the app so no CDN gets visitors' IP addresses, then remove jsDelivr from the policy and DPA. |
+| G11 | Verify provider details I could not confirm | 👤 | S | Vercel and Stripe locations/transfer safeguards (their DPA pages did not load), company names in the DPA table (Supabase's own DPA names Supabase Pte. Ltd.), and that your Supabase and Resend accounts really use the settings in `supabase/config.toml`. |
 | G6 | Record of processing, security measures (TOMs), breach process | 👤 | M | Drafts can be written here; you own them. |
 | G7 | Data-protection lawyer review | 👤 | – | DPA, Terms, privacy policy, works-council question (§87 BetrVG). |
 | G8 | Impressum | ✅ | – | DDG/MStV references, ODR link removed, VAT ID, link in worker app. |
