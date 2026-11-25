@@ -114,11 +114,14 @@ export default function PrivacyPolicy() {
         </Section>
 
         <Section title="6. Who We Share Data With">
-          <P>We use the following third-party sub-processors to operate the Service:</P>
-          <Li>Supabase (database and authentication) — data stored in the EU (Frankfurt)</Li>
+          <P>We use the following third-party service providers (sub-processors) to operate the Service:</P>
+          <Li>Supabase (database, authentication and file storage) — data stored in the EU (Ireland)</Li>
           <Li>Stripe (payment processing) — governed by Stripe's own GDPR commitments</Li>
-          <Li>Google Maps / MapLibre (map rendering — GPS coordinates are not forwarded to Google for worker tracking purposes)</Li>
-          <Li>Vercel (web hosting) — EU data processing available</Li>
+          <Li>Vercel (web hosting) — processes request data such as IP addresses when you use the web app</Li>
+          <Li>Resend (sending invitation and account emails) — receives the recipient's email address and name</Li>
+          <Li>Geoapify (address search when managers create projects and locations) — receives the address that is typed in and the IP address of the request; EU-hosted</Li>
+          <Li>Map display — on the web, map images are loaded from a third-party tile server (data.lfmaps.fr) and a Google Maps preview is embedded on some manager pages; in the Android app maps are provided by Google Maps, and in the iOS app by Apple Maps. These providers receive technical data such as the IP address and the map area being displayed. Worker location events are not sent to them.</Li>
+          <Li>jsDelivr (content delivery network for country flag images) — receives the IP address of the request</Li>
           <P>We do not sell personal data to third parties. The full list of sub-processors is included in our DPA at koordinate.app/dpa.</P>
         </Section>
 
@@ -154,7 +157,7 @@ export default function PrivacyPolicy() {
 
         <Section title="10. International Transfers">
           <P>
-            All personal data is stored and processed within the European Union. We do not transfer personal data to countries outside the EEA.
+            Our database and file storage are located in the European Union (Ireland). Some of the providers listed in section 6 are based outside the EEA or may process technical data such as IP addresses there. Where this happens, the transfer is covered by the provider's data processing agreement with the EU Standard Contractual Clauses and/or the provider's certification under the EU-US Data Privacy Framework. Worker location data is stored only in the EU database.
           </P>
         </Section>
 
