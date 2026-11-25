@@ -221,9 +221,10 @@ class SupabaseService(
         workerId: String,
         companyId: String,
         latitude: Double,
-        longitude: Double
+        longitude: Double,
+        mockLocation: Boolean = false
     ): Boolean = withContext(Dispatchers.IO) {
-        val notes = "Geofence Transition: $type"
+        val notes = "Geofence Transition: $type" + if (mockLocation) " | ${Constants.MOCK_LOCATION_TAG}" else ""
         val inserted = locationDbHelper.insertLocationEvent(
             id, timestamp, companyId, type, assignmentId, workerId, latitude, longitude, notes, synced = 0
         )

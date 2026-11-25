@@ -231,7 +231,7 @@ class PeriodicLocationTrackingService : Service() {
                         if (workerId != null && companyId != null) {
                             serviceScope.launch {
                                 BackgroundLocationManager.sendGeofenceTransitionEvent(
-                                    applicationContext, it.id, eventType, workerId, companyId, location.latitude, location.longitude, svc, Constants.eventTimeFor(location)
+                                    applicationContext, it.id, eventType, workerId, companyId, location.latitude, location.longitude, svc, Constants.eventTimeFor(location), Constants.isMockLocation(location)
                                 )
                                 val qualityIcon = when(quality?.source) {
                                     LocationSource.GPS_HIGH_QUALITY -> "ðŸŸ¢"
@@ -286,7 +286,7 @@ class PeriodicLocationTrackingService : Service() {
                         if (workerId != null && companyId != null) {
                             serviceScope.launch {
                                 BackgroundLocationManager.sendGeofenceTransitionEvent(
-                                    applicationContext, it.id, eventType, workerId, companyId, location.latitude, location.longitude, svc, Constants.eventTimeFor(location)
+                                    applicationContext, it.id, eventType, workerId, companyId, location.latitude, location.longitude, svc, Constants.eventTimeFor(location), Constants.isMockLocation(location)
                                 )
                                 val qualityIcon = when(quality.source) {
                                     LocationSource.GPS_HIGH_QUALITY -> "ðŸŸ¢"
@@ -384,6 +384,14 @@ class PeriodicLocationTrackingService : Service() {
         }
 
         // 2. PERIODIC TRACKING LOGIC
+        // While verifying a possible exit, the 30-second GPS fixes only feed the transition logic above.
+        // They are not stored as events: they add no value to hours or reports, only rows and uploads.
+        if (currentMode == TrackingMode.EXIT_PENDING) {
+            // Still tell the alarm backup that location updates are arriving, so it doesn't take extra fixes.
+            sharedPrefs.edit().putLong(Constants.KEY_LAST_FUSED_EVENT_TIME, currentTime).apply()
+            return
+        }
+
         val interval = when (currentMode ?: TrackingMode.PASSIVE) {
             TrackingMode.ACTIVE -> Constants.ACTIVE_TRACKING_INTERVAL_MS  // 1 min
             TrackingMode.EXIT_PENDING -> Constants.EXIT_PENDING_INTERVAL_MS  // 30 sec
@@ -439,13 +447,14 @@ class PeriodicLocationTrackingService : Service() {
                 val timestamp = Constants.eventTimeFor(location)
                 val type = when (currentMode ?: TrackingMode.PASSIVE) {
                     TrackingMode.ACTIVE -> "active_tracking"
-                    TrackingMode.EXIT_PENDING -> "exit_pending_tracking"
+                    TrackingMode.EXIT_PENDING -> "active_tracking" // unreachable: EXIT_PENDING returns above
                     TrackingMode.PASSIVE -> "passive_tracking"
                 }
                 
                 // Prepare notes with quality metadata
                 val notes = buildString {
                     append("Periodic update ($type)")
+                    if (Constants.isMockLocation(location)) append(" | ${Constants.MOCK_LOCATION_TAG}")
                     append(" | Source: ${quality.source.label}")
                     append(" | Trust: ${quality.trustScore}%")
                     append(" | Confidence: ${quality.confidence}")

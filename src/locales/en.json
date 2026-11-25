@@ -821,6 +821,11 @@
       "completeSetup": "Complete Setup",
       "loading": "Loading company information...",
       "copyright": "© {{year}} Koordinate. All Rights Reserved"
+    },
+    "dailyDetails": {
+      "mockLocationTitle": "Possible fake GPS detected",
+      "mockLocationMessage_one": "The phone flagged {{count}} location reading on this day as coming from a mock location app. Review the times before relying on them.",
+      "mockLocationMessage_other": "The phone flagged {{count}} location readings on this day as coming from a mock location app. Review the times before relying on them."
     }
   },
   "landing": {
@@ -865,4 +870,3 @@
     "ctaButton": "Create Your Account"
   }
 }
-

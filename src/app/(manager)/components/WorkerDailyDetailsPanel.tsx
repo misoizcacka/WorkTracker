@@ -10,6 +10,7 @@ import { Assignment, LocationEvent, useMapGeoJSON } from '~/hooks/useMapGeoJSON'
 import { Ionicons } from '@expo/vector-icons';
 import { Region } from 'react-native-maps';
 import { EmployeesContext, EmployeesContextType } from '~/context/EmployeesContext';
+import { useTranslation } from 'react-i18next';
 
 const viewerTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
 
@@ -54,6 +55,7 @@ const haversineDistance = (lat1: number, lon1: number, lat2: number, lon2: numbe
 };
 
 const WorkerDailyDetailsPanel = ({ workerId, date }: WorkerDailyDetailsPanelProps) => {
+  const { t } = useTranslation();
   const { getEmployeeById } = React.useContext(EmployeesContext) as EmployeesContextType;
   const [events, setEvents] = useState<DailyEvent[]>([]); // Geofence transitions + checkout events (for timeline)
   const [allLocationEvents, setAllLocationEvents] = useState<LocationEvent[]>([]); // ALL events for map
@@ -65,6 +67,8 @@ const WorkerDailyDetailsPanel = ({ workerId, date }: WorkerDailyDetailsPanelProp
   const [mapZoom, setMapZoom] = useState<number | undefined>(undefined);
   const [projects, setProjects] = useState<any[]>([]);
   const [commonLocations, setCommonLocations] = useState<any[]>([]);
+  // Readings from a fake GPS app (flagged by the phone as [MOCK_LOCATION]) on the selected day.
+  const [mockLocationCount, setMockLocationCount] = useState(0);
 
   // Use allLocationEvents for map (includes active/passive tracking)
   const locationEvents: LocationEvent[] = allLocationEvents;
@@ -240,7 +244,7 @@ const WorkerDailyDetailsPanel = ({ workerId, date }: WorkerDailyDetailsPanelProp
     const fetchDetails = async () => {
       setLoading(true);
       
-      const [projRes, locRes, detailsRes, allEventsRes, sessionsRes] = await Promise.all([
+      const [projRes, locRes, detailsRes, allEventsRes, sessionsRes, mockRes] = await Promise.all([
         supabase.from('projects').select('*'),
         supabase.from('common_locations').select('*'),
         // Geofence transitions only (for timeline)
@@ -264,9 +268,19 @@ const WorkerDailyDetailsPanel = ({ workerId, date }: WorkerDailyDetailsPanelProp
           .lte('start_time', moment(date).endOf('day').toISOString())
           .or(`end_time.gte.${moment(date).startOf('day').toISOString()},end_time.is.null`)
           .order('start_time', { ascending: true })
+          ,
+        // Events the phone marked as coming from a fake GPS app (count only; managers can read this table).
+        supabase
+          .from('location_events')
+          .select('id', { count: 'exact', head: true })
+          .eq('worker_id', workerId)
+          .ilike('notes', '%[MOCK_LOCATION]%')
+          .gte('created_at', moment(date).startOf('day').toISOString())
+          .lte('created_at', moment(date).endOf('day').toISOString()),
       ]);
 
       if (projRes.data) setProjects(projRes.data);
+      setMockLocationCount(mockRes?.error ? 0 : (mockRes?.count ?? 0));
       if (locRes.data) setCommonLocations(locRes.data);
 
       if (detailsRes.error) {
@@ -596,6 +610,20 @@ const WorkerDailyDetailsPanel = ({ workerId, date }: WorkerDailyDetailsPanelProp
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      {/* Fake GPS warning: the phone flagged readings from a mock location provider */}
+      {mockLocationCount > 0 && (
+        <View style={styles.mockBanner}>
+          <Ionicons name="alert-circle-outline" size={20} color={theme.colors.danger} style={styles.warningIcon} />
+          <View style={styles.warningContent}>
+            <Text style={styles.mockTitle} fontType="bold">
+              {t('manager.dailyDetails.mockLocationTitle')}
+            </Text>
+            <Text style={styles.mockText} fontType="regular">
+              {t('manager.dailyDetails.mockLocationMessage', { count: mockLocationCount })}
+            </Text>
+          </View>
+        </View>
+      )}
       {/* GDPR Retention Warning Banner */}
       {showWarning && (
         <View style={styles.warningBanner}>
@@ -746,6 +774,24 @@ const styles = StyleSheet.create({
         padding: theme.spacing(2),
         marginBottom: theme.spacing(3),
         borderRadius: theme.radius.md,
+    },
+    mockBanner: {
+        flexDirection: 'row',
+        backgroundColor: theme.colors.danger + '15',
+        borderLeftWidth: 4,
+        borderLeftColor: theme.colors.danger,
+        padding: theme.spacing(2),
+        marginBottom: theme.spacing(3),
+        borderRadius: theme.radius.md,
+    },
+    mockTitle: {
+        fontSize: theme.fontSizes.md,
+        color: theme.colors.headingText,
+        marginBottom: theme.spacing(0.5),
+    },
+    mockText: {
+        fontSize: theme.fontSizes.sm,
+        color: theme.colors.bodyText,
     },
     warningIcon: {
         marginRight: theme.spacing(1.5),

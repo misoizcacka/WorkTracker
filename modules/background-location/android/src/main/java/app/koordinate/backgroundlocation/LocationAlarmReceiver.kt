@@ -164,6 +164,7 @@ class LocationAlarmReceiver : BroadcastReceiver() {
         // Prepare notes with quality metadata
         val notes = buildString {
             append("AlarmManager fallback ($type)")
+            if (Constants.isMockLocation(location)) append(" | ${Constants.MOCK_LOCATION_TAG}")
             append(" | Source: ${quality.source.label}")
             append(" | Trust: ${quality.trustScore}%")
             if (quality.payrollVerified) append(" | ✅ Payroll verified")

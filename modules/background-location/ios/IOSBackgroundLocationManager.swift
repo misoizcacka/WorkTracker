@@ -571,7 +571,8 @@ final class IOSBackgroundLocationManager: NSObject, CLLocationManagerDelegate {
             longitude: location.coordinate.longitude,
             notes: source == "reconcile" ? "Reconciled on app resume" : "Transition detected via \(source)",
             config: config,
-            timestamp: location.timestamp
+            timestamp: location.timestamp,
+            mock: IOSBackgroundLocationManager.isMock(location)
           )
         } else {
           // Entry quality insufficient - log and skip
@@ -603,7 +604,8 @@ final class IOSBackgroundLocationManager: NSObject, CLLocationManagerDelegate {
             longitude: location.coordinate.longitude,
             notes: source == "reconcile" ? "Reconciled on app resume" : "Transition detected via \(source)",
             config: config,
-            timestamp: location.timestamp
+            timestamp: location.timestamp,
+            mock: IOSBackgroundLocationManager.isMock(location)
           )
         } else if !stateStore.isExitPending {
           // POSSIBLE EXIT DETECTED - switch to EXIT_PENDING to verify with GPS
@@ -644,6 +646,12 @@ final class IOSBackgroundLocationManager: NSObject, CLLocationManagerDelegate {
     }
 
     // ============ PERIODIC TRACKING LOGIC ============
+    // While verifying a possible exit, the 30-second GPS fixes only feed the transition logic above.
+    // They are not stored as events: they add no value to hours or reports, only rows and uploads.
+    if (currentMode ?? .passive) == .exitPending {
+      return
+    }
+
     let interval: TimeInterval
     switch currentMode ?? .passive {
     case .active:
@@ -668,7 +676,7 @@ final class IOSBackgroundLocationManager: NSObject, CLLocationManagerDelegate {
       trackingType = "active_tracking"
       modeLabel = "active"
     case .exitPending:
-      trackingType = "exit_pending_tracking"  // New event type 🔑
+      trackingType = "active_tracking"  // unreachable: exitPending returns above
       modeLabel = "exit_pending"
     case .passive:
       trackingType = "passive_tracking"
@@ -685,7 +693,8 @@ final class IOSBackgroundLocationManager: NSObject, CLLocationManagerDelegate {
       longitude: location.coordinate.longitude,
       notes: "Periodic update (\(trackingType))",
       config: config,
-      timestamp: location.timestamp
+      timestamp: location.timestamp,
+      mock: IOSBackgroundLocationManager.isMock(location)
     )
     
     let icon = location.horizontalAccuracy <= 20 ? "🟢" : (location.horizontalAccuracy <= 50 ? "🟡" : "🔵")
@@ -752,6 +761,7 @@ final class IOSBackgroundLocationManager: NSObject, CLLocationManagerDelegate {
     let latitude = location.coordinate.latitude
     let longitude = location.coordinate.longitude
     let fixTime = location.timestamp
+    let fixIsMock = IOSBackgroundLocationManager.isMock(location)
     let type = isInside ? "enter_geofence" : "exit_geofence"
 
     let icon = location.horizontalAccuracy <= 20 ? "🟢" : (location.horizontalAccuracy <= 50 ? "🟡" : "🔵")
@@ -767,7 +777,8 @@ final class IOSBackgroundLocationManager: NSObject, CLLocationManagerDelegate {
         longitude: longitude,
         notes: "Transition detected via \(source)",
         config: config,
-        timestamp: fixTime
+        timestamp: fixTime,
+        mock: fixIsMock
       )
       let service = SupabaseService(config: config, authenticator: self.authenticator)
       await service.flushPendingEvents()
@@ -790,6 +801,12 @@ final class IOSBackgroundLocationManager: NSObject, CLLocationManagerDelegate {
 
   // ─── Event emission ───────────────────────────────────────────────────────
 
+  /// True if iOS says this reading came from a software simulator (a fake GPS app or Xcode simulation).
+  /// Note: a jailbroken phone can hide the flag, so this catches casual faking only.
+  static func isMock(_ location: CLLocation) -> Bool {
+    location.sourceInformation?.isSimulatedBySoftware ?? false
+  }
+
   /// Event time for a location event: the time of the reading, not the send time. Falls back to
   /// now if the fix time looks wrong (older than 1 hour or more than 1 minute ahead). Same rule as
   /// Android's Constants.eventTimeFor.
@@ -808,7 +825,9 @@ final class IOSBackgroundLocationManager: NSObject, CLLocationManagerDelegate {
     notes: String?,
     config: SupabaseConfig,
     // Time of the location reading, not the send time. Defaults to now for events without a fix.
-    timestamp: Date = Date()
+    timestamp: Date = Date(),
+    // True if iOS says the reading came from a software simulator (fake GPS); recorded in the event notes.
+    mock: Bool = false
   ) async {
     let event = LocationEventRecord(
       id: UUID().uuidString.lowercased(),
@@ -819,7 +838,7 @@ final class IOSBackgroundLocationManager: NSObject, CLLocationManagerDelegate {
       type: type,
       latitude: latitude,
       longitude: longitude,
-      notes: notes
+      notes: mock ? ((notes ?? "") + " | [MOCK_LOCATION]") : notes
     )
     let service = SupabaseService(config: config, authenticator: authenticator)
     _ = await service.sendEvent(event)

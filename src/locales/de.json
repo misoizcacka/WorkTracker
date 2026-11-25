@@ -856,6 +856,11 @@
       "country": "Land",
       "save": "Speichern & Fortfahren",
       "saving": "Wird gespeichert..."
+    },
+    "dailyDetails": {
+      "mockLocationTitle": "Möglicherweise gefälschtes GPS erkannt",
+      "mockLocationMessage_one": "Das Telefon hat {{count}} Standortmessung an diesem Tag als von einer Mock-Location-App stammend markiert. Prüfen Sie die Zeiten, bevor Sie sich darauf verlassen.",
+      "mockLocationMessage_other": "Das Telefon hat {{count}} Standortmessungen an diesem Tag als von einer Mock-Location-App stammend markiert. Prüfen Sie die Zeiten, bevor Sie sich darauf verlassen."
     }
   }
 }

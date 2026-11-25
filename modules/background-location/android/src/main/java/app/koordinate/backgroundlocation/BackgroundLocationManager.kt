@@ -56,7 +56,9 @@ object BackgroundLocationManager {
         longitude: Double,
         supabaseService: SupabaseService,
         // Time of the location reading that caused the transition (see Constants.eventTimeFor).
-        eventTime: Long = System.currentTimeMillis()
+        eventTime: Long = System.currentTimeMillis(),
+        // True if the reading came from a mock (fake GPS) provider; recorded in the event notes.
+        mockLocation: Boolean = false
     ) {
         if (isDuplicateEvent(geofenceId, eventType)) {
             Log.d(TAG, "Deduplicated duplicate $eventType for $geofenceId. Skipping.")
@@ -74,7 +76,8 @@ object BackgroundLocationManager {
             workerId = workerId,
             companyId = companyId,
             latitude = latitude,
-            longitude = longitude
+            longitude = longitude,
+            mockLocation = mockLocation
         )
         if (success) {
             Log.d(TAG, "$eventType event for $geofenceId sent to Supabase.")

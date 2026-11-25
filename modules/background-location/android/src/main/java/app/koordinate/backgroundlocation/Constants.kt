@@ -1,6 +1,7 @@
 package app.koordinate.backgroundlocation
 
 import android.location.Location
+import android.os.Build
 
 /**
  * Location quality metadata for hybrid GPS+WiFi tracking
@@ -30,6 +31,23 @@ enum class Confidence {
 }
 
 object Constants {
+    /** Added to an event's notes when the reading came from a mock (fake GPS) provider. */
+    const val MOCK_LOCATION_TAG = "[MOCK_LOCATION]"
+
+    /**
+     * True if Android says this reading came from a mock location provider (a fake GPS app).
+     * Note: a rooted phone can hide the flag, so this catches casual faking only.
+     */
+    fun isMockLocation(location: Location?): Boolean {
+        if (location == null) return false
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            location.isMock
+        } else {
+            @Suppress("DEPRECATION")
+            location.isFromMockProvider
+        }
+    }
+
     /**
      * Event time for a location event: the time of the reading, not the time it's sent. Geofence
      * broadcasts can arrive minutes late, which pushed exit times later and inflated hours. Falls

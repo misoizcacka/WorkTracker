@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useRef, useMemo, useCallback } from "react";
+import React, { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { StyleSheet, Alert, ScrollView, ActivityIndicator, Linking, TouchableOpacity, RefreshControl, Platform, Image, AppState } from "react-native";
 import { Ionicons } from '@expo/vector-icons';
 import * as Location from "expo-location";
@@ -12,6 +12,7 @@ import { theme } from "../../theme";
 import { MapView, Marker, Circle } from '../../components/MapView';
 import { useSession } from '~/context/AuthContext';
 import { useAssignments } from '~/context/AssignmentsContext';
+import { saveLocalTransitionEvent } from '~/utils/localTransitionEvents';
 import { useProjects } from '~/context/ProjectsContext';
 import { ProcessedAssignmentStepWithStatus, AssignmentStatus } from '~/types';
 import moment from 'moment';
@@ -578,6 +579,7 @@ export default function Home() {
       if (bgStatus !== 'granted') { Alert.alert(t('worker.home.backgroundLocationRequired'), t('worker.home.backgroundLocationMsg')); return; }
 
       let currentLocation;
+      let checkInIsMock = false;
       try {
         const locPromise = Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
         const timeoutPromise = new Promise((_, reject) => 
@@ -585,6 +587,8 @@ export default function Home() {
         );
         const loc = await Promise.race([locPromise, timeoutPromise]) as any;
         currentLocation = { latitude: loc.coords.latitude, longitude: loc.coords.longitude };
+        // Android flags readings from a fake GPS app. iOS doesn't expose this here (native tracking checks it).
+        checkInIsMock = loc.mocked === true;
       } catch (err) { 
         Alert.alert(t('worker.home.locationError'), t('worker.home.locationTimeout') || 'Could not get your location. Please try again.');
         return; 
@@ -594,6 +598,18 @@ export default function Home() {
       if (d > relevantRadius) { Alert.alert(t('worker.home.tooFar'), t('worker.home.tooFarMsg', { name: projectLocationName })); return; }
 
       await startWorkSession(relevantAssignment.id, currentLocation);
+      if (checkInIsMock && user?.id && userCompanyId) {
+        // Record that the check-in position came from a fake GPS app. The manager sees a warning for the day.
+        saveLocalTransitionEvent({
+          timestamp: new Date().toISOString(),
+          type: 'periodic_update',
+          companyId: userCompanyId,
+          assignmentId: relevantAssignment.id,
+          workerId: user.id,
+          location: currentLocation,
+          notes: 'Check-in location [MOCK_LOCATION]',
+        });
+      }
       Toast.show({ type: 'success', text1: t('worker.home.checkedInToast'), text2: t('worker.home.checkedInToastSub', { name: projectLocationName }) });
       setSelectedNextAssignmentId(null);
     } catch (err: any) {
